@@ -1,0 +1,6 @@
+blender/out/
+blender/tex/
+*.blend1
+node_modules/
+.venv/
+venv/
