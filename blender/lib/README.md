@@ -4,12 +4,16 @@ Owner: carpenter. Other roles may import these modules and may add their own fil
 `blender/lib/<role>_*.py`. The API below is meant to stay stable. New optional arguments
 may be added, but existing names and defaults will not change without a note in the round notes.
 
-Run everything with the team's bpy. On Mac's MacBook Air:
-`NM_DEVICE=METAL NM_THREADS=0 NPM_CONFIG_PREFIX=~/nachtmarkt-tools/npm ~/nachtmarkt-tools/bpy-venv/bin/python your_script.py`
-(on the cloud machine: `/home/claude/tools/bpy-venv/bin/python your_script.py`, CPU). `NM_DEVICE` and
-`NM_THREADS` apply to every Cycles job the library starts: kit bakes, AO bakes and preview renders
-(see `state.configure_cycles`). `NPM_CONFIG_PREFIX` lets `optimize.mjs` find the gltf-transform libraries.
-The AO post-process needs numpy, scipy and Pillow in the bpy environment.
+Run everything with the team's bpy on the cloud machine (4 CPUs, no GPU; see "Where things run"
+in `docs/BUILD.md`):
+`NM_THREADS=2 /home/claude/tools/bpy-venv/bin/python your_script.py`
+`NM_DEVICE` (default `CPU`) and `NM_THREADS` (default 2, 0 = all cores) apply to every Cycles job the
+library starts: kit bakes, AO bakes and preview renders (see `state.configure_cycles`). Iterate renders
+at 960x540 and 32 samples; final review renders are 1280x720 and 48 samples. bpy may segfault at exit
+after writing everything; that is harmless when the outputs exist. `optimize.mjs` loads the
+gltf-transform libraries of the globally installed `@gltf-transform/cli` (`npm root -g`; set
+`NPM_CONFIG_PREFIX` if your global npm lives elsewhere). The AO
+post-process needs numpy, scipy and Pillow in the bpy environment (all present in the cloud venv).
 
 ```python
 import os, sys
@@ -44,6 +48,8 @@ turns the one light, neutral wood into pine, honey, oak, dark, grey or soot boar
 | `oak` | kit, 1 m tile, 1024 px | ring-porous oak for counter tops: pore bands, ray flecks, cross-grain scratches, a few mug rings; `hut.OAK_TINT` holds multipliers |
 | `paint` | kit atlas, 8 bands | chipped paint over wood. Bands (`geo.PAINT_BANDS`): `red gold blue white green cream black rauten`. `gold` is half metallic (0.5), like bronze-powder paint, so it still reads under warm lights without a bright environment map. `rauten` is the Bavarian blue-and-white lozenge pattern |
 | `iron` | kit, 0.5 m tile, 512 px | forged iron, mid-grey: hammer dents, scattered rust blooms and runs, soot, pitting |
+| `iron_matte` | kit variant of `iron` | sheet iron for hoods and fireboxes: its own lighter base colour (`kit_iron_matte_color`, the iron colour x2.1 in linear light, ~8 KB) and metal x0.35 as `metallicFactor`, so it reads grey under point lights without an environment map, plus a faint warm emissive copy of that colour (`emissiveFactor` 0.2/0.14/0.08) standing in for the bulbs and fire beside the hood, which no site light reaches. Roughness and normal maps are the iron kit's. Add variants in `mats.KIT_VARIANTS` (`metal=`, `color_gain=`) |
+| `rauten` | pattern, 0.26 m tile, 256 px | dedicated two-colour Bavarian lozenge texture (`mats.PATTERNS`, made with numpy, no bake): four big lozenges per repeat so the pattern survives mipmapping, a light blue and a warm white, and a faint emissive copy of the pattern (`emissiveFactor` 0.26/0.21/0.15) standing in for the eave bulbs that hang beside the pennants. Embedded in the glb (about 3 KB). Use `uv_off=` to place a lozenge |
 | `snow bulb_warm bulb_cold wire glass fir brass copper ember ash ornament_red ornament_gold fabric_* lamp_glass` | simple | flat PBR values (still multiplied by `COLOR_0`) |
 
 Metal is 0 wherever a kit's metal is a constant 0 (wood, oak); only gold paint (0.5) and iron are metallic.
@@ -57,8 +63,9 @@ No lighting is baked into base colour. Ambient occlusion is baked per asset with
 tiny islands (rivets, letters, bulb sockets) get no texels and point at a light patch, empty texels
 are filled from the nearest island (no black bleeding through mipmaps), and values are remapped to
 `[bake.AO_FLOOR, 1]` (0.32) so no surface goes black under the site's lights. If the AO resolution equals the kit roughness texture's,
-the Blender exporter packs both into one ORM image. Use a different size (the deco kit uses
-512) to keep the kit roughness texture shareable.
+the Blender exporter packs both into one ORM image. Use a size no kit map has (kits are 1024,
+iron 512; lite kit maps 512): the section stalls bake AO at 768 (lite 384) and the deco stalls
+at 448 (lite 256), so every stall references the shared kit roughness maps.
 
 Named tints (`geo.TINTS`): `pine honey oak dark walnut grey soot shingle white`, or any linear RGB tuple.
 
@@ -69,7 +76,7 @@ Named tints (`geo.TINTS`): `pine honey oak dark walnut grey soot shingle white`,
 - `configure_cycles(scene=None)`: device from `NM_DEVICE` (CPU, or METAL/CUDA/OPTIX/HIP/ONEAPI for the GPU) and threads from `NM_THREADS` (0 = all cores, default 2).
 - `lite()`: True while building a `*.lite.glb`. The helpers then drop bevels, shingles become one strip per course, and spheres, text and garlands get fewer segments.
 - `rng`: the only random stream the helpers use. Seed it for repeatable builds.
-- `font(name)`: bundled OFL fonts: `fraktur` (UnifrakturMaguntia), `fraktur_bold` (UnifrakturCook), `fell_sc`, `fell_italic` (IM Fell English), `alegreya_sc` (Alegreya SC ExtraBold).
+- `font(name)`: bundled OFL fonts: `fraktur` (UnifrakturMaguntia), `fraktur_bold` (UnifrakturCook), `fell_sc`, `fell_italic` (IM Fell English), `alegreya_sc` (Alegreya SC ExtraBold). The stall signs use `fraktur_bold`, `fell_italic` and `alegreya_sc`.
 - Paths: `REPO`, `MODELS_DIR` (`site/public/models`), `OUT_DIR` (`blender/out`, gitignored), `KIT_DIR`.
 - `export_collection()` / `env_collection()`: what is exported vs render-only.
 
@@ -88,7 +95,7 @@ Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shad
 ### `carpentry` (all sizes in metres, front = -Y)
 - Walls: `plank_wall(part, a, b, z0, top, axis, at, pw, th, gap, lean, tint, band, bevel, skip)`, where `top` may be a function (gables). Also `lap_siding(...)` (overlapping horizontal boards), `floor_boards(...)` and `nails(part, pts, normal)`.
 - Roofs: `Slope(eave, along, down, length, a0, a1)` describes one roof plane (right-handed basis, `point(a, s, n)`), and `gable_slopes(W, D, eave_z, ridge_z, ov_eave, ov_gable, ridge_axis)` returns the two planes of a gable. Covering and trim: `roof_deck`, `shingles(part, slope, sw, sh, st, expo, tint)`, `board_roof`, `barge_boards` and `fascia`.
-- `snow_cap(part, slope, thick=0.05, lip=0.05, cover=1.0, ridge_clear=0.24, courses=None, butt_gap=0.024, base=0.03)`: thin snow with a lip curling over the eave and a wind-scoured band under the ridge (its lower edge wanders, so the top courses and the ridge show). Pass `courses=(expo, first_butt)` for a shingle roof: the snow then lies in one strip per course and sinks below each butt, so every shingle row shows as a dark line through the snow. `cover < 1` adds melted patches (off by default). The snow edge sinks into the roof instead of ending in a wall. Lite: one coarse blanket. Put it in a Part named `snow_<n>` (material `snow`). `Hut.build_snow()` passes the right values for shingle and board roofs.
+- `snow_cap(part, slope, thick=0.05, lip=0.05, cover=1.0, ridge_clear=0.24, courses=None, butt_gap=0.024, base=0.03, ridges=None, ridge_cover=0.012, ridge_soft=0.05)`: thin snow with a lip curling over the eave and a wind-scoured band under the ridge (its lower edge wanders, so the top courses and the ridge show). Pass `courses=(expo, first_butt)` for a shingle roof: the snow then lies in one strip per course and sinks below each butt, so every shingle row shows as a dark line through the snow. `cover < 1` adds melted patches (off by default). Pass `ridges=` (the batten list `board_roof` returns) for a board roof: the snow drapes over each batten as one continuous soft ridge down the whole slope, so the battens read under the snow and never poke through as dashes. The snow edge sinks into the roof instead of ending in a wall. Lite: one coarse blanket. Put it in a Part named `snow_<n>` (material `snow`). `Hut.build_snow()` passes the right values for shingle and board roofs.
 - `valance(part, x0, x1, y, z_top, h, drop, n, style, holes, band, M=None)`: a carved eave board. Styles: `scallop point wave step straight`. Holes: `star circle heart`. Pass `M` to run it along a rake.
 - `sign(board, letters, text, font, center, w, h, board_band, text_band, frame_band, board_shape, text_size, resolution, text_bevel)`: a painted board (`rect arch banner oval`) with raised letters facing -Y.
 - `bulb_string(bulbs, wire, anchors, sag, spacing, bulb_r, seg=None, rings=None)`: fairy bulbs on a sagging wire (bulb detail 7x5 by default; lite caps it at 5x3 even when the caller asks for more). Use a Part named `bulbs_<n>` with material `bulb_warm` or `bulb_cold`.
@@ -108,11 +115,15 @@ Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shad
 
 ## Checking a stall in the browser
 
-`node blender/stalls/web/shoot.mjs [--only stall_bier] [--ao both|on|off] [--lite] [--out dir]` loads a
+`node blender/stalls/web/shoot.mjs [--only stall_bier] [--ao both|on|off] [--lite] [--out dir]
+[--props prop_wurst_counter@slot_counter] [--signspot] [--home] [--tag name]` loads a
 glb from `site/public/models` under the lighting designer's `site/src/lighting` module (Vite dev
 server on port 4395, `three` from `site/node_modules`, so run `npm ci` in `site/` first) and saves a
 screenshot framed like the Cycles preview, with and without the AO map. Set `PLAYWRIGHT_MODULE` to a
-Playwright `index.mjs` if Playwright is not installed next to the script. On macOS it uses the GPU.
+Playwright `index.mjs` if Playwright is not installed next to the script. On the cloud machine it
+renders with SwiftShader (2-4 min per shot). `--props` attaches vendor glbs at their slots,
+`--signspot` adds the proposed warm spot at `slot_sign`, and `--home` frames the stall from the
+site's home camera where `site/src/layout.json` places it.
 
 ## Command-line tools (plain Node / Python, no bpy)
 

@@ -4,7 +4,8 @@
   "bpm": 66.0,
   "timeSignature": "3/4",
   "key": "G minor",
-  "tenorBank": "musyngkite",
+  "tenorBank": "mtg",
+  "brushes": "swirly",
   "sampleRate": 44100,
   "duration": 269.221791,
   "loopStart": 44.845465,
@@ -81,10 +82,10 @@
   "license": {
     "composition": "Original composition for this site (all rights with the site owner)",
     "recording": {
-      "sax, room, mix": "Share-alike: must be offered under CC BY-SA 3.0, because they contain the MusyngKite tenor samples (CC BY-SA 3.0, via gleitz/midi-js-soundfonts)",
+      "sax, room, mix": "Attribution: MTG Solo Saxophones, tenor (Music Technology Group, Universitat Pompeu Fabra, via freesound.org; SFZ by kinwie; CC BY 4.0) and Salamander Grand Piano (mix, room)",
       "piano": "Attribution: Salamander Grand Piano by Alexander Holm (CC BY 3.0)",
       "bass, drums": "No conditions (CC0 sources)",
-      "credit": "Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: MusyngKite soundfont via gleitz/midi-js-soundfonts (CC BY-SA 3.0). Bass: Karoryfer Meatbass (CC0). Drums: Virtuosity Drums by Versilian Studios (CC0). Recording: CC BY-SA 3.0."
+      "credit": "Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: MTG Solo Saxophones by the Music Technology Group, UPF (freesound.org), SFZ by kinwie (CC BY 4.0). Bass: Karoryfer Meatbass (CC0). Drums: Swirly Drums by Karoryfer Samples (brushes, CC0) and Virtuosity Drums by Versilian Studios and Karoryfer Samples (kick, CC0)."
     }
   }
 }

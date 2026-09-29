@@ -46,20 +46,29 @@ if (LITE or REUSE_AO) and os.path.exists(AO_PATH):
 elif not LITE:
     ao_img = bpy.data.images.new("square_ao", 8, 8)   # placeholder, replaced by the bake
 
+if LITE:
+    # Round 1 pass 3, lite budget: the cobble fan keeps 512 px; the setts (gutter, street, sidewalk and
+    # bands all share one set, the sidewalk and bands through a warm factor) drop to 256 px, the kerb
+    # granite to 256 px without a normal map, and the bench and pole timber to 256 px colour only.
+    T_SETT = C.lite_texture_set(T_SETT, 256)
+    T_WALK = dict(T_SETT)
+    T_GRAN = C.lite_texture_set(T_GRAN, 256, keep=("color", "rough"))
+    T_WOOD = C.lite_texture_set(T_WOOD, 256, keep=("color",))
+WARM = (1.08, 0.98, 0.86) if LITE else None
 M = {}
 M["cobble"] = C.pbr("cobble_fan", tex=T_COB, vcol="grime", ao_img=ao_img, normal_strength=1.0)
 M["gutter"] = C.pbr("setts_gutter", tex=T_SETT, vcol="grime", ao_img=ao_img, factor=(0.85, 0.85, 0.88))
 M["street"] = C.pbr("setts_street", tex=T_SETT, vcol="grime", ao_img=ao_img)
-M["walk"] = C.pbr("setts_sidewalk", tex=T_WALK, vcol="grime", ao_img=ao_img)
+M["walk"] = C.pbr("setts_sidewalk", tex=T_WALK, vcol="grime", ao_img=ao_img, factor=WARM)
 M["curb"] = C.pbr("granite_curb", tex=T_GRAN, factor=(0.95, 0.93, 0.9))
 M["iron"] = C.solid("cast_iron", (0.018, 0.024, 0.021), rough=0.42, metal=0.75)
-M["wood"] = C.pbr("bench_wood", tex=T_WOOD, factor=(1.25, 1.1, 1.0))
-M["pole"] = C.pbr("pole_wood", tex=T_WOOD, factor=(0.8, 0.75, 0.7))
+M["wood"] = C.pbr("bench_wood", tex=T_WOOD, factor=(1.25, 1.1, 1.0), rough=0.7)
+M["pole"] = C.pbr("pole_wood", tex=T_WOOD, factor=(0.8, 0.75, 0.7), rough=0.75)
 M["wire"] = C.solid("wire_black", (0.01, 0.01, 0.01), rough=0.5)
 M["bulb"] = C.solid("bulb_warm", (1.0, 0.8, 0.55), rough=0.3, emit=(1.0, 0.62, 0.28), strength=6.0)
 M["snow"] = C.solid("snow", (0.82, 0.85, 0.92), rough=0.75)
-M["puddle"] = C.pbr("puddle_water", color=(0.05, 0.048, 0.045), rough=0.07, vcol="puddle")
-M["bands"] = C.pbr("granite_bands", tex=T_WALK, factor=(1.12, 1.1, 1.05), ao_img=ao_img)
+M["puddle"] = C.pbr("puddle_water", color=(0.035, 0.034, 0.032), rough=0.05, vcol="puddle")
+M["bands"] = C.pbr("granite_bands", tex=T_WALK, factor=(1.0, 0.98, 0.93) if not LITE else (1.08, 0.98, 0.86), ao_img=ao_img)
 for m in M.values():
     m.use_backface_culling = True
 # the puddle's vertex alpha (0 at the rim) drives its opacity: a thin film over the wet cobbles
@@ -74,6 +83,7 @@ UV = {"cobble": (3.2, 3.2), "gutter": (2.4, 2.4), "street": (2.4, 2.4), "walk": 
 NTH = 96 if LITE else 176
 K_ARC = round(2 * math.pi * 42 / 2.4) * 2.4 / (2 * math.pi)      # arc-length scale so the texture closes
 grime_noise = TX.pnoise(256, 6, 5, 0.55, seed=5)                    # covers 160 m
+mid_noise = TX.pnoise(256, 22, 3, 0.5, seed=17)                     # ~7 m patches of damp and dry
 
 
 def grime_at(x, y):
@@ -87,8 +97,12 @@ def grime_at(x, y):
 
 relief_noise = TX.pnoise(256, 28, 3, 0.5, seed=12)                 # ~6 m features over 160 m
 random.seed(31)
-HOLLOWS = []                                                         # settled hollows (x, y, radius, depth)
-while len(HOLLOWS) < 16:
+# settled hollows (x, y, radius, depth).  Round 1 pass 3: the first three sit where the home camera
+# (three.js [3, 9, 33]) looks at the paving between itself and the section stalls, so their puddles show
+# in the home view; the rest are scattered over the plaza.
+HOME_HOLLOWS = [(-3.2, -12.5, 3.4, 0.03), (5.8, -8.2, 2.8, 0.026), (0.8, -17.0, 2.4, 0.024)]
+HOLLOWS = list(HOME_HOLLOWS)
+while len(HOLLOWS) < 19:
     tt = random.uniform(0, 2 * math.pi); rr = 30 * math.sqrt(random.random())
     HOLLOWS.append((rr * math.cos(tt), rr * math.sin(tt), random.uniform(1.6, 3.6), random.uniform(0.012, 0.03)))
 random.seed(3)
@@ -116,8 +130,16 @@ def relief(x, y):
         d2 = ((x - hx) ** 2 + (y - hy) ** 2) / (hr * hr)
         if d2 < 4:
             h -= hd * math.exp(-d2 * 1.6)
-    h -= 0.012 * math.exp(-(x / 3.5) ** 2) * (1 if -30 < y < 4 else 0)          # the trodden walk
+    h -= 0.012 * trodden(x, y)                                                   # the trodden walk
     return h * fade
+
+
+def trodden(x, y):
+    """0..1: how worn the paving is by feet.  The main walk runs from the home view (three.js z = 33)
+    to the bandstand; a cross lane runs in front of the four section stalls."""
+    w = math.exp(-((x + 0.35 * math.sin(y * 0.21)) / 3.2) ** 2) * min(1.0, max(0.0, (4 - y) / 3.0)) * min(1.0, max(0.0, (y + 34) / 4.0))
+    lane = math.exp(-((y + 5.0 + 0.004 * x * x) / 2.6) ** 2) * min(1.0, max(0.0, (16 - abs(x)) / 4.0))
+    return max(w, 0.8 * lane)
 
 
 def profile(t):
@@ -195,16 +217,23 @@ def build_ground():
         return (arc / 2.4, s / 2.4)
 
     def shade(x, y, zone, r, Rp):
+        """Large-scale grime and wetness (COLOR_0, multiplied into the base colour).  Round 1 pass 3:
+        stronger contrast so the paving never reads as one repeating tile from the home view: dry,
+        dusty patches against damp ones (7 m noise over 27 m noise), a dark, wet trodden walk and lane,
+        damp hollows and wet gutters."""
         g = grime_at(x, y)
-        v = 0.62 + 0.45 * g ** 1.3
+        m = _bilin(mid_noise, x, y)
+        v = 0.34 + 0.62 * g ** 1.2 + 0.34 * (m - 0.5)
         s = r - Rp
         if -1.2 < s < GW + 0.3 or (P.CURB_S - 0.6 < s < P.CURB_S + 0.05):
-            v *= 0.82                      # wet, dirty edges along the gutters
+            v *= 0.72                      # wet, dirty edges along the gutters
         if zone == "walk":
             v *= 1.05
-        if zone == "cobble" and not LITE:
-            v *= 1.0 + 6.0 * min(0.0, relief(x, y) + 0.004)          # damp, darker hollows
-        return min(v, 1.0)
+        if zone == "cobble":
+            v *= 1.0 - 0.36 * trodden(x, y)                               # the walk: wet and dark
+            if not LITE:
+                v *= 1.0 + 12.0 * min(0.0, relief(x, y) + 0.004)          # damp, darker hollows
+        return min(max(v, 0.22), 1.0)
 
     faces = 0
     for i in range(NTH):
@@ -373,11 +402,21 @@ def puddle(x, y, rad, core=0.72):
 
 
 npud = 0
-for hx, hy, hr, hd in HOLLOWS:              # the deepest hollows first
+for hi, (hx, hy, hr, hd) in enumerate(HOLLOWS):     # the home-view hollows first, then the deepest
     if LITE and npud >= 5:
         break
     if hd > 0.018 and free_spot(hx, hy, hr * 0.5) and math.hypot(hx, hy) > 4:
-        puddle(hx, hy, min(0.9, hr * 0.3), core=0.72); npud += 1
+        big = hi < len(HOME_HOLLOWS)
+        puddle(hx, hy, (1.25 if hi == 0 else 0.95) if big else min(0.9, hr * 0.3), core=0.5 if big else 0.62); npud += 1
+# thin wet films along the trodden walk: nearly clear, they only catch the lights (glossy streaks)
+nfilm = 0
+if not LITE:
+    for k in range(9):
+        fy = -30 + k * 3.3 + random.uniform(-0.8, 0.8)
+        fx = random.uniform(-2.2, 2.2) - 0.35 * math.sin(fy * 0.21)
+        if free_spot(fx, fy, 1.5) and not any(math.hypot(fx - hx, fy - hy) < 2.2 for hx, hy, _, _ in HOME_HOLLOWS):
+            puddle(fx, fy, random.uniform(1.0, 1.7), core=random.uniform(0.28, 0.4)); nfilm += 1
+C.log("wet films", nfilm)
 tries = 0
 while npud < (10 if not LITE else 7) and tries < 500:        # along the gutters
     tries += 1
@@ -423,8 +462,8 @@ def lamp(idx, x, y, rot):
     iron.raw(verts, faces)
     iron.cyl((0, 0, 3.12), 0.1, 0.085, 0.1, seg=seg, caps=False)
     # ladder rest bar with ball ends
-    iron.beam((-0.34, 0, 3.02), (0.34, 0, 3.02), 0.028, 0.028)
     if not LITE:
+        iron.beam((-0.34, 0, 3.02), (0.34, 0, 3.02), 0.028, 0.028)
         for sx in (-0.36, 0.36):
             iron.uvsphere((sx, 0, 3.02), 0.035, seg=6, rings=3)
     # lantern: base cup, six posts, roof, finial
@@ -436,13 +475,13 @@ def lamp(idx, x, y, rot):
         a = 2 * math.pi * k / 6
         corners0.append((0.17 * math.cos(a), 0.17 * math.sin(a), 3.36))
         corners1.append((0.25 * math.cos(a), 0.25 * math.sin(a), ztop))
-    for k in range(6):
+    for k in range(6 if not LITE else 0):          # the lite lantern is its glowing glass and roof
         iron.beam(corners0[k], corners1[k], 0.018, 0.018, up=(corners0[k][0], corners0[k][1], 0))
     iron.cyl((0, 0, 3.37), 0.18, 0.18, 0.025, seg=6, caps=False)
     iron.cyl((0, 0, ztop + 0.02), 0.27, 0.27, 0.04, seg=6)
     iron.cyl((0, 0, ztop + 0.18), 0.31, 0.06, 0.28, seg=6, bottom=False)
-    iron.cyl((0, 0, ztop + 0.36), 0.06, 0.05, 0.08, seg=6, caps=False)
     if not LITE:
+        iron.cyl((0, 0, ztop + 0.36), 0.06, 0.05, 0.08, seg=6, caps=False)
         iron.uvsphere((0, 0, ztop + 0.45), 0.045, seg=6, rings=3)
     # glowing frosted glass (bulbs_) slightly inside the frame
     for k in range(6):
@@ -472,6 +511,11 @@ for k in range(N_PLAZA_LAMPS):
     if P.exit_at(t, P.plaza_r(t) + 1, pad=1.0) >= 0:
         t += math.radians(6)
     r = P.plaza_r(t) - 1.1
+    for _ in range(12):          # step clear of a ride's footprint (the Ferris wheel reaches the plaza edge)
+        if not P.in_ride(r * math.cos(t), r * math.sin(t), pad=1.0):
+            break
+        t += math.radians(3)
+        r = P.plaza_r(t) - 1.1
     lamp_spots.append((r * math.cos(t), r * math.sin(t), random.uniform(0, 6.28)))
 # corner lamps on the sidewalk next to each exit
 for deg, w in P.EXITS:
@@ -487,13 +531,15 @@ for i, (x, y, rot) in enumerate(lamp_spots):
 wood = C.Geo("poles_wood", M["pole"], (1.0, 1.0))
 wire = C.Geo("string_wire", M["wire"], (1, 1))
 poles = [C.three_to_blender(x, z) for x, z in P.POLES_THREE]
-H = P.POLE_H
 for i, p in enumerate(poles):
     z0 = ground_height(p.x, p.y)
+    H = P.pole_h(i)
     seg = 7 if LITE else 10
-    wood.cyl((p.x, p.y, z0 + H / 2), 0.11, 0.075, H, seg=seg, rot=(0, 0, random.uniform(0, 6)), caps=False)
+    rb = 0.11 if H < 8 else 0.14          # the tall poles behind the bandstand are stouter
+    wood.cyl((p.x, p.y, z0 + H / 2), rb, rb * 0.68, H, seg=seg, rot=(0, 0, random.uniform(0, 6)), caps=False)
     iron.cyl((p.x, p.y, z0 + 0.35), 0.135, 0.13, 0.7, seg=seg, bottom=False)
-    iron.cyl((p.x, p.y, z0 + H + 0.05), 0.09, 0.09, 0.1, seg=seg, caps=False)
+    if not LITE:
+        iron.cyl((p.x, p.y, z0 + H + 0.05), 0.09, 0.09, 0.1, seg=seg, caps=False)
     iron.cyl((p.x, p.y, z0 + H + 0.2), 0.12, 0.0, 0.22, seg=seg, bottom=False)
     if not LITE:
         iron.cyl((p.x, p.y, z0 + H - 0.3), 0.1, 0.1, 0.06, seg=seg, caps=False)       # hanging ring for the wires
@@ -510,10 +556,10 @@ def catenary(a, b, sag, n):
     return pts
 
 
-spacing = 0.55 if not LITE else 1.0
+spacing = 0.55 if not LITE else 1.35
 for si, (i, j) in enumerate(P.SPANS):
     a = poles[i].copy(); b = poles[j].copy()
-    a.z = ground_height(a.x, a.y) + H - 0.3; b.z = ground_height(b.x, b.y) + H - 0.3
+    a.z = ground_height(a.x, a.y) + P.pole_h(i) - 0.3; b.z = ground_height(b.x, b.y) + P.pole_h(j) - 0.3
     L = (b - a).length
     sag = min(0.07 * L, 1.1) * random.uniform(0.85, 1.1)
     n = max(4, int(L / (0.7 if not LITE else 1.5)))

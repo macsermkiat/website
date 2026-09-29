@@ -1,194 +1,151 @@
-# Music writer, round 1 (pass 3): "Lanterns After Closing"
+# Music writer, round 1 (pass 4): "Lanterns After Closing"
 
 ## Read this first, Mac
 
-Nobody has listened to this recording yet, me included: I can't hear audio, so every result below is a measurement. The tenor was your original complaint, so it isn't finished until you have heard it. These files are now in git, so they reach your MacBook:
+Nobody has listened to this recording yet, me included. I can't hear audio, and this session has no way to reach you, so the market owner has to send you these files. Every result below is a measurement. The tenor was your original complaint, so it isn't finished until you have heard it.
 
-1. **The whole tune: `site/public/audio/ballad-mix.mp3`** (4:29).
+**What to listen to** (all in git, so they reach your MacBook):
+
+1. **The whole tune: `site/public/audio/ballad-mix.mp3`** (4:29). The tenor matters most at 0:00-0:45 (the head) and 1:28-2:56 (the tenor chorus).
    - Head: 0:01-1:28.
    - Tenor chorus: 1:28-2:56.
    - Piano half-chorus: 2:56-3:39.
    - Out head and ending: 3:39-4:29.
-2. **Tenor A/B, in `review/round-1/music/listen/`.** `head_musyngkite.mp3` and `head_fluidr3.mp3` are the head with each tenor sample bank, and the `_tenor` files are the tenor alone. Which one sounds less synthetic? I chose MusyngKite from measurements only.
-3. **`review/round-1/music/listen/chorus_b_excerpt.mp3`** is the new second tenor chorus (see below), 1:26-3:03 of the tune.
+2. **Tenor A/B, `music/listen/head_*.mp3`** (bars 1-16, 46 s each). `head_mtg.mp3` is what now ships. `head_musyngkite.mp3` is what shipped in pass 3 and `head_fluidr3.mp3` is the other soundfont. The `_tenor` files are the tenor alone with its room.
+3. **Brush A/B, `music/listen/brushes_*.mp3`** (0:44-1:40). `brushes_recorded.mp3` is what now ships and `brushes_modelled.mp3` is passes 1-3. The `_alone` files are the drums alone, 12 dB up.
+4. **`music/listen/chorus_b_excerpt.mp3`**: the second tenor chorus, which the site plays on every second pass through the loop.
 
-Questions (answer any time; nothing below waits on them):
+**Questions:**
 
-- **Q1: Tenor sound.** Is it still too bright, too breathy, too synthetic, or now too dull? In pass 3 it gained a little high air and now breathes between phrases.
-  - The settings are at the top of `music/render/sax.py`: `AIR` (new), `BREATH`, `CORE`, and the `TONE` corners for each bank.
-  - I'll adjust them from your answer.
-- **Q2: Share-alike licence.** The MusyngKite tenor samples are CC BY-SA 3.0. That makes these files share-alike:
-  - the sax, room and mix files;
-  - the two alternate-chorus files;
-  - the listening files that contain MusyngKite.
+- **Q1: Tenor sound.** Is it still too bright, too breathy, too synthetic, or now too dull? The tenor is now a recorded player (see "Tenor"), and I turned the air down from 1.0 to 0.4 before you listen. The settings are at the top of `music/render/sax.py`:
+  - `AIR` (hiss above 2.4 kHz, now 0.4);
+  - `BREATH` (breath inside the dark EQ, 1.2);
+  - `CORE` (the hollow subtone body, 0.9);
+  - `TONE["mtg"]` (the dark and bright filter corners).
 
-  They would have to be offered under CC BY-SA 3.0 with a credit line. Your composition is not affected. Is that fine? If not, I re-render with `--sax-bank fluidr3` and the recording becomes attribution-only (CC BY). With FluidR3 I would also lower `AIR` to about 0.6, because it measures 876 Hz, close to the 900 Hz limit.
-- **Q3: 3/4 or 4/4?** Same question as before, with the concrete options under "Still open from pass 2". I recommend keeping the waltz.
+  One sentence from you is enough for me to retune them, for example "darker", "less hiss" or "more air".
+- **Q2: Licence.** This question no longer blocks anything. The shipped tenor is now the MTG recording, under CC BY 4.0, so the whole recording is attribution-only and nothing on the site is share-alike. The CC BY-SA 3.0 Musyng Kite tenor is now only in two listening files in `music/listen/`, which the site does not serve. If you prefer the Musyng Kite tenor by ear, say so and accept share-alike for the sax, room and mix files.
+- **Q3: 3/4 or 4/4?** Same question as before (see "Still open: 3/4 or 4/4"). I recommend keeping the waltz.
 - **Q4: Title.** Is "Lanterns After Closing" fine?
+- **Q5: Brushes.** Do the recorded brushes sound better than the old modelled ones? I switched on the strength of the source alone.
 
-**Your decisions so far:** none. You were away during this pass, so the licence, the metre (3/4) and the title stay as they were. I'll log each answer here when it comes.
+**Your decisions so far:** none. No answers have reached me in four passes. The metre stays 3/4 and the title stays as it is. I'll log each answer here when it comes.
 
-## What changed in pass 3
+## Correction: what the earlier summary got wrong
 
-| Judges asked | Done |
-|---|---|
-| **Let the tenor breathe.** Stop legato at a written rest, split phrases at rests of 0.5 beat, intake threshold of about 0.35 s, breath points in the head, no run over about 8-10 s | Done. **The longest tenor run is now 9.2 s, down from 64.0 s** (audio gap scan). See "Breathing" below. |
-| Get the listening files to Mac | The four A/B files (re-rendered with the pass-3 tenor) and a chorus-B excerpt are in `review/round-1/music/listen/` (8.7 MB, tracked). This file points to the tracked `site/public/audio/ballad-mix.mp3` for the whole tune. |
-| Get Mac's answer on CC BY-SA 3.0 | Asked again (Q2). Mac was asleep during this pass. Nothing was re-rendered with FluidR3. |
-| Make sure the credits page and plain-HTML version carry the attribution line | Not done yet: that is the engineer's code. As of this pass, nothing in `site/src` or `content/` carries the line. The request is repeated under "For the engineer". |
-| **Keep the melody on top.** Cap the comp's top voice at about A4-Bb4, or thin to shells under held tenor notes, and check audibility at 200-1500 Hz | Both done. See "Melody on top". |
-| Recheck the breath air (the tenor measured -46.5 dB at 3.2-6.4 kHz) | Added a low air path at 2.4-7 kHz that bypasses the final low-pass (`AIR` in `sax.py`). The tenor at 3.2-6.4 kHz rose from **-46.5 dB to -40.7 dB** relative to its total, and at 6.4-8 kHz from -72.4 dB to -51.0 dB. It still needs Mac's ear. |
-| Enable `--cut-stems` once the engineer plays the ending from the mix | Not yet. `site/src/audio/stems.js` still trims at `loopEnd` and has no ending handover, so the stems stay full length and `stemsEnd` stays null. |
-| Log Mac's 3/4 and title decisions | No answers yet (Q3, Q4). |
-| Fix `midi_export.py` key signature 'Cm' | It now comes from `ballad.KEY` (`key_signature()`). `ballad.mid` has been regenerated and reads `Gm`. |
-| Re-voice the 24 two-note shells with a look-ahead | Done. **Two-note voicings went from 24 of 143 to 1 of 143.** See "Piano voicings". |
-| Centre the long-note intonation (+5.4 cents sharp) | Fixed, but the cause was different from the one described (see "Intonation"). The tuning is now **+0.3 cents median** over all 28 samples, with a mean absolute error of 1.3 cents. |
-| A second tenor chorus for the endless loop, and a freely licensed brush multisample | The chorus is written, rendered and shipped as an optional alternate. The only brush multisample found is itself synthesised, so it was rejected. See "Alternate chorus" and "Brushes". |
+The summary I gave the panel after pass 2 was not updated after pass 3, so it described files that no longer shipped. This is what shipped in pass 3 and what ships now:
 
-### Breathing
-
-What changed:
-
-- **Phrases.** `ballad.tenor_notes()` now ends a phrase at any written rest of half a beat or more (`PHRASE_SPLIT = 0.5`, before 0.74). Inside a phrase, notes are slurred. The last note of a phrase stops 0.08 beat before its written end and never runs into the rest.
-- **Release.** In `sax.py`, a phrase's last note releases in at most half the rest that follows it, so even a half-beat rest is a real gap.
-- **Breath intake.** It now comes before every phrase after 0.35 s or more of silence (`INHALE_GAP`, before 1.0 s), and it is shortened to fit the gap.
-- **Breaths written into the score.** No note was added and the harmony is unchanged. The breaths are:
-  - in the head after bars 4, 8, 10, 12 and 14;
-  - in the bridge in bars 18, 20, 22 and 24;
-  - in the last A in bar 30;
-  - the same in the out head;
-  - in the chorus at bars 52 and 62.
-- **Loop seam.** Bar 16 still matches bar 80.
-
-Gap scan: a breath is at least 0.15 s at more than 30 dB under the loud level.
-
-| | Pass 2 | Pass 3 |
-|---|---|---|
-| Longest run in the audio | 64.0 s (7.7-71.7) | **9.2 s** (131.2-140.4, bars 48-51 of the tenor chorus) |
-| Next longest runs | 27.7 s, 25.8 s, 18.8 s | 9.0 s, 8.6 s, 8.2 s |
-| Runs over 10 s | 6 | **0** |
-| Phrases | 12 | 35 |
-| Longest run in the score (note on/off, 0.3 s gaps) | 64 s | 9.0 s |
-
-The alternate chorus is the same or shorter: its longest run is 7.2 s. The duration is unchanged at 269.2 s, because no bars were added.
-
-### Melody on top
-
-Changes in `ballad.choose_voicing()` and `piano_part()`:
-
-- While the tenor plays, the comp's top voice is capped at B-flat 4 (`TOP_CAP = 70`). Before, 14 of the 48 head voicings went above it, up to E-flat 5. Now 0 of 143 do.
-- Under a held tenor note (1.5 beats or more), the comp prefers a three-note shell, plays at 0.80 of its velocity, and skips the soft re-strike on beat 3.
-- Under any tenor note, the comp plays at 0.86 of its velocity.
-- The piano stem is now levelled on its own half-chorus, at the same -22.3 LUFS as pass 2. Before, it was levelled on the whole piece, which turned a softer comp back up.
-- Drop-2 spreads are new candidates. They open the voicing around a low tune, with one voice under it and the rest above. See `piano_voicings.jpg`.
-- A tune note at C4 or above may now take a comp entirely under it.
-
-**Audibility in the head** (sax stem against piano stem, band energy at 200-1500 Hz):
-
-| | Pass 2 | Pass 3 |
-|---|---|---|
-| Sax over piano, whole head | +7.1 dB | **+8.4 dB** |
-| Sax over piano, median over the 21 held notes | +14.5 dB | +13.2 dB |
-| Weakest held note | -0.3 dB | -1.7 dB |
-
-The weakest held notes are the phrase-final low G3s (bars 5, 16, 29, 32). There the tenor fades into breath by design, and G3's fundamental (196 Hz) sits just below the 200 Hz band. The held-note median is a little lower than in pass 2 because the tenor's phrase tails now fade sooner. The piano under held notes is not louder.
-
-**Top voice above the tenor:** 41 of 44 comp chords in the head and 96 of 107 in the whole piece. It was 93 of 93 in the judges' count, measured differently. Most head chords still reach above the tune, because the head sits at D3-C4. A comp entirely under a G3 would sit in the muddy register below E3, which the low interval limits forbid. What changed is that the chords now straddle a low tune (a voice below, the rest above) instead of stacking over it, and none goes above B-flat 4.
-
-### Piano voicings
-
-`choose_voicing()` now filters in stages:
-
-1. Clear of the tune note at the strike and of the next tune note (the look-ahead). In bars 33-64 this applies to both tenor choruses.
-2. Clear of the note at the strike only.
-3. The same two with 4 semitones more range.
-
-Each stage is tried first under the top-voice cap, then without it. `clear_melody()` only thins a voicing when every stage fails.
-
-Result, 143 voicings:
-
-| | Pass 2 | Pass 3 |
-|---|---|---|
-| Two-note voicings | 24 | 1 (bar 46, F13 on one beat, where the two choruses and their next notes leave no rootless voicing clear) |
-| Three-note voicings | 98 | 104 |
-| Four-note voicings | 21 | 38 |
-| Voicings breaking the low interval limits | 0 | 0 |
-
-### Intonation
-
-The +5 cents was not a centring-window problem. `flatten_pitch()` subtracted each sample's own median from its pitch curve. That removed the vibrato but kept each sample's tuning, and the MusyngKite samples sit a median 5 cents sharp (G3 +10). Now the sustained part (0.6 s to the end, the part the splicer reuses) is the reference, and its median offset is removed as well. Measured on the prepared samples (`checks.intonation()`):
-
-| Bank | Median | Mean absolute | Worst |
+| | Earlier summary (stale) | Actually shipped in pass 3 | Ships now (pass 4) |
 |---|---|---|---|
-| MusyngKite, pass 2 | +5.2 cents | 5.3 cents | +10.3 cents |
-| MusyngKite, pass 3 | **+0.3 cents** | 1.3 cents | -5.0 cents |
-| FluidR3, pass 3 | +0.4 cents | 0.6 cents | -1.9 cents |
+| Key | C minor | G minor | G minor |
+| Tenor samples | FluidR3 GM, CC BY 3.0 | **MusyngKite, CC BY-SA 3.0** (share-alike on the sax, room, mix and both alternate-chorus files) | **MTG Solo Saxophones, a recorded tenor, CC BY 4.0** (no share-alike anywhere on the site) |
+| Brushes | modelled | modelled | **recorded** (Swirly Drums, CC0) |
+| Sax centroid | 705 Hz | 761 Hz (736-854 Hz in the panel's re-measure) | **644 Hz** (548-864 Hz across 13 methods, see "Measurements") |
+| Mix peak | -2.74 dBFS | -3.00 dBFS | **-2.18 dBFS** |
+| Alternate chorus | not mentioned | `ballad-sax-b.mp3` and `ballad-room-b.mp3` shipped | same files, re-rendered |
 
-The sample cache is now `*_tenor_v5.npz`.
+The switch to Musyng Kite in pass 3 made those files share-alike, and the panel had to find that out from the repo. That was my mistake. Pass 4 removes the problem rather than asking Mac to accept it.
 
-### Alternate chorus (for the endless loop)
+## What changed in pass 4
 
-`TENOR_CHORUS_B` in `ballad.py` is a second written tenor chorus over the same changes (bars 33-64). It is original and has the same breath plan as the first. The lines are different:
+| Panel asked | Done |
+|---|---|
+| Get Mac to listen and retune from his answer | I can't reach Mac from here. The files he needs are listed above and in `music/listen/`. Nothing was retuned from an answer, because none came. |
+| Replace the stale summary with the pass-3 facts | Done above ("Correction"). The structured summary for this pass describes what ships now. |
+| Mac's decision on CC BY-SA 3.0. If he declines, go to FluidR3 with a lower `AIR` | I went one better than FluidR3: the tenor is now a **recorded** tenor under CC BY 4.0 (attribution-only), so no share-alike ships and no decision is needed. FluidR3 at `AIR` 0.4 would measure about 731 Hz (bars 1-16, `music/listen/ab.json`). |
+| Pull `AIR` back to about 0.5 before Mac listens | `AIR` is now **0.4** (it was 1.0). At 0.5 one centroid method (8192-point frames, every non-silent frame) read 898 Hz; at 0.4 the worst is 864 Hz. |
+| Play the ending on the site, then ship `--cut-stems` | The engineer's new `site/src/audio/songplan.js` (in progress this pass) plays the head, three loop passes and then the written ending, **from the stems**. So `--cut-stems` must **not** ship: it would cut the ending out of the stems the site now plays it from. The stems stay full length and `stemsEnd` stays null. |
+| Keep looking for a recorded brush kit and tenor | **Both found** in the sfzinstruments GitHub organisation, which the MCP GitHub search could list although the plain search API is blocked. Karoryfer Swirly Drums (CC0) is a brushed jazz kit with recorded snare stirs. MTG Solo Saxophones (CC BY 4.0) is a recorded tenor with breath noises. Both are now the defaults. See "Tenor" and "Brushes". |
+| Correct the builder report (key, bank, centroid, peak, share-alike, alternates) | Done (see "Correction" and "Measurements"). |
+| Cut the audio weight (mono 64-80 kbps player stems, room 96 kbps) | Built but **not shipped**, because the brief sets 128-160 kbps for stems and only the market owner can relax that. `render.py --light-stems` writes the smaller set to `music/out/light/`: four mono player stems at 64 kbps (2.15 MB each) and a stereo room at 80 kbps (2.69 MB), **11.3 MB against 21.5 MB**. At 56 and 64 kbps it would be about 9.7 MB. The lite market already loads only `ballad-mix.mp3` (`stems.js`: `useStems = !lite`). |
+| Move the listening MP3s out of `review/round-1/music/` | Moved to **`music/listen/`**, which I own and which is tracked: 9.3 MB at 128 kbps, with shorter excerpts than before. `review/round-1/music/` now holds only images and this file. The old files are still in git history (commit 73eabf9); whether to rewrite history, and whether listening files belong in git at all, is the market owner's call. |
+| Push the ending and alternate-chorus hand-offs to the engineer | The engineer is building both this pass (`songplan.js`: the alternate chorus on every second pass, 0.25 s inside the manifest's edges, then the written ending). The manifest is unchanged in shape, so nothing on my side blocks it. |
+| Re-voice the two-note shell at bar 46 (F13) | Done. **0 of 143 voicings are two-note shells** (was 1). Bar 46's F13 is now E-flat 3, G4, A4 (7th, 9th, 3rd): an open rootless shell. See "Piano". |
+| Keep the length under 4.5 min | Unchanged at 269.22 s (269.27 s decoded), 0.7 s under the cap. Nothing in this pass added length. |
 
-- a sparse first A built on a falling B-flat to A motif;
-- a sequence in the second A;
-- long notes in the bridge;
-- a dark, low last A.
+### Tenor
 
-How it ships:
+The tenor source is now **MTG Solo Saxophones**, tenor. The Music Technology Group at Universitat Pompeu Fabra recorded it and published it on freesound.org, kinwie trimmed and mapped it to SFZ, and the sfzinstruments organisation hosts it under CC BY 4.0. It gives:
 
-- **Files.** `ballad-sax-b.mp3` and `ballad-room-b.mp3` are segments of the sax and room stems from 87.98 s to 181.21 s: 93 s, 1.5 MB each, 3.0 MB together. Nothing else changes, because the comp and the piano fills were chosen against both choruses.
-- **Manifest.** `manifest.alternates` gives start, end, files and how to switch.
-- **Events.** `ballad-events.json` has `saxAlt`.
-- **Matching edges.** The first and last half second of each segment are identical to the main stems in the render: the largest difference is 2e-8. After MP3 coding they differ by -28 dB (sax) and -20 dB (room), which is coding noise. A crossfade anywhere in those windows is therefore seamless. The first 0.1 s must be skipped, because it holds the MP3 decoder's priming.
-- **Mix with chorus B.** Peak -2.61 dBFS. Loudness -17.27 LUFS over the segment, against -17.42 LUFS for the main mix over the same segment.
-- **Tenor centroid in chorus B.** 767 Hz.
+- one soft (p) sustained note per semitone from A-flat 2 to E5, recorded at 48 kHz and resampled to 44.1 kHz;
+- 64 recordings of the player's breathing.
 
-Playing it needs the engineer (see below). Until then it does nothing, and the site is unchanged.
+What `sax.py` does with it:
+
+- **Same chain as before.** Each sample loses its recorded vibrato and is tuned to its nominal pitch: median +0.3 cents, worst 2.3 cents over 28 samples. Long notes are sustained by splicing the sample's own steady tone. The subtone body and the pitch-gated breath layer sit on top, and the whole voice goes through the dark EQ. The rendering code still has the slow attacks (130-220 ms), the breath-noise layer, the late vibrato (4.7-5.3 Hz) and the scoops and falls.
+- **Recorded breath intakes.** The intakes before phrases are now the player's own breaths, low-passed at 3 kHz and set to the level of the modelled intake they replace. The A/B files use the same recorded breaths for all three banks, so only the notes differ.
+- **`AIR` at 0.4 instead of 1.0.** The tenor measures -48.0 dB at 3.2-6.4 kHz relative to its total, against -40.7 dB in pass 3.
+- **A floor gate** (`floor_gate()`). It fades the stem to true silence where it sits 70-80 dB under its loud level: the last of the air tails, inaudible in the mix but bright on their own. The reference level is fixed, so the main and alternate-chorus renders gate identically.
+
+Why MTG, going by measurements only (`music/listen/ab.json`, bars 1-16):
+
+- The rendered legato joins change colour least of the three banks: 3.8 dB median, against 4.8 dB for Musyng Kite and 5.5 dB for FluidR3.
+- The raw notes differ more from their neighbours (4.9 dB, against 2.6 dB for Musyng Kite), because each semitone is a separate recording.
+- Its centroid in bars 1-16 is 656 Hz, between Musyng Kite (632 Hz) and FluidR3 (731 Hz).
+- It is a real player on a real horn, not a General MIDI patch.
 
 ### Brushes
 
-I searched GitHub code for brush-sweep SFZ multisamples. The only hit was `matthewmackes/map2-audio` (`data/drums/factory_kits/jazz_brush`). It is CC0, but its README says the samples were "generated procedurally", so it is not a recording and would be no better than the modelled sweeps. I rejected it. The GitHub repository search API is blocked from this machine, and Freesound needs an API key. The brushes stay modelled.
+The brushes come from **Karoryfer Swirly Drums** (CC0), a jazz kit recorded with brushes. `drums.py` now plays:
+
+- **Sweeps.** One stir circle per bar, taken from a random stretch of the 13-second stir recordings. There are four dynamic levels, four takes and two mics (skin and wires). Each circle is shaped by the brush's speed around it and crossfaded bar to bar, so the stir never repeats and never stops.
+- **Taps on 2 and 3.** Recorded brush hits: 6 of the 12 velocity layers, 4 takes, top and bottom mics. About one in five soft taps is a "dig", where the brush stays on the head.
+- **Hi-hat foot and brushed ride.** Recorded, from the same kit. The ride's bloom, without its attack, makes the swell under the fermata.
+- **Feathered kick.** Still the Virtuosity Drums jazz kick (CC0), low-passed.
+
+Component levels were matched to the model's balance: sweeps and taps level with each other, the hat about 13 dB under them.
+
+**Mono fix.** The old model (and my first recorded version) widened the snare with a 2 ms delayed copy. `stems.js` folds the drum stem to mono, where that copy made comb notches every 550 Hz; `brushes.jpg` shows the horizontal striping in both takes. The snare is now panned instead, with no delayed copy. The modelled take in the A/B still has the comb, as it always did.
+
+### Piano
+
+`choose_voicing()` now has one more fallback before it would thin a chord (`open_shells()`). When no close or drop-2 rootless voicing clears both tenor choruses, it opens the shell: the 3rd and 7th plus one colour tone, each in its own octave, at most an octave and a fifth wide, within the low interval limits. The case is bar 46, beat 3: chorus A sits on F13's third (A3) while chorus B sits on its seventh (E-flat 4). The voicing is now E-flat 3, G4, A4. No other voicing changed. See `piano_voicings.jpg`, bars 33-64, pass 3 against pass 4.
 
 ## Measurements (re-measured from the shipped MP3s)
 
-Run `python3 music/render/measure.py`. The full output is in `music/out/measurements.json`.
+Run `python3 music/render/measure.py`. The full output is in `music/out/measurements.json` and the browser check in `music/out/browser_check.json`.
 
 | Check | Result |
 |---|---|
-| Stems | 5 files, each 11,874,816 samples (269.27 s decoded), 128 kbps, 4.31 MB. All the same length and aligned to the sample. |
-| Tempo | Designed at 66 bpm (3/4). Onset autocorrelation of bass + drums gives **65.99 bpm**. |
-| Key | Designed in G minor. Log-compressed chroma gives **G minor** (r = 0.58). Power chroma gives B-flat major, the relative major, which is dominated by the tenor's long notes. |
-| Duration | **4:29** (269.2 s). The loop is 44.845-219.391 s (bars 17-80, 174.5 s). |
-| Sax spectral centroid (target below 900 Hz) | **761 Hz** mean over active frames. The median is 749 Hz and the long-term spectrum 734 Hz. It was 548 Hz in pass 2; the rise comes from the new air path, and with `AIR = 0` the head measures 575 Hz. |
-| Tenor air (sax at 3.2-6.4 kHz relative to its total) | -40.7 dB (pass 2: -46.5 dB). At 6.4-8 kHz: -51.0 dB (pass 2: -72.4 dB). |
-| Tenor runs without a breath | Longest 9.2 s, none over 10 s (see "Breathing"). |
-| Tenor phrase dynamics | 5th-95th percentile level range inside phrases, as a median over 35 phrases: 13.3 dB. |
-| Piano voicings | 143 voicings: 0 outside the low interval limits, 1 two-note, 0 tops above B-flat 4 while the tenor plays. |
-| Melody audibility (head, 200-1500 Hz) | Sax +8.4 dB over the piano. |
-| Tenor sample tuning | +0.3 cents median. |
-| Mix peak (target below -1 dBFS) | **-3.00 dBFS** sample peak, -2.99 dBTP true peak. |
-| Mix loudness (target about -18 LUFS) | **-18.0 LUFS integrated**. Stems: sax -20.1, piano -24.7, bass -24.2, drums -30.4, room -27.7. |
-| Loop seam | The sample step at the jump is 0.0008, against a 99th-percentile step of 0.022 nearby. The level changes by 3.05 dB across the jump and by 3.01 dB across `loopStart` in normal playback, so it is the same music. The last 0.4 s before the jump matches what precedes `loopStart` to -26.2 dB (MP3 coding noise). Spectral flux at the seam is 1.7 times the median. |
-| Browser (Chrome headless via Playwright, `decodeAudioData`) | All five stems and the mix decode to 11,874,816 samples at 44.1 kHz and 12,924,969 at 48 kHz. The lag against the render is **0 samples on every file**, with correlation 0.96-1.00. The loop jump level matches normal playback within 0.4 dB on every stem. Output: `music/out/browser_check.json`. The two alternate segments were decoded with libmpg123 (4,112,640 samples each), not in Chromium. |
+| Stems | 5 files, each 11,874,816 samples (269.27 s decoded), 128 kbps CBR stereo, 4.31 MB. All the same length and aligned to the sample. |
+| Browser (Chromium 141 headless, `decodeAudioData`) | All five stems and the mix decode to 11,874,816 samples at 44.1 kHz and 12,924,969 at 48 kHz. The lag against the render is **0 samples** on every file. |
+| Tempo | Designed at 66 bpm (3/4). Onset autocorrelation of bass and drums gives **66.0 bpm**. |
+| Key | Designed in G minor. The log chroma of the pitched stems (tenor, piano, bass) gives **G minor** (r = 0.69). The full mix now reads A minor (r = 0.36): the recorded brushes are broadband noise that flattens the chroma. This is a new measure; the old one is kept in the JSON for comparison. |
+| Duration | **4:29** (269.22 s rendered). The loop is 44.845-219.391 s (bars 17-80). |
+| Form | 32-bar AABA in 3/4: head (1-32), tenor chorus (33-64), piano half-chorus (65-80), out head from the bridge (81-96) with a ritardando and a rubato fermata. |
+| **Sax spectral centroid** (target below 900 Hz) | **644 Hz**: the mean over active frames, magnitude-weighted. The median is 577 Hz and the long-term spectrum 572 Hz. Across 13 methods (1024-8192-point frames; active frames at -40 or -60 dB; all non-silent frames; whole file) it ranges **548-864 Hz**. The highest, 864 Hz, is 8192-point frames averaged over every non-silent frame, which counts quiet breath frames as much as notes. Power-weighted centroids are about 285 Hz. The alternate chorus measures 620 Hz by the first method (542-866 Hz range). |
+| Tenor air (3.2-6.4 kHz relative to total) | -48.0 dB (pass 3: -40.7 dB). |
+| Tenor runs without a breath | Longest 9.0 s, none over 10 s, 42 runs in the audio (35 phrases in the score). |
+| Tenor phrase dynamics | 5th-95th percentile level range inside phrases: 19.2 dB median over 35 phrases (pass 3: 13.3 dB). The recorded samples and the fades into breath move more. |
+| Melody audibility (head, 200-1500 Hz) | Sax 8.4 dB over the piano; held notes median 14.4 dB. The weakest held notes are the phrase-final G3s in bars 16 and 32 (-4.0 and -3.5 dB), where the tenor fades into breath by design and G3's fundamental sits under the band. |
+| Piano voicings | 143 voicings: 0 outside the low interval limits, **0 two-note shells**, 0 tops above B-flat 4 while the tenor plays. |
+| **Mix peak** (target below -1 dBFS) | **-2.18 dBFS** sample peak, -2.18 dBTP true peak. |
+| **Mix loudness** (target about -18 LUFS) | **-18.0 LUFS integrated**. Stems: sax -20.0, piano -24.5, bass -24.1, drums -30.5, room -27.7. |
+| Loop seam | The sample step at the jump is 0.006, against a 99th-percentile step of 0.025 nearby. The level changes by 4.58 dB across the jump and by 4.59 dB across `loopStart` in normal playback, so it is the same music. The last 0.4 s before the jump matches what precedes `loopStart` to -27.7 dB (MP3 coding noise). In Chromium the jump matches normal playback within 0.2 dB on every stem. |
+| Alternate chorus | Renders identical to the main stems at both edges (largest difference 1.5e-8). In the MP3s the sax edge at 0.1-0.5 s is silence, -115 dBFS, with a -120 dBFS residual. Mix with chorus B: peak -2.64 dBFS, -17.05 LUFS over the segment (main mix -17.23 LUFS there). Longest run without a breath: 7.2 s. |
 
-## For the engineer (please pick up)
+## Audio weight
 
-1. **Credits (licence obligation).** Put the attribution line from CREDITS.md (music writer section) on the credits page and in the plain-HTML version. The same text is in `manifest.license.recording.credit`. As long as the MusyngKite tenor ships, the files must be offered under CC BY-SA 3.0 with this line.
-2. **Play the ending.** On a "last tune" action, or when the visitor leaves the bandstand, hand over from the looping stems to the streamed `mix` element at the same position and let it run past `loopEnd`. `manifest.ending` has the times. Once that works, tell me and I'll ship `render.py --cut-stems`: the stems end 1 s after `loopEnd`, which takes them from 21.5 MB to about 17.7 MB, and I'll set `manifest.stemsEnd`.
-3. **Alternate chorus (optional).** On every second pass through the loop, play `alternates[0].stems.sax` and `.room` in place of the sax and room stems from `start` to `end`. Crossfade in the first and last half second, skipping the first 0.1 s. The segments are 1.5 MB each and are only needed from the second pass on, so they can load late. If memory matters, fold them to mono and 24 kHz like the stems. The musicians' animation can use `saxAlt` from `ballad-events.json` on those passes.
+| Set | Size | Status |
+|---|---|---|
+| Five stems, 128 kbps stereo | 21.5 MB | shipped (the brief's line) |
+| Mix, 128 kbps | 4.3 MB | shipped; the lite market loads only this |
+| Alternate chorus (sax and room segments) | 3.0 MB | shipped; the site needs them only from the second pass |
+| Four player stems mono at 64 kbps, room stereo at 80 kbps | 11.3 MB | `music/out/light/`, **not shipped**, waiting on the market owner |
 
-## Still open from pass 2: 3/4 or 4/4 (Q3)
+`--cut-stems` is retired for now, because the site plays the ending from the stems.
 
-- **Now:** 3/4, 96 bars, 4:29 at 66 bpm, with a full 32-bar tenor chorus (two of them now). It is a jazz-waltz ballad.
-- **4/4 that fits the 4.5-minute limit:**
-  - head, 32 bars;
-  - tenor half-chorus (bridge and last A), 16 bars;
-  - piano half-chorus (A A), 16 bars;
-  - out head of the last A only, 8 bars.
+## For the engineer
 
-  That is 72 bars, about 4:30 with the ritardando, fermata and tail. It needs the melody and solos rewritten in 4/4.
-- **4/4 with an 80-bar form:** 4:51 at 66 bpm, over the limit. Going slower makes it longer, not shorter.
+1. **Credits.** Your credits section already reads `license.recording.credit` and prints it in the footer. The text changed this pass (MTG tenor, Swirly Drums brushes), and your build picks it up without code changes. The FluidR3 line you add for the fallback band is yours, and none of the recorded files I ship use FluidR3 any more.
+2. **Ending and alternates.** Both work with the manifest as it is. Keep playing the ending from the stems; I won't cut them.
+3. **Drums at 32 kHz mono.** The drum stem is now mono-safe (see "Mono fix").
+
+## Still open: 3/4 or 4/4 (Q3)
+
+- **Now:** 3/4, 96 bars, 4:29 at 66 bpm, with a full 32-bar tenor chorus (two written choruses for the loop). It is a jazz-waltz ballad.
+- **A 4/4 version that fits the 4.5-minute limit:** head (32 bars), tenor half-chorus (16), piano half-chorus (16) and out head of the last A only (8). That is 72 bars, about 4:30 with the ritardando and fermata, and it needs the melody and solos rewritten in 4/4.
+- **A 4/4 version with an 80-bar form:** 4:51 at 66 bpm, over the limit.
 
 I recommend keeping the waltz unless the lilt sounds wrong to you.
 
@@ -197,30 +154,46 @@ I recommend keeping the waltz unless the lilt sounds wrong to you.
 - **`site/public/audio/`:**
   - five stems at 4.31 MB each (21.5 MB);
   - `ballad-mix.mp3`, 4.31 MB;
-  - `ballad-sax-b.mp3` and `ballad-room-b.mp3`, 1.49 MB each (not needed on first load);
+  - `ballad-sax-b.mp3` and `ballad-room-b.mp3`, 1.49 MB each;
   - `ballad-events.json`, 38 KB;
-  - `manifest.json`, 3.2 KB.
-- **`review/round-1/music/listen/`:** four A/B files of 90 s at 160 kbps (1.8 MB each) and `chorus_b_excerpt.mp3` (1.55 MB). They are for Mac, not shipped.
+  - `manifest.json`, 3.4 KB (now with `brushes`).
+- **`music/listen/`** (for Mac; tracked, not shipped): 9.3 MB, 128 kbps.
+  - six tenor A/B files of 46 s, 0.74 MB each;
+  - four brush A/B files of 57 s, 0.90 MB each;
+  - `chorus_b_excerpt.mp3`, 1.55 MB;
+  - `ab.json`.
 - **Review images:**
   - `spectrogram_sax.png` and `spectrogram_mix.png`;
-  - `sax_detail.jpg`: bars 1-8 of the tenor, with the new breaths visible as gaps;
-  - `piano_voicings.jpg`: the comp in pass 2 against pass 3, with the E3 line and the B-flat 4 cap;
+  - `sax_detail.jpg`: bars 1-8 of the MTG tenor;
+  - `brushes.jpg`: bars 33-36 of the drums alone, recorded against modelled;
+  - `piano_voicings.jpg`: bars 33-64, pass 3 against pass 4;
   - `arrangement.jpg`: stem levels across the form.
-- **New code:** `music/render/checks.py` (the pass-3 measures, also run by `measure.py`).
-- **Not tracked:** `music/out/` (git-ignored) holds `ballad_mix_preview.mp3`, `ballad_mix_chorus_b_preview.mp3`, the WAVs and the JSON reports.
-- **Render time:** a full render takes 4.7 min on one core; `--reuse` takes about 4 min.
+- **New or changed code:**
+  - `fetch_samples.sh` fetches the MTG tenor and the Swirly Drums brushes (about 230 MB more, git-ignored);
+  - `sax.py` has the `mtg` bank, recorded breaths, `AIR` at 0.4 and `floor_gate`;
+  - `drums.py` has the recorded brushes, with the model kept as `render_modelled`;
+  - `render.py` has `--brushes` and `--light-stems`, and the MTG licence;
+  - `ballad.py` has `open_shells()`;
+  - `ab_tenor.py` covers three banks, writes to `music/listen/` and renders 16 bars;
+  - `ab_brushes.py` is new;
+  - `measure.py` adds the key on the pitched stems;
+  - `voicing_figure.py` draws the tenor chorus.
+- **Render time:** a full render takes about 7 min on one core.
 - No 3D assets, so there are no triangle counts.
 
 ## Open issues
 
-- **Not listened to.** This covers the breaths, the air path, the retuned samples, the new comp and the alternate chorus. The biggest remaining risk is still that the tenor is a General MIDI soundfont, however much it is reshaped. A real player recording the head would be the real upgrade.
-- **Air against darkness.** The air path raised the tenor centroid from 548 to 761 Hz. That is still under 900, but it moves toward the brightness Mac disliked. If he hears it as hiss or harshness, set `AIR` to 0.5 (or 0).
-- **Licence.** The CC BY-SA 3.0 answer is pending (Q2). The MusyngKite licence comes only from the gleitz repo's README, because synthfont.com is blocked from this machine.
-- **Waiting on the engineer.** The credits line, the ending handover, `--cut-stems` and alternate-chorus playback all need the engineer.
-- **One tight voicing.** Bar 46 is still a two-note shell.
-- **Brushes.** They are still modelled: no recorded, freely licensed brush multisample was reachable.
+- **Not listened to.** This covers the new tenor, the recorded brushes, `AIR` 0.4 and the bar-46 voicing. Mac's ear on Q1 and Q5 is the only real test of "soft, non-harsh subtone". Until he has heard it, the piece is not finished on the one point he complained about.
+- **The tenor is still a sampler.** It is recorded now, but one soft sample per semitone, spliced and reshaped, is not a phrase played by a person. A real player recording the head would still be the big upgrade.
+- **MTG's upstream licence is unconfirmed.** The CC BY 4.0 licence comes from the sfzinstruments repository's LICENSE and README. freesound.org is blocked from this machine, so the original MTG packs' page could not be checked.
+- **The loudest MTG layer is unused.** Only the soft layer plays. Loud passages are the soft samples pushed harder, which suits a whispered ballad but could sound thin at the climax of the tenor chorus.
+- **The brush balance is set by numbers.** The level of the stirs against the taps was matched to the old model, not judged by ear.
+- **Listening files in git.** `music/listen/` adds 9.3 MB to the repo, and the pass-3 files are already in history. The market owner should decide where such files live.
+- **Weight.** The 128-160 kbps line in the brief keeps the stems at 21.5 MB. The 11.3 MB set is ready if the market owner relaxes it.
+- **Waiting on Mac:** Q1-Q5.
 
 ## Contract notes
 
-- I wrote only inside `music/`, `site/public/audio/`, `review/round-1/music/` and my section of `CREDITS.md`. The share-alike file list was updated there. I did not touch `site/src/`.
+- I wrote only inside `music/`, `site/public/audio/`, `review/round-1/music/` and my section of `CREDITS.md`. I did not touch `site/src/`.
+- `review/round-1/music/` now holds only this file and preview images. The listening files moved to `music/listen/`.
 - The spectrograms are PNG, as the brief asked. The other previews are JPEG at 1280 px wide.

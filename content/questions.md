@@ -17,11 +17,11 @@ I keep the questions I come back to up here. I don't have answers to them. When 
 
 ### What is a cause?
 
-<!-- check -->
+Science leans on the word all the time and rarely says what it means. <!-- check -->
 
 ### Is time something the brain makes?
 
-<!-- check -->
+Physics has trouble finding a flow of time. We feel one every second. <!-- check -->
 
 ### Why does improvisation feel inevitable afterwards?
 

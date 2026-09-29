@@ -1,140 +1,184 @@
-# Architect, round 1 (pass 2): square, old town, tree, layout
+# Architect, round 1 (pass 3): square, old town, tree, layout
 
-Pass 2 answers the Opus, Fable and Codex judges. All six glbs were rebuilt on the cloud machine from the current scripts (town first, so the square's ground AO sees the new houses), the clash test was rerun, and every preview was re-rendered here at 1280x720 and 48 samples (Cycles, CPU, 2 threads).
+Pass 3 answers the pass-2 judges. Every glb was rebuilt on the cloud machine from the current scripts, in this order: tree, town, square (its ground AO is baked with the new town in place), then the lite files. `check_clash.py` was rerun against the shipped files (the stalls rebuilt at 16:xx and 17:xx included). All six previews were re-rendered at 1280x720 and 48 samples. The stall, bandstand and ride stand-ins are gone: the previews now place the shipped glbs from `site/public/models`.
 
-## What changed in pass 2
+## What changed in pass 3
 
-| Judge's point | Fix | Where to check |
+| Judges' point | Fix | Where to check |
 |---|---|---|
-| String lights run through the tree (spans 26/28/30, poles 16/17) | Back-row poles moved to [0,-20] and [12.2,-19.6], poles 7/8 behind the bandstand to [±2.6,-9.6]. The spans behind the tree were re-routed ([16,7] replaces [17,8]). `blender/square/check_clash.py` tests every wire, bulb and pole vertex against the fir's measured needle envelope (5.57 m at the base, 3.98 m at 5.5 m) plus 0.3 m, and every pole, lamp, bench and bin against the stall and ride bounding boxes. | `check_clash.py` now prints `[clash] OK`; `tree.jpg` |
-| Tree benches under the boughs | The two benches now stand 6.6 m from the fir's axis with their backs to it; the lowest boughs reach 5.57 m. | clash test |
-| Black and white striped kerb | A sliver of the ground's riser, which had a degenerate UV, poked out in front of every other kerbstone. The riser now sits under the middle of the stones. | `street.jpg` and `cobbles.jpg`: every kerbstone reads as the same grey granite |
-| No AO in town.glb and tree.glb | **Town:** walls, gables, roofs and the church stonework share one baked AO atlas (2048 bake, 1024 after optimisation). Timbers, frames, shutters, signs, ironwork, snow and far roofs carry per-corner baked AO, stored as lightmap UVs that point into a ramp in the same image. 31 of 33 materials have an occlusion texture; the two without are `window_warm` and `bulb_warm`. **Tree:** trunk, fence and fence snow are atlas-baked; needles, snow cards, baubles, stars and the garland use the per-corner ramp. 11 of 12 materials have AO. **Square:** the lamps, poles, benches, bins, bollards and kerbs now have AO too (9 of 12 materials; not bulbs, wires or puddles). | `gltf-transform inspect`: `occlusionTexture` on the materials |
-| Asset names riesenrad.glb and karussell.glb | layout.json now names `ferris.glb` and `carousel.glb`. Every asset in layout.json exists in `site/public/models/` with its `.lite.glb`. | `site/src/layout.json` |
-| Black-blob puddles | The puddles now sit in 16 settled hollows in the plaza's relief and along the gutters. Each one is a fan with a see-through core (alpha 0.6–0.72) and a rim that fades to 0, so it reads as a film of water on wet cobbles. The hollows around them are darker and damper. | `home.jpg`, `cobbles.jpg` |
-| Church tower unreadable, sandstone blocks too large | The belfry openings and clock dials were buried inside the stage walls; they now sit on each stage's face. Sandstone tiles at 2.4 m with real-size ashlar courses. Two floodlight empties `light_church_0/1` stand at the tower foot on the square side; the preview aims warm spots at them, as German churches are lit at night. | `church.jpg`: four stages with string courses, lancet, louvred belfry pairs, clock faces, gablets, pinnacles and spire all legible |
-| Wedge gaps between ring roofs | 17 back ranges fill the wedges that open behind neighbouring ring houses. Each has plastered walls up to just below the lower eave, a zinc roof and snow on it. | `roofs.jpg` (from the top of the Ferris wheel) |
-| 50 `light_` empties, unranked | Now 32 in square.glb and 15 in lite, named by priority: `light_lamp_00`–`_11` (plaza edge), `light_lamp_street_00`–`_06` (corners), then `light_string_NN` on only six key spans. | node list below |
-| The plaza foreground reads as a flat normal map | The meshoptimizer simplifier had collapsed the ground to 187 triangles; my optimize step now passes `--simplify false`. The plaza is a denser mesh (a ring every 1.9 m, 11.4k triangles) displaced by worn relief: gentle settling, 16 hollows 1–3 cm deep, and a trodden low line along the main walk. | `cobbles.jpg`, `home.jpg` foreground |
-| Codex: lite market over budget | The lite town drops the stone window jambs (it keeps lintels and sills), which saves 6k triangles and 0.16 MB. My lite files total 2.82 MB (town 1.41, square 1.03, tree 0.38). See open issues for what more would cost. | table below |
-
-## What was built
-
-All four assets are scripted in Blender (bpy 4.2) and rebuilt from scratch by their scripts. Every texture is generated procedurally in numpy by `blender/lib/architect_tex.py`. All of them tile, and the per-stone, per-tile and per-plank variation is baked into colour, roughness and normal maps. There are no third-party images.
-
-| Script | Output |
-|---|---|
-| `blender/square/square.py` (`LITE=1` for lite) | `site/public/models/square.glb`, `square.lite.glb` |
-| `blender/town/town.py` (`LITE=1`) | `site/public/models/town.glb`, `town.lite.glb` |
-| `blender/square/tree.py` (`LITE=1`) | `site/public/models/tree.glb`, `tree.lite.glb` |
-| `blender/square/preview.py <home\|street\|church\|tree\|cobbles>` | the preview JPEGs in this folder |
-| `site/src/layout.json` | the placement of every stall, landmark, deco stall, the tree, square, town and the home camera |
-
-Shared code lives in `blender/lib/architect_common.py` (geometry with real-world UVs, materials, AO bake, export and optimisation), `architect_plan.py` (the plaza outline, the ring street, the exits and the house line, used by both square and town) and `architect_tex.py`.
-
-**Square (`square.glb`)**
-- **Plaza:** an irregular plaza about 72 m across, with an outline made of low-order sine terms so no side is straight. It is paved in *Segmentbogenpflaster*, the German fan pattern. Every stone has its own shape: the edges are domain-warped at two scales, and each stone gets its own tilt, height, rounded worn top, colour (granite greys, blue basalt, some porphyry) and polish. The joints are dark, wet and sometimes mossy.
-- **Large-scale variation:** a low-frequency grime and wetness pass rides on vertex colour (`COLOR_0`), so the tile never reads as repeating. A 1024 px ambient-occlusion lightmap on `TEXCOORD_1` covers the whole ground mesh (160 m square). It is baked with the town present, so the sidewalks darken at the house fronts. Blender packs it into the same image as the tiled roughness, with each channel on its own UV set, so the shared sampler repeats and the roughness tiles correctly.
-- **Granite bands:** bands of granite slabs split the cobble field into panels: a ring at r ≈ 26 m, eight radial bands and a ring round the tree. They read from the home camera. After optimisation they share the sidewalk material, because the lighter factor I gave them was above 1 and was clamped away. That is harmless.
-- **Street edges:** the plaza has a gentle camber down to a three-row V gutter. Beyond it runs a crowned 7 m ring street of setts in rows, then a second gutter, a kerb of about 270 individual granite kerbstones (each slightly misaligned), and a sidewalk of larger warm setts that runs under the houses. Where the seven side streets leave the ring, the kerb stops and the street paving runs out between the houses. There are also 10 puddles (7 in lite).
-- **Street lamps:** 19 cast-iron lamps, 12 round the plaza edge and 7 at the street corners. Each has a fluted shaft, a ladder bar, a hexagonal lantern with frosted glass (`bulbs_lamp_NN`, material `bulb_warm`) and an empty in the lantern: `light_lamp_00`–`_11` on the plaza edge, `light_lamp_street_00`–`_06` at the corners.
-- **String lights:** 18 timber string-light poles with iron caps and 31 swagged spans. The sag follows the span length, and each span carries warm bulbs on sockets (`bulbs_string_NN`, `bulb_warm`), criss-crossing the lanes as in the prototype. Only six spans carry a `light_string_NN` empty (three in lite): the four crossings in front of the section stalls and bandstand, then two back spans.
-- **Furniture:** 8 cast-iron benches with timber slats (two by the tree, 6.6 m from its axis), 4 bins and 28 bollards across the side-street mouths.
-- **Snow:** `snow_ground` is a snow sheet that follows the camber, the gutters and the kerb tops 3.5 cm above the paving. `snow_props` holds the snow caps on the lamps, poles, benches, bins and bollards.
-
-**Old town (`town.glb`)**
-- **The ring:** 25 townhouses stand on the house line at r ≈ 47–50 m, between the seven side-street exits and the church. Their backs reach r ≈ 57–62, and small random setbacks make the line irregular.
-- **House types:** six types are mixed, and the type always changes from one house to the next. Tint and height change too.
-  - half-timbered, gable to the square, with jetties and visible joist ends
-  - a tall half-timbered gable
-  - half-timbered, eaves to the square, with gabled dormers
-  - plastered with a stepped gable (*Treppengiebel*) and stone copings and finial
-  - plastered, eaves to the square, with quoins, string courses and dormers
-  - plastered with a half-hipped gable (*Krüppelwalm*)
-- **Half-timbering:** the framing is built per floor: sill beam, top plate, posts at every window, rails, St Andrew's crosses, *Feuerbock* or rhombus parapets and *Mann* braces. The timber comes in dark brown, ox-blood or black, over cream, white, ochre, rose, yellow, sage, blue or terracotta plaster.
-- **Windows:** every window has a frame with a reveal, a mullion and transom, a sill, and snow on about half the sills. Plastered houses add sandstone surrounds. Shutters come in green, red, blue or grey.
-- **Shopfronts:** about half the ground floors are shops, with display windows, a door with a step and transom light, and a sign board with gilt lettering in Fraktur or Alegreya SC (Bäckerei, Weinstube, Buchhandlung, Café am Markt, Uhren · Schmuck and so on). There is a wrought-iron pretzel sign at the bakery and a fir garland with bulbs over each shopfront (`bulbs_town_garlands`).
-- **Houses and walls:** some houses carry wall lanterns (`bulbs_town_lanterns`). Side walls left open by a gap get their own windows. Each side street has a detailed corner house on both sides, simpler houses behind and a house closing the view. A skyline of 48 roofs stands beyond at r = 70–88 m.
-- **Windows material:** all panes use one material, **`window_warm`**. Its emissive atlas has 16 cells: nine lit variants (curtains, a candle arch or *Schwibbogen*, a paper Herrnhut star, a table lamp, lace, curtains nearly closed), one stained-glass cell and six dark or barely lit cells. Each house has its own share of lit windows. The engine can scale the whole glow with the one material.
-- **Church:** the Marktkirche has its tower centred on [8, −56]. The tower is 33 m of red sandstone in four stages, with corner buttresses, a stepped portal, a pointed lancet, louvred belfry openings, gilt clock faces on four sides, four gablets and pinnacles, and an octagonal slate spire topped by a gilt ball and cross 60 m up. The 28 m nave has buttresses, seven lancet windows with stone tracery and stained glass, a polygonal apse, a steep slate roof, a copper ridge turret and a side portal.
-- **Snow:** `snow_roofs` holds every roof and dormer slope, plus the chimney caps, stepped-gable copings, sills and the spire's base.
-
-**Tree (`tree.glb`)**
-- **The fir:** a 15 m Nordmann fir made of about 3,600 alpha-tested needle fronds (material `fir_needles`, alphaMode MASK) on branch whorls. The branches droop and lift at the tips, and the fronds sit on both sides of each branch and at the tips, so the silhouette is dense and irregular, not a stack of cones.
-- **Decorations:** 170 glass baubles in red, gold, champagne and matte red, with caps; 70 straw stars; a gold bead garland; 460 warm fairy lights (`bulbs_tree`, `bulb_warm`); and a glowing star (`bulbs_star`).
-- **Base and snow:** a low octagonal picket fence with greenery inside. Snow comes in two layers: `snow_tree` (snow cards on the upper faces of the boughs) and `snow_tree_fence`. There are two `light_tree_*` empties.
-
-**Layout (`site/src/layout.json`)**
-- **Entries:** 4 section stalls, 3 landmarks, 9 deco stalls (each with a `goods` key), plus tree, square and town. Every entry has `id`, `kind`, `asset`, `label` (the German sign), `pos [x, z]` and `rotY`, and section stalls and landmarks also have `section`. The home camera is `camera.home`.
-- **Positions:** the section stalls, bandstand, Ferris wheel and carousel stay where BUILD.md puts them. The deco stalls are nudged off the grid by up to 0.5 m and 0.1 rad so the lanes look hand-placed.
-- **Carousel:** `rotY −0.6`, so its entrance faces the centre.
-- **Tree:** `rotY 0.3`.
-- **Home camera:** the target moved from y 2.2 to 3.4, which gives less empty paving and more town in the home view.
-- **Asset names:** the file names match what the carpenter exports: `stall_gluehwein.glb`, `stall_bier.glb`, `stall_bratwurst.glb`, `stall_buecher.glb`, and `deco_<goods>.glb` including `deco_puffer.glb`. The rides are `bandstand.glb`, `ferris.glb` and `carousel.glb`, the ride builder's files. `site/src/layout.js` reads the file as it is.
+| **1. Tree: the trunk shows through the upper crown from the home camera** (`tree.py`) | **Above 5 m:** the whorls are about 30% closer and carry two more branches each. The side fronds are pitched up and rolled 30–60° from horizontal. Every upper branch and tip carries outward-facing cross cards. Interwhorl shoots rise 30–60° from the leader between the whorls.<br>**From 2 m up:** part of the existing fronds are rolled 25–50° too, so the mid crown fills without extra triangles.<br>**Budget:** the doubled flat cards low down were thinned to pay for this, the baubles went from 8x5 to 7x4 segments, and the fairy bulbs are 3-sided. | `tree.jpg`, `home.jpg`, and `tree_home_crop.jpg` (a 110 mm crop from the home camera at [3, 9, 33]: no trunk shows above about 3 m). Browser: `browser_home.jpg` |
+| **2. Spans 11, 12 and 19 through the bandstand roof** (`architect_plan.py`) | **Spans 11 and 12** run from pole 2 to poles 7 and 8 and pass 1.9 m from the bandstand's axis, where its roof stands 5.1–5.7 m high. Poles 7 and 8 behind the bandstand are now 9.2 m tall (and stouter), so those wires climb over the roof.<br>**Span 19** used to run 35 m from pole 9 to pole 12 across z = −3 and sagged into the roof. It now swags across the front lane from pole 0 to pole 4 (z = 4, 4 m in front of the bandstand).<br>**Poles 16 and 17** (the back row) moved another metre back, because the denser crown now reaches 4.3 m from the fir's axis at 5.5 m height.<br>**`check_clash.py` extended:** it decodes the shipped glbs and builds a BVH over every stall's, ride's and the bandstand's own triangles, placed from layout.json. Each wire and bulb vertex must stay 0.15 m from any of those surfaces, and no wire, bulb, pole, lamp or bench triangle may intersect one. It also reports each span's clearance over the bandstand. | `check_clash.py` prints OK. Clearances are in the clash section below |
+| **3. Church nave, back and skyline roofs read as flat slabs** | **New slate map (`slate_courses`):** German scale slate (Schuppendeckung). Courses are about 17 cm, slates 18–34 cm wide with a curved cut on one lower corner, blue-grey to purple-grey with per-slate tone, gloss, and the odd rust or lichened slate. Soot and damp streaks run down the slope, and the exposed lower edges are lighter. It tiles at 2.4 m with a 1024 px map; the old map had 5 cm slates in near-black on a 1.2 m tile, which averaged to a flat slab. Normal strength is 8.<br>**Clay tiles:** normal strength goes from 5 to 8, and the per-tile colour spread from ±17% to ±30%.<br>**AO contrast:** the town AO lift drops from 0.3 to 0.2 (atlas) and 0.22 (per-vertex).<br>**Nave roof:** three slate-hung dormers on the square side give it scale. | `church.jpg`, `roofs.jpg` |
+| **4. The home-view foreground doesn't read as worn and wet** (`square.py`) | **COLOR_0:** a 7 m damp/dry noise sits over the 27 m grime. The value range is 0.22–1.0 (it was 0.68–0.95). Gutters are darker (×0.72) and hollows darker still (×(1+12·depth)).<br>**Trodden walk and lane:** a walk (camera side to bandstand) and a lane (in front of the four section stalls) are 36% darker and 1.2 cm lower.<br>**Puddles:** three new settled hollows sit where the home camera looks, at three.js [3.2, 12.5], [−5.8, 8.2] and [−0.8, 17], each with a 0.95–1.25 m puddle.<br>**Wet films:** eight nearly clear films (alpha 0.28–0.4, roughness 0.05) lie along the walk and catch the lights as glossy streaks. | `home.jpg` foreground: patchy damp and dry paving, the pole and its bulbs reflected in the film, puddles with soft rims |
+| **5. home.jpg uses stand-ins** | `preview.py` now decodes and places the shipped `stall_*.glb`, `deco_*.glb`, `bandstand.glb`, `ferris.glb` and `carousel.glb` from layout.json (16 assets). Their `light_` empties become point lights like mine. `STANDINS=1` restores the stand-ins. | `home.jpg`, `tree.jpg`, `roofs.jpg` |
+| **6. The lite market's 8 MB target** | My lite files now total **2.21 MB** (they were 2.82).<br>**square.lite:** from 1.03 MB / 14.7k triangles to 0.67 MB / 12.8k. The lamps lose their lantern posts, ladder bar and finial neck, the pole caps lose a ring, and string bulbs are 1.35 m apart (were 1.0 m). All setts (street, gutter, sidewalk, bands) share one 256 px set, the kerb granite is 256 px without a normal map, and the bench and pole timber is 256 px colour only.<br>**town.lite:** from 1.41 MB to 1.20 MB. The timber, painted wood, yellow sandstone and plaster sets drop to 256 px, and the lite town now carries the shop-sign texture (2 triangles a sign).<br>**tree.lite:** from 0.38 MB to 0.33 MB (fence timber is 256 px colour only). | Table below and "For the market owner" |
+| **7 and 9. NOTES said 32 `light_` empties in square.glb** | Corrected: square.glb has **25** (12 `light_lamp_NN` + 7 `light_lamp_street_NN` + 6 `light_string_NN`); square.lite has 15 (12 + 3). | Node checks below and contract item 5 |
+| **8. Stained glass reads as a test pattern** | The chevron cell is gone. The church glass now has two tall regions in the window atlas (the bottom half of columns 1 and 3, each two cells high, 256x512 px), drawn in the lancet's own proportions as a leaded two-light window:<br>• pale amber and green grisaille quarries in an irregular, hand-cut lozenge lattice<br>• a jewel border to each light<br>• three medallions per light (roundels or quatrefoils, pieced by radial and ring leads) in muted ruby, sapphire, emerald and amber<br>• a painted sandstone tracery head with trefoils and a quatrefoil roundel<br>Its emission is about a third of a lit house window's. The lancets cycle through four looks (two variants, each mirrored), so no two neighbours match. The two transoms that made the barcode are gone; the stone mullion stays. | `church.jpg`, `home.jpg` |
+| **10. Identical Schwibbogen cells side by side in shopfronts** | Each shop picks its display panes from six lit cells without repeats, and the second pane is mirrored. Every other window mirrors its cell at random, so neighbours that happen to share a cell still differ. The window atlas is now 1024 px (256 px cells). | `cobbles.jpg`, `street.jpg` |
+| **11. town.glb at 146,973 of 150,000 triangles** | **Lettering:** shop-sign lettering is now one 1024 px texture atlas, `shop_signs`. It has a row per sign: dark green board, gilt letters with a cast shadow, raised in the normal map, metallic in the metal map, painted from the same two OFL fonts. Each sign's lettering is a single quad; gilt dropped from 9.6k to 3.3k triangles.<br>**End caps:** posts, rails, braces, parapet struts, mullions and transoms lost their end caps, which are hidden where they butt into another member.<br>**Result:** **133,979 triangles** (16k free for the Erker, fountain and Litfaßsäule), even with the three nave dormers added. | Table below |
 
 ## Triangles and file sizes (after optimisation, from `gltf-transform inspect`)
 
 | Asset | Triangles | File | Budget |
 |---|---|---|---|
-| square.glb | 38,724 | 2.16 MB (1.26 MB of it textures) | 40k / 3 MB |
-| square.lite.glb | 14,724 | 1.03 MB | ~⅓ (38%) |
-| town.glb (all buildings and church) | 146,973 | 4.49 MB (0.69 MB textures) | 150k / 5 MB |
-| town.lite.glb | 34,087 | 1.41 MB | ~⅓ (23%) |
-| tree.glb | 36,568 | 1.06 MB | no row in BUILD.md; I aim for 40k / 1.5 MB |
-| tree.lite.glb | 7,686 | 0.38 MB | ~⅓ (21%) |
+| square.glb | 39,038 | 2.18 MB | 40k / 3 MB |
+| square.lite.glb | 12,798 | 0.67 MB | ~⅓ (33%) |
+| town.glb (all buildings and church) | 133,979 | 4.41 MB | 150k / 5 MB |
+| town.lite.glb | 32,261 | 1.20 MB | ~⅓ (24%) |
+| tree.glb | 39,944 | 1.05 MB | no row in BUILD.md; I hold it to 40k / 1.5 MB |
+| tree.lite.glb | 9,684 | 0.33 MB | ~⅓ (24%) |
 
-Desktop total for these three is 7.7 MB of the 25 MB first-load target. Lite total is 2.82 MB of the 8 MB lite target.
+Desktop total for these three: 7.64 MB of the 25 MB first-load target. Lite total: 2.21 MB of the 8 MB lite target.
 
-Square triangles by mesh: street_iron 11,590 (19 lamps, bins and bollards), ground 11,378, bulbs 5,424, string_wire 3,174, curbs 2,220, snow_ground 1,818, snow_props 1,636, puddles 420, plaza_bands 368, poles_wood 360, benches_wood 336.
-Town triangles by mesh: pw_frame 33.8k (window frames and mullions), stone_yel 20.7k, ti_brown 17.6k, ti_ox 11.3k, snow_roofs 10.0k, gilt 9.6k (sign lettering and dials), stone_red 8.3k, and the rest below 3.3k each.
+**Square triangles by mesh:**
 
-Node checks on the final files:
-- **square.glb:** 12 `light_lamp_NN` + 7 `light_lamp_street_NN` + 6 `light_string_NN` empties, 50 `bulbs_*` meshes (19 lamps and 31 spans, all `bulb_warm`), `snow_ground` and `snow_props`.
-- **square.lite.glb:** 12 plaza lamps and 3 string empties, 43 `bulbs_*`, the same snow nodes.
-- **town.glb:** `window_warm` (one material for every pane), `bulb_warm`, `bulbs_town_garlands`, `bulbs_town_lanterns`, `snow_roofs`, `snow_skyline`, `light_church_0/1`.
-- **town.lite.glb:** `window_warm`, `bulbs_town_lanterns`, `snow_roofs`, `light_church_0/1`.
+| Mesh | Triangles | Contents |
+|---|---|---|
+| street_iron | 11,590 | 19 lamps, bins, bollards, pole feet |
+| ground | 11,378 | |
+| bulbs | 5,408 | |
+| string_wire | 3,168 | |
+| curbs | 2,220 | |
+| snow_ground | 1,818 | |
+| snow_props | 1,636 | |
+| puddles | 756 | 10 puddles and 8 wet films |
+| plaza_bands | 368 | |
+| poles_wood | 360 | |
+| benches_wood | 336 | |
+
+**Town triangles by mesh:**
+
+| Mesh | Triangles |
+|---|---|
+| pw_frame | 31.4k |
+| ti_brown | 16.8k |
+| stone_yel | 16.6k |
+| stone_red | 12.5k |
+| snow_roofs | 9.9k |
+| ti_black | 7.1k |
+| pw_green | 4.6k |
+| ti_ox | 3.9k |
+| garland | 3.5k |
+| gilt | 3.3k |
+| bulbs_town_garlands | 2.6k |
+| windows | 2.5k |
+
+The house mix differs from pass 2: the new mirror flags draw from the seeded random stream, so the types and tints came out in a different order. The same no-repeat rule still holds.
+
+**Tree triangles by mesh:**
+
+| Mesh | Triangles |
+|---|---|
+| needles | 22.6k |
+| baubles and caps | 8.2k |
+| snow_tree | 2.8k |
+| bulbs_tree | 2.8k |
+
+## Node and material checks on the final files
+
+- **square.glb:** 25 `light_` empties: `light_lamp_00`–`_11` (plaza edge), `light_lamp_street_00`–`_06` (corners) and `light_string_09/10/11/12/20/21`. 50 `bulbs_*` meshes (19 lamps and 31 spans), all `bulb_warm`. Snow nodes `snow_ground` and `snow_props`. 10 of 13 materials have AO; the three without are `bulb_warm`, `wire_black` and `puddle_water`.
+- **square.lite.glb:** 15 `light_` empties (12 plaza lamps and `light_string_09/10/11`), 43 `bulbs_*`, the same snow nodes.
+- **town.glb:** `window_warm` (one material for every pane, church glass included), `bulb_warm`, `bulbs_town_garlands`, `bulbs_town_lanterns`, `snow_roofs`, `snow_skyline`, `light_church_0/1` and the new `shop_signs`. 32 of 34 materials have AO; the two without are `window_warm` and `bulb_warm`.
+- **town.lite.glb:** `window_warm`, `bulbs_town_lanterns`, `snow_roofs`, `light_church_0/1`, `shop_signs`.
 - **tree.glb / tree.lite.glb:** `bulbs_tree`, `bulbs_star`, `snow_tree`, `snow_tree_fence`, `light_tree_0`, `light_tree_1`.
-- **layout.json:** 4 section stalls, 3 landmarks, 9 deco stalls (each with `goods`), plus tree, square and town, all with `pos` and `rotY`; `camera.home` is unchanged.
+- **layout.json:** unchanged this pass: 4 section stalls, 3 landmarks, 9 deco stalls (each with `goods`), plus tree, square and town, all with `pos` and `rotY`, and `camera.home`. All 19 assets exist with their `.lite.glb`.
 
-## Previews (Cycles, CPU, 1280x720, 48 samples, denoised; stalls and rides are plain stand-ins at the real assets' sizes)
+## Clash test (`blender/square/check_clash.py`, run on the shipped files)
 
-- `home.jpg`: the square and town from the home camera.
-- `street.jpg`: a curve of ring houses with a side street opening. The kerb reads as grey granite all the way along.
-- `church.jpg`: the Marktkirche and its tower, with the floodlights on.
-- `tree.jpg`: the tree, from the lane behind the Bierstand.
-- `cobbles.jpg`: a low view of the worn fan cobbles, a granite band, a puddle, the gutter and the kerb.
-- `roofs.jpg`: the ring's roofs and the church from just above the top of the Ferris wheel. The roofs close up behind each other, and no wedge gaps show.
+`[clash] OK`. With the tree placed at [6.5, −15], rotY 0.3, and every stall and ride placed from layout.json:
 
-In the previews each lamp and tree `light_` empty becomes a 45 W warm point light, the church empties become warm spots aimed up the tower, and one broad warm light over the market stands in for the stalls' glow. There is also faint moonlight, and the compositor adds depth fog and bloom. Snow is hidden.
+- **Fir:** no wire, bulb or pole vertex lies within the fir's measured needle envelope (5.56 m at the base, 4.27 m at 5.5 m) plus 0.3 m. The two tree benches stand clear of the lowest boughs.
+- **Footprints:** no pole, lamp, bench, bin or bollard stands inside a stall, ride or bandstand footprint. A plaza lamp that the new random draw put inside the Ferris wheel's footprint now steps round it.
+- **Surfaces:** no string wire or bulb comes within 0.15 m of any stall, deco stall, ride or bandstand triangle, and no wire, bulb, pole, lamp or bench triangle intersects one.
+- **Bandstand clearance** (to its mesh surface):
+
+  | Mesh | Clearance |
+  |---|---|
+  | bulbs_string_12 | 0.93 m |
+  | bulbs_string_11 | 0.94 m |
+  | string_wire (all spans) | 0.98 m |
+  | bulbs_string_09 | 2.61 m |
+  | bulbs_string_10 | 2.62 m |
+
+  All other spans stay more than 3 m from it. Span 19 no longer passes the bandstand.
+
+## Previews (Cycles, CPU, 1280x720, 48 samples, denoised; the stalls and rides are the shipped glbs)
+
+- **`home.jpg`:** the square and town from the home camera, with the real stalls, bandstand, Ferris wheel and carousel.
+- **`tree_home_crop.jpg`:** a long-lens crop of the tree from the home camera position, to check the crown.
+- **`street.jpg`:** a curve of ring houses with a side street opening.
+- **`church.jpg`:** the Marktkirche with the new slate, dormers and leaded glass, floodlights on.
+- **`tree.jpg`:** the tree from the lane behind the Bierstand.
+- **`cobbles.jpg`:** a low view of the worn fan cobbles, a granite band, a puddle, the gutter, the kerb and a shopfront.
+- **`roofs.jpg`:** the ring's roofs and the church from above the top of the Ferris wheel.
+- **`browser_home.jpg`:** the real market in Chromium (software GL) through the site's dev server (`site/src/lighting/shoot-market.mjs`, `quality=full&snow=0`), with these glbs and the lighting designer's lights (10 real-time lights). The engine frames the home view a little wider than my camera. The tree's crown reads as solid fir with no trunk showing, and the church glass glows muted and well below the house windows.
+
+The Cycles previews light the scene like this:
+- Each lamp, tree and stall `light_` empty becomes a 45 W warm point light.
+- The church empties become warm spots aimed up the tower.
+- A broad warm light over the market stands in for the stalls' glow.
+- There is faint moonlight.
+- The compositor adds depth fog and bloom.
+- Snow is hidden.
 
 ## How to rebuild (cloud machine)
 
 ```
-/home/claude/tools/bpy-venv/bin/python blender/town/town.py            # ~11 min (2048 AO bake)
-LITE=1 /home/claude/tools/bpy-venv/bin/python blender/town/town.py     # ~1.5 min
-/home/claude/tools/bpy-venv/bin/python blender/square/square.py        # ~9 min, after the town
+/home/claude/tools/bpy-venv/bin/python blender/square/tree.py          # ~6 min; LITE=1 for the lite tree
+/home/claude/tools/bpy-venv/bin/python blender/town/town.py            # ~12 min (2048 AO bake)
+LITE=1 /home/claude/tools/bpy-venv/bin/python blender/town/town.py     # ~3 min
+/home/claude/tools/bpy-venv/bin/python blender/square/square.py        # ~9 min, after the town (REUSE_AO=1 skips the ground bake)
 LITE=1 /home/claude/tools/bpy-venv/bin/python blender/square/square.py
-/home/claude/tools/bpy-venv/bin/python blender/square/tree.py          # ~4 min; LITE=1 for the lite tree
-/home/claude/tools/bpy-venv/bin/python blender/square/check_clash.py   # exits 1 and lists offenders on a clash
+/home/claude/tools/bpy-venv/bin/python blender/square/check_clash.py   # tests the shipped files; exits 1 and lists offenders on a clash
 /home/claude/tools/bpy-venv/bin/python blender/square/preview.py <home|street|church|tree|cobbles|roofs>
 ```
-All renders and bakes honour `NM_DEVICE` and `NM_THREADS`. bpy segfaults at exit (code 139) after writing everything, which is expected.
+
+All renders and bakes honour `NM_DEVICE` and `NM_THREADS`. bpy segfaults at exit (code 139) after writing everything, which is expected. `preview.py` and `check_clash.py` decode other roles' glbs into `blender/square/out/decoded/` with `blender/lib/decode.mjs` whenever a shipped file is newer.
 
 ## Things that break or stretch the contract
 
-1. **The standard web step in BUILD.md destroys the node contract.** `gltf-transform optimize` with its defaults prunes empties, joins named meshes, palettises materials (renaming `bulb_warm`) and simplifies geometry (it flattened my plaza). My scripts use `--join false --flatten false --prune false --palette false --instance false --simplify false` with meshopt, WebP and the size limit. The carpenter's `blender/lib/optimize.mjs` is the other route. BUILD.md should name one of them. (The judges asked the market owner for this too.)
-2. **No tree budget row in BUILD.md.** The judges suggest 40k / 1.5 MB; the tree is within that.
-3. **Vertex colour on the ground.** `square.glb`'s ground carries `COLOR_0` (large-scale grime and wetness), which three.js multiplies into the base colour. Please do not strip it. The puddles use `COLOR_0` alpha for their fading rims, so their material is alpha-blended.
-4. **Occlusion on `TEXCOORD_1`.** Every AO texture uses the second UV set (the tiled material textures use the first). The town and tree AO images also hold a ramp strip that the small parts' UVs point into, so the image must not be resized unevenly or re-packed.
-5. **Light empties.** There are 32 `light_` empties in square.glb (15 in lite), plus 2 in the tree and 2 at the church. The contract caps lights only for stalls; the names are ranked so the lighting designer can take the first N.
-6. **Snow and stall floors.** Snow sits 3.5 cm above the paving, and the plaza's relief puts the paving up to about 4 cm below y = 0 in the hollows. Neither shows under stall floors.
+1. **The standard web step in BUILD.md destroys the node contract.** `gltf-transform optimize` with its defaults does four things that break it:
+   - it prunes empties
+   - it joins named meshes
+   - it palettises materials (renaming `bulb_warm`)
+   - it simplifies geometry
+
+   My scripts use `--join false --flatten false --prune false --palette false --instance false --simplify false`, with meshopt, WebP and the size limit. BUILD.md should name this flag set or `blender/lib/optimize.mjs`.
+2. **No tree budget row in BUILD.md.** The tree holds to 40k / 1.5 MB (39,944 triangles, 1.05 MB).
+3. **Vertex colour on the ground.** `square.glb`'s ground carries `COLOR_0` (large-scale grime, damp and the trodden walk). three.js multiplies it into the base colour, so please do not strip it. The puddles and wet films use `COLOR_0` alpha for their fading rims, so their material is alpha-blended.
+4. **Occlusion on `TEXCOORD_1`.** Every AO texture uses the second UV set; the tiled material textures use the first. The town and tree AO images also hold a ramp strip that the small parts' UVs point into, so the image must not be resized unevenly or re-packed.
+5. **Light empties.**
+   - **Counts:** square.glb has **25** `light_` empties (12 `light_lamp_NN` + 7 `light_lamp_street_NN` + 6 `light_string_NN`), and square.lite has 15. There are 2 more in the tree and 2 at the church (29 in all from my files).
+   - **Ranking:** the names are ranked so the lighting designer can take the first N (plaza lamps, then the corner lamps, then the string spans).
+6. **Snow and stall floors.** Snow sits 3.5 cm above the paving. The plaza's relief puts the paving up to about 4 cm below y = 0 in the hollows (4.2 cm on the trodden walk). Neither shows under stall floors.
+7. **The window atlas grew to 1024 px.** This is for the stained glass and the sharper panes, and costs about 30 KB. The church glass occupies UV v 0–0.5 in columns 1 and 3, so atlas cells 9, 11, 13 and 15 are no longer window cells.
+
+## For the market owner: lite budget numbers
+
+My lite files are now **2.21 MB** (square.lite 0.67, town.lite 1.20, tree.lite 0.33), which is 28% of the 8 MB lite target.
+
+**What I cut this pass:** 256 px for every small-scale texture:
+- square: setts, granite, timber
+- town: timber, painted wood, yellow sandstone, plaster
+- tree: fence timber
+
+I also dropped normal maps on the kerb, bench, pole and fence timber, and cut the lamp and bulb geometry.
+
+**What else can drop to 256 px in lite, with the measured WebP sizes at 512 px:**
+
+| Texture | Now (512 px) | At 256 px (about) |
+|---|---|---|
+| town `roof_tiles_*` (colour, rough, normal) | 20 + 17 + 38 KB | ~20 KB |
+| town `slate_*` | 14 + 24 + 30 KB | ~18 KB |
+| square `cobble_fan_*` (colour, AO+rough, normal) | 56 + 73 + 76 KB | ~55 KB, but the cobbles fill the lite view, so I would keep them at 512 |
+| tree `fir_frond` (512x256) | 61 KB | ~17 KB; the fronds would soften |
+
+Dropping the roofs to 256 would save about 0.1 MB more. The town's remaining lite weight is geometry (about 0.8 MB, most of it 32-bit tiling UVs). UV quantisation would halve that, but it needs `KHR_texture_transform` support checked in the engine.
 
 ## Open issues and what I would do next
 
-- **Lite budget (Codex):** my lite files total 2.82 MB. More savings would cost detail. The town's real-world UVs stay 32-bit floats because they tile past 0–1, which makes the lite town's geometry about 0.9 MB. Options: gltfpack-style UV quantisation through `KHR_texture_transform` (needs an engine check), baking the lite facades to a texture instead of window-frame geometry, or 256 px normal maps in lite. I'd rather the market owner decide which roles give up what.
-- **Town AO resolution:** the 2048 bake is downsized to 1024 by `--texture-size 1024`. Up close, contact shadow at the jetties is soft. Keeping the AO image at 2048 would cost about 0.4 MB.
-- **Puddles in the browser:** in Cycles they now read as a wet film. They still need a check against the lighting designer's environment map.
-- **Church:** the tower reads now. In the home view the floodlights are hidden behind the tree, so the lighting designer might want a third, low light on the square-side face.
-- **Previews:** the tree camera stands in the lane behind the Bierstand, 10 m from the fir, because the string-light pole at [10.5,-6.5] stood right in front of the trunk from the pass-1 spot. In `roofs.jpg` the Ferris wheel's stand-in gondola fills the lower left; the real wheel will look different.
-- **Detail for close views:** the side-street houses beyond the corner houses are simple. The ring could also get a fountain, an advertising column (*Litfaßsäule*), parked bicycles and bay windows (*Erker*).
-- **Lettering:** shop-sign lettering is triangulated font geometry (part of the 9.6k gilt triangles). It could move into a small shared texture if the town needs budget.
+- **Puddles in the browser:** in Cycles the puddles and wet films read as dark, glossy water that reflects the poles and bulbs. From the home camera's height they mostly mirror the dark sky. In the browser they depend on the lighting designer's environment map.
+- **Church roof at night:** the slate courses read up close (`church.jpg`) and from the Ferris wheel. From the home camera the nave roof is lit only by moonlight and the market glow, so it stays dark. A low light on the square-side roof, or snow (the `snow_roofs` layer), would bring it out.
+- **Detail for close views (round 2):** a fountain, an advertising column (*Litfaßsäule*), bay windows (*Erker*) and bicycles. There is now 16k triangles of room in town.glb.
+- **AO resolution:** the 2048 town AO bake is downsized to 1024 by the optimize step's `--texture-size 1024`. Keeping it at 2048 would cost about 0.4 MB.
+- **Blender importer:** in my Cycles previews the real stalls use Blender's glTF importer. It may not show their `COLOR_0` tints exactly as three.js does, so judge the stalls' own look from the carpenter's previews.

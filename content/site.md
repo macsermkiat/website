@@ -2,7 +2,7 @@
 section: site
 stall: Nachtmarkt
 title: "Mac's Nachtmarkt"
-tagline: "Physician in Bangkok. I build tools for clinical research, and I like jazz, physics, philosophy, the brain, and a good winter market."
+tagline: "Physician in Bangkok. I write software for clinical research."
 description: "Mac is a physician at Chulalongkorn University in Bangkok who builds software for clinical research. His homepage is a German Christmas market at night."
 actions:
   - "Play the ballad"

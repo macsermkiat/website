@@ -35,19 +35,24 @@ export function toLocal(place, world) {
   return place.holder.worldToLocal(world.clone());
 }
 
+// Every act_ node an action asks for is marked live: the static merge (engine/merge.js) leaves it and its
+// subtree alone, because the action may move it. act_ nodes no action uses (the vendor's rows of mugs and
+// bottles) are merged like any other static mesh.
+const live = (o) => { if (o) o.userData.live = true; return o; };
+
 export function acts(place, prefix) {
-  return place ? actList(place.nodes, prefix) : [];
+  return place ? actList(place.nodes, prefix).map(live) : [];
 }
 
 export function act(place, name) {
-  return place?.nodes.acts[name] || null;
+  return live(place?.nodes.acts[name] || null);
 }
 
 /** First node under the place whose name matches (for extra nodes like grill_coals or smoke_origin). */
 export function findNode(place, re, { mesh = false } = {}) {
   let hit = null;
   place?.root.traverse((o) => { if (!hit && re.test(o.name) && (!mesh || o.isMesh)) hit = o; });
-  return hit;
+  return live(hit);
 }
 
 /** The counter top centre in place-local coordinates (slot_counter, or the standard 1.05 m counter). */

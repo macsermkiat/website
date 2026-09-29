@@ -14,12 +14,23 @@ FAIL (exit 1):
   1.15 m front opening; clickable goods have their origin at their base
 - every material except glass, liquids and emissives has a baked occlusion texture (TEXCOORD_1)
 - section stall + its props <= 60k triangles with >= 2k headroom, and <= 3 MB with shared textures
-WARN (listed, exit 0): deco stall + goods over 20k, lite versions above 40 % of the full triangles.
+- deco stall + its goods <= 20k triangles (BUILD.md budget)
+- the full and lite glb of a set carry the same act_ nodes, at the same place, with the same extras
+  (name, kind, title, author, cover_material), and items.json lists no act_ node a glb lacks
+- seat check (blender/props/seat_check.mjs, node): no prop triangle cuts into its stall (counter,
+  firebox, hearth plate, posts, braces, back boards) at its slot, and every set stays inside the y-range
+  of the board it stands on (so nothing hangs past the counter's back edge)
+WARN (listed, exit 0): lite versions above 38 % of the full triangles (target about a third).
+
+    python3 blender/props/check_props.py --notes   also rewrites the budget tables in
+                                                   review/round-1/vendor/NOTES.md from the current glbs
 """
 import json
 import os
 import re
+import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -37,6 +48,9 @@ DECO_KEYS = ["lebkuchen", "mandeln", "kerzen", "spielzeug", "schmuck", "kaese", 
 NO_AO = ("vendor_glass", "flame", "lamp_glow", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade")
 BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served)_\d+$")
 HEADROOM, SECTION_TRIS, SECTION_MB, DECO_TRIS = 2000, 60000, 3.0, 20000
+LITE_RATIO = 0.38
+NOTES = os.path.join(REPO, "review", "round-1", "vendor", "NOTES.md")
+SEAT = os.path.join(HERE, "seat_check.mjs")
 
 fails, warns = [], []
 
@@ -133,6 +147,115 @@ def check_geometry(name, r):
             fail(f"{name}: {node} pivot is not at its base (geometry starts at z {z:+.3f})")
 
 
+def act_nodes(js):
+    """{act_ name: (translation, rotation, extras)} for the engine-visible act_ nodes of a glb."""
+    out = {}
+    for nd in js.get("nodes", []):
+        n = nd.get("name", "")
+        if is_act(n):
+            out[n] = (nd.get("translation", [0, 0, 0]), nd.get("rotation", [0, 0, 0, 1]), nd.get("extras") or {})
+    return out
+
+
+def check_parity(name, js_full, js_lite):
+    """Full and lite must be the same set, node for node: same act_ names, places and extras."""
+    a, b = act_nodes(js_full), act_nodes(js_lite)
+    only_f, only_l = sorted(set(a) - set(b)), sorted(set(b) - set(a))
+    if only_f:
+        fail(f"{name}: lite lacks {len(only_f)} act_ node(s) the full set has: {only_f[:8]}")
+    if only_l:
+        fail(f"{name}: lite has act_ node(s) the full set lacks: {only_l[:8]}")
+    moved, differ = [], []
+    for n in sorted(set(a) & set(b)):
+        (tf, rf, ef), (tl, rl, el) = a[n], b[n]
+        if max(abs(x - y) for x, y in zip(tf, tl)) > 0.001 or max(abs(x - y) for x, y in zip(rf, rl)) > 0.001:
+            moved.append(n)
+        if ef != el:
+            differ.append(n)
+    if moved:
+        fail(f"{name}: {len(moved)} act_ node(s) sit elsewhere in lite: {moved[:8]}")
+    if differ:
+        fail(f"{name}: {len(differ)} act_ node(s) carry other extras in lite (title/author/cover): {differ[:8]}")
+
+
+def seat_check(sets):
+    """Run seat_check.mjs on every set (full and lite) against its stall at its slot."""
+    jobs = []
+    for name, e in sets.items():
+        for variant in ("model", "lite"):
+            jobs.append({"set": f"{name}|{variant}", "prop": os.path.join(MODELS, e[variant]),
+                         "stall": os.path.join(MODELS, e["asset"]), "slot": e["slot"]})
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(jobs, f)
+        path = f.name
+    try:
+        out = subprocess.run(["node", SEAT, path], capture_output=True, text=True, timeout=600)
+    except (OSError, subprocess.TimeoutExpired) as ex:
+        fail(f"seat check could not run ({ex}); it needs node and @gltf-transform (npm -g)")
+        return {}
+    finally:
+        os.unlink(path)
+    if out.returncode:
+        fail(f"seat check failed: {out.stderr.strip()[-400:]}")
+        return {}
+    res = json.loads(out.stdout)
+    print(f"\n{'seat check':32s} {'board y':>15s} {'set y':>15s}  cuts into the stall")
+    for key, r in res.items():
+        name, variant = key.split("|")
+        tag = f"{name} ({'full' if variant == 'model' else 'lite'})"
+        if r.get("error"):
+            fail(f"{tag}: seat check: {r['error']}")
+            continue
+        sup, bb = r.get("support"), r["bbox"]
+        cuts = r.get("collisions", [])
+        print(f"{tag:32s} {('%.3f..%.3f' % (sup['y_min'], sup['y_max'])) if sup else 'none':>15s} "
+              f"{'%.3f..%.3f' % (bb['min'][1], bb['max'][1]):>15s}  "
+              + (", ".join(f"{c['node']} at {c['at']}" for c in cuts[:4]) or "none"))
+        for c in cuts:
+            how = "sunk under a stall top by" if c.get("sunk") else "reaching behind a stall face by"
+            fail(f"{tag}: {c['node']} cuts into the stall at {c['at']} (slot frame, m), {how} {c['depth'] * 100:.1f} cm")
+        if not sup:
+            fail(f"{tag}: no board at the slot height under the set")
+        elif bb["min"][1] < sup["y_min"] - 0.005 or bb["max"][1] > sup["y_max"] + 0.005:
+            fail(f"{tag}: reaches y {bb['min'][1]:.3f}..{bb['max'][1]:.3f}, past the board it stands on "
+                 f"(y {sup['y_min']:.3f}..{sup['y_max']:.3f})")
+    return res
+
+
+def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite):
+    """Replace the generated budget block in NOTES.md (between the check_props markers)."""
+    L = ["<!-- check_props:begin (generated by blender/props/check_props.py --notes; do not edit by hand) -->", "",
+         "Triangles are after optimisation. kB is the glb alone (full / lite), which embeds its own AO map; the "
+         "shared atlases are counted once below. Size is the set's bounding box in metres.", "",
+         "| set | stall | slot | tris | lite tris (ratio) | kB full / lite | size x × y × z m |",
+         "|---|---|---|---|---|---|---|"]
+    for r in rows:
+        L.append(f"| {r[0]} | {r[1]} | {r[2]} | {r[3]} | {r[4]} ({r[5]:.0%}) | {r[6]:.0f} / {r[7]:.0f} | "
+                 f"{r[8][0]:.2f} × {r[8][1]:.2f} × {r[8][2]:.2f} |")
+    L += ["", f"All prop glbs together: {glb_full / 1e6:.2f} MB full and {glb_lite / 1e6:.2f} MB lite. Shared textures "
+          f"(`prop_tex_*`): {tex / 1e6:.2f} MB full and {tex_lite / 1e6:.2f} MB lite, loaded once for all sets.", "",
+          "Section stalls, the carpenter's current stall glb plus my props (60k triangles and 3 MB with the shared "
+          "textures the sets use; check_props fails under 2k headroom):", "",
+          "| stall | stall tris | + props | total / 60k | headroom | MB / 3 |", "|---|---|---|---|---|---|"]
+    for st, a, b, tot, room, mb in section_rows:
+        L.append(f"| {st} | {a} | {b} | {tot} {'OK' if room >= HEADROOM else 'FAIL'} | {room} | {mb:.2f} |")
+    L += ["", "Deco stalls, stall plus goods against 20k (check_props fails over):", "",
+          "| deco stall | stall tris | goods | total / 20k | room |", "|---|---|---|---|---|"]
+    for d, a, b, tot in deco_rows:
+        L.append(f"| {d} | {a} | {b} | {tot} {'OK' if tot <= DECO_TRIS else 'over'} | {DECO_TRIS - tot} |")
+    L += ["", "<!-- check_props:end -->"]
+    block = "\n".join(L)
+    txt = open(NOTES).read() if os.path.exists(NOTES) else ""
+    a, b = txt.find("<!-- check_props:begin"), txt.find("<!-- check_props:end -->")
+    if a < 0 or b < 0:
+        print("NOTES.md has no check_props markers; table not written")
+        return
+    txt = txt[:a] + block + txt[b + len("<!-- check_props:end -->"):]
+    with open(NOTES, "w") as f:
+        f.write(txt)
+    print(f"wrote the budget tables into {NOTES}")
+
+
 def main():
     with open(os.path.join(MODELS, "props.json")) as f:
         pj = json.load(f)
@@ -157,7 +280,8 @@ def main():
               if t.startswith("prop_tex_") and ".lite." not in t)
     tex_lite = sum(os.path.getsize(os.path.join(MODELS, t)) for t in os.listdir(MODELS)
                    if t.startswith("prop_tex_") and ".lite." in t)
-    per_stall, seen = {}, {}
+    per_stall, seen, rows = {}, {}, []
+    glb_full = glb_lite = 0
     print(f"{'set':24s} {'stall':14s} {'slot':13s} {'tris':>6s} {'lite':>5s} {'ratio':>5s} {'kB':>4s} {'lite':>4s}"
           f"  size x y z (m)")
     for name, e in sets.items():
@@ -171,12 +295,19 @@ def main():
         size = r.get("size") or [0, 0, 0]
         print(f"{name:24s} {e['stall']:14s} {e['slot']:13s} {rf['triangles']:6d} {rl['triangles']:5d} {ratio:5.0%} "
               f"{rf['bytes'] / 1e3:4.0f} {rl['bytes'] / 1e3:4.0f}  {size[0]:.2f} {size[1]:.2f} {size[2]:.2f}")
+        rows.append((name, e["stall"], e["slot"], rf["triangles"], rl["triangles"], ratio, rf["bytes"] / 1e3,
+                     rl["bytes"] / 1e3, size))
+        glb_full += rf["bytes"]
+        glb_lite += rl["bytes"]
+        jss = {}
         for variant, p in zip(("full", "lite"), paths):
             js, _ = glb_tools.read_glb(p)
+            jss[variant] = js
             nodes = glb_tools.node_names(js)
             check_nodes(f"{name} ({variant})", js, nodes)
             check_ao(f"{name} ({variant})", js)
-        for n in glb_tools.node_names(glb_tools.read_glb(paths[0])[0]):
+        check_parity(name, jss["full"], jss["lite"])
+        for n in glb_tools.node_names(jss["full"]):
             if is_act(n):
                 if n in seen:
                     fail(f"{n} is in both {seen[n]} and {name}")
@@ -186,10 +317,14 @@ def main():
                 elif items[n].get("kind") == "book" and not (items[n].get("title") and items[n].get("author")):
                     fail(f"items.json: {n} lacks title or author")
         check_geometry(name, r)
-        if ratio > 0.4:
+        if ratio > LITE_RATIO:
             warn(f"{name}: lite has {ratio:.0%} of the full triangles (target about a third)")
         per_stall.setdefault(e["stall"], []).append((rf, rl, uris(paths[0])))
+    stale = sorted(n for n, it in items.items() if it.get("set") in sets and n not in seen)
+    if stale:
+        fail(f"items.json lists {len(stale)} act_ node(s) no glb carries: {stale[:8]}")
     print(f"\nshared textures: {tex / 1e6:.2f} MB (lite {tex_lite / 1e6:.2f} MB), loaded once for all sets")
+    section_rows, deco_rows = [], []
     print(f"\n{'section stall':14s} {'stall':>6s} {'props':>6s} {'total':>6s} {'room':>6s} {'MB':>5s}")
     for stall, base in SECTION.items():
         sr = glb_tools.report(os.path.join(MODELS, base + ".glb"))
@@ -201,6 +336,7 @@ def main():
         tot = sr["triangles"] + pt
         mb = (sr["bytes"] + pb + tb) / 1e6
         print(f"{stall:14s} {sr['triangles']:6d} {pt:6d} {tot:6d} {SECTION_TRIS - tot:6d} {mb:5.2f}")
+        section_rows.append((stall, sr["triangles"], pt, tot, SECTION_TRIS - tot, mb))
         if tot > SECTION_TRIS - HEADROOM:
             fail(f"{stall}: {tot} triangles leaves {SECTION_TRIS - tot} headroom (< {HEADROOM})")
         if mb > SECTION_MB:
@@ -212,9 +348,13 @@ def main():
         pt = sum(r[0]["triangles"] for r in per_stall.get(sid, []))
         tot = sr["triangles"] + pt
         print(f"{d:14s} {sr['triangles']:6d} {pt:6d} {tot:6d}")
+        deco_rows.append((d, sr["triangles"], pt, tot))
         if tot > DECO_TRIS:
-            warn(f"deco {d}: stall {sr['triangles']} + goods {pt} = {tot} > {DECO_TRIS} "
+            fail(f"deco {d}: stall {sr['triangles']} + goods {pt} = {tot} > {DECO_TRIS} "
                  f"({'the stall alone leaves ' + str(max(0, DECO_TRIS - sr['triangles'])) + ' for goods'})")
+    seat_check(sets)
+    if "--notes" in sys.argv:
+        write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite)
     if fails:
         print(f"\nFAILED: {len(fails)} check(s) failed, {len(warns)} warning(s)")
         return 1

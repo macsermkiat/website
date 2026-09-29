@@ -7,6 +7,7 @@ import { buildPerson } from './standins/people.js';
 import { rng } from './standins/kit.js';
 import { readVec, readRot, modelExists, liteVariant } from './layout.js';
 import { loadGlb } from './engine/loader.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 const crowdFiles = import.meta.glob('./crowd.json', { eager: true, import: 'default' });
 const RAW = crowdFiles['./crowd.json'] ?? null;
@@ -20,9 +21,147 @@ const LITE_ALIAS = {
   'people_woman_young.glb': 'people_woman_coat.glb',
   'people_child_girl.glb': 'people_child_boy.glb',
 };
-// Full market: people farther than LOD_FAR metres from the camera switch to their .lite.glb figure
-// (about 1.5k triangles instead of 4.6k), and back nearer than LOD_NEAR.
+// Full market: people farther than lod.far metres from the camera switch to their .lite.glb figure
+// (about 1.5k triangles and one draw call instead of 4.6k and four), and back nearer than lod.near.
+// The defaults depend on the GPU class (quality.js), ?lod=far overrides them, and the frame-time governor in
+// main.js pulls them in on a machine that cannot keep up.
 export const LOD_FAR = 18, LOD_NEAR = 16;
+
+// ---------- one draw call per figure ----------
+// The organizer's figures have four body parts (coat, body, hat, scarf), each its own material, so four draw
+// calls (and four more in the moon's shadow pass) per person. The lite figures carry no textures besides one
+// shared occlusion map, so their parts can be one mesh: each part's colour goes into the vertex colours
+// (times the figure's own COLOR_0), and one material draws the whole crowd. Recolouring a person rewrites the
+// colour attribute of their own copy of the geometry; everything else is shared.
+const PARTS = new Set(['coat', 'body', 'hat', 'scarf']);
+const compacted = new WeakMap();
+let sharedFigureMat = null;
+
+/**
+ * A lift for the crowd: a little light proportional to each figure's own colour, so the dark coats read as
+ * cloth at night (a figure between the stalls catches their glow) instead of black cut-outs. The lighting
+ * module's moon rim does the edges; this does the faces of the cloth. `crowdLift.value` is shared.
+ */
+export const crowdLift = { value: 0.4 };
+function liftMaterial(m) {
+  if (!m || m.userData.crowdLift) return m;
+  m.userData.crowdLift = true;
+  const prev = m.onBeforeCompile;
+  m.onBeforeCompile = (shader, r) => {
+    prev?.call(m, shader, r);
+    shader.uniforms.crowdLift = crowdLift;
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float crowdLift;')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += ( diffuseColor.rgb * 0.8 + vec3( 0.006, 0.0065, 0.009 ) ) * crowdLift * vec3( 0.55, 0.5, 0.62 );');
+  };
+  const key = m.customProgramCacheKey?.bind(m);
+  m.customProgramCacheKey = () => `${key ? key() : ''}|crowdLift`;
+  m.needsUpdate = true;
+  return m;
+}
+
+function figureMaterial(ao) {
+  if (sharedFigureMat) return sharedFigureMat;
+  sharedFigureMat = liftMaterial(new THREE.MeshStandardMaterial({ name: 'crowd_figure', vertexColors: true, roughness: 0.86, metalness: 0, side: THREE.DoubleSide, aoMap: ao || null }));
+  return sharedFigureMat;
+}
+
+/** Merge a figure's part meshes into one skinned mesh, once per loaded figure. Returns the figure. */
+function compactFigure(src) {
+  if (compacted.has(src)) return src;
+  compacted.set(src, true);
+  const byParent = new Map();
+  src.traverse((o) => {
+    if (!o.isSkinnedMesh || Array.isArray(o.material)) return;
+    const m = o.material;
+    if (!PARTS.has(m.name) || m.map || m.normalMap) return; // full figures keep their cloth normal maps
+    if (!byParent.has(o.parent)) byParent.set(o.parent, []);
+    byParent.get(o.parent).push(o);
+  });
+  for (const [parent, list] of byParent) {
+    if (list.length < 2 || list.some((o) => o.skeleton !== list[0].skeleton)) continue;
+    const names = ['position', 'normal', 'uv', 'skinIndex', 'skinWeight'];
+    if (!list.every((o) => names.every((n) => o.geometry.getAttribute(n)))) continue;
+    const parts = [];
+    let start = 0;
+    const geos = list.map((o) => {
+      const g = floatCopy(o.geometry, names);
+      const n = g.getAttribute('position').count;
+      const own = o.geometry.getAttribute('color');
+      const base = new Float32Array(n * 3).fill(1);
+      if (own) for (let i = 0; i < n; i++) { base[i * 3] = own.getX(i); base[i * 3 + 1] = own.getY(i); base[i * 3 + 2] = own.getZ(i); }
+      parts.push({ name: o.material.name, start, count: n, base, color: o.material.color.clone() });
+      start += n;
+      g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+      return g;
+    });
+    const merged = mergeGeometries(geos, false);
+    if (!merged) continue;
+    merged.userData.parts = parts;
+    paint(merged.getAttribute('color'), parts, null);
+    const first = list[0];
+    const ao = list.map((o) => o.material.aoMap).find(Boolean);
+    const mesh = new THREE.SkinnedMesh(merged, figureMaterial(ao));
+    mesh.name = 'figure';
+    mesh.position.copy(first.position); mesh.quaternion.copy(first.quaternion); mesh.scale.copy(first.scale);
+    mesh.bind(first.skeleton, first.bindMatrix);
+    mesh.bindMode = first.bindMode;
+    mesh.frustumCulled = first.frustumCulled;
+    parent.add(mesh);
+    list.forEach((o) => o.removeFromParent());
+  }
+  return src;
+}
+
+function floatCopy(src, names) {
+  const g = new THREE.BufferGeometry();
+  for (const name of names) {
+    const a = src.getAttribute(name);
+    const Arr = name === 'skinIndex' ? Uint16Array : Float32Array;
+    const out = new Arr(a.count * a.itemSize);
+    const get = [(i) => a.getX(i), (i) => a.getY(i), (i) => a.getZ(i), (i) => a.getW(i)];
+    for (let i = 0; i < a.count; i++) for (let k = 0; k < a.itemSize; k++) out[i * a.itemSize + k] = get[k](i);
+    g.setAttribute(name, new THREE.BufferAttribute(out, a.itemSize));
+  }
+  g.setIndex(src.index ? Array.from(src.index.array) : [...Array(src.getAttribute('position').count).keys()]);
+  return g;
+}
+
+/** Fill a merged figure's colour attribute: each part's COLOR_0 times its colour (or the person's own). */
+function paint(attr, parts, colors) {
+  const c = new THREE.Color();
+  for (const p of parts) {
+    const want = colors?.[p.name];
+    if (want) c.set(want); else c.copy(p.color);
+    for (let i = 0; i < p.count; i++) {
+      const j = (p.start + i) * 3;
+      attr.array[j] = p.base[i * 3] * c.r; attr.array[j + 1] = p.base[i * 3 + 1] * c.g; attr.array[j + 2] = p.base[i * 3 + 2] * c.b;
+    }
+  }
+  attr.needsUpdate = true;
+}
+
+/** Per person: the merged figure's geometry with their own colours (shared by people dressed alike). */
+const painted = new Map();
+function paintFigure(fig, colors) {
+  fig.traverse((o) => {
+    const parts = o.isSkinnedMesh && o.geometry.userData.parts;
+    if (!parts || !colors) return;
+    const key = `${o.geometry.uuid}|${JSON.stringify(colors)}`;
+    if (!painted.has(key)) {
+      const g = new THREE.BufferGeometry();
+      for (const [n, a] of Object.entries(o.geometry.attributes)) if (n !== 'color') g.setAttribute(n, a);
+      g.setIndex(o.geometry.index);
+      g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(o.geometry.getAttribute('color').array.length), 3));
+      g.boundingSphere = o.geometry.boundingSphere;
+      g.boundingBox = o.geometry.boundingBox;
+      g.userData.parts = parts;
+      paint(g.getAttribute('color'), parts, colors);
+      painted.set(key, g);
+    }
+    o.geometry = painted.get(key);
+  });
+}
 
 function rel(url) {
   return String(url).replace(/^(\.\/|\/)+/, '').replace(/^(site\/)?(public\/)?/, '').replace(/^models\//, '');
@@ -122,7 +261,7 @@ function recolor(root, colors) {
       const want = m && colors[m.name];
       if (!want) return m;
       const key = `${m.uuid}|${want}`;
-      if (!recolorCache.has(key)) { const c = m.clone(); c.color = new THREE.Color(want); recolorCache.set(key, c); }
+      if (!recolorCache.has(key)) { const c = liftMaterial(m.clone()); c.color = new THREE.Color(want); recolorCache.set(key, c); }
       return recolorCache.get(key);
     };
     o.material = Array.isArray(o.material) ? o.material.map(swap) : swap(o.material);
@@ -170,7 +309,8 @@ function stepVendors(people) {
   }
 }
 
-export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, phrases }) {
+export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, phrases, lodFar = LOD_FAR }) {
+  const lod = { far: lodFar, near: Math.max(0, lodFar - 2) };
   const isOrganizer = RAW && RAW.version && ['vendors', 'queues', 'walkers', 'groups'].some((k) => Array.isArray(RAW[k]));
   const data = RAW ? (isOrganizer ? parseOrganizer(RAW) : parseCrowd(RAW)) : null;
   const plan = data && data.people.length ? data : fallbackCrowd(avoid);
@@ -196,8 +336,12 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
   /** One figure of a person (the full or the lite model): a recoloured skinned clone with its own mixer. */
   const noMug = (p) => (p.clip && /_free$/.test(p.clip)) || (plan.organizer && p.mug === false);
   function makeLevel(src, p, phase) {
-    const fig = cloneSkinned(src);
+    const fig = cloneSkinned(compactFigure(src));
+    paintFigure(fig, p.colors);
     recolor(fig, p.colors);
+    // the full figure's own materials get the same lift as the merged ones, so a person does not change
+    // brightness when they switch level
+    fig.traverse((o) => { if (o.isMesh && !Array.isArray(o.material) && PARTS.has(o.material.name)) liftMaterial(o.material); });
     // a figure without a mug still carries the (scaled-away) mug mesh: skip drawing it
     if (noMug(p)) fig.traverse((o) => { if (o.isMesh && /^mug/i.test(o.name)) o.visible = false; });
     fig.traverse((o) => { if (o.isMesh) { o.castShadow = !lite; o.receiveShadow = false; } });
@@ -292,7 +436,7 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
   function applyLod(p, camPos) {
     if (p.levels.length < 2) return;
     const d2 = p.g.position.distanceToSquared(camPos);
-    const want = p.lvl === p.levels[0] ? (d2 > LOD_FAR * LOD_FAR ? 1 : 0) : (d2 < LOD_NEAR * LOD_NEAR ? 0 : 1);
+    const want = p.lvl === p.levels[0] ? (d2 > lod.far * lod.far ? 1 : 0) : (d2 < lod.near * lod.near ? 0 : 1);
     const next = p.levels[want];
     if (next === p.lvl) return;
     // carry the clip time over, so the switch does not restart a step or a sip
@@ -379,12 +523,15 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
     group: root,
     count: crowd.length,
     enableLod,
+    /** Distance LOD: beyond `far` metres a person draws their lite figure (0: everyone does). */
+    setLod(far) { lod.far = Math.max(0, far); lod.near = Math.max(0, far - 2); },
+    get lod() { return { ...lod }; },
     get lodLevels() { return crowd.filter((p) => p.levels.length > 1).length; },
     /** Numbers for tests and the debug report. */
     stats() {
       let hidden = 0, far = 0;
       for (const p of crowd) { if (!p.g.visible) hidden++; if (p.levels.length > 1 && p.lvl === p.levels[1]) far++; }
-      return { people: crowd.length, hidden, lite: far, vendorsVisible: vendors.filter((v) => v.g.visible).length };
+      return { people: crowd.length, hidden, lite: far, lodFar: lod.far, vendorsVisible: vendors.filter((v) => v.g.visible).length };
     },
     /** For tests: the people stepped out of the current shot. */
     hiddenIds: () => crowd.filter((p) => !p.g.visible).map((p) => p.g.name),

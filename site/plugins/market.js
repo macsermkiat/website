@@ -262,10 +262,11 @@ export function buildInventory() {
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 // Licence names in a credit line become links to the licence deeds (CC BY and CC BY-SA ask for a link).
+// Any Creative Commons licence named in a credit links to its deed (the music writer changes samples between
+// rounds: MusyngKite CC BY-SA 3.0 gave way to the MTG saxophones under CC BY 4.0).
 const LICENCES = [
-  [/CC BY-SA 3\.0/g, 'https://creativecommons.org/licenses/by-sa/3.0/'],
-  [/CC BY 3\.0/g, 'https://creativecommons.org/licenses/by/3.0/'],
-  [/CC0(?: 1\.0)?/g, 'https://creativecommons.org/publicdomain/zero/1.0/'],
+  [/CC BY(-SA|-NC|-ND|-NC-SA|-NC-ND)? (\d\.\d)/g, (m, kind, v) => `https://creativecommons.org/licenses/by${(kind || '').toLowerCase()}/${v}/`],
+  [/CC0(?: 1\.0)?/g, () => 'https://creativecommons.org/publicdomain/zero/1.0/'],
 ];
 // The repository's CREDITS.md. In CI, GITHUB_REPOSITORY names the repository, so a rename (which the Pages
 // base path now follows) keeps the link working; blob/HEAD follows the default branch. Local builds use Mac's repo.
@@ -278,7 +279,7 @@ const CREDITS_URL = creditsUrl();
 function linkLicences(text) {
   let out = esc(text);
   const marks = [];
-  for (const [re, url] of LICENCES) out = out.replace(re, (m) => { marks.push(`<a href="${url}" rel="license">${m}</a>`); return `\u0000${marks.length - 1}\u0000`; });
+  for (const [re, url] of LICENCES) out = out.replace(re, (m, ...g) => { marks.push(`<a href="${url(m, ...g)}" rel="license">${m}</a>`); return `\u0000${marks.length - 1}\u0000`; });
   return out.replace(/\u0000(\d+)\u0000/g, (_, i) => marks[+i]);
 }
 

@@ -1,13 +1,14 @@
 """
-A/B the tenor sample bank on the head (bars 1-32): FluidR3 against MusyngKite.
+A/B the tenor sample bank on the first half of the head (bars 1-16): MTG (recorded, the default since pass 4)
+against MusyngKite and FluidR3 (General MIDI soundfonts).
 
-    python3 music/render/ab_tenor.py      # after render.py; writes music/out/ab/*.mp3 and ab.json
+    python3 music/render/ab_tenor.py      # after render.py; writes music/listen/*.mp3 and ab.json
 
 Both banks go through the same tenor chain (sax.py) with the same notes, and each is mixed with
 the shipped piano, bass and drums and a fresh room at the shipped tenor level, so the only
 difference is the source sample. Files for listening:
-    music/out/ab/head_fluidr3.mp3, head_musyngkite.mp3                  band
-    music/out/ab/head_fluidr3_tenor.mp3, head_musyngkite_tenor.mp3      tenor alone (dry + room)
+    music/listen/head_<bank>.mp3          band
+    music/listen/head_<bank>_tenor.mp3    tenor alone (dry + room)
 Proxies for "less synthetic" (no ear involved, so they only inform the choice):
   source (the raw samples C3-F#4, before any processing)
     timbre_motion_in_sustain_db   how much the harmonic envelope moves inside a held note; a
@@ -30,14 +31,17 @@ import pyloudnorm as pyln
 import soundfile as sf
 
 sys.path.insert(0, os.path.dirname(__file__))
-from lib import SR, OUT, to_stereo  # noqa: E402
+from lib import SR, OUT, MUSIC, to_stereo  # noqa: E402
 import ballad  # noqa: E402
 import measure  # noqa: E402
 import room  # noqa: E402
 import sax  # noqa: E402
 from render import encode, SEND, PAN  # noqa: E402
 
-AB = OUT / "ab"
+AB = MUSIC / "listen"   # tracked, so the files reach Mac (review/ is for preview images only)
+EXCERPT_END_BAR = 17
+KBPS_LISTEN = 128
+BANKS_AB = ("mtg", "musyngkite", "fluidr3")   # the first sets the shared room gain
 
 
 GRID = np.geomspace(150, 3000, 40)
@@ -59,12 +63,16 @@ def harmonic_envelope(x, midi, t0, t1, n=8192, hop=2205):
 def source_metrics(bank):
     """The raw samples of the head's range (C3-F#4), before any processing."""
     import base64, io, re
-    text = (sax.SAMPLES / "gleitz" / sax.BANKS[bank] / "tenor_sax-ogg.js").read_text()
-    items = dict(re.findall(r'"([A-G]b?\d)":\s*"data:audio/ogg;base64,([^"]+)"', text))
+    if bank != "mtg":
+        text = (sax.SAMPLES / "gleitz" / sax.BANKS[bank] / "tenor_sax-ogg.js").read_text()
+        items = dict(re.findall(r'"([A-G]b?\d)":\s*"data:audio/ogg;base64,([^"]+)"', text))
     env, motion, level, vib = {}, [], [], []
     for m in range(48, 67):
-        d, _ = sf.read(io.BytesIO(base64.b64decode(items[sax._name(m)])), dtype="float32")
-        d = d.mean(axis=1) if d.ndim > 1 else d
+        if bank == "mtg":
+            d = sax._load_mtg(f"ten_p_{m - 43:02d}")
+        else:
+            d, _ = sf.read(io.BytesIO(base64.b64decode(items[sax._name(m)])), dtype="float32")
+            d = d.mean(axis=1) if d.ndim > 1 else d
         E = harmonic_envelope(d, m, 0.4, 2.9)
         env[m] = E.mean(axis=0)
         motion.append(np.sqrt(((E - E.mean(axis=0)) ** 2).mean()))
@@ -87,7 +95,7 @@ def rendered_metrics(x, notes):
     """Timbre change between consecutive legato notes of the rendered tenor (harmonic envelopes)."""
     jumps, prev = [], None
     for n in notes:
-        if n.dur < 0.4:
+        if n.dur < 0.4 or n.t + n.dur > len(x) / SR:
             prev = None
             continue
         E = harmonic_envelope(x, n.midi, n.t + 0.1, n.t + n.dur)
@@ -104,9 +112,11 @@ def rendered_metrics(x, notes):
 def main():
     AB.mkdir(parents=True, exist_ok=True)
     ev = ballad.events()
-    t_end = ballad.beat_time(ballad.bar_beat(33)) + 1.5
+    # the first two A sections (bars 1-16, 0:00-0:46): long enough to judge the tone, and small
+    # enough to keep in git (128 kbps, about 0.7 MB a file)
+    t_end = ballad.beat_time(ballad.bar_beat(EXCERPT_END_BAR)) + 1.5
     n = int(t_end * SR)
-    phr = [p for p in ev["phrases"] if p[0].beat < ballad.bar_beat(33)]
+    phr = [p for p in ev["phrases"] if p[0].beat < ballad.bar_beat(EXCERPT_END_BAR)]
     notes = [x for p in phr for x in p]
     band = {k: sf.read(str(OUT / f"stem_{k}.wav"), dtype="float32")[0][:n] for k in ("sax", "piano", "bass", "drums", "room")}
     meter = pyln.Meter(SR)
@@ -116,7 +126,7 @@ def main():
     fade = np.ones((n, 1), np.float32)
     fade[-int(1.2 * SR):, 0] = np.linspace(1, 0, int(1.2 * SR))
     report, room_gain = {}, None
-    for bank in ("fluidr3", "musyngkite"):
+    for bank in BANKS_AB:
         dry = sax.render(notes, phr, n, bank=bank)
         st = to_stereo(dry, PAN["sax"])
         st *= 10 ** ((ref_sax - meter.integrated_loudness(st.astype(np.float64))) / 20)
@@ -129,8 +139,8 @@ def main():
         mix = (st + band["piano"] + band["bass"] + band["drums"] + wet) * fade
         solo = (st + tenor_wet) * fade
         g = 10 ** ((-18.0 - meter.integrated_loudness(mix.astype(np.float64))) / 20)
-        (AB / f"head_{bank}.mp3").write_bytes(encode(mix * g, 160))
-        (AB / f"head_{bank}_tenor.mp3").write_bytes(encode(solo * g, 160))
+        (AB / f"head_{bank}.mp3").write_bytes(encode(mix * g, KBPS_LISTEN))
+        (AB / f"head_{bank}_tenor.mp3").write_bytes(encode(solo * g, KBPS_LISTEN))
         cen = measure.centroid_report(st)
         report[bank] = {
             "centroid_hz": round(cen["active_frames_mean_hz"], 1),

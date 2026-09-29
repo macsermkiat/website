@@ -24,31 +24,72 @@ export function gpuInfo() {
   }
 }
 
-const WEAK_GPU = /swiftshader|llvmpipe|softpipe|software|basic render|microsoft basic|mali-[4t][0-9]{2}\b|mali-g5[0-2]|adreno \(tm\) [3-5][0-9]{2}|powervr|sgx|intel\(r\) (hd|uhd) graphics( [0-9]{3,4})?$|intel hd graphics [0-9]{3,4}|gma/i;
+// GPU classes from the WebGL renderer string (ANGLE on Windows and Chrome for Mac, Mesa on Linux, masked on Safari).
+// Only software renderers and clearly old or low-end parts go to the lite market by name. Mid-range integrated
+// graphics (UHD 620/630/7xx, Iris, Iris Xe, Radeon Vega, Apple) get the full market with the crowd's distance LOD
+// pulled in; the frame-time governor in main.js takes it from there on the visitor's own machine (and offers the
+// lite market if even that is too slow). The pass-1 rule sent every "Intel(R) UHD Graphics" to lite, which is
+// most laptops of the last six years.
+const SOFTWARE = /swiftshader|llvmpipe|softpipe|lavapipe|software|basic render|microsoft basic/i;
+const WEAK = [
+  /mali-(4\d{2}|t\d{3,4})\b|mali-g(3|5[0-2])\d?\b/i, // old and low-end Mali
+  /adreno \(tm\) [3-5]\d{2}\b|adreno [3-5]\d{2}\b/i, // Adreno 300-500 series
+  /powervr|sgx|videocore|vivante/i,
+  /\bgma\b|gen[4-7]|ironlake|sandybridge|ivybridge|haswell/i,
+  // Intel HD Graphics by number: 2000-6000 (2011-2015) and 4xx/5xx (Atom, Celeron, Skylake GT1/GT2)
+  /intel.*\bhd graphics(\s+(\d{3,4}|p\d{3,4}))?\b(?!.*iris)/i,
+  // UHD 600/605/610 (Celeron, Pentium Silver, Gemini Lake) and Mesa's names for them
+  /\buhd graphics 6(00|05|10)\b|\((glk|apl|bxt|jsl|ehl)\b/i,
+];
+const INTEGRATED = /intel|iris|\buhd\b|radeon(\(tm\))? (graphics|vega|r[4-7]\b)|vega \d+|apple gpu|apple m\d|adreno|mali|immortalis/i;
+const DISCRETE = /nvidia|geforce|quadro|rtx|gtx|radeon (rx|pro)|\brx \d{3,4}|apple m\d (pro|max|ultra)|\barc\b/i;
 
-export function detectLite(info = gpuInfo()) {
+/** 'software' | 'weak' | 'integrated' | 'discrete' | 'unknown' for a WebGL renderer string. */
+export function gpuTier(renderer = '') {
+  const r = String(renderer);
+  if (!r) return 'unknown';
+  if (SOFTWARE.test(r)) return 'software';
+  if (DISCRETE.test(r)) return 'discrete';
+  if (WEAK.some((re) => re.test(r))) return 'weak';
+  if (INTEGRATED.test(r)) return 'integrated';
+  return 'unknown';
+}
+
+/**
+ * The crowd's distance LOD for a GPU class (metres beyond which people draw their lite figure). Starting
+ * points until real measurements replace them (NOTES.md); the frame-time governor lowers them at run time.
+ */
+export const LOD_BY_TIER = { discrete: 18, unknown: 14, integrated: 12, weak: 8, software: 8 };
+
+export function detectLite(info = gpuInfo(), env = globalThis) {
   const reasons = [];
-  const ua = navigator.userAgent || '';
+  const nav = env.navigator || {};
+  const ua = nav.userAgent || '';
+  const coarse = env.matchMedia ? env.matchMedia('(pointer: coarse)').matches : false;
   const phone = /Android.+Mobile|iPhone|iPod|Windows Phone|Mobile Safari/i.test(ua) ||
-    (matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600);
+    (coarse && env.screen && Math.min(env.screen.width, env.screen.height) < 600);
   if (phone) reasons.push('phone');
   if (/iPad|Android/i.test(ua) && !phone) reasons.push('tablet');
-  if (info.renderer && WEAK_GPU.test(info.renderer)) reasons.push('weak GPU: ' + info.renderer);
+  const tier = gpuTier(info.renderer);
+  if (tier === 'software' || tier === 'weak') reasons.push(`${tier} GPU: ${info.renderer}`);
   if (info.maxTex && info.maxTex < 8192) reasons.push('small textures');
-  if (navigator.deviceMemory && navigator.deviceMemory <= 4) reasons.push('low memory');
-  if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) reasons.push('few cores');
-  if (navigator.connection?.saveData) reasons.push('data saver');
-  return { lite: reasons.length > 0, reasons };
+  if (nav.deviceMemory && nav.deviceMemory <= 4) reasons.push('low memory');
+  if (nav.hardwareConcurrency && nav.hardwareConcurrency <= 2) reasons.push('few cores');
+  if (nav.connection?.saveData) reasons.push('data saver');
+  return { lite: reasons.length > 0, reasons, tier };
 }
 
 export function chooseQuality() {
   const info = gpuInfo();
   const q = new URLSearchParams(location.search).get('quality');
   const detected = detectLite(info);
-  if (q === 'lite' || q === 'full') return { lite: q === 'lite', source: 'url', detected, info };
+  // the crowd's distance LOD: ?lod=<metres> for measuring, else by GPU class
+  const lodQ = Number(new URLSearchParams(location.search).get('lod'));
+  const lodFar = Number.isFinite(lodQ) && lodQ >= 0 && new URLSearchParams(location.search).has('lod') ? lodQ : LOD_BY_TIER[detected.tier] ?? 14;
+  if (q === 'lite' || q === 'full') return { lite: q === 'lite', source: 'url', detected, info, lodFar };
   const saved = storageGet();
-  if (saved === 'lite' || saved === 'full') return { lite: saved === 'lite', source: 'saved', detected, info };
-  return { lite: detected.lite, source: 'detected', detected, info };
+  if (saved === 'lite' || saved === 'full') return { lite: saved === 'lite', source: 'saved', detected, info, lodFar };
+  return { lite: detected.lite, source: 'detected', detected, info, lodFar };
 }
 
 /** Switch quality and reload; the choice is remembered for this browser. */

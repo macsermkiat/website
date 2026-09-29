@@ -196,6 +196,7 @@ export function createStallActions(ctx) {
   const busy = new Set();
   let bookIdx = 0;
   let pulled = null; // the book standing out of the shelf: { n, set, left }
+  let inFlight = null, retractPending = false; // a book on its way out, and whether it should go straight back
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   function pullBook(node) {
     // the button lets the bookseller choose: Mac's books in turn
@@ -237,12 +238,25 @@ export function createStallActions(ctx) {
     };
     // The book stays out while it is being read: until the next book is pulled, or BOOK_HOLD seconds of market
     // time (so a paused or slow frame never puts it back before it has been seen; reduced motion keeps it too).
-    anim.add(0.45, set, () => { pulled = { n, set, left: BOOK_HOLD }; });
+    inFlight = n;
+    retractPending = false;
+    anim.add(0.45, set, () => {
+      inFlight = null;
+      pulled = { n, set, left: BOOK_HOLD };
+      if (retractPending) { retractPending = false; putBack(); }
+    });
     // a paper tag with its title above the book while it stands out
     const title = i >= 0 ? picks[i][0] : bookInfo(n)?.title;
     if (title) bookTag.show(title, n);
   }
+  /** Put the pulled book back and take its tag away (the panel closed, or the view went home). */
+  function retract() {
+    bookTag.hide();
+    if (pulled) putBack();
+    else if (inFlight) retractPending = true;
+  }
   function putBack() {
+    if (!pulled) return;
     const { n, set } = pulled;
     pulled = null;
     bookTag.hide();
@@ -255,6 +269,7 @@ export function createStallActions(ctx) {
     wurst: { hint: actionHint('wurst', 'Turn the sausages on the grill.'), acts: [{ key: 'turn', label: 'Turn the sausages', fn: turnSausages }, { key: 'bun', label: 'One in a bun, please', fn: bun }] },
     books: { hint: actionHint('books', 'Click any spine on the shelves, or let the bookseller choose.') + (banded.length ? ' <em>Mac’s picks wear a red paper band.</em>' : ''), acts: [{ key: 'book', label: 'Pick a book for me', fn: () => pullBook(null) }] },
     pullBook,
+    retract,
     /** The spine for each of Mac's books, in reading.md order (for tests and the curious). */
     featuredBooks: featured,
     bookOf: (node) => (pickOf.has(node) ? picks[pickOf.get(node)][0] : null),

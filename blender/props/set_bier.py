@@ -16,7 +16,7 @@ from mathutils import Matrix
 
 import goods as G
 import vlib
-from vlib import C, T, WHITE, lite, rng, seg
+from vlib import C, T, WHITE, drng, lite, rng, seg
 
 TWO_PI = 2 * math.pi
 
@@ -72,8 +72,8 @@ def pretzel(m, M, s=1.0, col=C("6a3212")):
     m.tube(pts, 0.01, seg(6, 4), "roll", S, col, "glaze", radii=radii)
     if not lite():
         for j in range(9):
-            p = pts[rng.randrange(len(pts))]
-            m.box((0.004, 0.003, 0.003), S @ T(p[0], p[1], p[2] + 0.011, rz=rng.uniform(0, 3)), "sw_satin",
+            p = pts[drng.randrange(len(pts))]
+            m.box((0.004, 0.003, 0.003), S @ T(p[0], p[1], p[2] + 0.011, rz=drng.uniform(0, 3)), "sw_satin",
                   C("f4f2ee"), skip=("nz",))
 
 
@@ -95,13 +95,14 @@ def counter():
         rz = rng.uniform(-math.pi, math.pi) if kind == "mass" else 0
         M = T(0, 0, 0, rz=rz)
         glass = G.mass(g, M) if kind == "mass" else G.willi(g, M)
-        level = glass[1] - (0.024 if kind == "mass" else 0.028) - rng.uniform(0, 0.006)
-        G.beer_fill(g, foam, M, glass, level, beer_col=BEERS[beer][1], spill=rng.uniform(0, TWO_PI) if i % 2 == 0 else 0)
+        level = glass[1] - (0.016 if kind == "mass" else 0.015) - rng.uniform(0, 0.005)
+        G.beer_fill(g, foam, M, glass, level, beer_col=BEERS[beer][1], spill=rng.uniform(0, TWO_PI) if i % 2 == 0 else 0,
+                    seed=i * 1.7)
         s.item(f"act_glass_{i}", ("Maß" if kind == "mass" else "Half litre") + f" of {BEERS[beer][0]}", "glass",
                glass="Maßkrug" if kind == "mass" else "Willibecher", beer=BEERS[beer][0])
         # beer coaster under each glass
         if not lite() and not on_tray:
-            m.disc(0.054, 12, "coaster", T(x, y, 0.0015, rz=rng.uniform(0, 6)), WHITE, "atlas")
+            m.disc(0.054, 12, "coaster", T(x, y, 0.0015, rz=drng.uniform(0, 6)), WHITE, "atlas")
             m.lathe([(0.054, 0.0), (0.054, 0.004)], 12, "paper", T(x, y, 0), C("e8e2d6"))
     # a bar towel and a wooden board of pretzels between glasses and tap
     m.box((0.28, 0.16, 0.006), T(-0.85, 0.09, 0.003, rz=-0.08), "towel", WHITE, faces={"pz": "towel"}, skip=("nz",))
@@ -129,24 +130,34 @@ def stein(m, M, col=C("7a6a58"), lid=C("b0b0b0")):
 def back():
     s = vlib.PropSet("prop_bier_back", "slot_shelf_1", "bierstand", footprint=(2.4, 0.28))
     m = s.static
-    # three small oak casks on wooden cradles, branded heads to the front with brass taps
-    for k, x in enumerate((-1.05, -0.72, 0.75)):
-        for dy in (-0.07, 0.07):
-            m.box((0.18, 0.04, 0.035), T(x, dy + 0.01, 0.0175), vlib.RW("wood"), C("6a4a30"), skip=("nz",))
-        G.barrel(m, T(x, 0.01, 0.012, rz=-math.pi / 2), L=0.26, r_end=0.1, r_belly=0.118, staves=14)
-    # chalkboard price board standing against the back wall
-    bw, bh = 0.56, 0.34
-    Mb = T(-0.1, 0.1, 0.0, rx=-0.08) @ T(0, 0, bh / 2 + 0.004)
+    # three small oak casks on a barrel rack (Fasslager): two squared rails front and back along the
+    # shelf, a pair of chocks on each rail per cask. Heads to the front, taps low on the heads.
+    L, r_end, r_belly, cy = 0.21, 0.1, 0.118, 0.012
+    rail_z, rail_h = 0.0, 0.03
+    lift = rail_z + rail_h - (r_belly - (r_end + (r_belly - r_end) * math.sin(math.pi * 0.84)))
+    for x0, x1 in ((-1.18, -0.58), (0.61, 0.89)):
+        for ry in (cy - 0.078, cy + 0.078):
+            m.box((x1 - x0, 0.036, rail_h), T((x0 + x1) / 2, ry, rail_z + rail_h / 2), vlib.RW("wood"), C("5a3c24"),
+                  skip=("nz",))
+    for k, x in enumerate((-1.03, -0.73, 0.75)):
+        for ry in (cy - 0.078, cy + 0.078):
+            for sx in (-1, 1):
+                m.box((0.03, 0.034, 0.04), T(x + sx * 0.088, ry, rail_z + rail_h + 0.012, ry=sx * 0.7), vlib.RW("wood"),
+                      C("6a4a30"))
+        G.barrel(m, T(x, cy, lift, rz=-math.pi / 2), L=L, r_end=r_end, r_belly=r_belly, staves=14)
+    # chalkboard price board standing against the back wall, left of the middle brace (x -0.015..0.015)
+    bw, bh = 0.5, 0.34
+    Mb = T(-0.31, 0.085, 0.0, rx=-0.08) @ T(0, 0, bh / 2 + 0.004)
     m.box((bw - 0.03, 0.012, bh - 0.03), Mb, "chalkboard", WHITE, faces={"ny": "chalkboard"})
     for dz, w, hh in ((bh / 2 - 0.012, bw, 0.024), (-bh / 2 + 0.012, bw, 0.024)):
         m.box((w, 0.022, hh), Mb @ T(0, 0, dz), vlib.RW("wood"), C("6a4228"))
     for dx in (bw / 2 - 0.012, -bw / 2 + 0.012):
         m.box((0.024, 0.022, bh), Mb @ T(dx, 0, 0), vlib.RW("wood"), C("6a4228"))
-    m.cyl(0.005, 0.005, 0.05, 6, "sw_matte", T(0.05, 0.03, 0.014, ry=math.pi / 2), C("f4f2ec"))   # chalk
+    m.cyl(0.005, 0.005, 0.05, 6, "sw_matte", T(-0.2, 0.03, 0.014, ry=math.pi / 2), C("f4f2ec"))   # chalk
     stein(m, T(0.35, 0.0, 0, rz=2.4), C("8a7a64"))
     # a stack of beer coasters
     for k in range(4 if not lite() else 1):
-        m.disc(0.054, 12, "coaster", T(1.05, -0.03, 0.006 * (k + 1), rz=rng.uniform(0, 6)), WHITE, "atlas")
+        m.disc(0.054, 12, "coaster", T(1.05, -0.03, 0.006 * (k + 1), rz=drng.uniform(0, 6)), WHITE, "atlas")
     m.lathe([(0.054, 0.0), (0.054, 0.024)], 12, "paper", T(1.05, -0.03, 0), C("e8e2d6"))
     s.finish()
     return s
@@ -160,14 +171,14 @@ def shelf():
     for k, x in enumerate((-0.86, -0.7, -0.54)):
         idx = 10 + k
         g = s.node(f"act_glass_{idx}", (x, 0.01 + (k % 2) * 0.03, 0.012), rot=(math.pi, 0, rng.uniform(0, TWO_PI)))
-        G.mass(g, T(0, 0, -0.2108), n=10)
+        G.mass(g, T(0, 0, -0.2108), n=10, lo=5)
         s.item(f"act_glass_{idx}", "Clean Maßkrug, upside down", "glass", glass="Maßkrug")
     # clean half-litre Willibecher upside down on a second towel
     m.box((0.36, 0.18, 0.01), T(-0.2, 0.02, 0.005), "towel", WHITE, faces={"pz": "towel"}, skip=("nz",))
     for k, x in enumerate((-0.3, -0.2, -0.1)):
         idx = 13 + k
         g = s.node(f"act_glass_{idx}", (x, 0.02 + (k % 2) * 0.04, 0.01), rot=(math.pi, 0, 0))
-        G.willi(g, T(0, 0, -0.2058), n=10)
+        G.willi(g, T(0, 0, -0.2058), n=10, lo=5)
         s.item(f"act_glass_{idx}", "Clean Willibecher, upside down", "glass", glass="Willibecher")
     # a row of stoneware steins with pewter lids, two folded tea towels
     for k, (x, col) in enumerate(((0.1, C("6a5a48")), (0.24, C("8a7a64")))):

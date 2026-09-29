@@ -11,6 +11,13 @@ ring houses, and every material except the windows and bulbs has ambient occlusi
 occlusion slot: walls, roofs and stonework share a baked 2048 lightmap atlas; timbers, frames,
 shutters, signs, ironwork and snow carry per-vertex occlusion through a ramp in the same image.
 
+Round 1 pass 3: German slate courses (17 cm courses of 18-34 cm scale slates, blue- to purple-grey,
+glossy and varied) on the church and the slate roofs, stronger tile relief and colour variation, three
+slate dormers on the nave roof, leaded stained glass in the church lancets (two tall atlas regions,
+mirrored, far dimmer than the house windows), mirrored and non-repeating window cells (shopfront panes
+never repeat within a shop), shop-sign lettering in one small texture atlas instead of 9k triangles of
+text, and no hidden end caps on posts, rails, braces, mullions and transoms.
+
 Run:  /home/claude/tools/bpy-venv/bin/python blender/town/town.py
       LITE=1 (same command) for town.lite.glb
 """
@@ -33,15 +40,22 @@ col = C.collection("Town")
 # ------------------------------------------------------------------ textures
 T_PL = C.make_texture_set("town", "plaster", lambda: TX.plaster(1024), normal_strength=2.5)
 T_TI = C.make_texture_set("town", "timber", lambda: TX.timber(512), normal_strength=3.0)
-T_RO = C.make_texture_set("town", "roof_tiles", lambda: TX.roof_tiles(1024), normal_strength=5.0)
-T_SL = C.make_texture_set("town", "slate", lambda: TX.roof_tiles(512, cols=16, rows=20, seed=77, slate=True), normal_strength=4.0)
+T_RO = C.make_texture_set("town", "roof_tiles", lambda: TX.roof_tiles(1024), normal_strength=8.0)
+T_SL = C.make_texture_set("town", "slate", lambda: TX.slate_courses(1024, 2.4, 14, seed=77), normal_strength=8.0)
 T_SR = C.make_texture_set("town", "sandstone_red", lambda: TX.sandstone(1024, 2.4, seed=81, red=True), normal_strength=3.0)
 T_SY = C.make_texture_set("town", "sandstone_yellow", lambda: TX.sandstone(512, 2.4, seed=83, red=False), normal_strength=3.0)
 T_PW = C.make_texture_set("town", "painted_wood", lambda: TX.painted_wood(512), normal_strength=3.0)
+if LITE:
+    # lite budget (round 1 pass 3): the small-scale sets drop to 256 px; roofs, red sandstone and the
+    # window atlas keep 512 (they fill the view)
+    T_TI = C.lite_texture_set(T_TI, 256)
+    T_PW = C.lite_texture_set(T_PW, 256)
+    T_SY = C.lite_texture_set(T_SY, 256)
+    T_PL = C.lite_texture_set(T_PL, 256)
 WIN_BASE = os.path.join(C.tex_dir("town"), "windows_base.png")
 WIN_EMIT = os.path.join(C.tex_dir("town"), "windows_emit.png")
 if os.environ.get("FORCE_TEX") or not os.path.exists(WIN_EMIT):
-    b, e = TX.window_atlas(512)
+    b, e = TX.window_atlas(1024)
     TX.save_png(WIN_BASE, b ** (1 / 2.2)); TX.save_png(WIN_EMIT, np.clip(e, 0, 1) ** (1 / 2.2))
 
 # ------------------------------------------------------------------ materials
@@ -76,14 +90,16 @@ MATS["bulb"] = C.solid("bulb_warm", (1.0, 0.8, 0.55), rough=0.3, emit=(1.0, 0.62
 MATS["dial"] = C.solid("clock_dial", (0.9, 0.85, 0.7), rough=0.5, emit=(1.0, 0.85, 0.6), strength=0.8)
 MATS["dark"] = C.solid("dark_opening", (0.01, 0.01, 0.012), rough=0.9)
 for m in MATS.values():
-    m.use_backface_culling = True
+    if m:
+        m.use_backface_culling = True
 
+MATS["signs"] = None                 # the sign lettering atlas: made once every sign is known (see sign_texture())
 UVM = {}
 for k in MATS:
     if k.startswith("pl_"): UVM[k] = (2.5, 2.5)
     elif k.startswith("ti_"): UVM[k] = (1.0, 0.25)
     elif k.startswith("roof"): UVM[k] = (2.16, 2.10)
-    elif k == "slate": UVM[k] = (1.2, 1.1)
+    elif k == "slate": UVM[k] = (2.4, 2.4)
     elif k.startswith("stone"): UVM[k] = (2.4, 2.4)
     elif k.startswith("pw_"): UVM[k] = (1.0, 1.0)
     else: UVM[k] = (1.0, 1.0)
@@ -91,13 +107,25 @@ G = C.GeoSet("town", MATS, UVM)
 
 # ------------------------------------------------------------------ atlas cells
 LIT_CELLS = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-DARK_CELLS = [10, 11, 13, 14, 12, 15]
-STAINED = 9
+DARK_CELLS = [10, 14, 12, 10, 14]            # 12 is a barely lit room; the others are dark
+STAINED_COLS = (1, 3)                        # the two stained-glass regions: bottom half of columns 1 and 3
 
 
-def cell_rect(c, pad=0.006):
+def cell_rect(c, pad=0.006, mirror=None):
+    """UV rectangle of atlas cell c; mirror flips it left to right (None = at random), so neighbouring
+    windows showing the same cell still differ."""
     cx, cy = c % 4, c // 4
-    return (cx / 4 + pad, 1 - (cy + 1) / 4 + pad, (cx + 1) / 4 - pad, 1 - cy / 4 - pad)
+    u0, v0, u1, v1 = (cx / 4 + pad, 1 - (cy + 1) / 4 + pad, (cx + 1) / 4 - pad, 1 - cy / 4 - pad)
+    if mirror is None:
+        mirror = random.random() < 0.5
+    return (u1, v0, u0, v1) if mirror else (u0, v0, u1, v1)
+
+
+def stained_rect(k, pad=0.004):
+    """Lancet k's stained-glass region: variant k % 2, mirrored for k // 2 odd (four looks in turn)."""
+    cx = STAINED_COLS[k % 2]
+    u0, u1 = cx / 4 + pad, (cx + 1) / 4 - pad
+    return (u1, pad, u0, 0.5 - pad) if (k // 2) % 2 else (u0, pad, u1, 0.5 - pad)
 
 
 def pick_cell(lit_p):
@@ -106,17 +134,17 @@ def pick_cell(lit_p):
 
 # ------------------------------------------------------------------ facade elements (house-local coords, front plane y = yf, facing -y)
 
-def window(x, zb, ww, wh, yf, lit_p, h, surround=None, shutters=None, mullion=True, cell=None):
+def window(x, zb, ww, wh, yf, lit_p, h, surround=None, shutters=None, mullion=True, cell=None, mirror=None):
     g = G["window"]
     c = pick_cell(lit_p) if cell is None else cell
-    g.quad_rect((x, yf - 0.004, zb + wh / 2), ww, wh, "-y", uv_rect=cell_rect(c))
+    g.quad_rect((x, yf - 0.004, zb + wh / 2), ww, wh, "-y", uv_rect=cell_rect(c, mirror=mirror))
     fr = G["pw_frame"]
     fw, fd = 0.06, 0.045
     if not LITE or wh > 1.6:
         fr.frame_ring(x, zb, ww, wh, fw, fd, yf)
     if mullion and not LITE:
-        fr.wall_beam((x, zb), (x, zb + wh), 0.045, 0.03, yf)
-        fr.wall_beam((x - ww / 2, zb + wh * 0.68), (x + ww / 2, zb + wh * 0.68), 0.045, 0.03, yf)
+        fr.wall_beam((x, zb), (x, zb + wh), 0.045, 0.03, yf, ends=False)
+        fr.wall_beam((x - ww / 2, zb + wh * 0.68), (x + ww / 2, zb + wh * 0.68), 0.045, 0.03, yf, ends=False)
     if surround:
         s = G[surround]
         sw, sd = 0.14, 0.035
@@ -162,30 +190,61 @@ def load_font(text):
     return bpy.data.fonts.load(path, check_existing=True) if os.path.exists(path) else None
 
 
-def text_mesh(text, size):
-    cu = bpy.data.curves.new("tmp_text", "FONT"); cu.body = text
-    f = load_font(text)
-    if f: cu.font = f
-    cu.size = size; cu.align_x = "CENTER"; cu.align_y = "CENTER"; cu.extrude = 0.0
-    cu.resolution_u = 2 if not LITE else 1
-    ob = bpy.data.objects.new("tmp_text", cu); bpy.context.scene.collection.objects.link(ob)
-    dg = bpy.context.evaluated_depsgraph_get()
-    me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
-    verts = [tuple(v.co) for v in me.vertices]; faces = [tuple(p.vertices) for p in me.polygons]
-    bpy.data.objects.remove(ob); bpy.data.curves.remove(cu); bpy.data.meshes.remove(me)
-    return verts, faces
+SIGN_ROWS = []                 # (text, width_m) per atlas row
+SIGN_ROW_PX, SIGN_ATLAS = 42, 1024
+SIGN_FACE_H = 0.39             # the painted face between the two gilt rails
+SIGN_PX_PER_M = SIGN_ROW_PX / SIGN_FACE_H
+
+
+def sign_row(text, w):
+    key = (text, round(w, 1))
+    if key not in SIGN_ROWS:
+        if len(SIGN_ROWS) >= SIGN_ATLAS // SIGN_ROW_PX:
+            same = [k for k in SIGN_ROWS if k[0] == text] or SIGN_ROWS
+            key = same[0]
+            C.log("sign atlas full: reusing", key)
+        else:
+            SIGN_ROWS.append(key)
+    return SIGN_ROWS.index(key), key[1]
 
 
 def sign(x, zc, text, yf, w=None):
+    """Shop sign: a painted board between two gilt rails; the lettering is a quad with its own row in
+    the sign atlas (2 triangles instead of hundreds of font triangles)."""
     w = w or max(1.6, 0.26 * len(text))
     G["pw_sign"].box((x, yf - 0.04, zc), (w, 0.05, 0.42), skip_back=True)
     G["gilt"].wall_beam((x - w / 2, zc + 0.2), (x + w / 2, zc + 0.2), 0.025, 0.07, yf)
     G["gilt"].wall_beam((x - w / 2, zc - 0.2), (x + w / 2, zc - 0.2), 0.025, 0.07, yf)
-    if LITE:
-        return
-    verts, faces = text_mesh(text, 0.27)
-    vs = [(x + v[0], yf - 0.072, zc + v[1]) for v in verts]
-    G["gilt"].raw(vs, faces)
+    row, wa = sign_row(text, w)
+    wpx = min(SIGN_ATLAS, round(wa * SIGN_PX_PER_M))
+    pad = 0.5 / SIGN_ATLAS
+    rect = (pad, 1 - (row + 1) * SIGN_ROW_PX / SIGN_ATLAS + pad, wpx / SIGN_ATLAS - pad, 1 - row * SIGN_ROW_PX / SIGN_ATLAS - pad)
+    G["signs"].quad_rect((x, yf - 0.067, zc), w, SIGN_FACE_H, "-y", uv_rect=rect)
+
+
+def sign_texture():
+    """Paint the sign atlas once every sign is placed and give the signs mesh its material."""
+    d = C.tex_dir("town")
+    paths = {k: os.path.join(d, f"shop_signs{'_lite' if LITE else ''}_{k}.png") for k in ("color", "mr", "normal")}
+    t = TX.sign_atlas(SIGN_ROWS, lambda text: os.path.join(FONT_DIR, "UnifrakturCook-Bold.ttf" if any(text.startswith(f) for f in FRAKTUR) else "AlegreyaSC-ExtraBold.ttf"),
+                      n=SIGN_ATLAS, row_px=SIGN_ROW_PX, px_per_m=SIGN_PX_PER_M)
+    TX.save_png(paths["color"], t["color"] ** (1 / 2.2))
+    TX.save_png(paths["mr"], np.stack([np.ones_like(t["rough"]), t["rough"], t["metal"]], -1))
+    TX.save_png(paths["normal"], TX.normal_from_height(t["height"], 2.5))
+    m = C.pbr("shop_signs", tex={"color": paths["color"], "normal": paths["normal"]})
+    nt = m.node_tree; N = nt.nodes; L = nt.links
+    bsdf = N["Principled BSDF"]
+    uvn = next(n for n in N if n.type == "UVMAP")
+    mr = N.new("ShaderNodeTexImage"); mr.image = C.load_img(paths["mr"], True)
+    sep = N.new("ShaderNodeSeparateColor")
+    L.new(uvn.outputs["UV"], mr.inputs["Vector"]); L.new(mr.outputs["Color"], sep.inputs["Color"])
+    L.new(sep.outputs["Green"], bsdf.inputs["Roughness"]); L.new(sep.outputs["Blue"], bsdf.inputs["Metallic"])
+    m.use_backface_culling = True
+    MATS["signs"] = m
+    for gs in (G_RING,):
+        if "signs" in gs.g:
+            gs.g["signs"].mat = m
+    C.log("sign atlas rows", len(SIGN_ROWS))
 
 
 def pretzel_sign(x, zc, yf):
@@ -234,10 +293,10 @@ def timber_floor(ti, W, z0, z1, yf, wins, sill_z, lintel_z, parapet="x", corner_
             extra.append((a + b) / 2)
     posts = sorted(posts + extra)
     for x in posts:
-        g.wall_beam((x, z0 + 0.2), (x, z1 - 0.18), tw, dp, yf)
+        g.wall_beam((x, z0 + 0.2), (x, z1 - 0.18), tw, dp, yf, ends=False)
     # rails at sill and lintel height
-    g.wall_beam((-W / 2 + tw, sill_z - 0.07), (W / 2 - tw, sill_z - 0.07), 0.14, dp - 0.008, yf)
-    g.wall_beam((-W / 2 + tw, lintel_z + 0.07), (W / 2 - tw, lintel_z + 0.07), 0.14, dp - 0.008, yf)
+    g.wall_beam((-W / 2 + tw, sill_z - 0.07), (W / 2 - tw, sill_z - 0.07), 0.14, dp - 0.008, yf, ends=False)
+    g.wall_beam((-W / 2 + tw, lintel_z + 0.07), (W / 2 - tw, lintel_z + 0.07), 0.14, dp - 0.008, yf, ends=False)
     if LITE:
         return
     # parapet ornaments under the windows
@@ -246,17 +305,17 @@ def timber_floor(ti, W, z0, z1, yf, wins, sill_z, lintel_z, parapet="x", corner_
         lo, hi = z0 + 0.22, sill_z - 0.15
         if hi - lo < 0.3: continue
         if parapet == "x":
-            g.wall_beam((a, lo), (b, hi), 0.12, dp - 0.014, yf)
-            g.wall_beam((a, hi), (b, lo), 0.12, dp - 0.016, yf)
+            g.wall_beam((a, lo), (b, hi), 0.12, dp - 0.014, yf, ends=False)
+            g.wall_beam((a, hi), (b, lo), 0.12, dp - 0.016, yf, ends=False)
         elif parapet == "fb":   # "Feuerbock": two curved-looking struts meeting at the top
             m = (a + b) / 2
-            g.wall_beam((a, lo), (m - 0.05, hi), 0.11, dp - 0.014, yf)
-            g.wall_beam((b, lo), (m + 0.05, hi), 0.11, dp - 0.016, yf)
+            g.wall_beam((a, lo), (m - 0.05, hi), 0.11, dp - 0.014, yf, ends=False)
+            g.wall_beam((b, lo), (m + 0.05, hi), 0.11, dp - 0.016, yf, ends=False)
             g.wall_beam((m, lo), (m, hi), 0.1, dp - 0.012, yf)
         elif parapet == "rhombus":
             m = (a + b) / 2; c = (lo + hi) / 2
             for p0, p1 in (((a, c), (m, hi)), ((m, hi), (b, c)), ((b, c), (m, lo)), ((m, lo), (a, c))):
-                g.wall_beam(p0, p1, 0.09, dp - 0.014, yf)
+                g.wall_beam(p0, p1, 0.09, dp - 0.014, yf, ends=False)
     # braces ("Mann" figure) in solid panels
     for a, b in zip(posts, posts[1:]):
         inside_window = any(abs((a + b) / 2 - x) < ww / 2 + 0.1 for x, ww in wins)
@@ -265,14 +324,14 @@ def timber_floor(ti, W, z0, z1, yf, wins, sill_z, lintel_z, parapet="x", corner_
         mid = (z0 + z1) / 2
         if corner_braces and (a == posts[0] or b == posts[-1]):
             if a == posts[0]:
-                g.wall_beam((a + 0.08, mid + 0.25), (b - 0.05, z0 + 0.22), 0.13, dp - 0.014, yf)
-                g.wall_beam((a + 0.08, mid - 0.25), (b - 0.05, z1 - 0.2), 0.13, dp - 0.016, yf)
+                g.wall_beam((a + 0.08, mid + 0.25), (b - 0.05, z0 + 0.22), 0.13, dp - 0.014, yf, ends=False)
+                g.wall_beam((a + 0.08, mid - 0.25), (b - 0.05, z1 - 0.2), 0.13, dp - 0.016, yf, ends=False)
             else:
-                g.wall_beam((b - 0.08, mid + 0.25), (a + 0.05, z0 + 0.22), 0.13, dp - 0.014, yf)
-                g.wall_beam((b - 0.08, mid - 0.25), (a + 0.05, z1 - 0.2), 0.13, dp - 0.016, yf)
+                g.wall_beam((b - 0.08, mid + 0.25), (a + 0.05, z0 + 0.22), 0.13, dp - 0.014, yf, ends=False)
+                g.wall_beam((b - 0.08, mid - 0.25), (a + 0.05, z1 - 0.2), 0.13, dp - 0.016, yf, ends=False)
         elif b - a > 0.8:
-            g.wall_beam((a + 0.05, z0 + 0.22), (b - 0.05, z1 - 0.2), 0.12, dp - 0.014, yf)
-            g.wall_beam((a + 0.05, z1 - 0.2), (b - 0.05, z0 + 0.22), 0.12, dp - 0.016, yf)
+            g.wall_beam((a + 0.05, z0 + 0.22), (b - 0.05, z1 - 0.2), 0.12, dp - 0.014, yf, ends=False)
+            g.wall_beam((a + 0.05, z1 - 0.2), (b - 0.05, z0 + 0.22), 0.12, dp - 0.016, yf, ends=False)
 
 
 def jetty_joists(ti, W, z, yf, overhang):
@@ -444,11 +503,12 @@ def build_house(F, s, idx, open_sides=()):
         # display windows filling the rest
         xa, xb = (-W / 2 + 0.45, dx - dw / 2 - 0.4) if dx > 0 else (dx + dw / 2 + 0.4, W / 2 - 0.45)
         nd = 2 if xb - xa > 3.2 else 1
+        panes = random.sample([0, 3, 6, 5, 2, 8], nd)      # never the same display twice in one shop
         for k in range(nd):
             seg = (xb - xa) / nd
             cx = xa + seg * (k + 0.5)
             window(cx, 0.6, seg - 0.35, 1.7, 0, 1.0, h0, surround=s["surround"] or "stone_yel", mullion=True,
-                   cell=random.choice([0, 3, 6, 5]))
+                   cell=panes[k], mirror=k == 1)
         sign(0 if nd == 2 else (xa + xb) / 2, h0 - 0.42, shop, 0, w=min(W - 1.0, max(2.0, 0.25 * len(shop))))
         if "Bäck" in shop or "Kondi" in shop:
             pretzel_sign(-dx * 0.9, h0 + 0.9, 0)
@@ -689,7 +749,9 @@ def build_church():
     for k, sc in enumerate((1.3, 1.15)):
         G["stone_yel"].prism([(p[0] * sc, p[1] - 0.03 * (k + 1), p[2] * (1 + 0.05 * (2 - k))) for p in portal], (0, 0.03 * (k + 1), 0))
     # windows: lancets on the lower stages, belfry openings with louvres, clocks
-    def lancet(x, y, zb, w, h, facing, cell=STAINED, lit=True):
+    lancet_k = [0]
+
+    def lancet(x, y, zb, w, h, facing, lit=True):
         pts2 = [(-w / 2, 0), (w / 2, 0), (w / 2, h - w * 0.8), (w * 0.3, h - w * 0.22), (0, h), (-w * 0.3, h - w * 0.22), (-w / 2, h - w * 0.8)]
         pts = []
         for px, pz in pts2:
@@ -698,10 +760,11 @@ def build_church():
             elif facing == "-x": pts.append((y, x - px, zb + pz))
             else: pts.append((y, x + px, zb + pz))
         if lit:
-            G["window"].poly(pts, uv_rect=cell_rect(cell))
+            G["window"].poly(pts, uv_rect=stained_rect(lancet_k[0]))
+            lancet_k[0] += 1
         else:
             G["dark"].poly(pts)
-        if lit and not LITE and w > 1.0:   # stone tracery: mullion and transoms
+        if lit and not LITE and w > 1.0:   # stone mullion (the tracery head is painted in the glass)
             nrm = {"-y": Vector((0, -1, 0)), "+y": Vector((0, 1, 0)), "-x": Vector((-1, 0, 0)), "+x": Vector((1, 0, 0))}[facing]
             def P3(px, pz):
                 if facing == "-y": return Vector((x + px, y, zb + pz))
@@ -709,9 +772,7 @@ def build_church():
                 if facing == "-x": return Vector((y, x - px, zb + pz))
                 return Vector((y, x + px, zb + pz))
             off = nrm * 0.04
-            G["stone_yel"].beam(tuple(P3(0, 0) + off), tuple(P3(0, h - w * 0.35) + off), 0.09, 0.08, up=tuple(nrm))
-            for fz in (0.33, 0.66):
-                G["stone_yel"].beam(tuple(P3(-w / 2, h * fz) + off), tuple(P3(w / 2, h * fz) + off), 0.07, 0.06, up=tuple(nrm))
+            G["stone_yel"].beam(tuple(P3(0, 0) + off), tuple(P3(0, h - w * 0.55) + off), 0.1, 0.08, up=tuple(nrm), skip_ends=True)
         # stone surround
         if not LITE:
             n = len(pts)
@@ -813,6 +874,11 @@ def build_church():
         if nn.z < 0: tri = tri[::-1]
         G["slate"].poly(tri)
         G["snow"].poly([tuple(Vector(p) + Vector((0, 0, 0.12))) for p in tri])
+    # three slate-hung dormers on the square side of the nave roof: they break up the big slate plane
+    # and give its courses a scale
+    tanp = math.tan(pitch)
+    for fx in (0.22, 0.47, 0.8):
+        dormer(x0 + NL * fx, -NW / 2 + 2.2, NH + 2.2 * tanp - 0.05, pitch, 1.4, "slate", "slate", 0.35)
     # ridge turret (Dachreiter) with a small copper spire
     G["pw_brown"].box((x0 + NL * 0.6, 0, zr + 1.2), (1.4, 1.4, 2.4))
     G["copper"].cyl((x0 + NL * 0.6, 0, zr + 4.2), 1.0, 0.05, 3.6, seg=8, rot=(0, 0, math.pi / 8), bottom=False)
@@ -996,6 +1062,7 @@ if not LITE:
 G = G_RING
 
 # ------------------------------------------------------------------ finish
+sign_texture()
 fir_ob, gb_ob = garlands() if not LITE else (None, None)
 # wall lantern bulbs
 wl = C.Geo("bulbs_town_lanterns", MATS["bulb"], (1, 1))
@@ -1056,7 +1123,7 @@ def seen(p):
 
 
 # per-corner occlusion for everything (small parts use it directly, and small faces of the atlas meshes too)
-vao = C.bake_vertex_ao(atlas + small, samples=48, distance=1.2, lift=0.3)
+vao = C.bake_vertex_ao(atlas + small, samples=48, distance=1.2, lift=0.22)
 for o in small:
     C.ramp_uv(o, vao[o.name], STRIP + 0.006, 0.996)
 # atlas texels only for large visible faces: walls, gables, roofs, chimneys, the church's walls
@@ -1064,7 +1131,7 @@ C.lightmap_atlas(atlas, reserve_u=1 - STRIP, margin=0.003 if not LITE else 0.006
                  face_filter=lambda p: p.area > 1.2 and seen(p), ramp=vao)
 ao_img = C.bake_ao(atlas, "town_ao", AO_RES, AO_PATH, samples=48, distance=2.5, post=False,
                    margin=8 if not LITE else 4)
-C.finish_ao_image(ao_img, AO_PATH, lift=0.3, strip=(STRIP, "ramp"))
+C.finish_ao_image(ao_img, AO_PATH, lift=0.2, strip=(STRIP, "ramp"))     # pass 3: more contrast (was 0.3)
 for o in atlas + small:
     for m in o.data.materials:
         C.attach_ao(m, ao_img)

@@ -333,7 +333,7 @@ def roof_tiles(n=1024, tile_w_m=2.16, tile_h_m=2.10, cols=12, rows=14, seed=71, 
     else:
         pal = [(0.42, 0.14, 0.07), (0.36, 0.12, 0.06), (0.48, 0.20, 0.10), (0.30, 0.10, 0.06),
                (0.40, 0.18, 0.11), (0.24, 0.09, 0.06)]
-    col = palette_pick(t, pal) * (0.8 + 0.35 * hash01(ids, 5))[..., None]
+    col = palette_pick(t, pal) * (0.68 + 0.6 * hash01(ids, 5))[..., None]
     fine = pnoise(n, 120, 2, 0.6, seed + 7)
     col *= (0.85 + 0.3 * fine)[..., None]
     grime = pnoise(n, 4, 4, 0.5, seed + 8)
@@ -471,28 +471,27 @@ def snow_frond(frond):
 
 # ------------------------------------------------------------------ window atlas (emissive)
 
-def window_atlas(n=512, cells=4, seed=121):
-    """4x4 cells of window panes. Cells 0..9 lit (variants), 10..15 dark.
+def window_atlas(n=1024, cells=4, seed=121):
+    """4x4 cells of window panes: cells 0..8 lit (curtains, candle arch, paper star, table lamp, lace,
+    curtains nearly closed), 10, 12 and 14 dark or barely lit.  Round 1 pass 3: the church glass takes
+    two tall regions, each two cells high (cells 9+13 and 11+15, the bottom half of columns 1 and 3),
+    drawn as leaded two-light lancets in their own proportions (see stained_glass()).
     Returns (base, emit): base colour of glass, emission colour."""
     r = rng(seed)
     cs = n // cells
     base = np.zeros((n, n, 3)); emit = np.zeros((n, n, 3))
     yy, xx = np.mgrid[0:cs, 0:cs].astype(float) / cs
+    for k, cx in enumerate((1, 3)):
+        b, e = stained_glass(cs, 2 * cs, seed=seed + 50 + k, variant=k * 3)
+        sl = (slice(2 * cs, 4 * cs), slice(cx * cs, (cx + 1) * cs))
+        base[sl] = b; emit[sl] = e
     for c in range(cells * cells):
         cy, cx = divmod(c, cells)
         sl = (slice(cy * cs, (cy + 1) * cs), slice(cx * cs, (cx + 1) * cs))
+        if c in (9, 11, 13, 15):
+            continue
         glass = np.array([0.02, 0.025, 0.03]) + 0.02 * pnoise(cs, 4, 2, 0.5, seed + c)[..., None]
         base[sl] = glass
-        if c == 9:          # stained glass (church lancets): small leaded quarries, warm-lit from inside
-            ids = (np.floor(xx * 7 + 0.25 * np.sin(yy * 11)) * 17 + np.floor(yy * 12 + 0.25 * np.sin(xx * 9))).astype(np.int64)
-            tint = palette_pick(hash01(ids, 3), [(0.9, 0.55, 0.22), (0.62, 0.16, 0.08), (0.18, 0.22, 0.5), (0.95, 0.75, 0.38), (0.25, 0.4, 0.2), (0.8, 0.62, 0.4)], [5, 2, 2, 4, 1, 4])
-            lead = id_edges(ids)
-            lead = ndimage.binary_dilation(lead, iterations=2)
-            e = tint * (0.35 + 0.35 * (1 - yy))[..., None] * (0.75 + 0.25 * hash01(ids, 4))[..., None]
-            e[lead] = 0.01
-            emit[sl] = e
-            base[sl] = glass
-            continue
         if c < 10:
             warm = np.array([1.0, 0.55, 0.22]) * r.uniform(0.55, 1.0)
             if c % 3 == 0:
@@ -545,6 +544,174 @@ def window_atlas(n=512, cells=4, seed=121):
     return base, emit
 
 
+
+# ------------------------------------------------------------------ German slate (Schuppendeckung)
+
+def slate_courses(n=1024, tile_m=2.4, rows=14, seed=77):
+    """Slate roof in the German scale pattern: courses of slightly varying height (about 17 cm), slates
+    of varying width (18-34 cm) with a curved cut on one lower corner, so every course steps over the
+    one below.  Blue-grey to purple-grey with per-slate tone, gloss and a few rust-brown and pale,
+    lichened slates; soot and damp streaks run down the slope.  Round 1 pass 3: the old slate map had
+    5 cm slates in near-black, which read as a flat slab at any distance.  u runs along the eaves,
+    v up the slope."""
+    px = n / tile_m
+    r = rng(seed)
+    yy, xx = np.mgrid[0:n, 0:n].astype(float)
+    wx, wy = warp_coords(n, 1.2, 12, seed + 1)
+    X = ((xx + wx) % n) / px
+    Y = (((n - 1 - yy) + wy) % n) / px
+    hts = r.uniform(0.85, 1.15, rows); hts = hts / hts.sum() * tile_m
+    ce = np.concatenate([[0], np.cumsum(hts)])
+    ids = np.zeros((n, n), np.int64)
+    tpos = np.zeros((n, n))
+    fv_all = np.zeros((n, n))
+    # each course: cut positions along u; a point belongs to course j unless it lies under the curved
+    # lower corner of its slate, where the slate of course j-1 shows instead
+    cuts = []
+    for j in range(rows):
+        e = [0.0]
+        while e[-1] < tile_m:
+            e.append(e[-1] + r.uniform(0.18, 0.34))
+        e = np.array(e) * tile_m / e[-1]
+        cuts.append((e, r.uniform(0, tile_m)))
+
+    def locate(j, u):
+        """Slate index and position across it (0..1) for course array j at u."""
+        k = np.zeros(u.shape, np.int64); f = np.zeros(u.shape)
+        jm = j % rows
+        for jj in range(rows):
+            m = jm == jj
+            if not m.any():
+                continue
+            e, off = cuts[jj]
+            uu = (u[m] + off) % tile_m
+            kk = np.clip(np.searchsorted(e, uu, side="right") - 1, 0, len(e) - 2)
+            k[m] = kk; f[m] = (uu - e[kk]) / (e[kk + 1] - e[kk])
+        return k, f
+
+    row = np.clip(np.searchsorted(ce, Y, side="right") - 1, 0, rows - 1)
+    fv = (Y - ce[row]) / hts[row]
+    k, f = locate(row, X)
+    cut = 0.55 * np.clip((f - 0.45) / 0.55, 0, 1) ** 2        # the curved cut rises toward one side
+    below = fv < cut
+    rj = np.where(below, row - 1, row)
+    k2, f2 = locate(rj, X)
+    kk = np.where(below, k2, k)
+    ids = (rj % rows) * 1000 + kk
+    fvv = np.where(below, fv + 1.0 * hts[row] / hts[(row - 1) % rows], fv)     # position within its slate
+    tpos = np.clip(fvv - np.where(below, 0.55 * np.clip((f2 - 0.45) / 0.55, 0, 1) ** 2, cut), 0, 1.8)
+    edges = id_edges(ids)
+    d = wrap_edt(edges) / px
+    prof = smoothstep(0, 0.006, d)
+    fine = pnoise(n, 90, 3, 0.55, seed + 7)
+    t = hash01(ids, 4)
+    pal = [(0.085, 0.095, 0.115), (0.10, 0.105, 0.13), (0.075, 0.08, 0.095), (0.115, 0.11, 0.13),
+           (0.095, 0.10, 0.10), (0.13, 0.125, 0.14)]
+    col = palette_pick(t, pal) * 2.1 * (0.7 + 0.65 * hash01(ids, 5))[..., None]
+    rust = hash01(ids, 8) > 0.965
+    col = np.where(rust[..., None], col * np.array([1.6, 1.15, 0.8]), col)
+    lichen = (hash01(ids, 9) > 0.95) | (smoothstep(0.8, 0.9, pnoise(n, 7, 4, 0.55, seed + 12)) * (hash01(ids, 10) > 0.6) > 0.5)
+    col = np.where(lichen[..., None], col * 0.55 + np.array([0.16, 0.16, 0.13]) * 0.45, col)
+    col *= (0.88 + 0.24 * fine)[..., None]
+    streak = stretched_noise(n, 18, 2, 3, seed + 11)
+    grime = pnoise(n, 3, 4, 0.5, seed + 8)
+    col *= (0.8 + 0.3 * grime + 0.22 * (streak - 0.5))[..., None]
+    # the exposed lower edge of each slate is lighter (it catches the light); the step above it is dark
+    col *= (0.4 + 0.6 * prof)[..., None] * (1.0 + 0.4 * np.clip(0.25 - tpos, 0, 0.25) / 0.25)[..., None]
+    h = prof * (0.5 + 0.5 * (1 - np.clip(tpos, 0, 1))) + 0.06 * hash01(ids, 3) + 0.03 * fine
+    rough = np.clip(0.38 + 0.3 * hash01(ids, 6) + 0.12 * fine + 0.15 * (1 - prof) + 0.2 * lichen, 0.25, 0.95)
+    return dict(color=np.clip(col, 0, 1), rough=rough, height=h)
+
+
+# ------------------------------------------------------------------ leaded stained glass (church lancets)
+
+def stained_glass(w_px, h_px, seed=0, w_m=2.0, h_m=8.5, variant=0):
+    """A two-light Gothic lancet in leaded glass, drawn in the lancet's own proportions (it is mapped
+    onto the lancet's bounding box).  Pale grisaille quarries in an irregular lozenge lattice, a jewel-
+    toned border to each light, three medallions per light (roundels or quatrefoils, pieced by radial
+    and concentric leads) and a tracery head of sandstone with small trefoils.  The level is kept well
+    below the house windows so the glass glows without flattening into one bright shape.
+    Returns (base, emit) arrays (h_px, w_px, 3), linear."""
+    r = rng(seed)
+    yy, xx = np.mgrid[0:h_px, 0:w_px].astype(float)
+    X = (xx + 0.5) / w_px * w_m - w_m / 2                     # metres across, 0 at the mullion
+    Y = (h_px - 0.5 - yy) / h_px * h_m                         # metres up
+    nz = pnoise(max(w_px, h_px), 9, 3, 0.5, seed + 3)[:h_px, :w_px]
+    nz2 = pnoise(max(w_px, h_px), 14, 2, 0.5, seed + 4)[:h_px, :w_px]
+    side = np.where(X < 0, 0, 1)
+    lw = w_m / 2 - 0.05                                          # each light's width (mullion 0.1 m)
+    lx = np.where(X < 0, X + w_m / 2, X - 0.05) - lw / 2        # x within the light, 0 at its centre
+    lx = np.where(X < 0, lx - 0.025, lx)
+    # quarries: an irregular lozenge lattice, hand-cut (warped)
+    qa, qb = 0.26, 0.36
+    A = (lx / qa + Y / qb + 0.35 * (nz - 0.5))
+    B = (lx / qa - Y / qb + 0.35 * (nz2 - 0.5))
+    ids = (np.floor(A).astype(np.int64) * 131 + np.floor(B).astype(np.int64) * 17 + side * 7919)
+    pale = palette_pick(hash01(ids, 1 + variant), [(0.8, 0.66, 0.4), (0.62, 0.66, 0.46), (0.84, 0.6, 0.32),
+                                                  (0.6, 0.58, 0.5), (0.74, 0.52, 0.3)], [4, 3, 2, 2, 1])
+    col = pale * (0.2 + 0.22 * hash01(ids, 2))[..., None]
+    jewel = [(0.55, 0.05, 0.06), (0.08, 0.14, 0.5), (0.1, 0.34, 0.14), (0.7, 0.42, 0.06), (0.35, 0.08, 0.32)]
+    if variant % 2:
+        jewel = [jewel[1], jewel[0], jewel[3], jewel[2], jewel[4]]
+    # border strip along each light's edges, in short alternating pieces
+    border = np.abs(lx) > lw / 2 - 0.11
+    bid = np.floor(Y / 0.22).astype(np.int64) + side * 1000 + 50000
+    ids = np.where(border, bid, ids)
+    bcol = palette_pick(hash01(bid, 7), [jewel[0], jewel[1], jewel[3]], [3, 3, 1])
+    col = np.where(border[..., None], bcol * (0.6 + 0.25 * hash01(bid, 8))[..., None], col)
+    # medallions: three per light
+    top = h_m - w_m * 0.55                                       # where the pointed head starts
+    cy_list = [top * f for f in ((0.2, 0.47, 0.74) if variant < 2 else (0.25, 0.52, 0.79))]
+    rad = lw / 2 - 0.16
+    for m, cy in enumerate(cy_list):
+        dx, dy = lx, Y - cy
+        rr = np.hypot(dx, dy); ang = np.arctan2(dy, dx)
+        quat = (variant + m) % 2 == 1
+        edge_r = rad * (0.82 + 0.18 * np.abs(np.cos(2 * ang))) if quat else rad
+        inside = rr < edge_r
+        ring = inside & (rr > edge_r - 0.07)
+        sector = np.floor((ang + np.pi) / (2 * np.pi) * (8 if not quat else 4)).astype(np.int64)
+        inner = rr < edge_r * 0.45
+        mid_id = 60000 + side * 900 + m * 60 + np.where(ring, 50, np.where(inner, 40, sector))
+        ids = np.where(inside, mid_id, ids)
+        c_ring = np.array(jewel[(m + variant) % 3 + 0 if m != 1 else 3])
+        c_field = np.array(jewel[(m + 1 + variant) % 2])
+        c_inner = np.array(jewel[(m + 2 + variant) % 5])
+        pick = np.where(ring[..., None], c_ring, np.where(inner[..., None], c_inner, c_field * (0.8 + 0.4 * (sector % 2))[..., None]))
+        col = np.where(inside[..., None], pick * (0.8 + 0.35 * hash01(mid_id, 11))[..., None], col)
+    # the tracery head: sandstone with a trefoil above each light and a roundel in the apex
+    head = Y > top
+    stone = np.zeros_like(X, bool)
+    for cxh in (-(lw / 2 + 0.025), lw / 2 + 0.05):
+        for k in range(3):
+            a = np.pi / 2 + k * 2 * np.pi / 3
+            fx, fy = cxh + 0.16 * np.cos(a), top + 0.22 + 0.16 * np.sin(a)
+            d = np.hypot(X - fx, Y - fy)
+            stone |= head & (np.abs(d - 0.13) < 0.03)
+    rc = top + w_m * 0.34
+    d = np.hypot(X, Y - rc)
+    stone |= (np.abs(d - 0.26) < 0.035)
+    for k in range(4):
+        a = k * np.pi / 2 + np.pi / 4
+        dd = np.hypot(X - 0.12 * np.cos(a), Y - rc - 0.12 * np.sin(a))
+        stone |= dd < 0.11 + 0.0 * dd
+        stone &= ~(dd < 0.075)
+    stone |= head & (np.abs(X) < 0.05)                          # the mullion runs up into the head
+    head_ids = np.floor(np.hypot(X, Y - rc) / 0.12).astype(np.int64) * 13 + np.floor((np.arctan2(Y - rc, X) + np.pi) / 0.6).astype(np.int64) + 80000
+    ids = np.where(head & ~stone, head_ids, ids)
+    col = np.where((head & ~stone)[..., None], palette_pick(hash01(head_ids, 13), [jewel[1], jewel[0], jewel[3], (0.7, 0.7, 0.6)], [3, 2, 1, 2]) * 0.9, col)
+    # lead cames between the pieces (1-2 px), darker overall toward the head, a warm glow low down
+    lead = id_edges(ids)
+    lead = lead | ndimage.binary_dilation(lead, structure=np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]]))
+    glow = (0.55 + 0.45 * np.exp(-((Y - h_m * 0.3) / (h_m * 0.45)) ** 2)) * (0.85 + 0.3 * pnoise(max(w_px, h_px), 5, 2, 0.5, seed + 9)[:h_px, :w_px])
+    emit = col * glow[..., None] * 0.42
+    emit[lead] = 0.004
+    emit[stone] = 0.0
+    base = np.zeros((h_px, w_px, 3)) + np.array([0.02, 0.022, 0.025])
+    base[lead] = (0.03, 0.03, 0.03)
+    base[stone] = np.array([0.36, 0.3, 0.21]) * (0.8 + 0.3 * nz[stone])[..., None]
+    return base, emit
+
 # ------------------------------------------------------------------ io
 
 def to_u8(a):
@@ -561,3 +728,50 @@ def save_png(path, arr):
     else:
         Image.fromarray(a, "RGBA").save(path)
     return path
+
+
+# ------------------------------------------------------------------ shop-sign lettering atlas
+
+def sign_atlas(rows, fonts, n=1024, row_px=42, px_per_m=107.7, seed=131):
+    """Painted shop signs as one texture instead of triangulated lettering (round 1 pass 3: the gilt
+    text meshes cost 9k triangles).  rows: list of (text, width_m) in atlas row order; fonts(text) ->
+    a TrueType path.  Each row is a dark green board with a fine gilt line and gilt lettering with a
+    dark cast shadow; the lettering is raised in the height map and metallic in the metal map.
+    Returns dict color (linear), rough, metal, height (all n x n)."""
+    from PIL import Image, ImageDraw, ImageFont
+    r = rng(seed)
+    col = np.zeros((n, n, 3)); rough = np.full((n, n), 0.6); metal = np.zeros((n, n)); height = np.zeros((n, n))
+    grain = stretched_noise(n, 40, 3, 3, seed + 1)
+    for i, (text, w_m) in enumerate(rows):
+        y0 = i * row_px
+        wpx = int(min(n, round(w_m * px_per_m)))
+        board = np.array([0.045, 0.075, 0.05]) * (0.85 + 0.3 * grain[y0:y0 + row_px, :wpx, None])
+        col[y0:y0 + row_px, :wpx] = board
+        rough[y0:y0 + row_px, :wpx] = 0.55
+        im = Image.new("L", (wpx * 2, row_px * 2), 0)       # 2x supersampled
+        dr = ImageDraw.Draw(im)
+        dr.rectangle([6, 6, wpx * 2 - 7, row_px * 2 - 7], outline=255, width=2)
+        size = int(row_px * 2 * 0.62)
+        fpath = fonts(text)
+        while size > 10:
+            f = ImageFont.truetype(fpath, size)
+            bb = dr.textbbox((0, 0), text, font=f)
+            if bb[2] - bb[0] < wpx * 2 - 40:
+                break
+            size -= 2
+        bb = dr.textbbox((0, 0), text, font=f)
+        tx = (wpx * 2 - (bb[2] - bb[0])) / 2 - bb[0]
+        ty = (row_px * 2 - (bb[3] - bb[1])) / 2 - bb[1]
+        dr.text((tx, ty), text, font=f, fill=255)
+        m = np.asarray(im.resize((wpx, row_px), Image.LANCZOS), float) / 255.0
+        sh = np.roll(np.roll(m, 1, 0), 1, 1) * (1 - m)
+        grad = np.linspace(1.15, 0.8, row_px)[:, None]
+        gilt = np.array([0.8, 0.56, 0.22])
+        c = col[y0:y0 + row_px, :wpx]
+        c = c * (1 - 0.7 * sh[..., None])
+        c = c * (1 - m[..., None]) + (gilt * grad[..., None] * (0.9 + 0.2 * grain[y0:y0 + row_px, :wpx, None])) * m[..., None]
+        col[y0:y0 + row_px, :wpx] = c
+        rough[y0:y0 + row_px, :wpx] = 0.55 * (1 - m) + 0.28 * m
+        metal[y0:y0 + row_px, :wpx] = m
+        height[y0:y0 + row_px, :wpx] = ndimage.gaussian_filter(m, 0.8)
+    return dict(color=np.clip(col, 0, 1), rough=rough, metal=metal, height=height)

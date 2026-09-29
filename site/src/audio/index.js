@@ -22,6 +22,11 @@ export function createAudio({ manifest, positions, getCamera, lite, warn }) {
     get phase() { return band.phase || (band.playing ? band.mode : 'idle'); },
     get separable() { return band.separable !== false; },
     prefetch() { band.prefetch?.(); },
+    /** The recorded band's place in its road map (null for the improvising fallback). */
+    where() { return band.where?.() || null; },
+    seek(pos, pass) { band.seek?.(pos, pass); },
+    get endings() { return band.endings || 0; },
+    get alternatesReady() { return !!band.alternatesReady; },
     async start() {
       try {
         await band.start();

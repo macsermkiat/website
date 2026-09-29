@@ -95,7 +95,7 @@ def iron_shade(gy0, gy1):
             return c
         if near_x and 1.7 < p.z < 2.7:                    # hood: soot heaviest at the skirt
             t = max(0.0, min(1.0, (p.z - 1.74) / 0.8))
-            k = 0.72 + 0.28 * t                           # (lighter than before: reads in the browser)
+            k = 0.8 + 0.2 * t                             # (light: the hood must read in the browser)
             blue = max(0.0, 1.0 - abs(p.z - 1.95) / 0.2) * 0.5
             return (k * (1 - 0.35 * blue), k * (1 - 0.25 * blue), k)
         if p.z > 2.6 and abs(p.x - GX) < 0.3:              # stovepipe: soot toward the top
@@ -121,7 +121,6 @@ def build(lite):
             inner_tint="oak", counter_tint="dark", shade=sh, bulb_spacing=0.22, lap_segs=8,
             front_posts=[-W / 2 + 0.05, W / 2 - 0.05], shelves=(1.4, 1.8))
     h.roofp.shade = sh
-    h.iron.mat = "iron_matte"          # metallicFactor 0.4: the hood reads without an env map
     yF = h.yF
     h.build_carcass(lower_top=lambda c: 0.78 if GRILL_X0 - 0.05 < c < GRILL_X1 + 0.05 else COUNTER_TOP - 0.07)
     h.build_counter(x0=GRILL_X1 + 0.02)
@@ -131,9 +130,11 @@ def build(lite):
     h.build_snow()
 
     # ------------------------------------------------------------ grill set into the counter
-    iron = h.iron
+    # firebox and hood: lighter sheet iron with a faint warm glow from the bulbs and the fire
+    # (kit variant iron_matte); the stovepipe, struts and fittings stay plain forged iron (h.iron)
+    iron = h.part("hood", "iron_matte")
     gy0, gy1 = yF - 0.22, yF + 0.38
-    iron.shade = iron_shade(gy0, gy1)
+    iron.shade = h.iron.shade = iron_shade(gy0, gy1)
     gcy = (gy0 + gy1) / 2
     gw, gd = GRILL_X1 - GRILL_X0, gy1 - gy0
     R = state.rng
@@ -202,19 +203,19 @@ def build(lite):
         iron.tube([a0 + Vector((0, -0.006, 0)), a1 + Vector((0, -0.006, 0))], 0.008, tseg=5)
     # hanging rods from the rafters
     for x in (hc.x - gw / 2 + 0.05, hc.x + gw / 2 - 0.05):
-        iron.box((x, hc.y, 2.2), (0.012, 0.012, 0.5), bevel=0)
+        h.iron.box((x, hc.y, 2.2), (0.012, 0.012, 0.5), bevel=0)
     pipe_top = RIDGE + 0.75
-    iron.cyl((hc.x, hc.y, (2.6 + pipe_top) / 2), 0.11, 0.11, pipe_top - 2.6, seg=16, caps=False)
+    h.iron.cyl((hc.x, hc.y, (2.6 + pipe_top) / 2), 0.11, 0.11, pipe_top - 2.6, seg=16, caps=False)
     for z in (3.0, 3.55, pipe_top - 0.25):
-        iron.torus((hc.x, hc.y, z), 0.112, 0.008, seg=16, tseg=4)
+        h.iron.torus((hc.x, hc.y, z), 0.112, 0.008, seg=16, tseg=4)
     # rain cap on legs
-    iron.cyl((hc.x, hc.y, pipe_top + 0.2), 0.24, 0.02, 0.13, seg=16, caps=True)
+    h.iron.cyl((hc.x, hc.y, pipe_top + 0.2), 0.24, 0.02, 0.13, seg=16, caps=True)
     for a in range(3):
         ang = a * 2 * math.pi / 3
-        iron.box((hc.x + 0.1 * math.cos(ang), hc.y + 0.1 * math.sin(ang), pipe_top + 0.07),
+        h.iron.box((hc.x + 0.1 * math.cos(ang), hc.y + 0.1 * math.sin(ang), pipe_top + 0.07),
                  (0.012, 0.012, 0.16), bevel=0)
     # flashing collar where the pipe meets the roof
-    iron.cyl((hc.x, hc.y, RIDGE - 0.02 - abs(hc.y) * math.tan(h.pitch) + 0.03), 0.2, 0.13, 0.08, seg=16)
+    h.iron.cyl((hc.x, hc.y, RIDGE - 0.02 - abs(hc.y) * math.tan(h.pitch) + 0.03), 0.2, 0.13, 0.08, seg=16)
     smoke = (hc.x, hc.y, pipe_top + 0.3)
 
     # ------------------------------------------------------------ firewood lean-to on the right side

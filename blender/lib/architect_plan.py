@@ -80,11 +80,24 @@ def layout_places():
 TREE_THREE = (6.5, -15.0)
 POLES_THREE = [[-15, 4], [-7.5, 6.5], [0, 7.5], [7.5, 6.5], [15, 4], [-10.5, -6.5], [10.5, -6.5],
                [-2.6, -9.6], [2.6, -9.6], [-17.5, -3], [-17.5, 5], [-17.5, 13], [17.5, -3], [17.5, 5],
-               [17.5, 13], [-7, -18], [0, -20], [12.2, -19.6]]
+               [17.5, 13], [-7, -18], [0, -21], [12.4, -20.6]]
+# Round 1 pass 3: span 19 used to run 35 m from pole 9 to pole 12 across z = -3, 2 m in front of the
+# bandstand's axis, and sagged into its roof; it now swags across the front lane from pole 0 to pole 4
+# (z = 4, 4 m in front of the bandstand).  Spans 11 and 12 (pole 2 to poles 7 and 8) pass 1.9 m from
+# the bandstand's axis, where its roof stands 5.1-5.7 m high; poles 7 and 8 behind the bandstand are
+# now 9.2 m tall, so those wires climb over the roof with about 1.5 m to spare
+# (blender/square/check_clash.py tests every wire and bulb against the bandstand's own mesh).  The back-row
+# poles 16 and 17 moved another metre back (to z = -21 and -20.6): the denser upper crown of the pass-3
+# tree reaches 4.3 m from its axis at 5.5 m height.
 SPANS = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [4, 6], [5, 7], [7, 8], [8, 6], [1, 7], [3, 8], [2, 7],
-         [2, 8], [1, 5], [3, 6], [9, 10], [10, 11], [12, 13], [13, 14], [9, 12], [11, 1], [14, 3],
+         [2, 8], [1, 5], [3, 6], [9, 10], [10, 11], [12, 13], [13, 14], [0, 4], [11, 1], [14, 3],
          [10, 13], [5, 9], [6, 12], [15, 16], [16, 17], [15, 7], [16, 7], [15, 5], [17, 6]]
 POLE_H = 6.4
+POLE_H_OF = {7: 9.2, 8: 9.2}      # the two poles behind the bandstand carry the wires over its roof
+
+
+def pole_h(i):
+    return POLE_H_OF.get(i, POLE_H)
 # spans that carry a light_string_NN empty (the rest have bulbs only): the four crossings over the
 # lanes in front of the section stalls and the bandstand first, then two back spans (lite keeps 3)
 STRING_LIGHT_SPANS = [11, 12, 9, 10, 20, 21]

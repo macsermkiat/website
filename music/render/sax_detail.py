@@ -27,7 +27,7 @@ fig, (ax, ax2) = plt.subplots(2, 1, figsize=(12.8, 7.2), dpi=100, gridspec_kw=di
 m = f <= 1600
 ax.pcolormesh(t + t0, f[m], P[m], cmap=cmap, vmin=-80, vmax=0, shading="auto", rasterized=True)
 ax.set_ylabel("frequency (Hz)", color="#4a4a46")
-ax.set_title("Tenor, head bars 1-8 (G minor, MusyngKite): scoops, late-blooming vibrato, breaths, phrase swells", loc="left", fontsize=12, color="#1f1f1d")
+ax.set_title("Tenor, head bars 1-8 (G minor, MTG recorded tenor, AIR 0.4): scoops, late-blooming vibrato, breaths, phrase swells", loc="left", fontsize=12, color="#1f1f1d")
 for b in range(1, 10):
     tb = ballad.beat_time(ballad.bar_beat(b))
     ax.axvline(tb, color="#c9c8c2", lw=0.8)

@@ -3,9 +3,14 @@
 Usage: /home/claude/tools/bpy-venv/bin/python blender/square/preview.py <shot> [samples] [out.jpg]
 shots: home | street | tree | cobbles | church | roofs
 Renders at 1280x720 and 48 samples (RES_X and argv[2] override; iterate at RES_X=960 and 32), keeps the PNG in blender/square/out/renders/ and writes a
-1280 px review JPEG.  Stalls and landmarks are plain stand-ins at the real assets' sizes (other roles
-build the real ones).
+1280 px review JPEG.
+
+Round 1 pass 3: the stalls, deco stalls, bandstand, Ferris wheel and carousel are the shipped glbs from
+site/public/models (decoded for Blender by blender/lib/decode.mjs), placed from layout.json, so the
+composition and any clashes are judged against what ships; their light_ empties become point lights like
+the architect's own.  STANDINS=1 falls back to the plain stand-ins; a missing asset always does.
 """
+import subprocess
 import os, sys, math, random
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
 import bpy
@@ -37,6 +42,18 @@ def imp(path, loc=(0, 0, 0), rot=0.0):
     return new
 
 
+def decoded(asset):
+    src = os.path.join(C.MODELS, asset)
+    if not os.path.exists(src):
+        return None
+    dec = os.path.join(C.REPO, "blender", "square", "out", "decoded")
+    os.makedirs(dec, exist_ok=True)
+    dst = os.path.join(dec, asset)
+    if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
+        subprocess.run(["node", os.path.join(C.REPO, "blender", "lib", "decode.mjs"), src, dst], check=True, capture_output=True)
+    return dst
+
+
 want_town = True
 want_square = True
 objs = []
@@ -48,32 +65,21 @@ tree_p = next(p for p in layout["places"] if p["id"] == "tree")
 tp = C.three_to_blender(*tree_p["pos"])
 objs += imp(os.path.join(C.REPO, "blender", "square", "out", "tree_raw.glb"), tp, tree_p.get("rotY", 0))
 
-# light_ empties -> warm point lights (what the browser does with real-time lights)
-church_tower = C.three_to_blender(8, -56)
-for o in list(bpy.data.objects):
-    if o.type == "EMPTY" and o.name.startswith("light_church"):
-        # floodlights at the tower foot, aimed up the tower face (the browser may use a spot here)
-        p = o.matrix_world.translation
-        aim = Vector((church_tower.x, church_tower.y, 22.0))
-        C.add_light("L_" + o.name, "SPOT", p, 9000.0, (1.0, 0.72, 0.45), size=0.3,
-                    rot=(aim - p).to_track_quat("-Z", "Y").to_euler())
-        bpy.data.lights["L_" + o.name].spot_size = math.radians(38)
-        bpy.data.lights["L_" + o.name].spot_blend = 0.6
-    elif o.type == "EMPTY" and o.name.startswith("light_") and not o.name.startswith("light_string"):
-        C.add_light("L_" + o.name, "POINT", o.matrix_world.translation, 45.0, (1.0, 0.62, 0.32), size=0.12)
-    if o.type == "MESH":
-        for m in o.data.materials:
-            if m and m.name.startswith("snow"):
-                o.hide_render = True        # previews show the market without snow
-
 # stand-ins for stalls and landmarks
 clay = C.solid("standin_clay", (0.42, 0.40, 0.38), rough=0.8)
 glow = C.solid("standin_glow", (1, 0.7, 0.4), emit=(1.0, 0.6, 0.28), strength=4.0)
+REAL = not os.environ.get("STANDINS")
+n_real = 0
 for p in layout["places"]:
     kind = p["kind"]
     if kind == "scenery":
         continue
     x, y = p["pos"][0], -p["pos"][1]
+    path = decoded(p["asset"]) if REAL else None
+    if path:
+        objs += imp(path, (x, y, 0), p.get("rotY", 0))
+        n_real += 1
+        continue
     F = Matrix.Translation((x, y, 0)) @ Matrix.Rotation(p.get("rotY", 0), 4, "Z")
     g = C.Geo("standin_" + p["id"], clay); g.frame = F
     gl = C.Geo("standin_glow_" + p["id"], glow); gl.frame = F
@@ -119,7 +125,26 @@ for p in layout["places"]:
         C.add_light("SL_car", "POINT", F @ Vector((0, 0, 3.2)), 500, (1.0, 0.6, 0.3), size=1)
     g.finish(stand); gl.finish(stand)
 
-C.add_light("MarketGlow", "POINT", (0, 0, 14), float(os.environ.get("GLOW", 9000)), (1.0, 0.62, 0.35), size=10)
+# light_ empties -> warm point lights (what the browser does with real-time lights)
+church_tower = C.three_to_blender(8, -56)
+for o in list(bpy.data.objects):
+    if o.type == "EMPTY" and o.name.startswith("light_church"):
+        # floodlights at the tower foot, aimed up the tower face (the browser may use a spot here)
+        p = o.matrix_world.translation
+        aim = Vector((church_tower.x, church_tower.y, 22.0))
+        C.add_light("L_" + o.name, "SPOT", p, 9000.0, (1.0, 0.72, 0.45), size=0.3,
+                    rot=(aim - p).to_track_quat("-Z", "Y").to_euler())
+        bpy.data.lights["L_" + o.name].spot_size = math.radians(38)
+        bpy.data.lights["L_" + o.name].spot_blend = 0.6
+    elif o.type == "EMPTY" and o.name.startswith("light_") and not o.name.startswith("light_string"):
+        C.add_light("L_" + o.name, "POINT", o.matrix_world.translation, 45.0, (1.0, 0.62, 0.32), size=0.12)
+    if o.type == "MESH":
+        for m in o.data.materials:
+            if m and m.name.startswith("snow"):
+                o.hide_render = True        # previews show the market without snow
+
+C.log("real assets placed", n_real)
+C.add_light("MarketGlow", "POINT", (0, 0, 14), float(os.environ.get("GLOW", 9000 if not n_real else 5000)), (1.0, 0.62, 0.35), size=10)
 C.add_light("Moon", "SUN", (0, 0, 50), 0.10, (0.55, 0.65, 1.0), rot=(math.radians(55), 0, math.radians(200)))
 
 # cameras

@@ -48,7 +48,8 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
     say('One moment, the ride is still being set up…');
     market.whenPlace(id).then(() => start());
   }
-  const lookAtMarket = new THREE.Vector3(0, 1.5, -2);
+  // from a gondola: over the square toward the church, the stalls below and the town beyond
+  const lookAtMarket = new THREE.Vector3(8, 3, 4);
   const tmp = new THREE.Vector3();
   let riding = null;
 
@@ -56,6 +57,7 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
     if (!riding) return;
     const place = riding.place;
     if (riding.rides?.wheel) riding.rides.wheel.boost = 1;
+    stage = null;
     riding = null;
     rig.endRide(silent ? null : viewFor(place));
     if (!silent) say(actionNote(place.id, 'off', 'Back on the ground.'));
@@ -66,12 +68,14 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
     const r = ferris?.rides;
     if (!r || !r.gondolas.length) return say('This Riesenrad has no gondolas to sit in yet.');
     if (riding) endRide(true);
-    // board the gondola nearest the ground
-    let best = r.gondolas[0], by = Infinity;
-    for (const g of r.gondolas) { const y = g.obj.getWorldPosition(tmp).y; if (y < by) { by = y; best = g; } }
+    // board the gondola nearest the ground; the wheel then turns faster until that gondola is at the top,
+    // stops there for the view (HOLD seconds, barely moving), and goes on at its own pace
+    let best = r.gondolas[0], by = Infinity, top = -Infinity;
+    for (const g of r.gondolas) { const y = g.obj.getWorldPosition(tmp).y; if (y < by) { by = y; best = g; } top = Math.max(top, y); }
     const seat = seatOffset(best.obj, 0.2, r.gondolas.map((g) => g.obj));
-    if (r.wheel) r.wheel.boost = 2;
-    riding = { type: 'ferris', place: ferris, rides: r };
+    if (r.wheel) r.wheel.boost = 1;
+    riding = { type: 'ferris', place: ferris, rides: r, gondola: best.obj, bottom: by, top, held: 0, peak: -Infinity };
+    stage = r.wheel ? 'rising' : 'top';
     rig.startRide('ferris', () => ({ pos: best.obj.localToWorld(seat.clone()), look: lookAtMarket }));
     sfx('whoosh');
     say(actionNote('ferris', 'ride', 'Riding up. The whole market opens out below you.'));
@@ -98,7 +102,41 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
     say(actionNote('carousel', 'ride', 'Hold on to the pole. Round and round under the lights.'));
   }
 
+  // ---------- the ride up: rising -> top (the view) -> round ----------
+  let stage = null;
+  const HOLD = 14, RISE_BOOST = 7, TOP_BOOST = 0.12;
+  function update(dt) {
+    if (!riding || riding.type !== 'ferris' || !riding.rides.wheel) return;
+    const w = riding.rides.wheel;
+    const y = riding.gondola.getWorldPosition(tmp).y;
+    const span = Math.max(1, riding.top - riding.bottom);
+    const up = (y - riding.bottom) / span; // 0 at the bottom, 1 at the top
+    if (stage === 'rising') {
+      // ease in, then run, and ease out over the last fifth of the way up; stop at the very top (the gondola
+      // starts coming down again: the height stops growing)
+      const k = up < 0.1 ? 0.35 + up * 6.5 : up > 0.8 ? Math.max(0.12, (1 - up) * 5) : 1;
+      w.boost = Math.max(TOP_BOOST, RISE_BOOST * k);
+      if (y < riding.peak - 0.02 || up > 0.985) { stage = 'top'; riding.held = 0; say(actionNote('ferris', 'ride', 'At the top. The whole market lies below you: the stalls, the bandstand, the tree and the old town round it.', {}, { done: true })); }
+      riding.peak = Math.max(riding.peak, y);
+    } else if (stage === 'top') {
+      w.boost = TOP_BOOST;
+      if ((riding.held += dt) > HOLD) { stage = 'round'; w.boost = 1; }
+    } else w.boost = 1;
+  }
+  /** Brighter exposure while riding: from a gondola the lit market is far below and small (1 = none). */
+  function exposure() {
+    if (!riding) return 1;
+    if (riding.type === 'carousel') return 1.15;
+    const y = riding.gondola.getWorldPosition(tmp).y;
+    const up = THREE.MathUtils.clamp((y - riding.bottom) / Math.max(1, riding.top - riding.bottom), 0, 1);
+    return 1.2 + 0.45 * up;
+  }
+
   return {
+    update,
+    exposure,
+    /** 'rising', 'top' or 'round' on the Riesenrad, else null (tests wait for the top). */
+    get stage() { return riding?.type === 'ferris' ? stage : null; },
     ferris: { hint: actionHint('ferris', 'Take a ride to the top for the view over the market.'), acts: [{ key: 'ride', label: 'Ride to the top', fn: () => whenReady('ferris', startFerris) }, { key: 'off', label: 'Get off', fn: () => endRide(false) }] },
     carousel: { hint: actionHint('carousel', 'Climb on a horse and go round.'), acts: [{ key: 'ride', label: 'Ride a horse', fn: () => whenReady('carousel', startCarousel) }, { key: 'bell', label: 'Ring the bell', fn: () => sfx('chime') }, { key: 'off', label: 'Get off', fn: () => endRide(false) }] },
     endRide,

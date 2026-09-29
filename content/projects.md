@@ -53,4 +53,4 @@ A system that audits blood transfusion practice against guidelines.
 
 [[Mac: where it runs, who uses it, and whether it can be linked or shown in public.]]
 
-The rest of my code is on GitHub: [github.com/macsermkiat](https://github.com/macsermkiat).
+More of my code is on [GitHub](https://github.com/macsermkiat).

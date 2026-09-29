@@ -1,17 +1,19 @@
 """Build the vendor's prop sets: full + lite glb (with baked AO), props.json, items.json, reports and
 Cycles previews.
 
-    NPM_CONFIG_PREFIX=~/nachtmarkt-tools/npm NM_DEVICE=METAL NM_THREADS=0 \\
-    ~/nachtmarkt-tools/bpy-venv/bin/python blender/props/build_props.py [--only a,b] [--no-render]
-        [--no-lite] [--no-full] [--no-ao] [--samples 128] [--res 1920x1080] [--render-only a,b]
+    NM_DEVICE=CPU NM_THREADS=2 /home/claude/tools/bpy-venv/bin/python blender/props/build_props.py
+        [--only a,b] [--no-render] [--no-lite] [--no-full] [--no-ao] [--samples 48] [--res 1280x720]
+        [--render-only a,b] [--shots wide,hero] [--sheet-only]
 
 Outputs
     site/public/models/prop_<set>.glb, prop_<set>.lite.glb, shared prop_tex_*.webp
     site/public/models/props.json      {"sets": [{set, stall, slot, model, lite, asset}]} (the engine's form)
     site/public/models/items.json      every act_ node -> display name (books: title, author, cover)
     blender/out/props_report.json      triangles, bytes, bounding boxes, pivots, items per set
+    blender/out/vendor/renders/*.png   the preview PNGs (deco frames as prop_deco_<key>.png; never the shared
+                                       blender/out/renders/, where the carpenter's deco.py writes deco_<key>.png)
     review/round-1/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
-                                       and the deco contact sheet
+                                       and the deco contact sheet (built only from the vendor's own frames)
 """
 import argparse
 import json
@@ -56,6 +58,7 @@ def args():
     ap.add_argument("--res", default="1920x1080")
     ap.add_argument("--render-only", default=None, help="comma list: render previews only for these sets")
     ap.add_argument("--shots", default="wide,hero", help="section previews to render: wide, hero or both")
+    ap.add_argument("--sheet-only", action="store_true", help="only rebuild the deco contact sheet from the frames")
     a, _ = ap.parse_known_args(sys.argv[1:])
     return a
 
@@ -82,13 +85,17 @@ def render_previews(name, d, ps, a, res):
             vstage.shot(d["hero"], top, os.path.join(vlib.REVIEW, f"{name}_hero.jpg"), a.samples, res)
         return None
     key = name.replace("prop_deco_", "")
+    # the frame PNG is named after the prop set (prop_deco_<key>.png) in the vendor's own render folder
     return vstage.shot(vstage.frame_cam(ps, lens=32), top, os.path.join(vlib.REVIEW, f"deco_{key}.jpg"),
-                       a.samples, res)
+                       a.samples, res, png_name=name)
 
 
 def main():
     a = args()
     sets = all_sets()
+    if a.sheet_only:
+        deco_contact_sheet(sets)
+        return
     only = a.only.split(",") if a.only else None
     if only:
         unknown = [n for n in only if n not in sets]
@@ -119,7 +126,7 @@ def main():
             if not a.no_render and want:
                 png = render_previews(name, d, ps, a, res)
                 if png:
-                    r["frame_png"] = png
+                    r["frame_png"] = os.path.relpath(png, vlib.REPO)
         r["seconds"] = round(time.time() - t0, 1)
         r["slot"], r["stall"] = d["slot"], d["stall"]
         r["label"] = d.get("label", name)
@@ -127,15 +134,26 @@ def main():
         print(f"[props] {name}: {json.dumps({k: r.get(k) for k in ('full', 'lite', 'size')})}")
         with open(REPORT, "w") as f:
             json.dump(reports, f, indent=1, ensure_ascii=False)
-    sheet = [(reports[n]["frame_png"], reports[n]["label"]) for n in sets
-             if n.startswith("prop_deco_") and os.path.exists(reports.get(n, {}).get("frame_png", ""))]
-    if len(sheet) == 9 and not a.no_render:
-        from nmlib import render
-        render.contact_sheet(sheet, os.path.join(vlib.REVIEW, "deco_goods_contact_sheet.jpg"), cols=3,
-                             tile=(416, 234), title="Deco stall goods (vendor, round 1 pass 2)")
+    if not a.no_render:
+        deco_contact_sheet(sets)
     shrink_shared_textures()
     write_props_json(sets)
     write_items_json(sets, reports)
+
+
+def deco_contact_sheet(sets):
+    """The nine deco goods frames on one sheet, read only from the vendor's own renders
+    (blender/out/vendor/renders/prop_deco_<key>.png). Missing frames leave the old sheet alone."""
+    from nmlib import render
+    frames = [(os.path.join(vstage.RENDERS, f"{n}.png"), sets[n].get("label", n)) for n in sets
+              if n.startswith("prop_deco_")]
+    missing = [p for p, _ in frames if not os.path.exists(p)]
+    if missing:
+        print(f"[props] contact sheet not rebuilt, frames missing: {[os.path.basename(p) for p in missing]}")
+        return
+    out = os.path.join(vlib.REVIEW, "deco_goods_contact_sheet.jpg")
+    render.contact_sheet(frames, out, cols=3, tile=(416, 234), title="Deco stall goods (vendor, round 1 pass 3)")
+    print(f"[props] wrote {out}")
 
 
 # Full-size shared maps that do not need 2048 px: the books' normal and roughness carry cloth weave
@@ -182,8 +200,10 @@ def write_items_json(sets, reports):
             if node in items:
                 raise RuntimeError(f"act_ node {node} appears in two sets ({items[node]['set']}, {name})")
             items[node] = {"set": name, "stall": sets[name]["stall"], **data}
-    out = {"about": "Display names for the vendor's act_ nodes (node names are unique across all prop sets). "
-                    "Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV "
+    out = {"about": "Display names for the vendor's act_ nodes (node names are unique across all prop sets; the "
+                    "full and the lite glb of a set carry the same act_ nodes at the same places). 'pivot' says "
+                    "where the node's origin is: 'base' is the point the item rests on; sausages turn about "
+                    "their centre. Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV "
                     "rect [u_min, v_min, u_max, v_max] in glTF texture space (origin top-left, as three.js samples glTF "
                     "textures) in prop_tex_books_color.webp.",
            "items": dict(sorted(items.items(), key=lambda kv: (kv[1]["set"], kv[0])))}

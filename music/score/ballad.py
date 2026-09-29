@@ -442,6 +442,30 @@ def voicing_candidates(ch: Chord, lo, hi):
     return [(f, v) for f, v in out if lil_ok(v)]
 
 
+def open_shells(ch: Chord, lo, hi):
+    """Open three-note rootless shells: the third and the seventh plus one colour tone (9th, 11th,
+    13th or an altered tone), each placed in any octave inside [lo, hi], at most an octave and a
+    fifth wide, within the low interval limits. Used only when no close or drop-2 voicing clears
+    the tune."""
+    pcs = sorted({i % 12 for f in ("A", "B") for i in ch.q[f]})
+    guides = [i for i in pcs if i in (3, 4, 10, 11)]
+    colours = [i for i in pcs if i not in guides]
+    out = []
+    if len(guides) < 2:
+        return out
+
+    def places(pc):
+        return [m for m in range(lo, hi + 1) if (m - ch.root - pc) % 12 == 0]
+    for c in colours:
+        for a in places(guides[0]):
+            for b in places(guides[1]):
+                for x in places(c):
+                    v = sorted((a, b, x))
+                    if len(set(v)) == 3 and v[-1] - v[0] <= 19 and lil_ok(v):
+                        out.append(("open3", v))
+    return out
+
+
 # The comp's top voice while the tenor plays: B-flat 4 at most, so the piano stays in the tenor's
 # shadow instead of floating a brighter line above the soft subtone melody.
 TOP_CAP = 70
@@ -468,13 +492,25 @@ def choose_voicing(ch, prev, lo, hi, melody=None, target_center=58, avoid=(), av
     for cap in ((top_cap, None) if top_cap is not None else (None,)):
         for av, rng_ in ((avoid, (lo, hi)), (now, (lo, hi)), (avoid, (lo - 4, hi + 4)), (now, (lo - 4, hi + 4))):
             stages.append((cap, av, rng_))
+    found = False
     for cap, av, (l2, h2) in stages:
         pool = cands if (l2, h2) == (lo, hi) else voicing_candidates(ch, l2, h2)
         pool = [(f, v) for f, v in pool if all(abs(x - m) > 1 for x in v for m in av)
                 and (cap is None or v[-1] <= cap)]
         if pool:
             cands = pool
+            found = True
             break
+    if not found:
+        # Round 1, pass 4: when no close or drop-2 voicing clears the tune (bar 46, where the two
+        # choruses sit on the chord's third and its seventh at the same time), open the shell
+        # instead of thinning it: the two guide tones and one colour tone, each in its own octave.
+        for cap, av, (l2, h2) in stages:
+            pool = [(f, v) for f, v in open_shells(ch, l2, h2)
+                    if all(abs(x - m) > 1 for x in v for m in av) and (cap is None or v[-1] <= cap)]
+            if pool:
+                cands = pool
+                break
     mel = [m for m, _ in melody] if melody else []
     key = max(avoid_now) if avoid_now else (max(avoid) if avoid else (mel[0] if mel else None))
     if key is not None and key >= 60 and top_cap is not None:

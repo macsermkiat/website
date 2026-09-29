@@ -19,6 +19,9 @@ import { bindKeyboard, watchMotion } from './interaction/keyboard.js';
 import { createPanel, buildPlaceNav } from './ui/panel.js';
 import { SECTIONS, ORDER, bookPicks, phrases, taglineHtml } from './content.js';
 import { createPerfMeter } from './perf.js';
+import { mergeStatic, mergeAcross, instancePools, instanceRiders } from './engine/merge.js';
+import { createGovernor } from './governor.js';
+import { counterLocal } from './actions/util.js';
 
 const $ = (id) => document.getElementById(id);
 const warnings = [];
@@ -75,9 +78,9 @@ async function boot() {
 
   // ---------- the market ----------
   const bar = $('loadingBar');
-  // The lite market opens without the rides and the nine deco stalls (about 3.4 MB of models) and adds them
-  // just after its first frame. ?defer=0 loads everything up front.
-  const deferOn = lite && params.get('defer') !== '0';
+  // Both markets open without the rides and the nine deco stalls (about 8 MB of full models, 3.4 MB lite) and
+  // add them just after the first frame. ?defer=0 loads everything up front.
+  const deferOn = params.get('defer') !== '0';
   const market = await buildMarket({
     scene, lite, warn,
     defer: deferOn ? (e) => e.kind === 'deco' || e.place === 'ferris' || e.place === 'carousel' : undefined,
@@ -88,7 +91,14 @@ async function boot() {
   const { lighting, source: lightingSource } = await setupLighting({ scene, renderer, camera, lite }, warn);
   // light_ empties become lights: the lighting designer's placement when the module offers one, else the engine's
   const reserved = lite ? 0 : 2; // the bandstand's two spotlights (the lite market fakes its spot)
-  const lightInfo = placeMarketLights({ scene, lighting, lightingSource, spots: market.lightSpots, lite, focus, reserved, warn });
+  // On the full market the two rides take a real light each once they arrive: keep those two back now.
+  const heldForLater = !lite && market.deferred.some((id) => /riesenrad|karussell|ferris|carousel/.test(id)) ? DEFERRED_LIGHTS : 0;
+  const fullBudget = Number(lighting.raw?.profile?.lightBudget) || 14;
+  const lightInfo = placeMarketLights({ scene, lighting, lightingSource, spots: market.lightSpots, lite, focus, reserved, warn, budget: lite ? undefined : fullBudget - heldForLater });
+  // the ground pools of unlit light_ empties: one instanced draw instead of one each
+  instancePools(lightInfo.pools, scene);
+  // the lite market's close-up key: one warm spot that follows the open section stall (see keyLight below)
+  const key = lite ? createKeyLight(scene) : null;
   const composer = lighting.composer;
   let outline = null;
   if (typeof composer.insertPass === 'function' && composer.passes?.[0]?.scene) {
@@ -107,13 +117,17 @@ async function boot() {
   // does nothing).
   const snowSettings = lighting.raw?.settings?.snow;
   if (snowSettings && Number(snowSettings.fogDensity) > SNOW_FOG_MAX) snowSettings.fogDensity = SNOW_FOG_MAX;
+  // Flakes: the nearest layer drew as big out-of-focus discs in front of the market; the engine asks for
+  // smaller, crisper ones (a request to the lighting designer, like the fog cap; see capFlakes).
+  capFlakes(scene);
   const snowfall = ownSnow ? { set() {}, update() {} } : createSnowfall(scene, { lite });
+  // keep walkers off the stalls (from the layout, so the deco stalls count before their models arrive)
   const avoid = (x, z) => {
     for (const p of Object.values(market.places)) if (Math.hypot(x - p.holder.position.x, z - p.holder.position.z) < (p.radius || 3) + 1) return false;
-    for (const pl of market.placed) if ((pl.entry.kind === 'deco' || pl.entry.kind === 'tree') && Math.hypot(x - pl.entry.position[0], z - pl.entry.position[2]) < 3.4) return false;
+    for (const e of market.layout.entries) if ((e.kind === 'deco' || e.kind === 'tree' || (e.place && !market.places[e.place])) && Math.hypot(x - e.position[0], z - e.position[2]) < (e.place ? 6 : 3.4)) return false;
     return true;
   };
-  const crowd = await createCrowd({ scene, overlay, lite, manager: undefined, warn, avoid, phrases: phrases() });
+  const crowd = await createCrowd({ scene, overlay, lite, manager: undefined, warn, avoid, phrases: phrases(), lodFar: quality.lodFar });
   if (!lite) crowd.group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
 
   // ---------- sound ----------
@@ -121,7 +135,10 @@ async function boot() {
   const audio = createAudio({ manifest: inventory.audio, positions, getCamera: () => camera, lite, warn });
 
   // ---------- camera, panel, actions ----------
-  const rig = createCameraRig({ camera, dom: renderer.domElement, home, motion });
+  // Phones (a narrow, tall market): the architect's home view shows the stalls as a thin band over a lot of
+  // dark ground. Come in closer and lower, so the four section stalls and the bandstand fill the upper part.
+  const phoneHome = stage.clientWidth < 600 && stage.clientHeight > stage.clientWidth * 0.9;
+  const rig = createCameraRig({ camera, dom: renderer.domElement, home: phoneHome ? PHONE_HOME : home, motion });
   let panel;
   const actions = createActions({
     market, scene, lite, motion, audio, rig, camera, overlay,
@@ -168,8 +185,13 @@ async function boot() {
   panel = createPanel({
     actionsFor: (id) => actions.get(id),
     playButtonLabel: playLabel,
-    onOpen: () => requestAnimationFrame(() => panelShift()),
-    onClose: () => panelShift(),
+    onOpen: (id) => {
+      // a book pulled at the Bücherstand goes back, and its title tag with it, when another place opens
+      if (id !== 'books') actions.retractBook();
+      key?.follow(market.places[id]);
+      requestAnimationFrame(() => panelShift());
+    },
+    onClose: () => { actions.retractBook(); key?.follow(null); panelShift(); },
   });
   // Opening a place from the buttons under the market: bring the market back into view first.
   // On a phone the panel is a bottom sheet: bring the market to the top of the screen, so the part above the
@@ -190,6 +212,33 @@ async function boot() {
     onBook: (node) => { if (panel.current !== 'books') openPlace('books'); actions.pullBook(node); },
   });
 
+  // ---------- fewer draw calls ----------
+  // Now that the lights are placed and the actions hold their nodes, the static meshes of every model are merged
+  // (engine/merge.js): one mesh per material per rigid body, and the deco stalls' shared kit as one row.
+  const merges = { before: 0, after: 0, row: 0 };
+  const decoRow = new THREE.Group();
+  decoRow.name = 'deco_row_merged';
+  scene.add(decoRow);
+  const riderSyncs = [];
+  function compact(placed) {
+    for (const p of placed) {
+      try { const r = mergeStatic(p.root); merges.before += r.before; merges.after += r.after; } catch (e) { warn(`merge ${p.entry.id}: ${e?.message || e}`); }
+      // the gondolas and horses: one instanced draw per part for all of them
+      for (const list of [p.nodes?.gondolas, p.nodes?.horses]) {
+        if (!list?.length) continue;
+        try {
+          const r = instanceRiders(list, p.root);
+          if (r) { riderSyncs.push(r.sync); merges.after -= r.saved; merges.riders = (merges.riders || 0) + r.saved; }
+        } catch (e) { warn(`instance riders ${p.entry.id}: ${e?.message || e}`); }
+      }
+    }
+    const deco = placed.filter((p) => p.entry.kind === 'deco').map((p) => p.root);
+    if (deco.length > 1) {
+      try { const saved = mergeAcross(deco, decoRow); merges.row += saved; merges.after -= saved; } catch (e) { warn(`merge deco row: ${e?.message || e}`); }
+    }
+  }
+  if (params.get('merge') !== '0') compact(market.placed);
+
   // ---------- snow, reset, keyboard ----------
   const snowBtn = $('snow');
   let snowOn = false;
@@ -208,6 +257,8 @@ async function boot() {
   function resetView() {
     actions.rides.endRide(true);
     panel.close();
+    actions.retractBook();
+    key?.follow(null);
     rig.flyTo(null);
   }
   $('reset').addEventListener('click', resetView);
@@ -271,6 +322,7 @@ async function boot() {
   resize();
 
   // ---------- loop ----------
+  const baseExposure = renderer.toneMappingExposure || 1;
   const timer = new THREE.Timer();
   timer.connect?.(document);
   let T = 0, frames = 0, slowFrames = 0;
@@ -286,12 +338,17 @@ async function boot() {
     applyShift(dt);
     const L = audio.levels;
     for (const r of market.rides) r.update(still ? 0 : dt, T, 1, !still);
+    for (const sync of riderSyncs) sync();
     for (const m of market.mixers) if (!still) m.update(dt);
     const pulse = (L.bass || 0) * 0.35 + (L.drums || 0) * 0.1;
     // bulbs burn a little brighter in falling snow, so the strings still read through it
     const snowLift = 1 + 0.3 * (lighting.raw?.snowAmount ?? (snowOn ? 1 : 0));
     market.bulbMaterials.forEach((m, i) => { m.emissiveIntensity = m.userData.baseEmissive * snowLift * (0.9 + (still ? 0 : 0.07 * Math.sin(T * 1.3 + i * 1.7)) + pulse); });
     actions.update(dt, T, still);
+    key?.update(dt);
+    // from a gondola the lit market is far below: open the exposure up while riding, and back on the ground
+    const wantExp = baseExposure * actions.rides.exposure();
+    renderer.toneMappingExposure += (wantExp - renderer.toneMappingExposure) * (motion.reduced ? 1 : 1 - Math.exp(-dt * 2));
     snowfall.update(dt, T, still);
     w0.w = stage.clientWidth; w0.h = stage.clientHeight;
     crowd.update(dt, T, camera, w0.w, w0.h, { still, look: rig.controls.target });
@@ -305,12 +362,16 @@ async function boot() {
     step(dt);
     composer.render(dt);
     perf?.frame(rawDt);
+    governor?.frame(rawDt);
     frames++;
-    if (!lite && frames > 30 && frames < 330 && dt > 0.045) slowFrames++;
-    if (frames === 330 && slowFrames > 200) suggestLite();
+    if (!lite && !governor && frames > 30 && frames < 330 && dt > 0.045) slowFrames++;
+    if (!governor && frames === 330 && slowFrames > 200) suggestLite();
     requestAnimationFrame(frame);
   }
+  let suggested = false;
   function suggestLite() {
+    if (suggested) return;
+    suggested = true;
     const b = document.createElement('button');
     b.className = 'btn badge';
     b.type = 'button';
@@ -320,7 +381,14 @@ async function boot() {
   }
 
   // a frame-time meter for measuring on real hardware (?perf): median and 95th percentile, draw calls, triangles
-  const perf = params.has('perf') ? createPerfMeter({ stage, renderer, lite }) : null;
+  // The frame-time governor (full market): if this machine cannot hold ~30 fps once the lighting module has
+  // made its own cuts, the crowd's distance LOD comes in (12 m, then 6 m, then everyone on the lite figure),
+  // the crowd stops casting moon shadows, and last the lite market is offered. ?governor=0 turns it off.
+  const governor = !lite && params.get('governor') !== '0' ? createGovernor({
+    crowd, lightingStats: () => lighting.raw?.stats?.(), suggestLite,
+    onStep: (s) => { report.governor = s; console.info('[market] governor', JSON.stringify(s)); },
+  }) : null;
+  const perf = params.has('perf') ? createPerfMeter({ stage, renderer, lite, governor: () => governor?.state || null, tour: { openPlace, resetView, advance: (s) => step(s) } }) : null;
 
   // first frame, then reveal (the mark lets tests and ?perf count what was fetched before the market opened)
   performance.mark?.('market-ready');
@@ -336,12 +404,19 @@ async function boot() {
   const lodReady = lite ? Promise.resolve(0) : new Promise((res) => setTimeout(res, 300)).then(() => crowd.enableLod()).catch((e) => { warn(`crowd LOD: ${e?.message || e}`); return 0; });
   // Lite market: the rides and deco stalls arrive now. Their lights become warm pools (the four real lights
   // stay on the section stalls), the lighting module tunes their bulbs, and they join picking and snow.
+  // Full market: the rides take the two real lights held back for them (a second placement pass).
   const deferredReady = !market.deferred.length ? Promise.resolve(null) : new Promise((res) => requestAnimationFrame(() => res())).then(() => market.loadDeferred()).then((added) => {
-    const more = placeMarketLights({ scene, lighting, lightingSource, spots: added.spots, lite, focus, reserved: 0, warn, budget: 0 });
+    const more = placeMarketLights({ scene, lighting, lightingSource, spots: added.spots, lite, focus, reserved: 0, warn, budget: heldForLater, second: true });
     lightInfo.pools.push(...more.pools);
+    lightInfo.lights.push(...more.lights);
+    instancePools(more.pools, scene);
     for (const p of added.placed) { try { lighting.raw?.tune?.(p.holder); } catch (e) { warn(`lighting.tune failed: ${e?.message || e}`); } }
     added.snow.forEach((o) => (o.visible = snowOn));
+    if (params.get('merge') !== '0') compact(added.placed);
     picking.refresh();
+    report.lights.realtime = lightInfo.lights.length;
+    report.lights.places = lightInfo.lights.map(placeOfLight);
+    report.merges = { ...merges };
     report.scene = sceneStats(scene);
     report.lights.pools = lightInfo.pools.length;
     report.props = market.propCount;
@@ -358,6 +433,9 @@ async function boot() {
     models: market.report,
     lights: { realtime: lightInfo.lights.length, pools: lightInfo.pools.length, cap: lightInfo.cap, places: lightInfo.lights.map(placeOfLight) },
     books: { merged: market.merges.books || null, featured: actions.featuredBooks.map((n) => n.name) },
+    merges: { ...merges },
+    lod: crowd.lod,
+    deferred: market.deferred,
     props: market.propCount,
     crowd: crowd.count,
     scene: sceneStats(scene),
@@ -375,7 +453,12 @@ async function boot() {
     freeze(on = true) { frozen = !!on; if (!frozen) timer.reset?.(); },
     /** Run the market's clock forward without drawing (tests: see the wheel turn on a 1 fps software renderer). */
     advance(seconds) { for (let t = 0; t < seconds; t += 0.05) step(0.05); },
-    get audio() { return { playing: audio.playing, mode: audio.mode, phase: audio.phase, levels: { ...audio.levels } }; },
+    get audio() { return { playing: audio.playing, mode: audio.mode, phase: audio.phase, levels: { ...audio.levels }, where: audio.where(), endings: audio.endings, alternatesReady: audio.alternatesReady }; },
+    seekSong: (pos, pass) => audio.seek(pos, pass),
+    get rideStage() { return actions.rides.stage; },
+    get exposure() { return renderer.toneMappingExposure; },
+    governor: () => governor?.state || null,
+    keyLight: () => key?.state() || null,
     crowd: () => crowd.stats(),
     hiddenPeople: () => crowd.hiddenIds(),
     people: () => crowd.people(),
@@ -423,13 +506,68 @@ async function boot() {
 }
 
 const SNOW_FOG_MAX = 0.017;
+// the home view on a phone (see phoneHome in boot)
+const PHONE_HOME = { position: [0.8, 5.0, 19.5], target: [0, 2.7, -4] };
+// the full market holds back one real light for each ride until the ride's model arrives
+const DEFERRED_LIGHTS = 2;
+
+/**
+ * Snowflakes: the lighting module's nearest layer drew flakes up to 5 cm across and 90 % soft, so in front of
+ * the camera they read as grey discs. The engine asks for at most FLAKE_MAX_SIZE metres and FLAKE_MAX_SOFT
+ * softness (a request to the lighting designer: once snow.js / settings.js agree, this changes nothing).
+ */
+const FLAKE_MAX_SIZE = 0.03, FLAKE_MAX_SOFT = 0.45;
+function capFlakes(scene) {
+  scene.traverse((o) => {
+    const u = o.isPoints && o.material?.name === 'lighting_snow' && o.material.uniforms;
+    if (!u?.uSizeMax) return;
+    const k = Math.min(1, FLAKE_MAX_SIZE / u.uSizeMax.value);
+    u.uSizeMax.value *= k;
+    u.uSizeMin.value *= k;
+    if (u.uSoft && u.uSoft.value > FLAKE_MAX_SOFT) u.uSoft.value = FLAKE_MAX_SOFT;
+  });
+}
+
+/**
+ * The lite market's close-up key light. Its four real lights sit inside the section stalls, so in a close-up
+ * the counter front and the vendor's face were in the dark. One warm spot, always in the scene (so no shader
+ * recompiles when it moves), fades in under the front eave of the open section stall, aimed at the counter,
+ * and fades out at home.
+ */
+function createKeyLight(scene) {
+  const L = new THREE.SpotLight(0xffc98f, 0, 7.5, 0.72, 0.55, 1.6);
+  L.name = 'engine_key_light';
+  L.castShadow = false;
+  scene.add(L, L.target);
+  let want = 0, placeId = null;
+  const INTENSITY = 22;
+  return {
+    follow(place) {
+      if (!place || !['glueh', 'bier', 'wurst', 'books'].includes(place.id)) { want = 0; placeId = null; return; }
+      placeId = place.id;
+      const c = counterLocal(place); // the counter top, in the stall's frame
+      // under the front eave, a little in front of the counter and above head height, aimed at the counter
+      // front and the vendor behind it
+      const from = new THREE.Vector3(c.x, 2.35, c.z + 1.25);
+      const to = new THREE.Vector3(c.x, 1.05, c.z - 0.1);
+      place.holder.localToWorld(from);
+      place.holder.localToWorld(to);
+      L.position.copy(from);
+      L.target.position.copy(to);
+      L.target.updateMatrixWorld();
+      want = INTENSITY;
+    },
+    update(dt) { L.intensity += (want - L.intensity) * Math.min(1, dt * 3); },
+    state: () => ({ place: placeId, intensity: +L.intensity.toFixed(2), position: L.position.toArray().map((v) => +v.toFixed(2)) }),
+  };
+}
 
 /**
  * light_ empties become lights: the lighting designer's placement when the module offers one, else the engine's.
  * On the lite market the section stalls are placed first and alone, so its four lights go one to each of
  * the four stalls whose panels look into them; every other light_ becomes a warm pool on the ground.
  */
-function placeMarketLights({ scene, lighting, lightingSource, spots, lite, focus, reserved, warn, budget }) {
+function placeMarketLights({ scene, lighting, lightingSource, spots, lite, focus, reserved, warn, budget, second = false }) {
   const theirs = lightingSource === 'lighting' && typeof lighting.raw?.placeLights === 'function';
   const place = (list, opts) => {
     if (theirs) {
@@ -437,8 +575,9 @@ function placeMarketLights({ scene, lighting, lightingSource, spots, lite, focus
     }
     return placeLights(scene, list, { lite, focus, reserved, budget: opts.budget });
   };
-  if (budget === 0) return place(spots, { budget: 0 });
-  if (!lite) return place(spots, {});
+  // a later pass (the deferred models): only the lights held back for it, and no more static shadows
+  if (second || budget === 0) return place(spots, { budget: budget || 0, reserved: 0, shadowed: 0 });
+  if (!lite) return place(spots, budget != null ? { budget } : {});
   const first = place(spots.filter((s) => s.kind === 'section'), {});
   const rest = place(spots.filter((s) => s.kind !== 'section'), { budget: Math.max(0, first.cap - first.lights.length) + reserved });
   return { lights: [...first.lights, ...rest.lights], pools: [...first.pools, ...rest.pools], cap: first.cap };

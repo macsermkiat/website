@@ -1,5 +1,7 @@
 // End-to-end smoke test: the built site served by `vite preview`, driven by Playwright on software GL.
-// 1. full market at 1280 px: home view, a stall panel, snow (screenshots)
+// 0. unit checks (tests/unit.mjs): GPU classes and the ballad's road map
+// 1. full market at 1280 px: home view, a stall panel, snow (screenshots); first-load size, deferred rides,
+//    draw calls after the static merge, the second light pass
 // 2. every panel action, both rides, snow, reset, keyboard and a click in 3D (small viewport, for speed)
 // 3. lite market auto-detected on a weak GPU (first-paint download, deferred models); a phone with reduced motion
 // 4. plain.html and the music credit on both pages
@@ -7,7 +9,7 @@
 // Fails on any console error, failed request or HTTP error.
 // Usage: npm run build && node tests/smoke.mjs [--out ../review/round-1/engineer] [--port 4317] [--only shots,interact,audio,lite,phone,plain,missing]
 import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 let pw;
@@ -67,6 +69,12 @@ async function frames(page, n) {
   await page.evaluate((n) => new Promise((res) => { let k = 0; const f = () => (++k >= n ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
 }
 const note = (page) => page.textContent('#actNote');
+/** Everything requested before the market opened (the page marks 'market-ready' just before its first frame). */
+const bytesAtReady = (page) => page.evaluate(() => {
+  const t = performance.getEntriesByName('market-ready')[0]?.startTime ?? Infinity;
+  const doc = performance.getEntriesByType('navigation')[0];
+  return (doc?.encodedBodySize || 0) + performance.getEntriesByType('resource').filter((r) => r.startTime < t).reduce((a, r) => a + (r.encodedBodySize || r.decodedBodySize || 0), 0);
+});
 const waitNote = (page, re) => page.waitForFunction((src) => new RegExp(src).test(document.getElementById('actNote')?.textContent || ''), re.source, { timeout: LONG }).then(() => true, () => false);
 const state = (page, k) => page.evaluate((k) => window.__market[k], k);
 const shot = async (page, name, sel, { keepScroll = false } = {}) => {
@@ -83,6 +91,16 @@ const shot = async (page, name, sel, { keepScroll = false } = {}) => {
 };
 
 try {
+  if (run('unit')) {
+    log('unit checks');
+    const { execFileSync } = await import('node:child_process');
+    let out = '', ok = true;
+    try { out = execFileSync(process.execPath, ['tests/unit.mjs'], { encoding: 'utf8' }); } catch (e) { out = e.stdout || String(e); ok = false; }
+    const lines = out.split('\n').filter((l) => /^\s+(ok|FAIL)/.test(l));
+    for (const l of lines) check(l.replace(/^\s+(ok|FAIL)\s+/, 'unit: '), /^\s+ok/.test(l));
+    if (!ok && !lines.some((l) => /FAIL/.test(l))) check('unit checks ran', false, out.slice(0, 200));
+  }
+
   if (run('shots')) {
     log('full market, 1280 px (reduced motion, so flights land in one frame)');
     const { ctx, page } = await openPage(`${BASE}?quality=full&snow=0`, { reducedMotion: 'reduce' });
@@ -91,6 +109,11 @@ try {
     console.log(JSON.stringify(report).slice(0, 3000));
     console.log('full scene', JSON.stringify(report.scene));
     check('full market chosen with ?quality=full', report.quality.lite === false);
+    const fullAtReady = await bytesAtReady(page);
+    log(`full: ${(fullAtReady / 1e6).toFixed(2)} MB downloaded when the market opens`);
+    check('full: under the 25 MB first-load aim (code, fonts and models)', fullAtReady < 25e6, `${(fullAtReady / 1e6).toFixed(2)} MB`);
+    check('full: the rides and deco stalls wait until after the first frame', ['riesenrad', 'karussell'].every((id) => report.deferred.includes(id)) && report.deferred.length >= 11, report.deferred.join(' '));
+    check('the frame-time governor runs on the full market', !!(await page.evaluate(() => window.__market.governor())));
     // the distance LOD for the crowd loads after the first frame; hold the picture so it is not stuck behind frames
     await page.evaluate(() => window.__market.freeze(true));
     const settled = await page.evaluate(() => window.__market.settled());
@@ -100,6 +123,11 @@ try {
     const sceneNow = await page.evaluate(() => window.__market.sceneStats());
     console.log('full scene after LOD', JSON.stringify(sceneNow), JSON.stringify(crowd));
     check('crowd distance LOD: far people use their lite figure', settled.lod > 0 && crowd.lite > 0, JSON.stringify({ settled, crowd }));
+    const after = await page.evaluate(() => window.__market.report);
+    const lp = after.lights.places;
+    check('full: the second light pass gives each ride its real light when it arrives', lp.includes('riesenrad') && lp.includes('karussell') && after.lights.realtime === 12, lp.join(' '));
+    check('full: static meshes merged (fewer draw calls)', after.merges.after < after.merges.before * 0.75 && after.merges.row > 20, JSON.stringify(after.merges));
+    check('full: under 800 meshes drawn in the home view', sceneNow.meshes < 800, JSON.stringify(sceneNow));
     check('bookshop spines merged into a few meshes', report.books?.merged?.meshes > 0 && report.books.merged.books > 20, JSON.stringify(report.books));
     await frames(page, 2);
     await shot(page, 'home_full.jpg');
@@ -133,6 +161,10 @@ try {
     const out = await page.evaluate(() => window.__market.pulledBook());
     check('the pulled book stands out of the shelf when the picture is taken', out === five[0]?.n, `${out} vs ${five[0]?.n}`);
     await shot(page, 'panel_buecherstand.jpg');
+    await go(() => window.__market.resetView());
+    await frames(page, 1);
+    const tag = await page.evaluate(() => ({ pulled: window.__market.pulledBook(), tag: getComputedStyle(document.querySelector('.booktag')).opacity }));
+    check('reset view puts the pulled book back and hides its title tag', tag.pulled === null && tag.tag === '0', JSON.stringify(tag));
     await go(() => { window.__market.openPlace('band'); window.__market.act('band', 'sax'); });
     await frames(page, 3);
     await shot(page, 'panel_bandstand.jpg');
@@ -165,6 +197,9 @@ try {
     await page.click('#pActions [data-action="prost"]');
 
     await page.click('#places button[data-place="wurst"]');
+    await page.evaluate(() => window.__market.advance(2));
+    const keyOn = await page.evaluate(() => window.__market.keyLight());
+    check('lite: the close-up key light lights the Bratwurst counter front', keyOn?.place === 'wurst' && keyOn.intensity > 5, JSON.stringify(keyOn));
     await page.click('#pActions [data-action="turn"]');
     check('turn the sausages', /Turned|flare|Almost/.test(await note(page)), await note(page));
     await page.click('#pActions [data-action="bun"]');
@@ -192,6 +227,11 @@ try {
       check('clicking a named spine gives that book', /Hofstadter|Gödel/.test(await note(page)), await note(page));
     } else check('clicking a named spine gives that book', false, `no clear pixel on ${spines[1]}`);
 
+    await page.click('#pClose');
+    await frames(page, 1);
+    const tagOff = await page.evaluate(() => ({ pulled: window.__market.pulledBook(), tag: getComputedStyle(document.querySelector('.booktag')).opacity }));
+    check('closing the panel puts the book back and hides its tag', tagOff.pulled === null && tagOff.tag === '0', JSON.stringify(tagOff));
+
     await page.click('#places button[data-place="band"]');
     check('lite: the player buttons say they move the spotlight', /Spotlight/.test(await page.textContent('#pActions [data-action="sax"]')));
     await page.click('#pActions [data-action="sax"]');
@@ -212,11 +252,19 @@ try {
     await page.click('#places button[data-place="ferris"]');
     await page.click('#pActions [data-action="ride"]');
     check('Riesenrad ride', (await state(page, 'riding')) === 'ferris');
-    await page.evaluate(() => window.__market.advance(9)); // up toward the top
+    const ex0 = await state(page, 'exposure');
+    // up to the top: the wheel runs fast until the rider's gondola is at the top, then holds there
+    const rise = await page.evaluate(() => { const m = window.__market; let t = 0; while (m.rideStage === 'rising' && t < 60) { m.advance(0.5); t += 0.5; } return { t, stage: m.rideStage, cam: m.camera.position.y }; });
+    check('Riesenrad: the ride stops at the top for the view', rise.stage === 'top' && rise.cam > 14, JSON.stringify(rise));
+    await page.evaluate(() => window.__market.advance(2));
+    check('Riesenrad: the exposure opens up for the view from the top', (await state(page, 'exposure')) > ex0 * 1.3, `${ex0} -> ${await state(page, 'exposure')}`);
+    check('Riesenrad: the panel says the rider is at the top', /top/i.test(await note(page)), await note(page));
     await frames(page, 3);
     await shot(page, 'ride_riesenrad.jpg', '#stage');
     await page.click('#pActions [data-action="off"]');
     check('get off the wheel', (await state(page, 'riding')) === null);
+    await page.evaluate(() => window.__market.advance(4));
+    check('the exposure comes back down on the ground', (await state(page, 'exposure')) < ex0 * 1.1, String(await state(page, 'exposure')));
 
     await page.click('#places button[data-place="carousel"]');
     await page.click('#pActions [data-action="ride"]');
@@ -234,6 +282,8 @@ try {
     check('snow off', (await state(page, 'snow')) === false);
     await page.click('#reset');
     check('reset view closes the panel', (await state(page, 'panel')) === null);
+    await page.evaluate(() => window.__market.advance(2));
+    check('lite: the key light fades out at home', (await page.evaluate(() => window.__market.keyLight().intensity)) < 1);
 
     // keyboard
     await page.focus('canvas');
@@ -272,11 +322,7 @@ try {
     const { ctx, page } = await openPage(`${BASE}?snow=0`);
     await waitReady(page);
     // everything requested before the market opened (the page marks 'market-ready' just before its first frame)
-    const atReady = await page.evaluate(() => {
-      const t = performance.getEntriesByName('market-ready')[0]?.startTime ?? Infinity;
-      const doc = performance.getEntriesByType('navigation')[0];
-      return (doc?.encodedBodySize || 0) + performance.getEntriesByType('resource').filter((r) => r.startTime < t).reduce((a, r) => a + (r.encodedBodySize || r.decodedBodySize || 0), 0);
-    });
+    const atReady = await bytesAtReady(page);
     const report = await page.evaluate(() => window.__market.report);
     log(`lite: ${(atReady / 1e6).toFixed(2)} MB downloaded when the market opens`);
     check('lite: under 8.5 MB (code, fonts and models) before the market opens', atReady < 8.5e6, `${(atReady / 1e6).toFixed(2)} MB`);
@@ -301,6 +347,9 @@ try {
     const cam1 = await page.evaluate(() => window.__market.camera.position.toArray());
     check('reduced motion: no auto-rotate', cam0.every((v, i) => Math.abs(v - cam1[i]) < 1e-3));
     await page.evaluate(() => window.__market.settled());
+    check('phone: the home view comes in closer than the desktop one', cam0[2] < 25 && cam0[1] < 7, JSON.stringify(cam0));
+    await frames(page, 3);
+    await shot(page, 'phone_home.jpg', null, { keepScroll: true });
     await page.click('#places button[data-place="carousel"]');
     await frames(page, 1);
     check('reduced motion: flights are instant', (await page.evaluate(() => window.__market.camera.position.distanceTo({ x: 19, y: 2.5, z: -12 }))) < 20);
@@ -321,14 +370,18 @@ try {
     const n = await page.locator('main section').count();
     check('plain.html has all seven sections', n === 7, `${n} sections`);
     check('plain.html links back to the market', (await page.locator('a[href="./"]').count()) > 0);
-    const credit = /Salamander[\s\S]*CC BY 3\.0[\s\S]*MusyngKite[\s\S]*CC BY-SA 3\.0/;
-    check('plain.html credits the music (Salamander CC BY, MusyngKite CC BY-SA)', credit.test(await page.textContent('#credits')), await page.textContent('#credits'));
+    // the credit is the music writer's own line from manifest.json (license.credit), word for word
+    const manifest = JSON.parse(readFileSync(new URL('../public/audio/manifest.json', import.meta.url), 'utf8'));
+    const want = (manifest.license?.credit || manifest.license?.recording?.credit || '').replace(/\s+/g, ' ').trim();
+    const credit = { test: (t) => !!want && t.replace(/\s+/g, ' ').includes(want) };
+    check('plain.html credits the music (the manifest\'s credit line)', credit.test(await page.textContent('#credits')), await page.textContent('#credits'));
     await shot(page, 'plain_html.jpg');
     await ctx.close();
     const { ctx: c2, page: p2 } = await openPage(`${BASE}?quality=lite`);
     check('the 3D page links to plain.html', (await p2.locator('a[href="plain.html"]').count()) > 0);
     check('the 3D page credits the music in its footer', credit.test(await p2.textContent('footer #credits')), await p2.textContent('footer #credits'));
-    check('the credit links the licences', (await p2.locator('#credits a[href*="creativecommons.org/licenses/by-sa/3.0"]').count()) > 0);
+    const named = (want.match(/CC BY(-SA)? \d\.\d|CC0/g) || []).length;
+    check('the credit links every licence it names', named > 0 && (await p2.locator('#credits a[rel="license"]').count()) >= named, `${named} named`);
     await c2.close();
   }
 
@@ -346,8 +399,9 @@ try {
     await frames(page, 3);
     await shot(page, 'missing_models_standins.jpg', '#stage');
     await ctx.close();
-    const { ctx: c2, page: p2 } = await openPage(`${BASE}?quality=lite&snow=0&missing=stall_bier,ferris`, { viewport: { width: 960, height: 640 } });
+    const { ctx: c2, page: p2 } = await openPage(`${BASE}?quality=lite&snow=0&missing=stall_bier,ferris&perf`, { viewport: { width: 960, height: 640 } });
     await waitReady(p2);
+    check('?perf shows the frame-time meter with its Tour button', await p2.locator('.perf button', { hasText: 'Tour' }).isVisible());
     await p2.evaluate(() => window.__market.settled());
     const r2 = await p2.evaluate(() => window.__market.report.models);
     check('two missing glbs: just those two are stand-ins', r2.filter((m) => m.source === 'standin').map((m) => m.id).sort().join() === 'bierstand,riesenrad', JSON.stringify(r2.filter((m) => m.source === 'standin')));
@@ -376,6 +430,24 @@ try {
       await page.evaluate(() => window.__market.advance(1.5)); // the analysers feed the levels on each step
       const lv = (await state(page, 'audio')).levels;
       check('stem levels reach the stage', Object.values(lv).some((v) => v > 0.01), JSON.stringify(lv));
+      // the road map: on the last pass the stems run on past loopEnd into the written ending
+      const w0 = (await state(page, 'audio')).where;
+      await page.evaluate(([p, n]) => window.__market.seekSong(p - 1.5, n), [w0.loopEnd, w0.passes]);
+      await page.waitForTimeout(3500);
+      const w1 = (await state(page, 'audio')).where;
+      check('last pass: the stems play on into the out head instead of looping', w1.pos > w0.loopEnd && w1.pass === w0.passes, JSON.stringify(w1));
+      await page.evaluate(([p]) => window.__market.seekSong(p - 1.5, 1), [w0.loopEnd]);
+      await page.waitForTimeout(3500);
+      const w2 = (await state(page, 'audio')).where;
+      check('earlier passes: the loop goes round again', w2.pass === 2 && w2.pos < 60, JSON.stringify(w2));
+      const altOk = await page.waitForFunction(() => window.__market.audio.alternatesReady, null, { timeout: 240000 }).then(() => true, () => false);
+      await page.evaluate(() => window.__market.seekSong(120, 2));
+      await page.waitForTimeout(1500);
+      const w3 = (await state(page, 'audio')).where;
+      check('pass 2 plays the second tenor chorus (alternate stems)', altOk && w3.alt === true, JSON.stringify(w3));
+      await page.evaluate(() => window.__market.seekSong(120, 3));
+      await page.waitForTimeout(1500);
+      check('pass 3 is back on the main chorus', (await state(page, 'audio')).where.alt === false);
     }
     await page.evaluate(() => window.__market.togglePlay());
     check('the band stops (full)', (await state(page, 'audio')).phase === 'idle');

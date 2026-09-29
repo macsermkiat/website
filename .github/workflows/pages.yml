@@ -32,6 +32,8 @@ jobs:
           cache: npm
           cache-dependency-path: site/package-lock.json
       - run: npm ci
+      # the browser-free checks: GPU classes for the lite market, and the ballad's road map
+      - run: npm run test:unit
       # The Pages base path ("/website" for this repository; "" with a custom domain) becomes Vite's base
       - id: pages
         uses: actions/configure-pages@v5

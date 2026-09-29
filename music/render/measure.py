@@ -234,6 +234,10 @@ def main():
     ls, le = int(round(man["loopStart"] * SR)), int(round(man["loopEnd"] * SR))
     key, kr, chroma = key_estimate(mix)
     key_p, kr_p, _ = key_estimate(mix, "power")
+    # round 1, pass 4: the recorded brushes are broadband noise that flattens the log chroma of the
+    # full mix, so the key is also measured on the pitched stems alone (tenor, piano, bass)
+    pitched = stems["sax"][:n] + stems["piano"][:n] + stems["bass"][:n]
+    key_t, kr_t, _ = key_estimate(pitched)
     import ballad
     ev = ballad.events()
     head = [n.midi for n in ev["tenor"] if n.beat < ballad.bar_beat(33)]
@@ -247,6 +251,7 @@ def main():
         "tempo_measured_bpm": round(t_ref, 2),
         "key_design": man.get("key"),
         "key_measured": key, "key_correlation": round(kr, 3),
+        "key_measured_pitched_stems": key_t, "key_correlation_pitched_stems": round(kr_t, 3),
         "key_measured_power_chroma": key_p, "key_correlation_power_chroma": round(kr_p, 3),
         "tenor_head_range_midi": [min(head), max(head)],
         "tenor_head_notes_below_C4": f"{sum(m < 60 for m in head)} of {len(head)}",

@@ -5,20 +5,25 @@
 // - Mix: one <audio> element, streamed, through a single PannerNode at the bandstand. It starts at once and
 //   costs almost no memory. The lite market only ever uses this; the full market uses it while the stems load.
 // - Stems (full market): each stem is decoded once, folded to mono at a lower rate (a player on the bandstand
-//   is a point source, so a stereo copy would only double the memory), trimmed at loopEnd, and played from an
-//   AudioBufferSource. All sources start on the same AudioContext tick and loop the same region, so they stay
-//   locked. Each player is a PannerNode at their place on the bandstand; the room return stays stereo and centred.
-//   When the stems are ready the mix hands over to them at the same bar with a short crossfade.
+//   is a point source, so a stereo copy would only double the memory), cut after the written ending, and
+//   played from AudioBufferSources scheduled segment by segment on the AudioContext clock (songplan.js):
+//   the head, the loop `passes` times (every second pass with the tenor's second chorus from the manifest's
+//   `alternates`), then the out head to the fermata, a rest, and from the top. Every stem's segment starts on
+//   the same tick, so the players stay locked. Each player is a PannerNode at their place on the bandstand; the
+//   room return stays stereo and centred. When the stems are ready the mix hands over to them at the same bar.
 // Featuring raises one player and lowers the others (stems only; the mix cannot be taken apart).
 // Visual levels come from analysers on the stems, or from the note list in `events` while the mix plays.
 import * as THREE from 'three';
 import { audioContext } from './context.js';
+import { songPlan } from './songplan.js';
 
 const PLAYERS = ['sax', 'piano', 'bass', 'drums'];
 const FEATURE_UP = 1.6, FEATURE_DOWN = 0.5;
 // Sample rates the stems are kept at after decoding. Brushes keep more air than the sax and bass need.
 const KEEP_RATE = { drums: 32000, room: 24000, default: 24000 };
 const XFADE = 0.35;
+const LOOKAHEAD = 6; // seconds of music kept scheduled ahead of the clock
+const REST = 7; // seconds of quiet after the fermata before the band starts again from the top
 
 export function stemUrl(url) {
   if (/^(https?:|blob:|data:)/.test(url)) return url;
@@ -77,16 +82,24 @@ function eventLevels(events) {
 }
 
 export function createStemsBand({ manifest, positions, getCamera, lite }) {
-  const api = { playing: false, bpm: Number(manifest.bpm) || 60, mode: 'stems', levels: { sax: 0, piano: 0, bass: 0, drums: 0 } };
+  const api = { playing: false, bpm: Number(manifest.bpm) || 60, mode: 'stems', levels: { sax: 0, piano: 0, bass: 0, drums: 0 }, endings: 0, section: null };
   const urls = Object.fromEntries(Object.entries(manifest.stems).map(([k, u]) => [k, stemUrl(u)]));
   const mixUrl = manifest.mix ? stemUrl(manifest.mix) : null;
   const eventsUrl = manifest.events ? stemUrl(manifest.events) : null;
-  const loopStart = Math.max(0, Number(manifest.loopStart) || 0);
-  const loopEndRaw = Number(manifest.loopEnd) || Number(manifest.duration) || 0;
-  const hasLoop = loopEndRaw > loopStart + 0.5;
+  // the road map: head, loop passes (alternate choruses), the written ending; see songplan.js
+  const decoded = Number(manifest.decodedDuration) || 0;
+  const song = songPlan(manifest, { fileEnd: decoded || undefined });
+  const loopStart = song.loopStart;
+  const loopEndRaw = song.loopEnd;
+  const hasLoop = song.hasLoop;
   const useStems = !lite || !mixUrl;
 
-  let AC = null, master = null, nodes = {}, buffers = null, loading = null, t0 = 0, offset = 0, featured = null;
+  let AC = null, master = null, nodes = {}, buffers = null, altBuffers = null, loading = null, featured = null;
+  // where play resumes (song seconds and loop pass), and the segments scheduled on the clock
+  let cursor = { pos: 0, pass: 1 };
+  let sched = [], ticker = null;
+  // the mix's own place in the road map (it has no alternates: the recorded mix is the main take)
+  let mixPass = 1, mixRestUntil = 0;
   let mix = null, stemsPlaying = false, mixPlaying = false, fromEvents = null, eventsLoading = null;
   const scratch = new Float32Array(512);
 
@@ -155,7 +168,7 @@ export function createStemsBand({ manifest, positions, getCamera, lite }) {
   // ---------- the stems, decoded ----------
   async function loadStems() {
     ensureGraph();
-    const end = hasLoop ? loopEndRaw + 0.05 : 0;
+    const end = song.end + 0.05;
     const out = {};
     // one at a time, so only one full-size decode is in memory at once
     for (const [k, u] of Object.entries(urls)) {
@@ -181,34 +194,74 @@ export function createStemsBand({ manifest, positions, getCamera, lite }) {
     }
     buffers = out;
     applyFeature(0);
+    // the tenor's second chorus, for alternate passes: loaded after the main stems, never in the way of playing
+    if (song.alt) loadAlternates().catch((e) => console.info('[audio] alternate chorus unavailable:', e?.message || e));
   }
 
-  function loopBounds(buf) {
-    const d = buf.duration;
-    if (!hasLoop) return [0, d];
-    const le = Math.min(loopEndRaw, d);
-    return le > loopStart + 0.5 ? [loopStart, le] : [0, d];
+  async function loadAlternates() {
+    const out = {};
+    for (const [k, u] of Object.entries(song.alt.stems)) {
+      if (!buffers[k]) continue;
+      const data = await fetchBuf(stemUrl(u), `${k} (alternate)`);
+      out[k] = await shrink(AC, data, { channels: k === 'room' ? 2 : 1, rate: KEEP_RATE[k] || KEEP_RATE.default, end: 0 });
+    }
+    if (Object.keys(out).length) altBuffers = out;
   }
 
-  /** Where the song is at AudioContext time `t`, folding the loop. */
+  /** Where the song is at AudioContext time `t` (from the scheduled segments). */
   function songPos(t) {
-    let pos = t - t0;
-    if (hasLoop && pos > loopEndRaw) pos = loopStart + ((pos - loopStart) % (loopEndRaw - loopStart));
-    return Math.max(0, pos);
+    for (const e of sched) if (t >= e.when && t < e.when + (e.seg.to - e.seg.from)) return { pos: e.seg.from + (t - e.when), pass: e.seg.pass };
+    const last = sched[sched.length - 1];
+    if (!last) return { ...cursor };
+    if (t < sched[0].when) return { pos: sched[0].seg.from, pass: sched[0].seg.pass };
+    return { pos: 0, pass: 1 }; // in the rest after the fermata
   }
 
-  function startSources(when, at) {
-    for (const [k, buf] of Object.entries(buffers)) {
+  /** Schedule one segment for every stem at AudioContext time `when`. */
+  function scheduleSegment(seg, when) {
+    const len = seg.to - seg.from;
+    const srcs = [];
+    for (const [k, main] of Object.entries(buffers)) {
+      const alt = seg.alt && altBuffers?.[k];
+      const buf = alt || main;
+      const at = alt ? seg.from - song.alt.start : seg.from;
+      if (at >= buf.duration - 0.01) continue;
       const s = AC.createBufferSource();
       s.buffer = buf;
-      const [ls, le] = loopBounds(buf);
-      s.loop = true; s.loopStart = ls; s.loopEnd = le;
       s.connect(nodes[k].gain);
-      s.start(when, Math.min(at, le - 0.01));
-      nodes[k].src = s;
+      s.start(Math.max(when, AC.currentTime), at, Math.min(len, buf.duration - at));
+      srcs.push(s);
     }
-    t0 = when - at;
+    sched.push({ seg, when, srcs });
+    api.section = seg.alt ? 'tenor chorus B' : null;
+  }
+
+  /** Keep LOOKAHEAD seconds scheduled: the next segment, or after the ending a rest and the top again. */
+  function topUp() {
+    if (!stemsPlaying || !AC) return;
+    const now = AC.currentTime;
+    // forget segments that have finished
+    while (sched.length > 1 && sched[0].when + (sched[0].seg.to - sched[0].seg.from) < now - 1) sched.shift();
+    for (let guard = 0; guard < 8; guard++) {
+      const last = sched[sched.length - 1];
+      const lastEnd = last.when + (last.seg.to - last.seg.from);
+      if (lastEnd - now > LOOKAHEAD) return;
+      const nx = song.next(last.seg);
+      if (nx) scheduleSegment(nx, lastEnd);
+      else { api.endings++; scheduleSegment(song.segment(0, 1), lastEnd + REST); }
+    }
+  }
+
+  function startSources(when, at, pass = 1) {
+    stopStems(AC.currentTime, 0);
+    sched = [];
+    const first = song.segment(Math.min(Math.max(0, at), song.end - 0.05), pass);
     stemsPlaying = true;
+    scheduleSegment(first, when);
+    topUp();
+    // the clock keeps the music going when the tab is in the background (rAF stops there)
+    clearInterval(ticker);
+    ticker = setInterval(topUp, 500);
   }
 
   function applyFeature(tc = 0.4) {
@@ -221,11 +274,12 @@ export function createStemsBand({ manifest, positions, getCamera, lite }) {
   }
 
   function stopStems(when, fade) {
-    for (const n of Object.values(nodes)) {
-      if (!n.src) continue;
-      try { n.src.stop(when + fade + 0.05); } catch { /* already stopped */ }
-      n.src = null;
+    for (const e of sched) for (const s of e.srcs) {
+      try { s.stop(Math.max(when + fade + 0.05, AC.currentTime)); } catch { /* already stopped */ }
     }
+    sched = [];
+    clearInterval(ticker);
+    ticker = null;
     stemsPlaying = false;
   }
 
@@ -233,9 +287,10 @@ export function createStemsBand({ manifest, positions, getCamera, lite }) {
   function handOver() {
     if (!api.playing || !mixPlaying || !buffers) return;
     const when = AC.currentTime + 0.15;
-    let at = mix.el.currentTime + 0.15;
-    if (hasLoop && at >= loopEndRaw) at = loopStart + (at - loopEndRaw);
-    startSources(when, at);
+    // the same bar of the same pass (in the rest after the fermata: the top, when the rest is over)
+    const resting = mixRestUntil > AC.currentTime;
+    const p = resting ? { pos: 0, pass: 1 } : song.advance(mix.el.currentTime, mixPass, 0.15);
+    startSources(resting ? mixRestUntil : when, p.ended ? 0 : p.pos, p.ended ? 1 : p.pass);
     // stems fade in over the crossfade while the mix fades out
     for (const n of Object.values(nodes)) {
       const g = n.gain.gain;
@@ -260,11 +315,13 @@ export function createStemsBand({ manifest, positions, getCamera, lite }) {
     master.gain.linearRampToValueAtTime(0.95, now + 1.2);
     api.playing = true;
     if (useStems && buffers) {
-      startSources(AC.currentTime + 0.12, offset);
+      startSources(AC.currentTime + 0.12, cursor.pos, cursor.pass);
       return;
     }
     if (mixUrl) {
-      await playMix(offset);
+      mixPass = cursor.pass;
+      mixRestUntil = 0;
+      await playMix(cursor.pos);
       if (useStems) {
         if (!loading) loading = loadStems();
         loading.then(handOver, (err) => { console.info('[audio] stems unavailable, staying on the mix:', err?.message || err); });
@@ -275,15 +332,15 @@ export function createStemsBand({ manifest, positions, getCamera, lite }) {
     if (!loading) loading = loadStems();
     await loading;
     if (!api.playing) return;
-    startSources(AC.currentTime + 0.12, offset);
+    startSources(AC.currentTime + 0.12, cursor.pos, cursor.pass);
   };
 
   api.stop = function () {
     if (!AC || !api.playing) return;
     const now = AC.currentTime;
     // remember where we are, so play resumes mid-song
-    if (stemsPlaying) offset = songPos(now);
-    else if (mixPlaying) offset = mix.el.currentTime;
+    if (stemsPlaying) cursor = songPos(now);
+    else if (mixPlaying) cursor = { pos: mix.el.currentTime, pass: mixPass };
     master.gain.cancelScheduledValues(now);
     master.gain.setValueAtTime(master.gain.value, now);
     master.gain.linearRampToValueAtTime(0, now + 0.8);
@@ -323,10 +380,20 @@ export function createStemsBand({ manifest, positions, getCamera, lite }) {
       nodes.room.roomDist.gain.setTargetAtTime(Math.min(1, 12 / Math.max(6, d)) * 0.8 + 0.1, now, 0.2);
     }
     if (mixPlaying && !stemsPlaying) {
-      // the <audio> element loops the whole file; fold it back into the loop region by hand
+      // the <audio> element plays the file straight through: fold it back into the loop region by hand for
+      // the passes before the last, then let it run on into the written ending; after the fermata, rest, and
+      // start again from the top
       const el = mix.el;
-      if (hasLoop && el.currentTime >= loopEndRaw) el.currentTime = loopStart + (el.currentTime - loopEndRaw);
-      if (el.ended) { el.currentTime = hasLoop ? loopStart : 0; el.play().catch(() => {}); }
+      if (mixRestUntil) {
+        if (now >= mixRestUntil) { mixRestUntil = 0; mixPass = 1; el.currentTime = 0; el.play().catch(() => {}); }
+      } else if (hasLoop && mixPass < song.passes && el.currentTime >= loopEndRaw) {
+        el.currentTime = loopStart + (el.currentTime - loopEndRaw);
+        mixPass++;
+      } else if (el.ended || el.currentTime >= song.end) {
+        el.pause();
+        api.endings++;
+        mixRestUntil = now + REST;
+      }
       if (fromEvents) fromEvents(el.currentTime, api.levels);
       return;
     }
@@ -342,6 +409,27 @@ export function createStemsBand({ manifest, positions, getCamera, lite }) {
       api.levels[k] = v > api.levels[k] ? v : api.levels[k] * 0.9 + v * 0.1;
     }
   };
+
+  /** Where the song is: { pos, pass, alt, phase } (tests, and the curious in the console). */
+  api.where = function () {
+    if (!AC) return { pos: cursor.pos, pass: cursor.pass, alt: false, phase: api.phase };
+    if (stemsPlaying) {
+      const t = AC.currentTime;
+      const e = sched.find((x) => t >= x.when && t < x.when + (x.seg.to - x.seg.from));
+      const p = songPos(t);
+      return { pos: +p.pos.toFixed(2), pass: p.pass, alt: !!(e?.seg.alt && altBuffers), resting: !e, phase: api.phase, passes: song.passes, loopEnd: song.loopEnd, end: song.end };
+    }
+    if (mixPlaying) return { pos: +mix.el.currentTime.toFixed(2), pass: mixPass, alt: false, resting: mixRestUntil > AC.currentTime, phase: api.phase, passes: song.passes, loopEnd: song.loopEnd, end: song.end };
+    return { pos: cursor.pos, pass: cursor.pass, alt: false, phase: api.phase };
+  };
+  /** Jump to a point of the road map (tests: hear the ending without waiting ten minutes). */
+  api.seek = function (pos, pass = 1) {
+    if (stemsPlaying) startSources(AC.currentTime + 0.05, pos, pass);
+    else if (mixPlaying) { mix.el.currentTime = pos; mixPass = pass; mixRestUntil = 0; }
+    else cursor = { pos, pass };
+  };
+  Object.defineProperty(api, 'alternatesReady', { get: () => !!altBuffers });
+  api.plan = song;
 
   return api;
 }

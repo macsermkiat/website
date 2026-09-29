@@ -31,23 +31,33 @@ import ballad  # noqa: E402
 
 STEMS = ["sax", "piano", "bass", "drums", "room"]
 # licence of the rendered recording, by tenor bank (see CREDITS.md, music writer)
+DRUMS_CREDIT = ("Drums: Swirly Drums by Karoryfer Samples (brushes, CC0) and Virtuosity Drums by Versilian Studios "
+                "and Karoryfer Samples (kick, CC0).")
 LICENSES = {
+    "mtg": {
+        "sax, room, mix": "Attribution: MTG Solo Saxophones, tenor (Music Technology Group, Universitat Pompeu Fabra, "
+                          "via freesound.org; SFZ by kinwie; CC BY 4.0) and Salamander Grand Piano (mix, room)",
+        "piano": "Attribution: Salamander Grand Piano by Alexander Holm (CC BY 3.0)",
+        "bass, drums": "No conditions (CC0 sources)",
+        "credit": "Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: MTG Solo Saxophones "
+                  "by the Music Technology Group, UPF (freesound.org), SFZ by kinwie (CC BY 4.0). Bass: Karoryfer "
+                  "Meatbass (CC0). " + DRUMS_CREDIT,
+    },
     "musyngkite": {
         "sax, room, mix": "Share-alike: must be offered under CC BY-SA 3.0, because they contain the MusyngKite "
                           "tenor samples (CC BY-SA 3.0, via gleitz/midi-js-soundfonts)",
         "piano": "Attribution: Salamander Grand Piano by Alexander Holm (CC BY 3.0)",
         "bass, drums": "No conditions (CC0 sources)",
         "credit": "Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: MusyngKite soundfont "
-                  "via gleitz/midi-js-soundfonts (CC BY-SA 3.0). Bass: Karoryfer Meatbass (CC0). Drums: Virtuosity "
-                  "Drums by Versilian Studios (CC0). Recording: CC BY-SA 3.0.",
+                  "via gleitz/midi-js-soundfonts (CC BY-SA 3.0). Bass: Karoryfer Meatbass (CC0). " + DRUMS_CREDIT +
+                  " Recording: CC BY-SA 3.0.",
     },
     "fluidr3": {
         "sax, room, mix": "Attribution: FluidR3 GM by Frank Wen (CC BY 3.0) and Salamander Grand Piano (mix, room)",
         "piano": "Attribution: Salamander Grand Piano by Alexander Holm (CC BY 3.0)",
         "bass, drums": "No conditions (CC0 sources)",
         "credit": "Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: FluidR3 GM by Frank Wen "
-                  "(CC BY 3.0 via gleitz/midi-js-soundfonts). Bass: Karoryfer Meatbass (CC0). Drums: Virtuosity "
-                  "Drums by Versilian Studios (CC0).",
+                  "(CC BY 3.0 via gleitz/midi-js-soundfonts). Bass: Karoryfer Meatbass (CC0). " + DRUMS_CREDIT,
     },
 }
 # relative levels (integrated LUFS of each dry stem before the final loudness step)
@@ -59,6 +69,8 @@ ROOM_REL_DB = -9.0          # room return, relative to the dry mix loudness
 MIX_LUFS = -18.0
 PEAK_CEIL_DB = -1.6
 KBPS = 128
+LIGHT_KBPS = 64          # --light-stems: the four player stems, mono
+LIGHT_ROOM_KBPS = 80     # --light-stems: the room, stereo
 # the alternate chorus segment: from half a second before bar 33 (the head is still identical) to
 # the downbeat of bar 67 (both choruses' last notes and their reverb have died away)
 ALT_START = lambda b: b.beat_time(b.bar_beat(33)) - 0.5  # noqa: E731
@@ -86,7 +98,7 @@ def render_alt_sax(ev, n, reuse, sax_bank):
     return x
 
 
-def render_instruments(ev, n, reuse, sax_bank="fluidr3"):
+def render_instruments(ev, n, reuse, sax_bank="mtg", brushes="swirly"):
     stems = {}
     for name in ["sax", "piano", "bass", "drums"]:
         cp = CACHE / f"stem_{name}.npy"
@@ -107,7 +119,7 @@ def render_instruments(ev, n, reuse, sax_bank="fluidr3"):
             x = bass.render(ev["bass"], n)
         else:
             import drums
-            x = drums.render(ev["drums"], n)
+            x = drums.render(ev["drums"], n, kit=brushes)
         x = to_stereo(x, PAN.get(name, 0.0))
         np.save(cp, x)
         stems[name] = x
@@ -193,11 +205,13 @@ def encoder_delay():
     return int(np.argmax(np.abs(d[:, 0]))) - 10000
 
 
-def encode(x, kbps):
+def encode(x, kbps, mono=False):
     e = lameenc.Encoder()
     e.set_bit_rate(kbps)
     e.set_in_sample_rate(SR)
-    e.set_channels(2)
+    if mono:
+        x = x.mean(axis=1) if x.ndim == 2 else x
+    e.set_channels(1 if mono else 2)
     e.set_quality(2)
     pcm = (np.clip(x, -1, 1) * 32767).astype("<i2")
     return bytes(e.encode(pcm.tobytes()) + e.flush())
@@ -211,6 +225,11 @@ def main():
                     help="tenor sample bank (see sax.BANKS and music/README.md for the A/B)")
     ap.add_argument("--cut-stems", action="store_true",
                     help="end the five stems 1 s after loopEnd (the mix file keeps the ending)")
+    ap.add_argument("--brushes", default="swirly", choices=["swirly", "modelled"],
+                    help="recorded brushes (Karoryfer Swirly Drums) or the round-1 model")
+    ap.add_argument("--light-stems", action="store_true",
+                    help="also write a smaller, unshipped stem set to music/out/light/ (four player stems mono "
+                         f"at {LIGHT_KBPS} kbps, room stereo at {LIGHT_ROOM_KBPS} kbps) to size the option")
     args = ap.parse_args()
     t_start = time.time()
     ev = ballad.events()
@@ -218,7 +237,7 @@ def main():
     duration = tl["end_music"] + TAIL
     n = int(round(duration * SR))
     print(f"{ballad.TITLE}: {n / SR:.2f}s, loop {tl['loopStart']:.3f}-{tl['loopEnd']:.3f}")
-    stems = render_instruments(ev, n, args.reuse, args.sax_bank)
+    stems = render_instruments(ev, n, args.reuse, args.sax_bank, args.brushes)
     # the alternate chorus: its own sax and room, carried through every gain step with the stems
     # they replace, so they drop into the same mix
     alt = {"sax": render_alt_sax(ev, n, args.reuse, args.sax_bank)}
@@ -313,6 +332,18 @@ def main():
             x = shifted(stems[k])[:cut].copy()
             x[-f2:] *= np.linspace(1, 0, f2, dtype=np.float32)[:, None]
             (SITE_AUDIO / files[k]).write_bytes(encode(x, KBPS))
+    if args.light_stems:
+        # not shipped: the smaller set the judges asked to size (needs the market owner to relax the
+        # brief's 128-160 kbps line). stems.js folds the player stems to mono anyway.
+        light = OUT / "light"
+        light.mkdir(exist_ok=True)
+        sizes = {}
+        for k in STEMS:
+            mono = k != "room"
+            b = encode(shifted(stems[k]), LIGHT_KBPS if mono else LIGHT_ROOM_KBPS, mono=mono)
+            (light / files[k]).write_bytes(b)
+            sizes[k] = len(b)
+        print(f"  light stems (music/out/light): {sum(sizes.values()) / 1e6:.2f} MB {sizes}")
     # ---- the alternate chorus: a segment of the sax and room stems, same timeline ----
     a0 = int(round(ALT_START(ballad) * SR))
     a1 = int(round(ALT_END(ballad) * SR))
@@ -345,6 +376,7 @@ def main():
         "timeSignature": "3/4",
         "key": ballad.KEY,
         "tenorBank": args.sax_bank,
+        "brushes": args.brushes,
         "sampleRate": SR,
         "duration": round(n / SR, 6),
         "loopStart": round(ls / SR, 6),

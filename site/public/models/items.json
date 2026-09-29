@@ -1,11 +1,12 @@
 {
- "about": "Display names for the vendor's act_ nodes (node names are unique across all prop sets). Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV rect [u_min, v_min, u_max, v_max] in glTF texture space (origin top-left, as three.js samples glTF textures) in prop_tex_books_color.webp.",
+ "about": "Display names for the vendor's act_ nodes (node names are unique across all prop sets; the full and the lite glb of a set carry the same act_ nodes at the same places). 'pivot' says where the node's origin is: 'base' is the point the item rests on; sausages turn about their centre. Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV rect [u_min, v_min, u_max, v_max] in glTF texture space (origin top-left, as three.js samples glTF textures) in prop_tex_books_color.webp.",
  "items": {
   "act_glass_0": {
    "set": "prop_bier_counter",
    "stall": "bierstand",
    "name": "Maß of Helles",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Maßkrug",
    "beer": "Helles"
   },
@@ -14,6 +15,7 @@
    "stall": "bierstand",
    "name": "Maß of Helles",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Maßkrug",
    "beer": "Helles"
   },
@@ -22,6 +24,7 @@
    "stall": "bierstand",
    "name": "Half litre of Dunkles",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Willibecher",
    "beer": "Dunkles"
   },
@@ -30,6 +33,7 @@
    "stall": "bierstand",
    "name": "Half litre of Weißbier",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Willibecher",
    "beer": "Weißbier"
   },
@@ -38,6 +42,7 @@
    "stall": "bierstand",
    "name": "Maß of Helles",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Maßkrug",
    "beer": "Helles"
   },
@@ -46,6 +51,7 @@
    "stall": "bierstand",
    "name": "Half litre of Helles",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Willibecher",
    "beer": "Helles"
   },
@@ -53,25 +59,29 @@
    "set": "prop_bier_counter",
    "stall": "bierstand",
    "name": "Helles tap",
-   "kind": "tap"
+   "kind": "tap",
+   "pivot": "base of the handle on top of the faucet; rotating X tips the handle forward"
   },
   "act_tap_1": {
    "set": "prop_bier_counter",
    "stall": "bierstand",
    "name": "Dunkles tap",
-   "kind": "tap"
+   "kind": "tap",
+   "pivot": "base of the handle on top of the faucet; rotating X tips the handle forward"
   },
   "act_tap_2": {
    "set": "prop_bier_counter",
    "stall": "bierstand",
    "name": "Weißbier tap",
-   "kind": "tap"
+   "kind": "tap",
+   "pivot": "base of the handle on top of the faucet; rotating X tips the handle forward"
   },
   "act_glass_10": {
    "set": "prop_bier_shelf",
    "stall": "bierstand",
    "name": "Clean Maßkrug, upside down",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Maßkrug"
   },
   "act_glass_11": {
@@ -79,6 +89,7 @@
    "stall": "bierstand",
    "name": "Clean Maßkrug, upside down",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Maßkrug"
   },
   "act_glass_12": {
@@ -86,6 +97,7 @@
    "stall": "bierstand",
    "name": "Clean Maßkrug, upside down",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Maßkrug"
   },
   "act_glass_13": {
@@ -93,6 +105,7 @@
    "stall": "bierstand",
    "name": "Clean Willibecher, upside down",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Willibecher"
   },
   "act_glass_14": {
@@ -100,6 +113,7 @@
    "stall": "bierstand",
    "name": "Clean Willibecher, upside down",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Willibecher"
   },
   "act_glass_15": {
@@ -107,6 +121,7 @@
    "stall": "bierstand",
    "name": "Clean Willibecher, upside down",
    "kind": "glass",
+   "pivot": "base",
    "glass": "Willibecher"
   },
   "act_book_200": {
@@ -114,6 +129,7 @@
    "stall": "buecherstand",
    "name": "Causality",
    "kind": "book",
+   "pivot": "base",
    "title": "Causality",
    "author": "Judea Pearl",
    "cover_material": "book_cover_200",
@@ -131,6 +147,7 @@
    "stall": "buecherstand",
    "name": "Siddhartha",
    "kind": "book",
+   "pivot": "base",
    "title": "Siddhartha",
    "author": "Hermann Hesse",
    "cover_material": "book_cover_201",
@@ -148,6 +165,7 @@
    "stall": "buecherstand",
    "name": "The Road to Reality",
    "kind": "book",
+   "pivot": "base",
    "title": "The Road to Reality",
    "author": "Roger Penrose",
    "cover_material": "book_cover_202",
@@ -165,6 +183,7 @@
    "stall": "buecherstand",
    "name": "Meditations",
    "kind": "book",
+   "pivot": "base",
    "title": "Meditations",
    "author": "Marcus Aurelius",
    "cover_material": "book_cover_203",
@@ -182,6 +201,7 @@
    "stall": "buecherstand",
    "name": "Grimms Märchen",
    "kind": "book",
+   "pivot": "base",
    "title": "Grimms Märchen",
    "author": "Brüder Grimm",
    "cover_material": "book_cover_204",
@@ -199,6 +219,7 @@
    "stall": "buecherstand",
    "name": "Also sprach Zarathustra",
    "kind": "book",
+   "pivot": "base",
    "title": "Also sprach Zarathustra",
    "author": "Friedrich Nietzsche",
    "cover_material": "book_cover_205",
@@ -216,6 +237,7 @@
    "stall": "buecherstand",
    "name": "Helgoland",
    "kind": "book",
+   "pivot": "base",
    "title": "Helgoland",
    "author": "Carlo Rovelli",
    "cover_material": "book_cover_206",
@@ -233,6 +255,7 @@
    "stall": "buecherstand",
    "name": "QED",
    "kind": "book",
+   "pivot": "base",
    "title": "QED",
    "author": "Richard P. Feynman",
    "cover_material": "book_cover_207",
@@ -250,6 +273,7 @@
    "stall": "buecherstand",
    "name": "The Waste Land",
    "kind": "book",
+   "pivot": "base",
    "title": "The Waste Land",
    "author": "T. S. Eliot",
    "cover_material": "book_cover_208",
@@ -267,6 +291,7 @@
    "stall": "buecherstand",
    "name": "Faust",
    "kind": "book",
+   "pivot": "base",
    "title": "Faust",
    "author": "Johann Wolfgang von Goethe",
    "cover_material": "book_cover_209",
@@ -284,6 +309,7 @@
    "stall": "buecherstand",
    "name": "The Elegant Universe",
    "kind": "book",
+   "pivot": "base",
    "title": "The Elegant Universe",
    "author": "Brian Greene",
    "cover_material": "book_cover_210",
@@ -301,6 +327,7 @@
    "stall": "buecherstand",
    "name": "Critique of Judgment",
    "kind": "book",
+   "pivot": "base",
    "title": "Critique of Judgment",
    "author": "Immanuel Kant",
    "cover_material": "book_cover_211",
@@ -318,6 +345,7 @@
    "stall": "buecherstand",
    "name": "The Fabric of Reality",
    "kind": "book",
+   "pivot": "base",
    "title": "The Fabric of Reality",
    "author": "David Deutsch",
    "cover_material": "book_cover_212",
@@ -335,6 +363,7 @@
    "stall": "buecherstand",
    "name": "Critique of Judgment",
    "kind": "book",
+   "pivot": "base",
    "title": "Critique of Judgment",
    "author": "Immanuel Kant",
    "cover_material": "book_cover_0",
@@ -352,6 +381,7 @@
    "stall": "buecherstand",
    "name": "Die Verwandlung",
    "kind": "book",
+   "pivot": "base",
    "title": "Die Verwandlung",
    "author": "Franz Kafka",
    "cover_material": "book_cover_1",
@@ -369,6 +399,7 @@
    "stall": "buecherstand",
    "name": "Also sprach Zarathustra",
    "kind": "book",
+   "pivot": "base",
    "title": "Also sprach Zarathustra",
    "author": "Friedrich Nietzsche",
    "cover_material": "book_cover_10",
@@ -386,6 +417,7 @@
    "stall": "buecherstand",
    "name": "Principia",
    "kind": "book",
+   "pivot": "base",
    "title": "Principia",
    "author": "Isaac Newton",
    "cover_material": "book_cover_11",
@@ -401,11 +433,138 @@
   "act_book_12": {
    "set": "prop_books_shelf_1",
    "stall": "buecherstand",
+   "name": "The Order of Time",
+   "kind": "book",
+   "pivot": "base",
+   "title": "The Order of Time",
+   "author": "Carlo Rovelli",
+   "cover_material": "book_cover_12",
+   "cover_uv": [
+    0.8772,
+    0.22485,
+    0.95483,
+    0.33765
+   ],
+   "cover_texture": "prop_tex_books_color.webp",
+   "where": "shelf"
+  },
+  "act_book_13": {
+   "set": "prop_books_shelf_1",
+   "stall": "buecherstand",
+   "name": "Gödel, Escher, Bach",
+   "kind": "book",
+   "pivot": "base",
+   "title": "Gödel, Escher, Bach",
+   "author": "Douglas R. Hofstadter",
+   "cover_material": "book_cover_13",
+   "cover_uv": [
+    0.0022,
+    0.3772,
+    0.07983,
+    0.48999
+   ],
+   "cover_texture": "prop_tex_books_color.webp",
+   "where": "shelf"
+  },
+  "act_book_14": {
+   "set": "prop_books_shelf_1",
+   "stall": "buecherstand",
+   "name": "The Feynman Lectures on Physics, Vol. I",
+   "kind": "book",
+   "pivot": "base",
+   "title": "The Feynman Lectures on Physics, Vol. I",
+   "author": "Richard P. Feynman, Robert B. Leighton, Matthew Sands",
+   "cover_material": "book_cover_14",
+   "cover_uv": [
+    0.08423,
+    0.3772,
+    0.16187,
+    0.48999
+   ],
+   "cover_texture": "prop_tex_books_color.webp",
+   "where": "shelf"
+  },
+  "act_book_15": {
+   "set": "prop_books_shelf_1",
+   "stall": "buecherstand",
+   "name": "The Feynman Lectures on Physics, Vol. II",
+   "kind": "book",
+   "pivot": "base",
+   "title": "The Feynman Lectures on Physics, Vol. II",
+   "author": "Richard P. Feynman, Robert B. Leighton, Matthew Sands",
+   "cover_material": "book_cover_15",
+   "cover_uv": [
+    0.16626,
+    0.3772,
+    0.2439,
+    0.48999
+   ],
+   "cover_texture": "prop_tex_books_color.webp",
+   "where": "shelf"
+  },
+  "act_book_16": {
+   "set": "prop_books_shelf_1",
+   "stall": "buecherstand",
+   "name": "The Feynman Lectures on Physics, Vol. III",
+   "kind": "book",
+   "pivot": "base",
+   "title": "The Feynman Lectures on Physics, Vol. III",
+   "author": "Richard P. Feynman, Robert B. Leighton, Matthew Sands",
+   "cover_material": "book_cover_16",
+   "cover_uv": [
+    0.24829,
+    0.3772,
+    0.32593,
+    0.48999
+   ],
+   "cover_texture": "prop_tex_books_color.webp",
+   "where": "shelf"
+  },
+  "act_book_17": {
+   "set": "prop_books_shelf_1",
+   "stall": "buecherstand",
+   "name": "Being You",
+   "kind": "book",
+   "pivot": "base",
+   "title": "Being You",
+   "author": "Anil Seth",
+   "cover_material": "book_cover_17",
+   "cover_uv": [
+    0.33032,
+    0.3772,
+    0.40796,
+    0.48999
+   ],
+   "cover_texture": "prop_tex_books_color.webp",
+   "where": "shelf"
+  },
+  "act_book_18": {
+   "set": "prop_books_shelf_1",
+   "stall": "buecherstand",
+   "name": "The Book of Why",
+   "kind": "book",
+   "pivot": "base",
+   "title": "The Book of Why",
+   "author": "Judea Pearl and Dana Mackenzie",
+   "cover_material": "book_cover_18",
+   "cover_uv": [
+    0.41235,
+    0.3772,
+    0.48999,
+    0.48999
+   ],
+   "cover_texture": "prop_tex_books_color.webp",
+   "where": "shelf"
+  },
+  "act_book_19": {
+   "set": "prop_books_shelf_1",
+   "stall": "buecherstand",
    "name": "Surfaces and Essences",
    "kind": "book",
+   "pivot": "base",
    "title": "Surfaces and Essences",
    "author": "Douglas R. Hofstadter and Emmanuel Sander",
-   "cover_material": "book_cover_12",
+   "cover_material": "book_cover_19",
    "cover_uv": [
     0.74048,
     0.72876,
@@ -415,130 +574,12 @@
    "cover_texture": "prop_tex_books_color.webp",
    "where": "shelf"
   },
-  "act_book_13": {
-   "set": "prop_books_shelf_1",
-   "stall": "buecherstand",
-   "name": "The Waste Land",
-   "kind": "book",
-   "title": "The Waste Land",
-   "author": "T. S. Eliot",
-   "cover_material": "book_cover_13",
-   "cover_uv": [
-    0.82251,
-    0.72876,
-    0.90015,
-    0.84155
-   ],
-   "cover_texture": "prop_tex_books_color.webp",
-   "where": "shelf"
-  },
-  "act_book_14": {
-   "set": "prop_books_shelf_1",
-   "stall": "buecherstand",
-   "name": "The Road to Reality",
-   "kind": "book",
-   "title": "The Road to Reality",
-   "author": "Roger Penrose",
-   "cover_material": "book_cover_14",
-   "cover_uv": [
-    0.0022,
-    0.72876,
-    0.07983,
-    0.84155
-   ],
-   "cover_texture": "prop_tex_books_color.webp",
-   "where": "shelf"
-  },
-  "act_book_15": {
-   "set": "prop_books_shelf_1",
-   "stall": "buecherstand",
-   "name": "Moby-Dick",
-   "kind": "book",
-   "title": "Moby-Dick",
-   "author": "Herman Melville",
-   "cover_material": "book_cover_15",
-   "cover_uv": [
-    0.0022,
-    0.49438,
-    0.07983,
-    0.60718
-   ],
-   "cover_texture": "prop_tex_books_color.webp",
-   "where": "shelf"
-  },
-  "act_book_16": {
-   "set": "prop_books_shelf_1",
-   "stall": "buecherstand",
-   "name": "Reality Is Not What It Seems",
-   "kind": "book",
-   "title": "Reality Is Not What It Seems",
-   "author": "Carlo Rovelli",
-   "cover_material": "book_cover_16",
-   "cover_uv": [
-    0.0022,
-    0.84595,
-    0.07983,
-    0.95874
-   ],
-   "cover_texture": "prop_tex_books_color.webp",
-   "where": "shelf"
-  },
-  "act_book_17": {
-   "set": "prop_books_shelf_1",
-   "stall": "buecherstand",
-   "name": "The Fabric of Reality",
-   "kind": "book",
-   "title": "The Fabric of Reality",
-   "author": "David Deutsch",
-   "cover_material": "book_cover_17",
-   "cover_uv": [
-    0.08423,
-    0.61157,
-    0.16187,
-    0.72437
-   ],
-   "cover_texture": "prop_tex_books_color.webp",
-   "where": "shelf"
-  },
-  "act_book_18": {
-   "set": "prop_books_shelf_1",
-   "stall": "buecherstand",
-   "name": "Flatland",
-   "kind": "book",
-   "title": "Flatland",
-   "author": "Edwin A. Abbott",
-   "cover_material": "book_cover_18",
-   "cover_uv": [
-    0.24829,
-    0.49438,
-    0.32593,
-    0.60718
-   ],
-   "cover_texture": "prop_tex_books_color.webp",
-   "where": "shelf"
-  },
-  "act_book_19": {
-   "set": "prop_books_shelf_1",
-   "stall": "buecherstand",
-   "name": "Seven Brief Lessons on Physics",
-   "kind": "book",
-   "title": "Seven Brief Lessons on Physics",
-   "author": "Carlo Rovelli",
-   "cover_material": "book_cover_19",
-   "cover_uv": [
-    0.41235,
-    0.49438,
-    0.48999,
-    0.60718
-   ],
-   "cover_texture": "prop_tex_books_color.webp",
-   "where": "shelf"
-  },
   "act_book_2": {
    "set": "prop_books_shelf_1",
    "stall": "buecherstand",
    "name": "The Elegant Universe",
    "kind": "book",
+   "pivot": "base",
    "title": "The Elegant Universe",
    "author": "Brian Greene",
    "cover_material": "book_cover_2",
@@ -554,16 +595,17 @@
   "act_book_20": {
    "set": "prop_books_shelf_1",
    "stall": "buecherstand",
-   "name": "Walden",
+   "name": "The Waste Land",
    "kind": "book",
-   "title": "Walden",
-   "author": "Henry David Thoreau",
+   "pivot": "base",
+   "title": "The Waste Land",
+   "author": "T. S. Eliot",
    "cover_material": "book_cover_20",
    "cover_uv": [
-    0.90454,
-    0.3772,
-    0.98218,
-    0.48999
+    0.82251,
+    0.72876,
+    0.90015,
+    0.84155
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "shelf"
@@ -571,16 +613,17 @@
   "act_book_21": {
    "set": "prop_books_shelf_1",
    "stall": "buecherstand",
-   "name": "The Order of Time",
+   "name": "The Road to Reality",
    "kind": "book",
-   "title": "The Order of Time",
-   "author": "Carlo Rovelli",
+   "pivot": "base",
+   "title": "The Road to Reality",
+   "author": "Roger Penrose",
    "cover_material": "book_cover_21",
    "cover_uv": [
-    0.8772,
-    0.22485,
-    0.95483,
-    0.33765
+    0.0022,
+    0.72876,
+    0.07983,
+    0.84155
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "shelf"
@@ -588,16 +631,17 @@
   "act_book_22": {
    "set": "prop_books_shelf_1",
    "stall": "buecherstand",
-   "name": "Gödel, Escher, Bach",
+   "name": "Moby-Dick",
    "kind": "book",
-   "title": "Gödel, Escher, Bach",
-   "author": "Douglas R. Hofstadter",
+   "pivot": "base",
+   "title": "Moby-Dick",
+   "author": "Herman Melville",
    "cover_material": "book_cover_22",
    "cover_uv": [
     0.0022,
-    0.3772,
+    0.49438,
     0.07983,
-    0.48999
+    0.60718
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "shelf"
@@ -605,16 +649,17 @@
   "act_book_23": {
    "set": "prop_books_shelf_1",
    "stall": "buecherstand",
-   "name": "The Feynman Lectures on Physics, Vol. I",
+   "name": "Reality Is Not What It Seems",
    "kind": "book",
-   "title": "The Feynman Lectures on Physics, Vol. I",
-   "author": "Richard P. Feynman, Robert B. Leighton, Matthew Sands",
+   "pivot": "base",
+   "title": "Reality Is Not What It Seems",
+   "author": "Carlo Rovelli",
    "cover_material": "book_cover_23",
    "cover_uv": [
-    0.08423,
-    0.3772,
-    0.16187,
-    0.48999
+    0.0022,
+    0.84595,
+    0.07983,
+    0.95874
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "shelf"
@@ -622,16 +667,17 @@
   "act_book_24": {
    "set": "prop_books_shelf_1",
    "stall": "buecherstand",
-   "name": "The Feynman Lectures on Physics, Vol. II",
+   "name": "The Fabric of Reality",
    "kind": "book",
-   "title": "The Feynman Lectures on Physics, Vol. II",
-   "author": "Richard P. Feynman, Robert B. Leighton, Matthew Sands",
+   "pivot": "base",
+   "title": "The Fabric of Reality",
+   "author": "David Deutsch",
    "cover_material": "book_cover_24",
    "cover_uv": [
-    0.16626,
-    0.3772,
-    0.2439,
-    0.48999
+    0.08423,
+    0.61157,
+    0.16187,
+    0.72437
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "shelf"
@@ -639,16 +685,17 @@
   "act_book_25": {
    "set": "prop_books_shelf_1",
    "stall": "buecherstand",
-   "name": "The Feynman Lectures on Physics, Vol. III",
+   "name": "Flatland",
    "kind": "book",
-   "title": "The Feynman Lectures on Physics, Vol. III",
-   "author": "Richard P. Feynman, Robert B. Leighton, Matthew Sands",
+   "pivot": "base",
+   "title": "Flatland",
+   "author": "Edwin A. Abbott",
    "cover_material": "book_cover_25",
    "cover_uv": [
     0.24829,
-    0.3772,
+    0.49438,
     0.32593,
-    0.48999
+    0.60718
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "shelf"
@@ -656,16 +703,17 @@
   "act_book_26": {
    "set": "prop_books_shelf_1",
    "stall": "buecherstand",
-   "name": "Being You",
+   "name": "Seven Brief Lessons on Physics",
    "kind": "book",
-   "title": "Being You",
-   "author": "Anil Seth",
+   "pivot": "base",
+   "title": "Seven Brief Lessons on Physics",
+   "author": "Carlo Rovelli",
    "cover_material": "book_cover_26",
    "cover_uv": [
-    0.33032,
-    0.3772,
-    0.40796,
-    0.48999
+    0.41235,
+    0.49438,
+    0.48999,
+    0.60718
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "shelf"
@@ -673,15 +721,16 @@
   "act_book_27": {
    "set": "prop_books_shelf_1",
    "stall": "buecherstand",
-   "name": "The Book of Why",
+   "name": "Walden",
    "kind": "book",
-   "title": "The Book of Why",
-   "author": "Judea Pearl and Dana Mackenzie",
+   "pivot": "base",
+   "title": "Walden",
+   "author": "Henry David Thoreau",
    "cover_material": "book_cover_27",
    "cover_uv": [
-    0.41235,
+    0.90454,
     0.3772,
-    0.48999,
+    0.98218,
     0.48999
    ],
    "cover_texture": "prop_tex_books_color.webp",
@@ -692,6 +741,7 @@
    "stall": "buecherstand",
    "name": "The Feeling of What Happens",
    "kind": "book",
+   "pivot": "base",
    "title": "The Feeling of What Happens",
    "author": "Antonio Damasio",
    "cover_material": "book_cover_28",
@@ -709,6 +759,7 @@
    "stall": "buecherstand",
    "name": "Kritik der reinen Vernunft",
    "kind": "book",
+   "pivot": "base",
    "title": "Kritik der reinen Vernunft",
    "author": "Immanuel Kant",
    "cover_material": "book_cover_29",
@@ -726,6 +777,7 @@
    "stall": "buecherstand",
    "name": "Buddenbrooks",
    "kind": "book",
+   "pivot": "base",
    "title": "Buddenbrooks",
    "author": "Thomas Mann",
    "cover_material": "book_cover_3",
@@ -743,6 +795,7 @@
    "stall": "buecherstand",
    "name": "Meditations",
    "kind": "book",
+   "pivot": "base",
    "title": "Meditations",
    "author": "Marcus Aurelius",
    "cover_material": "book_cover_30",
@@ -760,6 +813,7 @@
    "stall": "buecherstand",
    "name": "What Is Life?",
    "kind": "book",
+   "pivot": "base",
    "title": "What Is Life?",
    "author": "Erwin Schrödinger",
    "cover_material": "book_cover_31",
@@ -777,6 +831,7 @@
    "stall": "buecherstand",
    "name": "Gödel's Proof",
    "kind": "book",
+   "pivot": "base",
    "title": "Gödel's Proof",
    "author": "Ernest Nagel and James R. Newman",
    "cover_material": "book_cover_32",
@@ -794,6 +849,7 @@
    "stall": "buecherstand",
    "name": "Der Zauberberg",
    "kind": "book",
+   "pivot": "base",
    "title": "Der Zauberberg",
    "author": "Thomas Mann",
    "cover_material": "book_cover_33",
@@ -811,6 +867,7 @@
    "stall": "buecherstand",
    "name": "Six Easy Pieces",
    "kind": "book",
+   "pivot": "base",
    "title": "Six Easy Pieces",
    "author": "Richard P. Feynman",
    "cover_material": "book_cover_34",
@@ -828,6 +885,7 @@
    "stall": "buecherstand",
    "name": "Faust",
    "kind": "book",
+   "pivot": "base",
    "title": "Faust",
    "author": "Johann Wolfgang von Goethe",
    "cover_material": "book_cover_35",
@@ -845,6 +903,7 @@
    "stall": "buecherstand",
    "name": "Tractatus",
    "kind": "book",
+   "pivot": "base",
    "title": "Tractatus",
    "author": "Ludwig Wittgenstein",
    "cover_material": "book_cover_36",
@@ -862,6 +921,7 @@
    "stall": "buecherstand",
    "name": "Helgoland",
    "kind": "book",
+   "pivot": "base",
    "title": "Helgoland",
    "author": "Carlo Rovelli",
    "cover_material": "book_cover_37",
@@ -879,6 +939,7 @@
    "stall": "buecherstand",
    "name": "Consciousness Explained",
    "kind": "book",
+   "pivot": "base",
    "title": "Consciousness Explained",
    "author": "Daniel C. Dennett",
    "cover_material": "book_cover_38",
@@ -896,6 +957,7 @@
    "stall": "buecherstand",
    "name": "The Structure of Scientific Revolutions",
    "kind": "book",
+   "pivot": "base",
    "title": "The Structure of Scientific Revolutions",
    "author": "Thomas S. Kuhn",
    "cover_material": "book_cover_39",
@@ -913,6 +975,7 @@
    "stall": "buecherstand",
    "name": "Siddhartha",
    "kind": "book",
+   "pivot": "base",
    "title": "Siddhartha",
    "author": "Hermann Hesse",
    "cover_material": "book_cover_4",
@@ -930,6 +993,7 @@
    "stall": "buecherstand",
    "name": "Philosophical Investigations",
    "kind": "book",
+   "pivot": "base",
    "title": "Philosophical Investigations",
    "author": "Ludwig Wittgenstein",
    "cover_material": "book_cover_40",
@@ -947,6 +1011,7 @@
    "stall": "buecherstand",
    "name": "Causality",
    "kind": "book",
+   "pivot": "base",
    "title": "Causality",
    "author": "Judea Pearl",
    "cover_material": "book_cover_41",
@@ -964,6 +1029,7 @@
    "stall": "buecherstand",
    "name": "Probability Theory",
    "kind": "book",
+   "pivot": "base",
    "title": "Probability Theory",
    "author": "E. T. Jaynes",
    "cover_material": "book_cover_42",
@@ -981,6 +1047,7 @@
    "stall": "buecherstand",
    "name": "The Selfish Gene",
    "kind": "book",
+   "pivot": "base",
    "title": "The Selfish Gene",
    "author": "Richard Dawkins",
    "cover_material": "book_cover_43",
@@ -998,6 +1065,7 @@
    "stall": "buecherstand",
    "name": "The Emperor's New Mind",
    "kind": "book",
+   "pivot": "base",
    "title": "The Emperor's New Mind",
    "author": "Roger Penrose",
    "cover_material": "book_cover_44",
@@ -1015,6 +1083,7 @@
    "stall": "buecherstand",
    "name": "Mind and Cosmos",
    "kind": "book",
+   "pivot": "base",
    "title": "Mind and Cosmos",
    "author": "Thomas Nagel",
    "cover_material": "book_cover_45",
@@ -1032,6 +1101,7 @@
    "stall": "buecherstand",
    "name": "Thinking, Fast and Slow",
    "kind": "book",
+   "pivot": "base",
    "title": "Thinking, Fast and Slow",
    "author": "Daniel Kahneman",
    "cover_material": "book_cover_5",
@@ -1049,6 +1119,7 @@
    "stall": "buecherstand",
    "name": "The Beginning of Infinity",
    "kind": "book",
+   "pivot": "base",
    "title": "The Beginning of Infinity",
    "author": "David Deutsch",
    "cover_material": "book_cover_6",
@@ -1066,6 +1137,7 @@
    "stall": "buecherstand",
    "name": "Grimms Märchen",
    "kind": "book",
+   "pivot": "base",
    "title": "Grimms Märchen",
    "author": "Brüder Grimm",
    "cover_material": "book_cover_7",
@@ -1083,6 +1155,7 @@
    "stall": "buecherstand",
    "name": "QED",
    "kind": "book",
+   "pivot": "base",
    "title": "QED",
    "author": "Richard P. Feynman",
    "cover_material": "book_cover_8",
@@ -1100,6 +1173,7 @@
    "stall": "buecherstand",
    "name": "Die Welt als Wille",
    "kind": "book",
+   "pivot": "base",
    "title": "Die Welt als Wille",
    "author": "Arthur Schopenhauer",
    "cover_material": "book_cover_9",
@@ -1117,6 +1191,7 @@
    "stall": "buecherstand",
    "name": "The Mind's I",
    "kind": "book",
+   "pivot": "base",
    "title": "The Mind's I",
    "author": "Douglas R. Hofstadter and Daniel C. Dennett",
    "cover_material": "book_cover_100",
@@ -1134,6 +1209,7 @@
    "stall": "buecherstand",
    "name": "Critique of Judgment",
    "kind": "book",
+   "pivot": "base",
    "title": "Critique of Judgment",
    "author": "Immanuel Kant",
    "cover_material": "book_cover_101",
@@ -1151,6 +1227,7 @@
    "stall": "buecherstand",
    "name": "The Beginning of Infinity",
    "kind": "book",
+   "pivot": "base",
    "title": "The Beginning of Infinity",
    "author": "David Deutsch",
    "cover_material": "book_cover_102",
@@ -1168,6 +1245,7 @@
    "stall": "buecherstand",
    "name": "Der Prozess",
    "kind": "book",
+   "pivot": "base",
    "title": "Der Prozess",
    "author": "Franz Kafka",
    "cover_material": "book_cover_103",
@@ -1185,6 +1263,7 @@
    "stall": "buecherstand",
    "name": "Ethik",
    "kind": "book",
+   "pivot": "base",
    "title": "Ethik",
    "author": "Baruch de Spinoza",
    "cover_material": "book_cover_104",
@@ -1202,6 +1281,7 @@
    "stall": "buecherstand",
    "name": "Die Verwandlung",
    "kind": "book",
+   "pivot": "base",
    "title": "Die Verwandlung",
    "author": "Franz Kafka",
    "cover_material": "book_cover_105",
@@ -1219,6 +1299,7 @@
    "stall": "buecherstand",
    "name": "Siddhartha",
    "kind": "book",
+   "pivot": "base",
    "title": "Siddhartha",
    "author": "Hermann Hesse",
    "cover_material": "book_cover_106",
@@ -1236,6 +1317,7 @@
    "stall": "buecherstand",
    "name": "The Fabric of Reality",
    "kind": "book",
+   "pivot": "base",
    "title": "The Fabric of Reality",
    "author": "David Deutsch",
    "cover_material": "book_cover_107",
@@ -1253,6 +1335,7 @@
    "stall": "buecherstand",
    "name": "The Character of Physical Law",
    "kind": "book",
+   "pivot": "base",
    "title": "The Character of Physical Law",
    "author": "Richard P. Feynman",
    "cover_material": "book_cover_108",
@@ -1270,6 +1353,7 @@
    "stall": "buecherstand",
    "name": "The Feeling of What Happens",
    "kind": "book",
+   "pivot": "base",
    "title": "The Feeling of What Happens",
    "author": "Antonio Damasio",
    "cover_material": "book_cover_109",
@@ -1287,6 +1371,7 @@
    "stall": "buecherstand",
    "name": "Grimms Märchen",
    "kind": "book",
+   "pivot": "base",
    "title": "Grimms Märchen",
    "author": "Brüder Grimm",
    "cover_material": "book_cover_110",
@@ -1304,6 +1389,7 @@
    "stall": "buecherstand",
    "name": "The Selfish Gene",
    "kind": "book",
+   "pivot": "base",
    "title": "The Selfish Gene",
    "author": "Richard Dawkins",
    "cover_material": "book_cover_111",
@@ -1321,6 +1407,7 @@
    "stall": "buecherstand",
    "name": "Surfaces and Essences",
    "kind": "book",
+   "pivot": "base",
    "title": "Surfaces and Essences",
    "author": "Douglas R. Hofstadter and Emmanuel Sander",
    "cover_material": "book_cover_112",
@@ -1338,6 +1425,7 @@
    "stall": "buecherstand",
    "name": "Moby-Dick",
    "kind": "book",
+   "pivot": "base",
    "title": "Moby-Dick",
    "author": "Herman Melville",
    "cover_material": "book_cover_113",
@@ -1355,6 +1443,7 @@
    "stall": "buecherstand",
    "name": "Flatland",
    "kind": "book",
+   "pivot": "base",
    "title": "Flatland",
    "author": "Edwin A. Abbott",
    "cover_material": "book_cover_114",
@@ -1372,6 +1461,7 @@
    "stall": "buecherstand",
    "name": "What Is Life?",
    "kind": "book",
+   "pivot": "base",
    "title": "What Is Life?",
    "author": "Erwin Schrödinger",
    "cover_material": "book_cover_115",
@@ -1389,6 +1479,7 @@
    "stall": "buecherstand",
    "name": "Helgoland",
    "kind": "book",
+   "pivot": "base",
    "title": "Helgoland",
    "author": "Carlo Rovelli",
    "cover_material": "book_cover_116",
@@ -1406,6 +1497,7 @@
    "stall": "buecherstand",
    "name": "Kritik der reinen Vernunft",
    "kind": "book",
+   "pivot": "base",
    "title": "Kritik der reinen Vernunft",
    "author": "Immanuel Kant",
    "cover_material": "book_cover_117",
@@ -1423,6 +1515,7 @@
    "stall": "buecherstand",
    "name": "Die Welt als Wille",
    "kind": "book",
+   "pivot": "base",
    "title": "Die Welt als Wille",
    "author": "Arthur Schopenhauer",
    "cover_material": "book_cover_118",
@@ -1440,6 +1533,7 @@
    "stall": "buecherstand",
    "name": "QED",
    "kind": "book",
+   "pivot": "base",
    "title": "QED",
    "author": "Richard P. Feynman",
    "cover_material": "book_cover_119",
@@ -1457,6 +1551,7 @@
    "stall": "buecherstand",
    "name": "Causality",
    "kind": "book",
+   "pivot": "base",
    "title": "Causality",
    "author": "Judea Pearl",
    "cover_material": "book_cover_120",
@@ -1474,6 +1569,7 @@
    "stall": "buecherstand",
    "name": "Cosmos",
    "kind": "book",
+   "pivot": "base",
    "title": "Cosmos",
    "author": "Carl Sagan",
    "cover_material": "book_cover_121",
@@ -1491,6 +1587,7 @@
    "stall": "buecherstand",
    "name": "The Waste Land",
    "kind": "book",
+   "pivot": "base",
    "title": "The Waste Land",
    "author": "T. S. Eliot",
    "cover_material": "book_cover_122",
@@ -1508,6 +1605,7 @@
    "stall": "buecherstand",
    "name": "Thinking, Fast and Slow",
    "kind": "book",
+   "pivot": "base",
    "title": "Thinking, Fast and Slow",
    "author": "Daniel Kahneman",
    "cover_material": "book_cover_123",
@@ -1525,6 +1623,7 @@
    "stall": "buecherstand",
    "name": "The Emperor's New Mind",
    "kind": "book",
+   "pivot": "base",
    "title": "The Emperor's New Mind",
    "author": "Roger Penrose",
    "cover_material": "book_cover_124",
@@ -1542,6 +1641,7 @@
    "stall": "buecherstand",
    "name": "I Am a Strange Loop",
    "kind": "book",
+   "pivot": "base",
    "title": "I Am a Strange Loop",
    "author": "Douglas R. Hofstadter",
    "cover_material": "book_cover_125",
@@ -1559,6 +1659,7 @@
    "stall": "buecherstand",
    "name": "Six Easy Pieces",
    "kind": "book",
+   "pivot": "base",
    "title": "Six Easy Pieces",
    "author": "Richard P. Feynman",
    "cover_material": "book_cover_126",
@@ -1576,6 +1677,7 @@
    "stall": "buecherstand",
    "name": "Walden",
    "kind": "book",
+   "pivot": "base",
    "title": "Walden",
    "author": "Henry David Thoreau",
    "cover_material": "book_cover_127",
@@ -1593,6 +1695,7 @@
    "stall": "buecherstand",
    "name": "Probability Theory",
    "kind": "book",
+   "pivot": "base",
    "title": "Probability Theory",
    "author": "E. T. Jaynes",
    "cover_material": "book_cover_128",
@@ -1610,6 +1713,7 @@
    "stall": "buecherstand",
    "name": "Principia",
    "kind": "book",
+   "pivot": "base",
    "title": "Principia",
    "author": "Isaac Newton",
    "cover_material": "book_cover_129",
@@ -1627,6 +1731,7 @@
    "stall": "buecherstand",
    "name": "Buddenbrooks",
    "kind": "book",
+   "pivot": "base",
    "title": "Buddenbrooks",
    "author": "Thomas Mann",
    "cover_material": "book_cover_130",
@@ -1644,6 +1749,7 @@
    "stall": "buecherstand",
    "name": "Der Steppenwolf",
    "kind": "book",
+   "pivot": "base",
    "title": "Der Steppenwolf",
    "author": "Hermann Hesse",
    "cover_material": "book_cover_131",
@@ -1661,6 +1767,7 @@
    "stall": "buecherstand",
    "name": "The Structure of Scientific Revolutions",
    "kind": "book",
+   "pivot": "base",
    "title": "The Structure of Scientific Revolutions",
    "author": "Thomas S. Kuhn",
    "cover_material": "book_cover_132",
@@ -1678,6 +1785,7 @@
    "stall": "buecherstand",
    "name": "Mind and Cosmos",
    "kind": "book",
+   "pivot": "base",
    "title": "Mind and Cosmos",
    "author": "Thomas Nagel",
    "cover_material": "book_cover_133",
@@ -1695,6 +1803,7 @@
    "stall": "buecherstand",
    "name": "Faust",
    "kind": "book",
+   "pivot": "base",
    "title": "Faust",
    "author": "Johann Wolfgang von Goethe",
    "cover_material": "book_cover_134",
@@ -1712,6 +1821,7 @@
    "stall": "buecherstand",
    "name": "Gödel's Proof",
    "kind": "book",
+   "pivot": "base",
    "title": "Gödel's Proof",
    "author": "Ernest Nagel and James R. Newman",
    "cover_material": "book_cover_135",
@@ -1729,6 +1839,7 @@
    "stall": "buecherstand",
    "name": "Tractatus",
    "kind": "book",
+   "pivot": "base",
    "title": "Tractatus",
    "author": "Ludwig Wittgenstein",
    "cover_material": "book_cover_136",
@@ -1746,6 +1857,7 @@
    "stall": "buecherstand",
    "name": "Seven Brief Lessons on Physics",
    "kind": "book",
+   "pivot": "base",
    "title": "Seven Brief Lessons on Physics",
    "author": "Carlo Rovelli",
    "cover_material": "book_cover_137",
@@ -1763,6 +1875,7 @@
    "stall": "buecherstand",
    "name": "Reality Is Not What It Seems",
    "kind": "book",
+   "pivot": "base",
    "title": "Reality Is Not What It Seems",
    "author": "Carlo Rovelli",
    "cover_material": "book_cover_138",
@@ -1780,6 +1893,7 @@
    "stall": "buecherstand",
    "name": "A Brief History of Time",
    "kind": "book",
+   "pivot": "base",
    "title": "A Brief History of Time",
    "author": "Stephen Hawking",
    "cover_material": "book_cover_139",
@@ -1797,6 +1911,7 @@
    "stall": "buecherstand",
    "name": "Meditations",
    "kind": "book",
+   "pivot": "base",
    "title": "Meditations",
    "author": "Marcus Aurelius",
    "cover_material": "book_cover_140",
@@ -1814,6 +1929,7 @@
    "stall": "buecherstand",
    "name": "Also sprach Zarathustra",
    "kind": "book",
+   "pivot": "base",
    "title": "Also sprach Zarathustra",
    "author": "Friedrich Nietzsche",
    "cover_material": "book_cover_141",
@@ -1831,6 +1947,7 @@
    "stall": "buecherstand",
    "name": "The Elegant Universe",
    "kind": "book",
+   "pivot": "base",
    "title": "The Elegant Universe",
    "author": "Brian Greene",
    "cover_material": "book_cover_142",
@@ -1848,6 +1965,7 @@
    "stall": "buecherstand",
    "name": "Philosophical Investigations",
    "kind": "book",
+   "pivot": "base",
    "title": "Philosophical Investigations",
    "author": "Ludwig Wittgenstein",
    "cover_material": "book_cover_143",
@@ -1865,6 +1983,7 @@
    "stall": "buecherstand",
    "name": "The Road to Reality",
    "kind": "book",
+   "pivot": "base",
    "title": "The Road to Reality",
    "author": "Roger Penrose",
    "cover_material": "book_cover_144",
@@ -1882,6 +2001,7 @@
    "stall": "buecherstand",
    "name": "Order out of Chaos",
    "kind": "book",
+   "pivot": "base",
    "title": "Order out of Chaos",
    "author": "Ilya Prigogine and Isabelle Stengers",
    "cover_material": "book_cover_145",
@@ -1899,6 +2019,7 @@
    "stall": "buecherstand",
    "name": "Der Zauberberg",
    "kind": "book",
+   "pivot": "base",
    "title": "Der Zauberberg",
    "author": "Thomas Mann",
    "cover_material": "book_cover_146",
@@ -1916,6 +2037,7 @@
    "stall": "buecherstand",
    "name": "Consciousness Explained",
    "kind": "book",
+   "pivot": "base",
    "title": "Consciousness Explained",
    "author": "Daniel C. Dennett",
    "cover_material": "book_cover_147",
@@ -1933,6 +2055,7 @@
    "stall": "buecherstand",
    "name": "The Mind's I",
    "kind": "book",
+   "pivot": "base",
    "title": "The Mind's I",
    "author": "Douglas R. Hofstadter and Daniel C. Dennett",
    "cover_material": "book_cover_148",
@@ -1945,68 +2068,19 @@
    "cover_texture": "prop_tex_books_color.webp",
    "where": "shelf"
   },
-  "act_book_149": {
-   "set": "prop_books_shelf_2",
-   "stall": "buecherstand",
-   "name": "Critique of Judgment",
-   "kind": "book",
-   "title": "Critique of Judgment",
-   "author": "Immanuel Kant",
-   "cover_material": "book_cover_149",
-   "cover_uv": [
-    0.16626,
-    0.84595,
-    0.2439,
-    0.95874
-   ],
-   "cover_texture": "prop_tex_books_color.webp",
-   "where": "shelf"
-  },
-  "act_book_150": {
-   "set": "prop_books_shelf_2",
-   "stall": "buecherstand",
-   "name": "The Beginning of Infinity",
-   "kind": "book",
-   "title": "The Beginning of Infinity",
-   "author": "David Deutsch",
-   "cover_material": "book_cover_150",
-   "cover_uv": [
-    0.0022,
-    0.61157,
-    0.07983,
-    0.72437
-   ],
-   "cover_texture": "prop_tex_books_color.webp",
-   "where": "shelf"
-  },
-  "act_book_151": {
-   "set": "prop_books_shelf_2",
-   "stall": "buecherstand",
-   "name": "Der Prozess",
-   "kind": "book",
-   "title": "Der Prozess",
-   "author": "Franz Kafka",
-   "cover_material": "book_cover_151",
-   "cover_uv": [
-    0.41235,
-    0.84595,
-    0.48999,
-    0.95874
-   ],
-   "cover_texture": "prop_tex_books_color.webp",
-   "where": "shelf"
-  },
   "act_ladle": {
    "set": "prop_gluehwein_counter",
    "stall": "gluehwein",
    "name": "Ladle",
-   "kind": "ladle"
+   "kind": "ladle",
+   "pivot": "base"
   },
   "act_mug_0": {
    "set": "prop_gluehwein_counter",
    "stall": "gluehwein",
    "name": "Red boot mug with a white cuff, full and steaming",
    "kind": "mug",
+   "pivot": "base",
    "style": "santa",
    "shape": "boot",
    "where": "on the counter"
@@ -2016,6 +2090,7 @@
    "stall": "gluehwein",
    "name": "Red Glühwein mug with gold stars, full and steaming",
    "kind": "mug",
+   "pivot": "base",
    "style": "red",
    "shape": "classic",
    "where": "on the counter"
@@ -2025,6 +2100,7 @@
    "stall": "gluehwein",
    "name": "Blue mug with white snowflakes",
    "kind": "mug",
+   "pivot": "base",
    "style": "blue",
    "shape": "classic",
    "where": "on the counter"
@@ -2034,6 +2110,7 @@
    "stall": "gluehwein",
    "name": "Cream mug with a painted market skyline, full and steaming",
    "kind": "mug",
+   "pivot": "base",
    "style": "cream",
    "shape": "classic",
    "where": "on the counter"
@@ -2043,6 +2120,7 @@
    "stall": "gluehwein",
    "name": "Green mug with white fir trees, full and steaming",
    "kind": "mug",
+   "pivot": "base",
    "style": "green",
    "shape": "classic",
    "where": "on the counter"
@@ -2052,6 +2130,7 @@
    "stall": "gluehwein",
    "name": "Blue boot mug with gold stars",
    "kind": "mug",
+   "pivot": "base",
    "style": "bluestar",
    "shape": "boot",
    "where": "on the counter"
@@ -2061,6 +2140,7 @@
    "stall": "gluehwein",
    "name": "White mug with red stars, upside down to dry",
    "kind": "mug",
+   "pivot": "base",
    "style": "white",
    "shape": "classic",
    "where": "on the tray"
@@ -2070,6 +2150,7 @@
    "stall": "gluehwein",
    "name": "Cream mug with a painted market skyline, upside down to dry",
    "kind": "mug",
+   "pivot": "base",
    "style": "cream",
    "shape": "classic",
    "where": "on the tray"
@@ -2079,6 +2160,7 @@
    "stall": "gluehwein",
    "name": "Brown mug with iced hearts, upside down to dry",
    "kind": "mug",
+   "pivot": "base",
    "style": "brown",
    "shape": "classic",
    "where": "on the tray"
@@ -2088,6 +2170,7 @@
    "stall": "gluehwein",
    "name": "Red Glühwein mug with gold stars, upside down to dry",
    "kind": "mug",
+   "pivot": "base",
    "style": "red",
    "shape": "classic",
    "where": "on the tray"
@@ -2096,49 +2179,57 @@
    "set": "prop_gluehwein_counter",
    "stall": "gluehwein",
    "name": "Copper Glühwein kettle",
-   "kind": "kettle"
+   "kind": "kettle",
+   "pivot": "the burner's foot on the counter"
   },
   "act_pot_lid": {
    "set": "prop_gluehwein_counter",
    "stall": "gluehwein",
    "name": "Kettle lid",
-   "kind": "lid"
+   "kind": "lid",
+   "pivot": "hinge at the back rim of the kettle; rotating X negative opens it"
   },
   "act_steam": {
    "set": "prop_gluehwein_counter",
    "stall": "gluehwein",
    "name": "Steam over the kettle",
-   "kind": "effect"
+   "kind": "effect",
+   "pivot": "the point where steam or smoke starts"
   },
   "act_steam_0": {
    "set": "prop_gluehwein_counter",
    "stall": "gluehwein",
    "name": "Steam over mug 0",
-   "kind": "effect"
+   "kind": "effect",
+   "pivot": "the point where steam or smoke starts"
   },
   "act_steam_1": {
    "set": "prop_gluehwein_counter",
    "stall": "gluehwein",
    "name": "Steam over mug 1",
-   "kind": "effect"
+   "kind": "effect",
+   "pivot": "the point where steam or smoke starts"
   },
   "act_steam_3": {
    "set": "prop_gluehwein_counter",
    "stall": "gluehwein",
    "name": "Steam over mug 3",
-   "kind": "effect"
+   "kind": "effect",
+   "pivot": "the point where steam or smoke starts"
   },
   "act_steam_4": {
    "set": "prop_gluehwein_counter",
    "stall": "gluehwein",
    "name": "Steam over mug 4",
-   "kind": "effect"
+   "kind": "effect",
+   "pivot": "the point where steam or smoke starts"
   },
   "act_bottle_12": {
    "set": "prop_gluehwein_shelf",
    "stall": "gluehwein",
    "name": "Winzer-Glühwein, red",
    "kind": "bottle",
+   "pivot": "base",
    "where": "Glühwein shelf"
   },
   "act_bottle_13": {
@@ -2146,6 +2237,7 @@
    "stall": "gluehwein",
    "name": "Winzer-Glühwein, red",
    "kind": "bottle",
+   "pivot": "base",
    "where": "Glühwein shelf"
   },
   "act_bottle_14": {
@@ -2153,6 +2245,7 @@
    "stall": "gluehwein",
    "name": "White Glühwein from Riesling",
    "kind": "bottle",
+   "pivot": "base",
    "where": "Glühwein shelf"
   },
   "act_bottle_15": {
@@ -2160,6 +2253,7 @@
    "stall": "gluehwein",
    "name": "Blueberry Glühwein",
    "kind": "bottle",
+   "pivot": "base",
    "where": "Glühwein shelf"
   },
   "act_bottle_16": {
@@ -2167,6 +2261,7 @@
    "stall": "gluehwein",
    "name": "Rum, for a Schuss",
    "kind": "bottle",
+   "pivot": "base",
    "where": "Glühwein shelf"
   },
   "act_bottle_17": {
@@ -2174,6 +2269,7 @@
    "stall": "gluehwein",
    "name": "Kinderpunsch, alcohol-free",
    "kind": "bottle",
+   "pivot": "base",
    "where": "Glühwein shelf"
   },
   "act_mug_10": {
@@ -2181,6 +2277,7 @@
    "stall": "gluehwein",
    "name": "Red Glühwein mug with gold stars",
    "kind": "mug",
+   "pivot": "base",
    "style": "red",
    "shape": "classic",
    "where": "spare, on the back shelf"
@@ -2190,6 +2287,7 @@
    "stall": "gluehwein",
    "name": "Blue mug with white snowflakes",
    "kind": "mug",
+   "pivot": "base",
    "style": "blue",
    "shape": "classic",
    "where": "spare, on the back shelf"
@@ -2199,6 +2297,7 @@
    "stall": "gluehwein",
    "name": "Cream mug with a painted market skyline",
    "kind": "mug",
+   "pivot": "base",
    "style": "cream",
    "shape": "classic",
    "where": "spare, on the back shelf"
@@ -2208,6 +2307,7 @@
    "stall": "gluehwein",
    "name": "Riesling Kabinett feinherb, Mosel 2022 (Weingut am Laternenberg)",
    "kind": "bottle",
+   "pivot": "base",
    "where": "wine shelf"
   },
   "act_bottle_1": {
@@ -2215,6 +2315,7 @@
    "stall": "gluehwein",
    "name": "Riesling Spätlese, Rheingau 2021 (Weinhaus Glockenhof)",
    "kind": "bottle",
+   "pivot": "base",
    "where": "wine shelf"
   },
   "act_bottle_2": {
@@ -2222,6 +2323,7 @@
    "stall": "gluehwein",
    "name": "Riesling trocken, Pfalz 2023 (Kellerei Sternschnuppe)",
    "kind": "bottle",
+   "pivot": "base",
    "where": "wine shelf"
   },
   "act_bottle_3": {
@@ -2229,6 +2331,7 @@
    "stall": "gluehwein",
    "name": "Spätburgunder trocken, Baden 2020 (Weingut Mondscheinhang)",
    "kind": "bottle",
+   "pivot": "base",
    "where": "wine shelf"
   },
   "act_bottle_4": {
@@ -2236,6 +2339,7 @@
    "stall": "gluehwein",
    "name": "Spätburgunder, Ahr 2019 (Winzerhof Tannenleite)",
    "kind": "bottle",
+   "pivot": "base",
    "where": "wine shelf"
   },
   "act_bottle_5": {
@@ -2243,6 +2347,7 @@
    "stall": "gluehwein",
    "name": "Dornfelder halbtrocken, Rheinhessen 2022 (Weingut Schneehang)",
    "kind": "bottle",
+   "pivot": "base",
    "where": "wine shelf"
   },
   "act_bottle_6": {
@@ -2250,6 +2355,7 @@
    "stall": "gluehwein",
    "name": "Dornfelder trocken, Pfalz 2021 (Kellerei Kerzenschein)",
    "kind": "bottle",
+   "pivot": "base",
    "where": "wine shelf"
   },
   "act_bottle_7": {
@@ -2257,6 +2363,7 @@
    "stall": "gluehwein",
    "name": "Silvaner Kabinett trocken in a Bocksbeutel, Franken 2022 (Weingut zum Weihnachtsstern)",
    "kind": "bottle",
+   "pivot": "base",
    "where": "wine shelf"
   },
   "act_bottle_8": {
@@ -2264,6 +2371,7 @@
    "stall": "gluehwein",
    "name": "Silvaner trocken, Rheinhessen 2023 (Hof Nachtigallenruh)",
    "kind": "bottle",
+   "pivot": "base",
    "where": "wine shelf"
   },
   "act_bottle_9": {
@@ -2271,181 +2379,211 @@
    "stall": "gluehwein",
    "name": "Riesling Eiswein, Rheingau 2018 (Weingut Eiszapfen)",
    "kind": "bottle",
+   "pivot": "base",
    "where": "wine shelf"
   },
   "act_wineglass_0": {
    "set": "prop_gluehwein_wine",
    "stall": "gluehwein",
    "name": "Glass of Spätburgunder",
-   "kind": "wineglass"
+   "kind": "wineglass",
+   "pivot": "base"
   },
   "act_wineglass_1": {
    "set": "prop_gluehwein_wine",
    "stall": "gluehwein",
    "name": "Glass of Riesling",
-   "kind": "wineglass"
+   "kind": "wineglass",
+   "pivot": "base"
   },
   "act_wineglass_2": {
    "set": "prop_gluehwein_wine",
    "stall": "gluehwein",
    "name": "Clean wine glass",
-   "kind": "wineglass"
+   "kind": "wineglass",
+   "pivot": "base"
   },
   "act_grill": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Schwenkgrill over the charcoal",
-   "kind": "grill"
+   "kind": "grill",
+   "pivot": "the fire bowl's foot on the hearth plate (act_grill); the hook of the swing (act_grill_swing)"
   },
   "act_grill_swing": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Swinging grill grate",
-   "kind": "grill"
+   "kind": "grill",
+   "pivot": "the fire bowl's foot on the hearth plate (act_grill); the hook of the swing (act_grill_swing)"
   },
   "act_roll_0": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Brötchen (bread roll)",
-   "kind": "roll"
+   "kind": "roll",
+   "pivot": "base"
   },
   "act_roll_1": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Brötchen (bread roll)",
-   "kind": "roll"
+   "kind": "roll",
+   "pivot": "base"
   },
   "act_roll_2": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Brötchen (bread roll)",
-   "kind": "roll"
+   "kind": "roll",
+   "pivot": "base"
   },
   "act_roll_3": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Brötchen (bread roll)",
-   "kind": "roll"
+   "kind": "roll",
+   "pivot": "base"
   },
   "act_roll_4": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Brötchen (bread roll)",
-   "kind": "roll"
+   "kind": "roll",
+   "pivot": "base"
   },
   "act_roll_5": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Brötchen (bread roll)",
-   "kind": "roll"
+   "kind": "roll",
+   "pivot": "base"
   },
   "act_roll_6": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Brötchen (bread roll)",
-   "kind": "roll"
+   "kind": "roll",
+   "pivot": "base"
   },
   "act_roll_7": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Brötchen (bread roll)",
-   "kind": "roll"
+   "kind": "roll",
+   "pivot": "base"
   },
   "act_roll_8": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Brötchen (bread roll)",
-   "kind": "roll"
+   "kind": "roll",
+   "pivot": "base"
   },
   "act_roll_9": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Brötchen (bread roll)",
-   "kind": "roll"
+   "kind": "roll",
+   "pivot": "base"
   },
   "act_sausage_0": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst on the grill",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_sausage_1": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst on the grill",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_sausage_10": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst keeping warm",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_sausage_11": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst keeping warm",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_sausage_2": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst on the grill",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_sausage_3": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst on the grill",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_sausage_4": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst on the grill",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_sausage_5": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst on the grill",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_sausage_6": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst on the grill",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_sausage_7": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst on the grill",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_sausage_8": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst keeping warm",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_sausage_9": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst keeping warm",
-   "kind": "sausage"
+   "kind": "sausage",
+   "pivot": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the grill without it jumping (a base pivot would swing it round its underside)"
   },
   "act_served_0": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Bratwurst im Brötchen with mustard",
-   "kind": "served"
+   "kind": "served",
+   "pivot": "base"
   },
   "act_smoke": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
    "name": "Smoke from the grill",
-   "kind": "effect"
+   "kind": "effect",
+   "pivot": "the point where steam or smoke starts"
   }
  }
 }

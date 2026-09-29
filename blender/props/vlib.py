@@ -39,7 +39,12 @@ MODELS = os.path.join(REPO, "site", "public", "models")
 REVIEW = os.path.join(REPO, "review", "round-1", "vendor")
 _REG = None
 LITE = {"on": False}
+# Two random streams. `rng` is the layout stream: where goods stand, their sizes and which book is which.
+# It must be drawn identically in the full and the lite build, so lite sets match the full ones node for
+# node (check_props fails otherwise). `drng` is the detail stream (colour jitter, scattered garnish,
+# coal lumps, salt grains): anything whose count or presence depends on lite() draws from drng.
 rng = random.Random(1)
+drng = random.Random(1001)
 
 
 def lite():
@@ -47,8 +52,9 @@ def lite():
 
 
 def seg(n, lo=6):
-    """Segment count, reduced for the lite build (lite aims at about a third of the triangles)."""
-    return max(lo, int(round(n * 0.4))) if lite() else n
+    """Segment count, reduced for the lite build (lite aims at about a third of the triangles): a third
+    of the full count, but never under 6 sides for a round thing, or `lo` when that is lower."""
+    return max(min(lo, 6), int(round(n * 0.34))) if lite() else n
 
 
 def regions():
@@ -80,8 +86,8 @@ WHITE = (1.0, 1.0, 1.0)
 
 def jit(col, v=0.06):
     """Colour with a little random brightness / hue variation."""
-    k = 1 + rng.uniform(-v, v)
-    return tuple(min(1.0, c * k * (1 + rng.uniform(-v, v) * 0.3)) for c in col)
+    k = 1 + drng.uniform(-v, v)
+    return tuple(min(1.0, c * k * (1 + drng.uniform(-v, v) * 0.3)) for c in col)
 
 
 # ============================================================ region mapping
@@ -106,8 +112,8 @@ class Reg:
         if not self.phys:
             return self
         fa, fb = min(1.0, a / self.phys[0]), min(1.0, b / self.phys[1])
-        oa = rng.uniform(0, 1 - fa) if self.rand else 0
-        ob = rng.uniform(0, 1 - fb) if self.rand else 0
+        oa = drng.uniform(0, 1 - fa) if self.rand else 0
+        ob = drng.uniform(0, 1 - fb) if self.rand else 0
         r = Reg(self.rect)
         r.rect = list(self.rect)
         u0, v0, u1, v1 = self.rect
@@ -598,6 +604,18 @@ def material(key):
 
 
 # ============================================================ prop sets
+# where an act_ node's origin sits, by kind, when it is not the base the item rests on
+PIVOTS = {
+    "sausage": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the "
+               "grill without it jumping (a base pivot would swing it round its underside)",
+    "grill": "the fire bowl's foot on the hearth plate (act_grill); the hook of the swing (act_grill_swing)",
+    "lid": "hinge at the back rim of the kettle; rotating X negative opens it",
+    "tap": "base of the handle on top of the faucet; rotating X tips the handle forward",
+    "effect": "the point where steam or smoke starts",
+    "kettle": "the burner's foot on the counter",
+}
+
+
 class PropSet:
     """One glb: a root empty at the slot origin, a merged static mesh and named nodes."""
 
@@ -617,9 +635,10 @@ class PropSet:
             self.rot[name] = tuple(rot)
         return m
 
-    def item(self, node, name, kind, **extra):
-        """Register what a clickable act_ node is, for site/public/models/items.json."""
-        self.items[node] = {"name": name, "kind": kind, **extra}
+    def item(self, node, name, kind, pivot=None, **extra):
+        """Register what a clickable act_ node is, for site/public/models/items.json. `pivot` says where
+        the node's origin is: "base" (the point it rests on; the default for goods) unless given."""
+        self.items[node] = {"name": name, "kind": kind, "pivot": pivot or PIVOTS.get(kind, "base"), **extra}
 
     def empty(self, name, loc, parent=None):
         self.empties.append((name, tuple(loc), parent))
@@ -711,6 +730,7 @@ def reset(seed=1, lite_mode=False):
     LITE["on"] = lite_mode
     _MATS.clear()
     rng.seed(seed)
+    drng.seed(seed + 1000)
 
 
 def tex_uri(lite_mode):

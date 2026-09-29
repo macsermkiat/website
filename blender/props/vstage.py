@@ -6,7 +6,12 @@ import os
 
 import bpy
 
-from vlib import state, world_bbox
+from vlib import ATLAS_DIR, state, world_bbox
+
+# the vendor's own working files (AO maps, preview PNGs) live under blender/out/vendor/, never in the shared
+# blender/out/renders/, where the carpenter's deco.py writes deco_<key>.png for the empty stalls
+VENDOR_OUT = ATLAS_DIR
+RENDERS = os.path.join(VENDOR_OUT, "renders")
 
 
 def setup_device(scene=None, var="NM_DEVICE"):
@@ -81,7 +86,7 @@ def bake_ao(name, res, samples=32, distance=0.12, floor=0.4):
     bpy.ops.object.bake(type='AO', margin=2, use_clear=True)
     mask = nb._coverage_mask(targets, tiny, res)
     raw_mean, out_mean = nb._postprocess(img, mask, res, floor=floor)
-    path = os.path.join(state.OUT_DIR, "ao", f"{name}_ao.png")
+    path = os.path.join(VENDOR_OUT, "ao", f"{name}_ao.png")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     img.filepath_raw = path
     img.file_format = 'PNG'
@@ -169,12 +174,14 @@ def preview_scene(ps, kind="counter", width=3.0, extra_lights=()):
     return top
 
 
-def shot(cam, top, out_jpg, samples=128, res=(1920, 1080)):
-    """Render one camera (loc, target, lens) given relative to the slot; PNG in blender/out, JPEG for review."""
+def shot(cam, top, out_jpg, samples=128, res=(1920, 1080), png_name=None):
+    """Render one camera (loc, target, lens) given relative to the slot. The PNG goes to the vendor's own
+    blender/out/vendor/renders/<png_name or the jpeg's name>.png, the JPEG to review/."""
     from nmlib import render
     loc, tgt, lens = cam
     render.camera((loc[0], loc[1], loc[2] + top), (tgt[0], tgt[1], tgt[2] + top), lens=lens, dof=None)
-    png = os.path.join(state.OUT_DIR, "renders", os.path.basename(out_jpg).replace(".jpg", ".png"))
+    os.makedirs(RENDERS, exist_ok=True)
+    png = os.path.join(RENDERS, (png_name or os.path.basename(out_jpg).replace(".jpg", "")) + ".png")
     render.render(png, samples=samples, res=res, jpeg=out_jpg, jpeg_width=1280)
     return png
 

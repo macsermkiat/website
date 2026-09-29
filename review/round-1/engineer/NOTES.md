@@ -1,215 +1,290 @@
-# Engineer, round 1 (pass 2): the market in the browser
+# Engineer, round 1 (pass 3): the market in the browser
 
-`site/` is a Vite 8 + three.js 0.186 app. It builds to `site/dist` with base `/website/`, and `.github/workflows/pages.yml` deploys it to GitHub Pages (npm ci, build, upload, deploy). Pass 1 is described at the end of this file ("What the site does"). This pass works through the judging panel's list.
+`site/` is a Vite 8 + three.js 0.186 app. It builds to `site/dist` with base `/website/`. `.github/workflows/pages.yml` deploys it to GitHub Pages: npm ci, the unit checks, build, upload, deploy.
 
-## What changed in pass 2
+This pass works through the panel's list from pass 2. Everything below was measured on this build, on software GL (SwiftShader). **No one has run it on a real GPU yet** (see "Frame time" and question 1).
 
-### 1. Music credit on both pages (was the precondition for a public deploy)
+## Summary of this pass
 
-- The footer of `index.html` and `plain.html` now carries the music credit. The build takes it from the music writer's `manifest.json` (`license.recording.credit`) in `plugins/market.js` (`audioCredit()`). It names the piece and credits the Salamander Grand Piano (CC BY 3.0), the MusyngKite tenor sax (CC BY-SA 3.0), the CC0 bass and drums, and the recording (CC BY-SA 3.0).
-- Every licence name links to its Creative Commons deed, and the line ends with a link to `CREDITS.md`.
-- A second sentence credits the fallback band: FluidR3 GM by Frank Wen (CC BY 3.0) and the Tone.js drums (MIT). It is there because that band can still play if the recording fails.
-- `CREDITS.md`, engineer section: the FluidR3 row now says it serves only the fallback band. A new paragraph says which credit the site shows and where it comes from. The old open question named FluidR3 for the shipped sax, which was wrong. The shipped stems use MusyngKite and Salamander, and the question is now closed (see the questions below).
+| | Pass 2 | Pass 3 |
+|---|---|---|
+| Full market: download before it opens | 26.0 MB | **17.5 MB** (aim: 25 MB) |
+| Lite market: download before it opens | 6.8 MB | **5.5 MB** (aim: 8 MB) |
+| Full market, home view: meshes drawn | 1,127 | **451** |
+| Full market, home view: triangles | 897k | **878k** |
+| Lite market at first paint: meshes | 557 | **262** |
+| Smoke suite | 61 checks | **SMOKE_TOTAL checks** (38 are browser-free unit checks), no console errors |
 
-### 2. The Glühwein close-up: the vendor is visible
+## What changed
 
-- `crowd.js` has a second test next to the sight-line cone. For each vendor that a close camera can see (within 14 m and within about 37° of the view direction), anyone on the line from the camera to the vendor's chest steps out of the shot, if they are nearer than the vendor. Vendors themselves are never hidden.
-- During this pass the organizer also moved the Glühwein queue to the side of the counter, so on the final build nobody stands on the line any more. The engine test stays as a safety net for the other stalls and for later crowd edits. See `panel_gluehwein.jpg`.
-- The smoke test checks two things, independently of the engine code: the vendor is visible, and no visible person stands between the camera and the vendor (a plain line-of-sight test in the test itself).
+### 1. First load under 25 MB: the full market defers too
 
-### 3. Fewer triangles and draw calls
+- Both markets now open without the Riesenrad, the Karussell and the nine deco stalls. They load right after the first frame. `?defer=0` loads everything up front.
+- **Lights in two passes.** On the full market the first pass holds back one real light for each ride (`DEFERRED_LIGHTS = 2` in `main.js`). When the rides arrive, a second `placeLights` pass gives them those two lights. It adds no more static shadows.
+- The end state is the same as before: 12 real lights. That is two each on the four section stalls, plus the bandstand, the tree, the Karussell and the Riesenrad. The smoke test checks this.
+- The crowd's walkers used the placed deco stalls to keep off them. They now use the layout, so the stalls count before their models arrive.
+- A ride asked for before it arrives starts when it arrives. This is unchanged from pass 2 and now covers the full market too.
 
-**Crowd distance LOD** (full market)
-- After the first frame, each person gets a second figure from its `people_*.lite.glb`. Beyond 18 m the lite figure draws; nearer than 16 m the full one does. The gap stops people flickering between the two at the boundary.
-- Each figure has its own mixer. Only the visible one is updated, and on a switch the clip time carries over, so a step or a sip does not restart.
-- Loading the LOD figures waits until after the market is on screen, so it does not delay opening.
-- Home view: **1.18 M → 0.90 M triangles** (all 90 people use the lite figure from there).
+### 2. Fewer draw calls (`engine/merge.js`)
 
-**Merged book spines**
-- `engine/merge.js` merges the bookshop's 104 `act_book_` meshes into **3 meshes, one per shelf set**. The quantized glb attributes are decoded to floats first.
-- The book nodes stay in the scene as hidden pick proxies. A raycast still hits a hidden mesh, so clicking a spine still works.
-- When a book is pulled, its own mesh shows and its copy in the merged mesh collapses to empty triangles. When it is back on the shelf, the merged copy returns.
+- **Static merge.** In each model, meshes that draw the same are merged into one mesh per rigid body. "Draw the same" means the same material, or materials that look the same, including the same shared texture. A rigid body is the model root, or a `rot_`, `gondola_`, `horse_` or `instrument_` node.
+  - It merges the vendor's rows of mugs, bottles and glasses. They are `act_` nodes that no action moves.
+  - It leaves alone every `act_` node an action uses. `actions/util.js` marks them as `live` when an action asks for them.
+  - It also leaves alone snow caps, skinned meshes, animated nodes, and anything the engine or the lighting module added.
+  - Emissive materials merge only with the same material object, because the lighting module and the actions animate them.
+- **Bulb strings.** They are merged per rigid body after the lighting module has read them. The square alone had 50 separate bulb meshes.
+- **The deco row.** Their `vendor_atlas` goods and kit wood are merged across all nine stalls into one row. Each stall's own AO-baked parts stay separate.
+- **Riders.** Gondolas and horses that are built alike are drawn as instances: one `InstancedMesh` per part, with the pose copied from the rider every frame.
+  - The meshopt export orders each copy's vertices differently, so parts are matched by material, triangle count and bounds.
+  - The Riesenrad drops from 89 meshes to about 15.
+- **Ground pools.** The lighting module's 41 pools, one quad per unlit `light_`, are now one instanced draw per placement pass.
+- **The crowd.** Each lite figure's four parts (coat, body, hat, scarf) are merged into one skinned mesh with one shared material.
+  - Each person's colours go into the vertex colours of their own copy of the colour attribute. Everything else is shared.
+  - That is one draw per person instead of four, in the main pass and again in the moon-shadow pass.
+  - The full figures (near the camera) keep their cloth normal maps and their four parts.
+- **Result:** in the home view, meshes drop from 1,127 to 451. Draw calls per frame follow the meshes, plus the shadow and post passes. Full detail is in the budgets below.
 
-**Mugs**
-- People without a mug (the organizer's `_free` clips) no longer draw their scaled-away mug mesh.
+### 3. The GPU rule, the LOD distance and a governor (`quality.js`, `governor.js`)
 
-**Totals**
-- Meshes: full market **1,124**. That includes the vendor's new sets from this round (a wine shelf, a beer shelf and more books); the same build without the merge had 1,232.
-- Lite market: **838** after its deferred models arrive.
+**The GPU rule**
+- The pass-2 regex sent every "Intel(R) UHD Graphics" to lite. `gpuTier()` now sorts the renderer string into five classes: `software`, `weak`, `integrated`, `discrete` and `unknown`.
+- Only `software` and `weak` go to lite by name:
+  - software renderers;
+  - Intel HD Graphics (2011–2016);
+  - UHD 600/605/610 (Celeron and Pentium Silver);
+  - Mali-4xx and Mali-T;
+  - Adreno 3xx–5xx;
+  - PowerVR.
+- UHD 620/630/7xx, Iris, Iris Xe, Radeon integrated graphics and Apple M-series get the full market.
+- `tests/unit.mjs` checks 26 real renderer strings, in ANGLE, Mesa and Safari forms, plus five detection cases.
 
-**Rendering cost**
-- The full market's pixel ratio is capped at **1.5** (it was 1.75).
-- The lighting module already has adaptive quality. Under ~55 fps it steps down in order: MSAA 4× → 2×, then pixel ratio 1.5, then half-resolution bloom, then moon shadows every 4th frame.
+**The LOD distance**
+- The crowd's distance LOD now starts by class:
+  - 18 m on a discrete GPU;
+  - 14 m when the GPU is unknown;
+  - 12 m on integrated graphics;
+  - 8 m on a weak or software GPU.
+- `?lod=<metres>` pins it for measuring.
+- These are starting points, not measurements. See question 1.
 
-**A meter for real hardware**
-- `?perf` opens a frame-time meter in the corner of the market. It shows the median and 95th-percentile frame time over 240 frames, fps, draw calls and triangles for the whole composer frame, the canvas size and the pixel ratio.
-- "Copy" puts a one-line report on the clipboard. I still have no real GPU here; see question 1.
+**The frame-time governor (full market)**
+- It measures the visitor's own frame time. When the median is over 33 ms, it steps down once per 120 frames:
+  1. LOD to 12 m;
+  2. LOD to 6 m;
+  3. everyone uses their lite figure, and the crowd stops casting shadows;
+  4. the "Running slowly? Switch to the lite market" button.
+- It waits for the lighting module's own adaptive steps (MSAA, pixel ratio, bloom) to go first.
+- It replaces the old one-off "slow frames" counter. `?governor=0` turns it off.
 
-### 4. The lite market: under 8 MB before it opens
+**The `?perf` meter**
+- It now has a **Tour** button. The tour visits home, Glühwein, the bandstand, the Bücherstand, the Riesenrad view and home again, for about 6.5 s each.
+- It then copies one line per view: median, 95th percentile, draw calls, triangles, the lighting step and the governor step.
+- Mac only needs to press one button, then paste the result.
 
-- The lite market now opens without the Riesenrad, the Karussell and the nine deco stalls (about 3.4 MB). They load right after the first frame.
-- When they arrive:
-  - their `light_` empties become warm pools, so the four real lights stay on the section stalls;
-  - the lighting module's `tune()` sets up their bulbs;
-  - they join picking and the snow toggle.
-- If someone asks for a ride before the ride has loaded, it starts when the ride arrives, and the camera flies there once it exists.
-- The lite crowd draws its 40 people from 9 figures instead of 12. Parka → coat, young woman → woman in coat and girl → boy, recoloured as before, which saves about 300 KB.
-- Measured in the smoke run: **6.87 MB** is fetched before the market opens, counting code, fonts and models. The count is every resource that started before the page's `market-ready` mark. The total after everything arrives is about 10.5 MB.
-- `?defer=0` loads everything up front.
+### 4. The Riesenrad delivers its view from the top
 
-### 5. Re-run against the current lighting module
+- The rider boards the lowest gondola. The wheel then turns about seven times faster, easing in and out, until that gondola reaches the top.
+- It holds there for 14 s, barely moving, then carries on at its own pace. The panel says "At the top…"; the writer can override that line with a `Ride the wheel (done)` note.
+- The exposure opens up while riding, from ×1.2 at the bottom to ×1.65 at the top, and comes back down on the ground.
+- From the top, the view looks out over the square instead of down at the bandstand roof. See `ride_riesenrad.jpg`.
+- The smoke test checks all of this: the top reached, the camera above 14 m, the exposure raised and restored, and the panel line.
 
-- The build and every screenshot in this folder come from the current `site/src/lighting/` (the lighting designer's pass-2 files), in one smoke run after the last code change.
+### 5. A pulled book goes back
 
-### 6. Lights on the lite market, and snow
+- Closing the panel, resetting the view or opening another place calls `retract()`. That puts the book back on the shelf and hides its title tag.
+- This also works while the book is still sliding out.
+- There are two smoke checks: one for reset view (full market) and one for the panel's close button (lite).
 
-**Lite lights**
-- `main.js` → `placeMarketLights()` calls the lighting module's `placeLights` twice on lite:
-  1. with the section stalls only, so each of the four takes one of the four lights;
-  2. with everything else at budget 0, so the rest become pools.
-- The smoke test checks that Glühwein, Bierstand, Bücherstand and Bratwurst each have exactly one light. The Bratwurst panel is lit now.
-- The engine's own fallback placement takes the same `budget` option.
+### 6. The ballad's written ending and its second chorus (`audio/songplan.js`, `audio/stems.js`)
 
-**Snow**
-- With snow on, the lighting module thickened the fog to 0.024, and the stall lights and bulbs drowned in it.
-- The engine now caps the snow fog at 0.017 (`SNOW_FOG_MAX` in `main.js`). This is written into the module's exposed `settings.snow.fogDensity` only when the module's value is higher, so once the lighting designer adopts a value at or under 0.017 in `settings.js`, the cap does nothing.
-- Bulbs also burn 30% brighter as the snow comes in.
-- See `home_full_snow.jpg`. **Request to the lighting designer:** please take 0.017 (or your own lower value) into `settings.js` so that the setting lives in your module.
+**The stems**
+- They now follow a road map built from the manifest:
+  1. the head;
+  2. the loop three times (`ending.passes` in the manifest, default 3), where pass 2 plays the tenor's second written chorus from `alternates`;
+  3. the out head to the fermata (bars 81–96);
+  4. 7 s of quiet;
+  5. from the top.
+- One pass through the whole road map is about 10 minutes.
 
-### 7. Phone layout
+**How it plays**
+- Segments are scheduled on the AudioContext clock, with 6 s of lookahead and a timer, so it keeps playing in a background tab. All five stems start on the same tick.
+- The alternate sax and room files swap in 0.25 s inside their edges, where the manifest says they are identical to the main stems.
+- The alternates load after the main stems. If they are not ready yet, that pass plays the main chorus.
 
-- On a phone the panel is a bottom sheet capped at **58% of the screen** (`min(58svh, 560px)`), and its height follows its content.
-- Opening a place scrolls the market to the top of the screen, and the view shifts so the place sits in the visible part above the sheet. The shift is recomputed as the page scrolls.
-- Smoke check on a 390×844 phone: the sheet is 53% of the screen, and 45% of the screen above it still shows the market (`phone_reduced_motion.jpg`).
+**The mix**
+- The streamed mix (lite market, and the full market's first seconds) follows the same passes and ending, without the alternate chorus.
+- The hand-over to the stems lands on the same bar of the same pass.
 
-### 8. The five books on five named spines
+**Checks**
+- `tests/unit.mjs` checks the road map.
+- The smoke test plays the real stems and checks three things:
+  - Seeking just before `loopEnd` on the last pass runs on into the out head.
+  - On pass 1 it loops round.
+  - Pass 2 plays the alternate chorus and pass 3 does not.
 
-- In this round the vendor printed the reading list's titles on real spines in the middle of the lower shelf: The Order of Time, GEB, the three Feynman volumes, Being You and The Book of Why. Every book now carries a name, as glb extras (`title`, `author`) and in `public/models/items.json`, keyed by node name.
-- `stalls.js` reads a book's identity from the node's extras. It falls back to `items.json`, because the lite glbs have no extras, but their books have the same node names and cover materials.
-- Each `reading.md` book is matched to its spine by title. "The Feynman Lectures on Physics, Vol. II" still counts as the Feynman lectures. Clicking a spine pulls that book and shows its title, author and note.
-- Clicking any other spine names that book (for example *Critique of Judgment* · Immanuel Kant) and says it is the bookseller's stock and where Mac's five stand.
-- "Pull a book" goes through Mac's five in order and pulls the right spine.
-- If Mac swaps in a book that has no printed spine, it gets a free spine near the middle of the view (not behind the bookseller) with a red paper band round it.
-- The smoke test aims a real mouse click at the second book's spine and checks that the panel shows "Gödel, Escher, Bach".
-- The vendor's new export gives every book its own cover material (`book_cover_<n>`). All of those materials sample one texture, so the merge groups materials by how they look, not by identity. It still makes 3 meshes from 108 books.
+### 7. Crowd, snow and the lite Bratwurst (with the lighting designer and organizer)
+
+- **The crowd no longer shows as black silhouettes.** Every crowd material gets a small fill proportional to its own colour (`crowdLift` in `crowd.js`, 0.4), so coats read as cloth in the home view. See `home_full.jpg`.
+  - The full and lite figures get the same fill, so a person does not change brightness at the LOD switch.
+  - The lighting module's moon rim still does the edges.
+- **Snowflakes.** The engine caps the flake size at 3 cm and the softness at 0.45 (`capFlakes` in `main.js`).
+  - The nearest layer was up to 5 cm and 90 % soft, which read as grey discs.
+  - This is a request to the lighting designer, like the fog cap was. Once `settings.js` agrees, it changes nothing.
+  - The lighting designer has already taken the fog cap (0.017) into `settings.js`.
+- **Bratwurst (and every section stall) on lite.** The lite market has a close-up key light: one warm spot under the front eave of the open section stall, aimed at the counter front and the vendor. It fades in on open and out at home.
+  - It is always in the scene, so moving it does not recompile shaders. That makes 5 lights on lite instead of 4.
+  - See `panel_bratwurst_lite.jpg`. The smoke test checks that it follows the Bratwurst and fades out at home.
+
+### 8. Phone home framing
+
+- On a narrow portrait screen the home view comes in closer and lower: camera `[0.8, 5, 19.5]`, looking at `[0, 2.7, -4]`.
+- The bandstand, the tree and the Glühwein and Bierstand stalls now fill the upper two-thirds, instead of a thin band over dark ground. See `phone_home.jpg`.
 
 ### 9. Smaller fixes
 
-- **Lite band buttons.** On lite the player buttons read "Spotlight: Sax" and so on, with a tooltip, because the lite market streams one mix. The featuring note uses the writer's `play.lite` sentence.
-- **Pages settings.**
-  - `pages.yml` runs `actions/configure-pages` before the build and passes its `base_path` to Vite (`PAGES_BASE`). A renamed repository or a custom domain then still works. A local build keeps `/website/`.
-  - The placeholder gate is a repository variable: set `STRICT_CONTENT` to `1` in the repository settings and the build fails while any `[[Mac: …]]` is left. There is no code change to make on the day.
-- **Testing stand-ins without deleting files.** `?missing=all` or `?missing=stall_bier,ferris` pretends those glbs were never shipped, and `?layout=builtin` ignores `layout.json`. The smoke test uses both: every place becomes a labelled stand-in, the actions still work, and there are no console errors (`missing_models_standins.jpg`).
-- **Bug fixed.** A click on a spine resolved to the book's mesh node (`act_book_N_mesh`) instead of its pivot. Picking now skips `_mesh` names.
+- **Music credit.** The music writer switched the sax to the MTG Solo Saxophones (CC BY 4.0).
+  - The footer already takes the manifest's credit word for word. The licence links now cover any CC licence the credit names (BY/BY-SA/…, any version, and CC0), where pass 2 knew only BY 3.0, BY-SA 3.0 and CC0.
+  - The test now checks the manifest's own credit line and a link for every licence it names.
+  - `CREDITS.md` is updated.
+- **Unit checks** (`npm run test:unit`, no browser) run in CI before the build.
 
 ## Verification
 
-- **`npm ci && npm run build` passes.** The only message is the writer's placeholder count (16 in 7 files).
-- **Smoke suite, `node tests/smoke.mjs --dist <copy of dist>`: 61/61 checks passed, no console errors.** It ran on the final build (snapshot taken 10:51 UTC, after the lighting module's last change) against the current lighting module. The vendor was still re-exporting a few props (`prop_bier_back`) while it ran, so the models on disk may be slightly newer than the ones tested. Its phases are the full market (screenshots), every interaction, lite detection, a phone with reduced motion, plain.html and the credits, missing models, and the recorded band. New checks in this pass:
-  - the crowd LOD;
-  - the merged spines;
-  - the vendor visible in the Glühwein view, with nobody visible on the line to the vendor;
-  - five named spines, and a 3D click on one giving its book;
-  - "Spotlight" labels on lite;
-  - deferred rides and stalls arriving;
-  - the lite download before opening;
-  - one light per section stall on lite;
-  - the phone sheet at 60% of the screen or less, with the market visible above it;
-  - the music credit and licence links on both pages;
-  - every glb missing, `layout.json` ignored, and two named glbs missing.
-- SwiftShader takes 10–30 s per full-quality frame. The full-market screenshots use reduced motion and a frozen frame. The LOD figures load with the picture frozen for the same reason.
-
-Screenshots in this folder:
+- **`npm ci && npm run build` passes** in `site/`. The only message is the writer's placeholder count, 16 in 7 files, which production builds leave out.
+- **Smoke suite, final run: SMOKE_RESULT.**
+  - It ran with `node tests/smoke.mjs --dist <copy of dist>` on the final build, started at 20:59 UTC.
+  - At that time the newest lighting module file and glb on disk were from 20:16, so it ran against the vendor's latest `stall_bier`/`stall_bratwurst`/prop exports and the lighting designer's current module.
+  - Its phases:
+    - unit checks;
+    - full market (screenshots, first-load size, deferral, the second light pass, merges, LOD, the governor);
+    - every interaction on lite;
+    - lite detection and download;
+    - a phone with reduced motion;
+    - plain.html and the credits;
+    - missing models, plus the perf meter;
+    - the recorded band, with the road map.
+- **The screenshots come from the production build.** The writer's notes to Mac are hidden (`CONTENT_NOTES` unset). Pass 2's set had been taken from a notes-shown build.
+- SwiftShader takes 10–30 s per full-quality frame. The full-market screenshots use reduced motion and a frozen frame.
 
 | File | What it shows |
 |---|---|
-| `home_full.jpg` | Home view, full market, with the crowd LOD active |
-| `panel_gluehwein.jpg` | Glühwein panel after "Pour" and "Prost!": the vendor in view, nobody on the line to the counter |
-| `panel_buecherstand.jpg` | Bücherstand after "Pull a book" |
+| `home_full.jpg` | Home view, full market: rides deferred and arrived, merged meshes, crowd LOD and fill |
+| `panel_gluehwein.jpg` | Glühwein after "Pour" and "Prost!" |
+| `panel_buecherstand.jpg` | Bücherstand after "Pick a book for me" |
 | `panel_bandstand.jpg` | Bandstand, sax featured |
-| `home_full_snow.jpg` | Snow on, with the fog capped at 0.017 and the bulbs lifted |
-| `ride_riesenrad.jpg`, `ride_karussell.jpg` | From a gondola and from a horse (lite, deferred rides) |
+| `home_full_snow.jpg` | Snow on, with smaller, crisper flakes |
+| `ride_riesenrad.jpg` | At the top of the Riesenrad (lite, deferred ride), exposure opened up |
+| `ride_karussell.jpg` | From a horse |
 | `home_lite_stage.jpg` | Lite market, detected on the software GPU |
-| `phone_reduced_motion.jpg` | 390×844 phone, reduced motion: the Karussell above a 53% bottom sheet |
-| `plain_html.jpg` | The text page, with the music credit in its footer |
+| `phone_home.jpg` | 390×844 phone: the new home framing |
+| `phone_reduced_motion.jpg` | Phone, reduced motion, the Karussell above the bottom sheet |
+| `panel_bratwurst_lite.jpg` | Lite Bratwurst with the close-up key light on the counter front and the vendor |
+| `plain_html.jpg` | The text page with the music credit |
 | `missing_models_standins.jpg` | Every glb missing and `layout.json` ignored: the BUILD.md layout in stand-ins |
-| `panel_bratwurst_lite.jpg` | Lite market, Bratwurst after "Turn the sausages": the stall has its own light now (the counter front is still dim) |
 
-## Budgets
+## Budgets (measured in the final smoke run)
 
-**Scene, as drawn** (visible meshes, instanced copies counted):
+**Scene, as drawn** (visible meshes; instanced meshes count every copy's triangles)
 
-| | Full market (home view) | Lite market (after deferred models) |
+| | Full market, home view | Lite market |
 |---|---|---|
-| Triangles | 897k with LOD (1.17 M without) | 191k at first paint; about 297k after the deferred models |
-| Meshes (about the draw calls per pass) | 1,127 (about 1,235 without the book merge) | 557 at first paint; about 838 after |
-| Real-time lights | 12 + 2 band spots | 4, one per section stall (band spot faked) |
-| Light pools on the ground | 64 | 25 at first paint; 51 after |
-| Crowd | 90 people + 4 musicians; lite figures beyond 18 m | 40 people from 9 figures + 4 musicians |
+| Triangles | 878k after LOD (867k at first paint, before the rides) | 184k at first paint, about 250k after deferral |
+| Meshes | 451 after LOD and deferral (624 at first paint, full figures) | 262 at first paint, about 360 after deferral |
+| Real-time lights | 12 + 2 band spots (10 at first paint, 2 more with the rides) | 4 + the close-up key |
+| Ground pools | 41, drawn as 2 instanced meshes | 25 → 51, drawn as 2 instanced meshes |
+| Crowd | 90 people + 4 musicians; LOD from 8–18 m by GPU class (8 m on SwiftShader) | 40 people, one draw each |
 | Pixel ratio cap | 1.5 | 1.25 |
 
 **Download**
 
 | What | Size |
 |---|---|
-| JS: three.js chunk | 751 KB (190 KB gzip), cached separately |
-| JS: market code | 190 KB (66 KB gzip) |
-| JS: lighting module | 42 KB (17 KB gzip) |
-| Lite market, everything fetched before it opens (code, fonts, models) | 6.81 MB |
-| Lite market, after the deferred rides and deco stalls | about 10.5 MB |
-| Full market before it opens | about 26.7 MB (plus 1.3 MB of LOD figures after) |
-| Audio | unchanged: 4.3 MB mix on lite; the mix plus 21.5 MB of stems on full, only after play |
+| JS: three.js chunk | 751 KB (187 KB gzip), cached separately |
+| JS: market code | 256 KB (79 KB gzip) |
+| JS: lighting module | 48 KB (19 KB gzip) |
+| Full market before it opens (code, fonts, models) | **17.5 MB**; about 25 MB once the rides, deco stalls and LOD figures have arrived |
+| Lite market before it opens | **5.5 MB**; about 9 MB after deferral |
+| All `*.lite.glb` + lite textures on disk | 8.0 MB (aim 8 MB for the lite market) |
+| Audio | 4.3 MB mix on lite; on full, the mix, then 21.5 MB of stems plus the two alternate stems, only after play |
+
+## Frame time: still not measured on a real GPU
+
+There is no GPU on the cloud machine, so the panel's first and eighth items cannot be completed from here. What exists instead:
+
+1. The GPU classes and starting LOD distances above, which follow the usual GPU tiers. They are not based on measurements.
+2. The governor, which measures every visitor's own frame time and cuts cost until the market holds 30 fps, or offers lite.
+3. The `?perf` **Tour**, which produces the numbers in one press.
+
+**Before announcing the site, please** open these and press Tour, then paste the copied lines back:
+- `https://macsermkiat.github.io/website/?perf&quality=full&governor=0` on a mid-range laptop;
+- `?perf&quality=lite` on a phone.
+
+What to do with the laptop numbers:
+- **Median above ~33 ms:** lower `LOD_BY_TIER.integrated` (and `unknown`) in `quality.js`, or move that class to lite.
+- **Median well under 16 ms:** `integrated` can go to 18 m.
 
 ## Questions for Mac
 
-1. **Frame time on real hardware.** Nothing here has a GPU, so no one has seen the market run on one. Please open the site with `?perf` (and `?quality=full`) on a mid-range laptop and a phone. Press "Copy" on the meter and paste the line back. If the full market is under 30 fps on the laptop, the next steps are to make more machines default to lite, or to lower the LOD distance.
-2. **When should the placeholder gate be switched on?** Setting the repository variable `STRICT_CONTENT=1` makes the Pages build fail while any of the writer's 16 `[[Mac: …]]` notes remain.
-3. **Pages.** Pages must use "GitHub Actions" as its source. The base path now comes from the Pages settings, so the repository name no longer has to be `website`.
-4. **Share-alike music.** The shipped sax recording is CC BY-SA 3.0, because it is built from the MusyngKite samples. The site credits it correctly now. If you would rather avoid share-alike, the music writer can re-render with `--sax-bank fluidr3` (CC BY only).
-5. **Header tagline.** It still says "I build tools for clinical research…" (from `site.md`). Nothing clinical appears in the scene. Keep the wording?
-
-(Pass 1's question about the FluidR3 licence is closed. FluidR3 is used only by the fallback band, and it is credited in the footer either way.)
+1. **Real-GPU numbers** (above). This is the one thing that should happen before launch.
+2. **When should the placeholder gate go on?** Set the repository variable `STRICT_CONTENT=1` and the Pages build fails while any of the 16 `[[Mac: …]]` notes remain.
+3. **Pages settings.** Pages must use "GitHub Actions" as its source. The base path comes from the Pages settings.
+4. **Header tagline.** It says "Physician in Bangkok. I write software for clinical research." Nothing clinical appears in the scene. Keep it?
 
 ## For the other roles
 
-- **Lighting designer:** please put the snow fog at 0.017 or lower in `settings.js` (the engine caps it for now). On lite, the engine places the section stalls first; it could be a `placeLights({ ranking: 'sections-first' })` option in your module instead. On lite the Bratwurst stall now has its light, but the counter front stays dim (`panel_bratwurst_lite.jpg`); a slightly lower or more forward light position there would help.
-- **Vendor:** thank you for the book extras and `items.json`; the site uses both. Please put the same extras in the lite glbs as well. For now the site finds lite books through `items.json`, by node name.
-- **Organizer:** thanks for moving the Glühwein queue aside. The engine still hides anyone who ends up on a camera-to-vendor line, so later crowd edits cannot hide a vendor again.
+- **Lighting designer**
+  - Please take the snowflake caps into `snow.js`/`settings.js` (size ≤ 3 cm, softness ≤ 0.45 for the near layer). Then `capFlakes` in `main.js` does nothing.
+  - The engine now instances your pools. A `placeLights({ instancedPools: true })` in your module would be cleaner.
+  - The lite close-up key light (`createKeyLight` in `main.js`) is yours to restyle or replace.
+- **Carpenter and architect: smaller lite glbs.** All lite models together are 8.0 MB, against the 8 MB aim. The lite market opens at 5.5 MB only because it defers the rides and deco stalls. The largest lite files are:
+  - `town.lite.glb` 1.4 MB;
+  - `square.lite.glb` 1.0 MB;
+  - `ferris.lite.glb` 0.73 MB;
+  - `carousel.lite.glb` 0.61 MB.
+
+  Sharing the square's ground textures with the town, and 256 px textures on the far town, would help most.
+- **Ride builder.** Gondolas and horses built as linked duplicates would instance exactly. The engine now matches them by bounds, which works for the gondolas. The horses are four designs, and each is instanced within its own design.
+- **Organizer.** Crowd materials now get a colour-proportional fill. If a figure looks too flat, `crowdLift` in `crowd.js` is the one knob. Lite figures are drawn as one mesh, so please keep the part materials named `coat`, `body`, `hat` and `scarf`.
+- **Vendor.** Rows of `act_` goods that no action moves are merged now. If an action is added for one, it must ask for the node through `act()`/`acts()` in `actions/util.js`, which keeps it out of the merge.
 
 ## Still open
 
-- The ballad's ending never plays, because the loop cuts before the out head. The manifest now describes the ending and a second tenor chorus for alternate passes (`alternates`). The stems player does not use either yet.
-- The full market still fetches all its models before it opens (about 25 MB). The same deferral as on lite would work there, but the rides' lights are among its twelve real ones, so their placement would need a second pass.
 - The musicians' hands do not follow the small sway of their instruments.
+- Snow caps (`snow_`) are not merged, so turning snow on adds their draws back.
+- Horses of a design seen only once are not instanced.
+
+## Contract notes
+
+- **Light count on lite.** The lite market has 4 lights plus a close-up key that is dark at home: 5 real-time lights in the shader. BUILD.md says "fewer lights", with no number.
+- **Light budget and deferral.** The full market's light budget stays 14 (12 + 2 band spots). Two of the 12 are placed only when the rides arrive.
 
 ---
 
-## What the site does (from pass 1, still true)
+## What the site does (from passes 1–2, still true)
 
-- **Loading.** `layout.json` (or the BUILD.md layout) → GLTFLoader + MeshoptDecoder, four at a time, `*.lite.glb` on lite. Each model falls back from lite to full to a labelled stand-in built in code. A build-time inventory stops the page asking for files that do not exist.
+- **Loading.** `layout.json` (or the BUILD.md layout) → GLTFLoader + MeshoptDecoder, four at a time, `*.lite.glb` on lite. Each model falls back from lite to full to a labelled stand-in. A build-time inventory stops the page asking for files that do not exist. `?missing=all` / `?missing=a,b` and `?layout=builtin` test the fallbacks.
 - **Node conventions.**
   - `bulbs_*` glow and pulse with the bass.
   - `light_*` become lights within the budget, and pools beyond it.
   - `snow_*` follow the snow toggle.
-  - `slot_*` take the vendor's sets from `props.json`. On the bandstand they take the instruments and the organizer's musicians.
+  - `slot_*` take the vendor's sets from `props.json`, and the instruments and musicians.
   - `cam_view`/`cam_target` drive the flights.
   - `rot_*` spin.
-  - `gondola_*` stay upright; `horse_*` bob.
+  - `gondola_*` stay upright and `horse_*` bob.
   - `*_seat*` empties are the ride cameras.
   - `act_*` drive the actions.
 - **Interactions.**
   - Hover outline and tooltip, and click to open.
   - The panel with its action buttons.
-  - Pour a mug, Prost, pull a pint, turn the sausages, a sausage in a bun, pull a book, feature a player, play and pause.
-  - The Riesenrad and the Karussell.
-  - Snow toggle and reset.
-  - Keyboard: 1–7, Esc, arrows, +/-, Home.
+  - Pour a mug, Prost, pull a pint, turn the sausages, a sausage in a bun, pull a book (or click a spine), feature a player, play and pause.
+  - Both rides, snow and reset.
+  - Keyboard: 1–7, Esc, arrows, +/-, Home, Tab through the place buttons.
   - Reduced motion, watched live.
-- **Content.** `content/*.md` is parsed at build time (front matter + marked), with the prototype text in `site/content-fallback/` as the fallback. `plain.html` is filled from the same content.
-- **Lighting.** `src/lighting/index.js` through `import.meta.glob`, with `src/lighting-fallback.js` if it is missing or throws.
+- **Content.** `content/*.md` is parsed at build time (front matter + marked), with the prototype text in `site/content-fallback/` as the fallback. `plain.html` is filled from the same content and linked from the 3D page.
+- **Lighting.** `src/lighting/index.js` is loaded through `import.meta.glob`, with `src/lighting-fallback.js` if it is missing or throws.
 - **Sound.**
-  - Full market: the mix starts at once, then the five stems (HRTF panners at the players' places) take over at the same bar, and featuring raises one player.
+  - Full market: the mix first, then five HRTF-panned stems at the players' places, with featuring.
   - Lite market: the mix only.
   - Fallback: the prototype's generative band.
   - Stall sounds are synthesised.
-- **Quality.** `?quality=lite|full`, then the remembered choice, then detection (phone, weak or software GPU, low memory or cores, Save-Data), with a header toggle and a "Running slowly?" button.
+- **Quality.** `?quality=lite|full`, then the remembered choice, then detection, with a header toggle.

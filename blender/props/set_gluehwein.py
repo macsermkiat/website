@@ -16,7 +16,7 @@ from mathutils import Vector
 
 import goods as G
 import vlib
-from vlib import C, T, WHITE, lite, rng, seg
+from vlib import C, T, WHITE, drng, lite, rng, seg
 
 TWO_PI = 2 * math.pi
 
@@ -73,9 +73,10 @@ def copper_kettle(s, x, y):
     pot.cyl(0.006, 0.006, 0.03, 6, "brass", T(0, -0.235, z0 + 0.03, rx=math.pi), WHITE)
     for sx in (-0.05, 0.05):
         pot.cyl(0.007, 0.007, 0.03, 6, "brass", T(sx - 0.015, 0.212, z0 + 0.358, ry=math.pi / 2), WHITE)
-    # the lid: hinged at the back rim, propped open
+    # the lid: hinged at the back rim, just ajar (14 degrees) so the steam gets out. The engine's pour
+    # swings it 0.35 rad further open and back. Ajar, it stays 7 cm inside the counter's back edge.
     hinge = (0, 0.212, z0 + 0.358)
-    lid = s.node("act_pot_lid", hinge, parent="act_pot", rot=(-0.62, 0, 0))
+    lid = s.node("act_pot_lid", hinge, parent="act_pot", rot=(-0.25, 0, 0))
     s.item("act_pot_lid", "Kettle lid", "lid")
     lid_prof = [(0.214, -0.004), (0.216, 0.0), (0.2, 0.02), (0.15, 0.05), (0.08, 0.068), (0.0, 0.075)]
     lid.lathe(lid_prof, n, vlib.RW("copper"), T(0, -0.212, 0), WHITE, "atlas")
@@ -83,17 +84,30 @@ def copper_kettle(s, x, y):
     lid.sphere(0.022, seg(10, 6), seg(6, 4), vlib.RW("wood"), T(0, -0.212, 0.09), C("5a3622"), scale=(1, 1, 0.8))
     lid.cyl(0.008, 0.012, 0.018, 8, "brass", T(0, -0.212, 0.07), WHITE)
     lid.box((0.04, 0.03, 0.006), T(0, -0.005, 0.0), "brass", WHITE)
-    # ladle standing in the kettle, handle over the front rim
-    lad = s.node("act_ladle", (0.07, -0.08, z0 + 0.18), parent="act_pot")
-    s.item("act_ladle", "Ladle", "ladle")
-    lad.lathe([(0.0, -0.05), (0.03, -0.045), (0.046, -0.012), (0.047, 0.0), (0.044, 0.0),
-               (0.04, -0.028), (0.0, -0.042)], seg(12, 7), "steel", T(0, 0, -0.02), WHITE)
-    pts = [Vector((0.03, 0.0, -0.02)), Vector((0.045, -0.02, 0.08)), Vector((0.06, -0.06, 0.19)),
-           Vector((0.07, -0.12, 0.26)), Vector((0.08, -0.17, 0.28)), Vector((0.09, -0.19, 0.265))]
-    lad.tube(pts, 0.006, seg(7, 4), "steel", None, WHITE)
     s.empty("act_steam", (0, 0, liquid_z + 0.02), parent="act_pot")
     s.item("act_steam", "Steam over the kettle", "effect")
     return pot
+
+
+def ladle(s, x, y):
+    """Steel ladle (act_ladle) with its bowl on the ladle-rest plate, a last drop of Glühwein in it, the
+    handle leaning on the kettle's side. Origin under the bowl, on the plate."""
+    lad = s.node("act_ladle", (x, y, 0.004))
+    s.item("act_ladle", "Ladle", "ladle")
+    n = seg(14, 7)
+    outer = [(0.0, 0.0), (0.028, 0.004), (0.042, 0.016), (0.048, 0.034)]
+    inner = [(0.0455, 0.035), (0.039, 0.019), (0.026, 0.008), (0.0, 0.0055)]
+    if lite():
+        outer, inner = [outer[0], outer[2], outer[3]], [inner[0], inner[2], inner[3]]
+    lad.lathe(outer + [(0.049, 0.036)] + inner, n, "steel", None, WHITE)
+    lad.disc(0.036, n, "sw_wet", T(0, 0, 0.016), C("3a0508"), "liquid")
+    # handle: from the rim toward the kettle, rising to lean on its side, a hook at the end
+    ctrl = [Vector((0.046, -0.004, 0.034)), Vector((0.09, -0.016, 0.075)), Vector((0.17, -0.034, 0.16)),
+            Vector((0.228, -0.046, 0.232)), Vector((0.236, -0.05, 0.25))]
+    pts = G.spline(ctrl, 1 if lite() else 2)
+    lad.tube(pts, 0.0055, seg(6, 4), "steel", None, WHITE, radii=[0.007 - 0.0022 * i / (len(pts) - 1) for i in range(len(pts))])
+    if not lite():
+        lad.torus(0.012, 0.0035, 8, 4, "steel", T(0.24, -0.052, 0.262, ry=1.2), WHITE)
 
 
 def mug(s, i, loc, style, boot=False, filled=False, upside_down=False, where="on the counter"):
@@ -120,7 +134,8 @@ def mug(s, i, loc, style, boot=False, filled=False, upside_down=False, where="on
 def counter():
     s = vlib.PropSet("prop_gluehwein_counter", "slot_counter", "gluehwein")
     m = s.static
-    copper_kettle(s, 0.74, 0.03)
+    copper_kettle(s, 0.74, 0.0)
+    ladle(s, 0.3, 0.12)
     # mugs: a front row ready to hand out (some filled, steaming), clean ones upside down on a tray
     styles = ["santa", "red", "blue", "cream", "green", "bluestar", "white", "brown", "red", "santa"]
     # three just filled beside the kettle, three clean ones at the left end
@@ -144,7 +159,7 @@ def counter():
     for k in range(3 if not lite() else 1):
         G.cinnamon_stick(m, T(0.03 + k * 0.012, -0.14 + k * 0.01, 0.006 + k * 0.004, rz=0.4 + k * 0.1), L=0.1)
     G.star_anise(m, T(0.07, -0.05, 0.0, rz=0.2))
-    # a ladle rest (small plate)
+    # the ladle rest under the ladle: a small glazed plate
     m.disc(0.06, seg(16, 8), "ceramic", T(0.3, 0.12, 0.004), C("f4efe6"), "glaze")
     m.lathe([(0.06, 0.004), (0.066, 0.01), (0.0, 0.0)], seg(16, 8), "ceramic", T(0.3, 0.12, 0), C("f4efe6"), "glaze")
     s.finish()
@@ -177,15 +192,15 @@ def shelf():
             ("jar_kardamom", C("8aa060"), "almonds")]
     x = -0.45
     for k, (lab, col, reg) in enumerate(jars):
-        G.jar(m, T(x, -0.03 + (k % 2) * 0.05, 0, rz=rng.uniform(-0.2, 0.2)), lab, col, reg,
+        G.jar(m, T(x, -0.03 + (k % 2) * 0.05, 0, rz=drng.uniform(-0.2, 0.2)), lab, col, reg,
               h=0.11 + (k % 3) * 0.015, r=0.036)
         x += 0.09
     # a low crate of dried orange slices (stacked, overlapping)
     G.crate(m, T(0.2, 0.0, 0), 0.3, 0.2, 0.08, C("c89e70"))
     for k in range(9 if not lite() else 4):
-        dx, dy = rng.uniform(-0.12, 0.12), rng.uniform(-0.08, 0.08)
-        G.orange_slice(m, T(0.2 + dx, dy, 0.03 + rng.uniform(0, 0.05), rx=rng.uniform(-0.5, 0.5),
-                            ry=rng.uniform(-0.5, 0.5), rz=rng.uniform(0, 6)), r=rng.uniform(0.026, 0.034))
+        dx, dy = drng.uniform(-0.12, 0.12), drng.uniform(-0.08, 0.08)
+        G.orange_slice(m, T(0.2 + dx, dy, 0.03 + drng.uniform(0, 0.05), rx=drng.uniform(-0.5, 0.5),
+                            ry=drng.uniform(-0.5, 0.5), rz=drng.uniform(0, 6)), r=drng.uniform(0.026, 0.034))
     # bundles of cinnamon sticks tied with twine
     for b, by in enumerate((-0.03, 0.03)):
         for k in range(4 if not lite() else 2):
@@ -200,8 +215,8 @@ def shelf():
     # a small bowl of star anise
     G.bowl(m, T(0.7, 0.0, 0), r=0.07, h=0.035, seg_n=14)
     for k in range(4 if not lite() else 2):
-        G.star_anise(m, T(0.7 + rng.uniform(-0.035, 0.035), rng.uniform(-0.035, 0.035), 0.022 + k * 0.002,
-                          rx=rng.uniform(-0.3, 0.3), rz=rng.uniform(0, 6)))
+        G.star_anise(m, T(0.7 + drng.uniform(-0.035, 0.035), drng.uniform(-0.035, 0.035), 0.022 + k * 0.002,
+                          rx=drng.uniform(-0.3, 0.3), rz=drng.uniform(0, 6)))
     # spare mugs on the right, two rows
     styles = ["red", "blue", "cream"]
     for k, (x, y) in enumerate(((0.95, 0.06), (1.05, 0.06), (1.0, -0.05))):
@@ -237,13 +252,13 @@ def wine():
     # a low slatted rack the bottles stand in (a board with a front rail), and a wine crate as a riser
     G.board(m, T(-0.5, 0.01, 0), 1.3, 0.2, 0.014, C("a8845c"))
     m.box((1.3, 0.012, 0.04), T(-0.5, -0.085, 0.034), vlib.RW("wood"), C("8a6440"))
-    m.box((0.34, 0.22, 0.12), T(0.5, 0.03, 0.06), vlib.RW("wood"), C("b89266"), skip=("nz",))   # a closed wine box
+    m.box((0.34, 0.2, 0.12), T(0.5, 0.015, 0.06), vlib.RW("wood"), C("b89266"), skip=("nz",))   # a closed wine box
     x = -1.1
     for i, (lab, kind, glass, cap, name) in enumerate(WINES):
         on_crate = i >= 8
         w = 0.15 if kind == "bocksbeutel" else 0.1
         if on_crate:
-            loc = (0.43 + (i - 8) * 0.13, 0.03, 0.12)
+            loc = (0.43 + (i - 8) * 0.13, 0.015, 0.12)
         else:
             x += w / 2
             loc = (x, 0.01 + rng.uniform(-0.01, 0.01), 0.014)
@@ -252,13 +267,13 @@ def wine():
         G.bottle(node, None, lab, glass, kind, cap)
         s.item(f"act_bottle_{i}", name, "bottle", where="wine shelf")
     # an open wine crate packed with straw between the rack and the wine box, a few corks on the straw
-    G.crate(m, T(0.08, 0.03, 0), 0.3, 0.2, 0.1, C("b08a5c"))
-    m.box((0.27, 0.17, 0.004), T(0.08, 0.03, 0.084), vlib.RW("straw"), C("e8d098"), faces={"pz": vlib.RW("straw")},
+    G.crate(m, T(0.08, 0.02, 0), 0.3, 0.2, 0.1, C("b08a5c"))
+    m.box((0.27, 0.17, 0.004), T(0.08, 0.02, 0.084), vlib.RW("straw"), C("e8d098"), faces={"pz": vlib.RW("straw")},
           skip=("nz",))
     if not lite():
         for k in range(6):
-            m.box((0.012, 0.004, 0.08), T(0.08 + rng.uniform(-0.1, 0.1), 0.03 + rng.uniform(-0.06, 0.06), 0.09,
-                                             rx=rng.uniform(1.2, 1.9), rz=rng.uniform(0, 3)), "straw", C("e0c890"))
+            m.box((0.012, 0.004, 0.08), T(0.08 + drng.uniform(-0.1, 0.1), 0.02 + drng.uniform(-0.06, 0.06), 0.09,
+                                             rx=drng.uniform(1.2, 1.9), rz=drng.uniform(0, 3)), "straw", C("e0c890"))
     # three wine glasses on a small tray: a red, a white and a clean one
     G.board(m, T(1.0, 0.0, 0), 0.34, 0.2, 0.012, C("6a4228"))
     for k, (dx, dy, wcol, nm) in enumerate(((-0.1, -0.03, C("4a0612"), "Glass of Spätburgunder"),

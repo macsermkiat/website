@@ -8,7 +8,8 @@ hint: "Click any spine on the shelves, or let the bookseller choose."
 actions:
   - "Pull a book"
 notes:
-  "Pull a book": "Example pick: {title} · {author}. {note}"
+  "Pull a book": "{title} · {author}. {note}"
+# Not yet confirmed by Mac. The check marker on the shelf line in the body covers these five.
 books:
   - title: "The Order of Time"
     author: "Carlo Rovelli"
@@ -27,7 +28,7 @@ books:
     note: "Cause and effect, and how to reason about them."
 ---
 
-I read physics, philosophy and books about the brain. For now the front shelf holds example picks. <!-- check -->
+I read physics, philosophy and books about the brain. These five are on the front shelf. <!-- check -->
 
 - *The Order of Time* · Carlo Rovelli. Time as physics sees it, and as we feel it.
 - *Gödel, Escher, Bach* · Douglas Hofstadter. Loops, self-reference and how minds might arise.

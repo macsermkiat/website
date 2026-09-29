@@ -8,7 +8,7 @@ import math
 from mathutils import Matrix, Vector
 
 import vlib
-from vlib import C, T, WHITE, jit, lite, rng, seg
+from vlib import C, T, WHITE, drng, jit, lite, rng, seg
 
 TWO_PI = 2 * math.pi
 
@@ -34,7 +34,7 @@ def mug_classic(m, M, style="red", filled=False, handle_angle=0.0):
     m.lathe(outer, n, wrap, M, WHITE, "glaze", v_by="z", u0=handle_angle + math.pi)
     # rolled rim and the inside wall, glazed in the inside colour
     rim = [(0.0425, 0.094), (0.0412, 0.0968), (0.0372, 0.093)]
-    m.lathe(rim, n, "ceramic", M, ic, "glaze")
+    m.lathe(rim if not lite() else [rim[0], rim[2]], n, "ceramic", M, ic, "glaze")
     inner = [(0.0372, 0.093), (0.0335, 0.05), (0.029, 0.014), (0.0, 0.012)]
     m.lathe(inner if not lite() else [inner[0], inner[2], inner[3]], n, "ceramic", M, jit(ic, 0.03), "glaze")
     # unglazed foot ring and bottom
@@ -68,8 +68,10 @@ def mug_boot(m, M, style="santa", filled=False, toe_angle=-math.pi / 2):
     n = seg(12, 7)
     shaft = [(0.033, 0.0), (0.035, 0.004), (0.0345, 0.05), (0.036, 0.1), (0.037, 0.106)]
     m.lathe(shaft, n, wrap, M, WHITE, "glaze", v_by="z", u0=toe_angle + math.pi)
-    m.lathe([(0.037, 0.106), (0.0355, 0.1088), (0.0318, 0.105)], n, "ceramic", M, ic, "glaze")
-    m.lathe([(0.0318, 0.105), (0.029, 0.04), (0.0, 0.016)], n, "ceramic", M, jit(ic, 0.03), "glaze")
+    rim = [(0.037, 0.106), (0.0355, 0.1088), (0.0318, 0.105)]
+    m.lathe(rim if not lite() else [rim[0], rim[2]], n, "ceramic", M, ic, "glaze")
+    m.lathe([(0.0318, 0.105), (0.029, 0.04), (0.0, 0.016)] if not lite() else [(0.0318, 0.105), (0.0, 0.016)], n,
+            "ceramic", M, jit(ic, 0.03), "glaze")
     if not lite():
         m.lathe([(0.033, 0.0), (0.0, 0.001)], n, "bisque", M, C("d8c8ae"), "atlas")
     # toe: ellipse rings along a path from inside the shaft forward, rising to a rounded cap
@@ -126,7 +128,7 @@ def bottle(m, M, label="label_wine", glass=C("1e3a22"), kind="bordeaux", foil=C(
     if sy != 1.0:
         M = M @ Matrix.Diagonal((1.0, sy, 1.0, 1.0))
     if lite():
-        prof = [p for i, p in enumerate(prof) if i in (0, 1, 3, 4, 5, 6, len(prof) - 3, len(prof) - 1)]
+        prof = [p for i, p in enumerate(prof) if i in (0, 1, 3, 5, len(prof) - 3, len(prof) - 1)]
     m.lathe(prof, n, "sw_vgloss", M, glass, "glass", v_by="z")
     if liquid and not lite():
         lp = [(0.0, 0.005)] + [(max(0.0, prof[i][0] - 0.0035), prof[i][1]) for i in range(1, 4)] + [(0.0, prof[3][1])]
@@ -142,8 +144,8 @@ def bottle(m, M, label="label_wine", glass=C("1e3a22"), kind="bordeaux", foil=C(
     m.lathe(band, n, label, M, WHITE, "atlas", v_by="z", arc=TWO_PI * arc, u0=-math.pi / 2 - math.pi * arc)
     # foil capsule over the neck
     top = prof[-1][1]
-    m.lathe([(0.0158, top - 0.05), (0.016, top - 0.004), (0.012, top + 0.001), (0.0, top + 0.002)], seg(8, 6),
-            "sw_metal", M, foil, "atlas")
+    cap = [(0.0158, top - 0.05), (0.016, top - 0.004), (0.012, top + 0.001), (0.0, top + 0.002)]
+    m.lathe(cap if not lite() else [cap[0], cap[1], cap[3]], seg(8, 6), "sw_metal", M, foil, "atlas")
 
 
 def wine_glass(m, M, wine=None, glass_col=C("f2f6f4")):
@@ -154,26 +156,27 @@ def wine_glass(m, M, wine=None, glass_col=C("f2f6f4")):
              (0.012, 0.097), (0.034, 0.122), (0.041, 0.152), (0.037, 0.19)]
     inner = [(0.0362, 0.19), (0.0398, 0.152), (0.0328, 0.123), (0.011, 0.1), (0.0, 0.097)]
     if lite():
-        outer = [outer[i] for i in (0, 1, 2, 3, 4, 6, 7, 8)]
-        inner = [inner[i] for i in (0, 1, 3, 4)]
+        outer = [outer[i] for i in (0, 1, 3, 4, 6, 8)]
+        inner = [inner[i] for i in (0, 2, 4)]
     m.lathe(outer + inner, n, "sw_vgloss", M, glass_col, "glass")
     if wine:
         lvl = 0.128
-        m.lathe([(0.0, 0.1), (0.012, 0.102), (0.031, 0.121), (0.0335, lvl), (0.0, lvl)], n, "sw_wet", M, wine,
-                "liquid")
+        fill = [(0.0, 0.1), (0.012, 0.102), (0.031, 0.121), (0.0335, lvl), (0.0, lvl)]
+        m.lathe(fill if not lite() else [fill[0], fill[3], fill[4]], n, "sw_wet", M, wine, "liquid")
 
 
 def jar(m, M, label, content_col, content_region="almonds", h=0.12, r=0.038, lid=C("b89a5a")):
     M = M or Matrix()
     n = seg(9, 5)
-    m.lathe([(0.0, 0.0), (r - 0.004, 0.0), (r, 0.006), (r, h - 0.012), (r - 0.006, h - 0.004), (r - 0.006, h)],
-            n, "sw_vgloss", M, C("e8f0ec"), "glass")
+    body = [(0.0, 0.0), (r - 0.004, 0.0), (r, 0.006), (r, h - 0.012), (r - 0.006, h - 0.004), (r - 0.006, h)]
+    m.lathe(body if not lite() else [body[0], body[2], body[3], body[5]], n, "sw_vgloss", M, C("e8f0ec"), "glass")
     # contents fill most of the jar
-    fh = h * rng.uniform(0.55, 0.85)
-    m.lathe([(0.0, 0.004), (r - 0.003, 0.006), (r - 0.003, fh), (0.0, fh + 0.006)], n, content_region, M,
-            content_col, "atlas")
-    m.lathe([(r - 0.004, h - 0.012), (r - 0.002, h - 0.012), (r - 0.002, h + 0.012), (r - 0.012, h + 0.015),
-             (0.0, h + 0.015)], n, "brass", M, lid, "atlas")
+    fh = h * drng.uniform(0.55, 0.85)
+    fill = [(0.0, 0.004), (r - 0.003, 0.006), (r - 0.003, fh), (0.0, fh + 0.006)]
+    m.lathe(fill if not lite() else [fill[1], fill[2], fill[3]], n, content_region, M, content_col, "atlas")
+    cap = [(r - 0.004, h - 0.012), (r - 0.002, h - 0.012), (r - 0.002, h + 0.012), (r - 0.012, h + 0.015),
+           (0.0, h + 0.015)]
+    m.lathe(cap if not lite() else [cap[1], cap[2], cap[4]], n, "brass", M, lid, "atlas")
     m.lathe([(r + 0.0006, h * 0.35), (r + 0.0006, h * 0.62)], n, label, M, WHITE, "atlas", v_by="z",
             arc=math.pi * 0.8, u0=-math.pi / 2 - math.pi * 0.4)
 
@@ -206,8 +209,9 @@ def board(m, M, w, d, t=0.02, col=C("c89e70")):
 
 def orange(m, M, r=0.036):
     M = M or Matrix()
-    m.sphere(r, seg(10, 8), seg(7, 5), "peel", M @ T(0, 0, r * 0.92), jit(WHITE, 0.08), "atlas", scale=(1, 1, 0.92))
-    m.cyl(0.004, 0.003, 0.006, 5, "sw_matte", M @ T(0, 0, r * 1.8), C("3a4a1a"), caps=False)
+    m.sphere(r, seg(10, 6), seg(7, 4), "peel", M @ T(0, 0, r * 0.92), jit(WHITE, 0.08), "atlas", scale=(1, 1, 0.92))
+    if not lite():
+        m.cyl(0.004, 0.003, 0.006, 5, "sw_matte", M @ T(0, 0, r * 1.8), C("3a4a1a"), caps=False)
 
 
 def orange_slice(m, M, r=0.03, t=0.005):
@@ -244,11 +248,11 @@ def twine(m, pts, r=0.0022):
 
 
 # ------------------------------------------------------------------ beer glasses
-def willi(m, M, glass_col=C("eef4f0"), n=None):
+def willi(m, M, glass_col=C("eef4f0"), n=None, lo=7):
     """0.5 l Willi-Becher, 20.5 cm: 2.5 mm walls, a rounded rim and a thick base. Returns
     (inner profile, rim z, outer rim radius)."""
     M = M or Matrix()
-    n = seg(n or 14, 7)
+    n = seg(n or 12, lo)
     outer = [(0.0, 0.0), (0.029, 0.0), (0.031, 0.004), (0.031, 0.02), (0.036, 0.12), (0.038, 0.15),
              (0.0355, 0.19), (0.0365, 0.2025)]
     rim = [(0.0362, 0.2048), (0.0348, 0.2058), (0.0336, 0.2045)]
@@ -261,11 +265,11 @@ def willi(m, M, glass_col=C("eef4f0"), n=None):
     return inner, 0.2058, 0.0365
 
 
-def mass(m, M, glass_col=C("eef4f0"), n=None):
+def mass(m, M, glass_col=C("eef4f0"), n=None, lo=7):
     """1 l Maßkrug, 21 cm: thick dimpled glass (4.5 mm walls, 2 cm base) with a handle.
     Returns (inner profile, rim z, outer rim radius)."""
     M = M or Matrix()
-    n = seg(n or 14, 7)
+    n = seg(n or 12, lo)
     outer = [(0.0, 0.0), (0.05, 0.0), (0.054, 0.006), (0.054, 0.03), (0.052, 0.2), (0.053, 0.207)]
     rim = [(0.0528, 0.2095), (0.0505, 0.2108), (0.0484, 0.2095)]
     inner = [(0.0484, 0.207), (0.0475, 0.2), (0.0492, 0.036), (0.043, 0.022), (0.0, 0.02)]
@@ -282,10 +286,11 @@ def mass(m, M, glass_col=C("eef4f0"), n=None):
     return inner, 0.2108, 0.053
 
 
-def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foam", spill=0.0):
-    """Beer up to `level` (m) in m, and in foam_m a separate foam head: it rises from the beer along
-    the inner wall, domes a few millimetres above the rim and rolls over it (covering the rim edge),
-    with an optional drip running down the outside at angle `spill` (radians; 0 = none)."""
+def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foam", spill=0.0, seed=0.0, dome=None):
+    """Beer up to `level` (m) in m, and in foam_m a separate foam head: a band rising from the beer along
+    the inner wall, then a lumpy, domed cap that swells over the rim (covering the rim edge) with an
+    uneven, cauliflower outline, and an optional drip down the outside at angle `spill` (radians)."""
+    from mathutils import noise
     inner, rim_z, rim_r = glass
     n = seg(14, 7)
 
@@ -302,11 +307,40 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
     prof.append((0.0, level))
     m.lathe(prof, n, "sw_wet", M, beer_col, "beer")
     ri = r_at(rim_z - 0.003)
-    fp = [(r_at(level) - 0.0006, level - 0.002), (ri - 0.0004, rim_z - 0.003), (rim_r + 0.0012, rim_z + 0.0015),
-          (rim_r - 0.001, rim_z + 0.007), (rim_r * 0.7, rim_z + 0.0115), (0.0, rim_z + 0.013)]
+    # the foam's side against the glass, from the beer up to just under the rim
+    foam_m.lathe([(r_at(level) - 0.0006, level - 0.002), (ri - 0.0004, rim_z - 0.003)], n, region_foam, M,
+                 C("e8dcc4"), "atlas")
+    # the cap: rings from the overhanging edge in to the crown; heights domed and lumpy
+    dome = dome if dome is not None else rim_r * 0.5
+    rings = [(ri - 0.0004, -0.003, 0.0), (rim_r + 0.0024, 0.0006, 0.22), (rim_r + 0.003, 0.004, 0.5),
+             (rim_r * 0.9, 0.0, 0.72), (rim_r * 0.6, 0.0, 0.9), (rim_r * 0.26, 0.0, 0.99)]
     if lite():
-        fp = [fp[0], fp[2], fp[4], fp[5]]
-    foam_m.lathe(fp, n, region_foam, M, WHITE, "atlas", v_by="len")
+        rings = [rings[0], rings[1], rings[3], rings[5]]
+    verts, faces, uvs = [], [], []
+    reg = vlib.R(region_foam)
+    for i, (rr, dz, k) in enumerate(rings):
+        for j in range(n):
+            a = TWO_PI * j / n
+            p = Vector((math.cos(a) * 3.1, math.sin(a) * 3.1, seed + i * 0.37))
+            lump = noise.noise(p) * 0.5 + noise.noise(p * 2.3 + Vector((seed, 0, 0))) * 0.25
+            r = rr * (1.0 + (0.06 * lump if i >= 1 else 0.0))
+            z = rim_z + dz + dome * (k * k * 0.25 + k * 0.75 if k else 0.0) * (i > 0) + (0.005 * lump if i >= 2 else 0.0)
+            if i == 0:
+                z = rim_z + dz
+            verts.append((r * math.cos(a), r * math.sin(a), z))
+    top = len(verts)
+    verts.append((0.0, 0.0, rim_z + dome + 0.001 + 0.0015 * noise.noise(Vector((seed, 1.3, 0.2)))))
+    R = len(rings)
+    for i in range(R - 1):
+        for j in range(n):
+            a, b = i * n + j, i * n + (j + 1) % n
+            faces.append((a, b, b + n, a + n))
+    for j in range(n):
+        faces.append(((R - 1) * n + j, (R - 1) * n + (j + 1) % n, top))
+    ext = rim_r * 1.1
+    for f in faces:
+        uvs.append([reg.uv(0.5 + verts[i][0] / (2 * ext), 0.5 + verts[i][1] / (2 * ext)) for i in f])
+    foam_m.add(verts, faces, uvs, M, jit(WHITE, 0.02), "atlas", True)
     if spill and not lite():
         # a slow drip of foam over the rim and a little way down the outside
         c, s_ = math.cos(spill), math.sin(spill)
@@ -315,12 +349,15 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
 
 
 # ------------------------------------------------------------------ barrels
-def barrel(m, M, L=0.36, r_end=0.12, r_belly=0.14, staves=16, lying=True, hoop_col=C("3a3632"), tap=True):
-    """Small oak cask lying along local X (origin at the bottom of the belly). Separate oak staves
-    with a hairline gap, flat forged hoops, a branded front head (+X end) and a brass tap."""
+def barrel(m, M, L=0.36, r_end=0.12, r_belly=0.14, staves=16, lying=True, hoop_col=C("3a3c40"), tap=True):
+    """Small oak cask lying along local X (origin at the bottom of the belly). Separate oak staves with a
+    hairline gap, each bent across its width (two facets) so the silhouette stays round; forged iron hoops
+    (dark, slightly specular metal) with a raised edge; a branded front head (+X end) and a brass tap low
+    on that head, clear of the brand."""
     M = M or Matrix()
     n = seg(staves, 8)
-    k = seg(8, 4)
+    across = 2 if not lite() else 1
+    k = seg(6, 4)
     prof = []
     for i in range(k + 1):
         t = i / k
@@ -332,25 +369,29 @@ def barrel(m, M, L=0.36, r_end=0.12, r_belly=0.14, staves=16, lying=True, hoop_c
     sw = TWO_PI * r_belly / n
     for j in range(n):
         a0 = TWO_PI * j / n
-        m.lathe(prof, 1, stave.window(sw, L), Mb, jit(C("c8b4a0"), 0.12), "atlas", smooth=True,
+        m.lathe(prof, across, stave.window(sw, L), Mb, jit(C("c8b4a0"), 0.12), "atlas", smooth=True,
                 arc=TWO_PI / n * 0.975, u0=a0)
-    hn = n
-    for z in ((-L / 2 + 0.03, -L / 2 + 0.08, L / 2 - 0.08, L / 2 - 0.03) if not lite() else (-L / 2 + 0.04, L / 2 - 0.04)):
+    hn = n * across
+    hoops = (-L / 2 + 0.03, -L / 2 + 0.075, L / 2 - 0.075, L / 2 - 0.03) if not lite() else (-L / 2 + 0.04, L / 2 - 0.04)
+    for z in hoops:
         t = (z + L / 2) / L
-        r = r_end + (r_belly - r_end) * math.sin(math.pi * t) + 0.0025
-        m.lathe([(r - 0.002, z - 0.011), (r, z - 0.009), (r, z + 0.009), (r - 0.002, z + 0.011)], hn, "iron", Mb,
-                hoop_col, "atlas")
+        r = r_end + (r_belly - r_end) * math.sin(math.pi * t) + 0.0022
+        hp = [(r - 0.0022, z - 0.011), (r + 0.0008, z - 0.002), (r - 0.0022, z + 0.011)]
+        # blackened forged iron: a cool charcoal with a satin sheen (a metallic finish only mirrors the warm
+        # wood around it and reads as another brown band)
+        m.lathe(hp, hn, "sw_metal_rough", Mb, hoop_col, "atlas")
     for z in (-L / 2 + 0.012, L / 2 - 0.012):
         front = z > 0
-        m.disc(r_end - 0.004, n, "barrel_head" if front else "wood_end", Mb @ T(0, 0, z, rx=0 if front else math.pi,
+        m.disc(r_end - 0.004, hn, "barrel_head" if front else "wood_end", Mb @ T(0, 0, z, rx=0 if front else math.pi,
                rz=math.pi / 2), C("c4b0a0") if front else C("a08060"), "atlas")
         # stave ends protrude a little beyond the heads (the chime)
-        m.lathe([(r_end - 0.006, z), (r_end, z + (0.012 if front else -0.012))], n, stave, Mb, C("9a8a78"))
+        m.lathe([(r_end - 0.006, z), (r_end, z + (0.012 if front else -0.012))], hn, stave, Mb, C("9a8a78"))
     if tap:
-        tz = L / 2 + 0.002
-        m.cyl(0.012, 0.011, 0.04, 10, "brass", Mb @ T(0, -r_end * 0.55, tz), WHITE)
-        m.cyl(0.008, 0.008, 0.035, 8, "brass", Mb @ T(0, -r_end * 0.55, tz + 0.03, rx=math.pi / 2), WHITE)
-        m.box((0.012, 0.012, 0.035), Mb @ T(0, -r_end * 0.55, tz + 0.05), "brass", WHITE)
+        # low on the head (local +X of Mb is down): a short brass body, the spout down, a key on top
+        tz, tx = L / 2 + 0.001, r_end * 0.7
+        m.cyl(0.011, 0.0105, 0.026, seg(10, 6), "brass", Mb @ T(tx, 0, tz), WHITE)
+        m.cyl(0.0075, 0.0065, 0.024, seg(8, 6), "brass", Mb @ T(tx, 0, tz + 0.02, ry=math.pi / 2), WHITE)
+        m.box((0.022, 0.006, 0.009), Mb @ T(tx - 0.014, 0, tz + 0.02), "brass", WHITE)
 
 
 # ------------------------------------------------------------------ sausages and bread

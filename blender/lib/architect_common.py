@@ -118,8 +118,9 @@ class Geo:
         self._finish_prim(vs, M)
         return vs
 
-    def beam(self, a, b, w, d, up=(0, 0, 1), uv_m=None, skip_back=False):
-        """Box from a to b (centre line); w = width across (perpendicular to `up`), d = size along `up`."""
+    def beam(self, a, b, w, d, up=(0, 0, 1), uv_m=None, skip_back=False, skip_ends=False):
+        """Box from a to b (centre line); w = width across (perpendicular to `up`), d = size along `up`.
+        skip_ends drops the two end caps (for members whose ends butt into another member)."""
         a, b = Vector(a), Vector(b)
         L = (b - a).length
         x = (b - a).normalized()
@@ -144,19 +145,23 @@ class Geo:
                     other = 2 if ax == 1 else 1
                     dim = d if other == 2 else w
                     l[self.uv].uv = ((p[0] + 0.5) * L / su + o[0], (p[other] + 0.5) * dim / sv + o[1])
-        if skip_back:
-            kill = [f for f in self._faces_of(vs) if all(v.co.z < -0.499 for v in f.verts)]
+        if skip_back or skip_ends:
+            kill = [f for f in self._faces_of(vs)
+                    if (skip_back and all(v.co.z < -0.499 for v in f.verts))
+                    or (skip_ends and (all(v.co.x < -0.499 for v in f.verts) or all(v.co.x > 0.499 for v in f.verts)))]
             bmesh.ops.delete(self.bm, geom=kill, context="FACES_ONLY")
             vs = [v for v in vs if v.is_valid]
         M = Matrix.Translation((a + b) / 2) @ R @ Matrix.Diagonal((L, w, d, 1))
         self._finish_prim(vs, M)
         return vs
 
-    def wall_beam(self, a, b, w, depth, y0):
+    def wall_beam(self, a, b, w, depth, y0, ends=True):
         """Timber on a facade in the local x-z plane (facade at y=y0, proud toward -y by `depth`).
-        a, b are (x, z) points of the beam centreline."""
+        a, b are (x, z) points of the beam centreline.  ends=False drops the end caps (posts between
+        sill and plate, rails and braces between posts, mullions inside a frame)."""
         ax, az = a; bx, bz = b
-        return self.beam((ax, y0 - depth / 2, az), (bx, y0 - depth / 2, bz), w, depth, up=(0, -1, 0), skip_back=True)
+        return self.beam((ax, y0 - depth / 2, az), (bx, y0 - depth / 2, bz), w, depth, up=(0, -1, 0), skip_back=True,
+                         skip_ends=not ends)
 
     def frame_ring(self, x, zb, ww, wh, fw, fd, y0, outer=False):
         """Rectangular window frame on a facade (plane y=y0, facing -y): front ring, inner reveal and
@@ -415,6 +420,23 @@ def make_texture_set(area, name, gen, normal_strength=4.0, force=False):
         TX.save_png(paths["normal"], TX.normal_from_height(t["height"], normal_strength))
         log(f"texture {name} generated in {time.time() - t0:.1f}s")
     return paths
+
+
+def lite_texture_set(paths, size=256, keep=("color", "rough", "normal")):
+    """Downsized copies of a texture set for the lite market (cached next to the originals as
+    <name>_<key>_<size>.png).  Keys left out of `keep` are dropped (e.g. no normal map on small props)."""
+    from PIL import Image
+    out = {}
+    for k in keep:
+        src = paths.get(k)
+        if not src:
+            continue
+        dst = src[:-4] + f"_{size}.png"
+        if os.environ.get("FORCE_TEX") or not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
+            im = Image.open(src)
+            im.resize((size, size), Image.LANCZOS).save(dst)
+        out[k] = dst
+    return out
 
 
 def load_img(path, noncolor=False, extension="REPEAT"):

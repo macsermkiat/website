@@ -112,3 +112,284 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
     settle(pivot) { for (const m of meshesOf(pivot)) { m.visible = false; setRange(m, true); } },
   };
 }
+
+// ---------------------------------------------------------------------------------------------------------
+// Static merge: fewer draw calls for everything that never moves on its own.
+//
+// Inside one placed model, meshes that draw the same (same material, or materials that look the same) are
+// merged into one mesh per "rigid body". A rigid body is the model root, or a node that moves as a whole:
+// rot_ (the wheel, the platform), gondola_, horse_ and instrument_. Its merged meshes stay its children, so a
+// gondola still swings and the wheel still turns with everything on it.
+// Never merged: act_ nodes an action uses (marked userData.live by actions/util.js; the rest of the act_
+// nodes, such as the vendor's rows of mugs and bottles, are static), snow_ (toggled), bulbs_ and bulb materials (the
+// lighting module finds them by name), skinned or instanced meshes, morph targets, meshes the model's own
+// animation clips move, hidden meshes, and anything the engine or the lighting module added (engine_,
+// action_, effect_, lighting_, pool_ and the musicians).
+// Emissive materials (windows, embers) are only merged with the very same material object, because the
+// lighting module and the actions change those materials while the market runs.
+
+const SKIP = /^(snow_|bulbs_|musician_|lighting_|engine_|action_|effect_|band_pick_|pool_|merged_)/i;
+const skipNode = (o) => SKIP.test(o.name || '') || o.userData.live || o.userData.pickProxy;
+const ANCHOR = /^(rot_|gondola_|horse_|instrument_)/i;
+const ATTRS = ['position', 'normal', 'uv', 'uv1', 'uv2', 'tangent', 'color'];
+const defaultBeforeRender = THREE.Object3D.prototype.onBeforeRender;
+
+function liveMaterial(m) {
+  if (m.userData?.bulb || /^bulb_/i.test(m.name || '') || m.userData?.baseEmissive != null) return true;
+  const glows = m.emissive && m.emissive.getHex() !== 0 && (m.emissiveIntensity ?? 1) > 0;
+  return !!(glows || m.emissiveMap);
+}
+
+function eligible(o) {
+  if (!o.isMesh || o.isSkinnedMesh || o.isInstancedMesh || o.isPoints || o.isLine) return false;
+  if (o.morphTargetInfluences || o.userData.merged || o.userData.bulbs || o.userData.keep) return false;
+  if (o.onBeforeRender !== defaultBeforeRender) return false;
+  const m = o.material;
+  if (!m || Array.isArray(m) || !o.geometry?.getAttribute('position')) return false;
+  if (/^bulb_/i.test(m.name || '') || m.userData?.bulb || /^lighting_/i.test(m.name || '')) return false;
+  return true;
+}
+
+/** Nodes an animation clip of this model moves (their subtrees are left alone). */
+function animatedNames(root) {
+  const out = new Set();
+  for (const clip of root.userData.animations || []) {
+    for (const t of clip.tracks) out.add(t.name.split('.')[0]);
+  }
+  return out;
+}
+
+function mergeItems(items, frame) {
+  const names = ATTRS.filter((n) => items[0].mesh.geometry.getAttribute(n));
+  const inv = new THREE.Matrix4().copy(frame.matrixWorld).invert();
+  const geos = [];
+  for (const it of items) {
+    const g = floatGeometry(it.mesh.geometry, names);
+    const m = new THREE.Matrix4().multiplyMatrices(inv, it.mesh.matrixWorld);
+    g.applyMatrix4(m);
+    // a mirrored mesh: three flips its front face while drawing; baked in, the winding has to flip instead
+    if (m.determinant() < 0) {
+      const a = g.index.array;
+      for (let i = 0; i < a.length; i += 3) { const t = a[i + 1]; a[i + 1] = a[i + 2]; a[i + 2] = t; }
+    }
+    geos.push(g);
+  }
+  const merged = mergeGeometries(geos, false);
+  geos.forEach((g) => g.dispose());
+  if (!merged) return null;
+  merged.computeBoundingSphere();
+  merged.computeBoundingBox();
+  const first = items[0].mesh;
+  const mesh = new THREE.Mesh(merged, first.material);
+  mesh.castShadow = first.castShadow;
+  mesh.receiveShadow = first.receiveShadow;
+  mesh.renderOrder = first.renderOrder;
+  mesh.frustumCulled = first.frustumCulled;
+  mesh.layers.mask = first.layers.mask;
+  mesh.userData.merged = true;
+  return mesh;
+}
+
+function bucketKey(o, anchorId) {
+  const m = o.material;
+  const look = liveMaterial(m) ? `id:${m.uuid}` : materialLook(m);
+  const attrs = ATTRS.filter((n) => o.geometry.getAttribute(n)).join(',');
+  return `${anchorId}|${look}|${o.castShadow ? 1 : 0}${o.receiveShadow ? 1 : 0}|${o.renderOrder}|${o.frustumCulled ? 1 : 0}|${o.layers.mask}|${attrs}`;
+}
+
+/**
+ * Merge the static meshes of one placed model (see above). Returns { before, after } mesh counts.
+ * `extraSkip(o)` may protect more nodes (with their subtrees).
+ */
+export function mergeStatic(root, { extraSkip = null } = {}) {
+  root.updateMatrixWorld(true);
+  const moving = animatedNames(root);
+  const buckets = new Map();
+  let before = 0;
+  const bulbs = new Map();
+  const walk = (o, anchor) => {
+    if (o !== root) {
+      // bulb strings: merged among themselves (same material object only), after the lighting module has read
+      // them; the merged mesh keeps the bulbs_ name and flag, so picking and the lighting still know it
+      if (o.visible && /^bulbs_/i.test(o.name || '') && !o.userData.live && !moving.has(o.name)) {
+        o.traverse((m) => {
+          if (!m.isMesh || !m.visible || m.isSkinnedMesh || m.isInstancedMesh || Array.isArray(m.material) || m.morphTargetInfluences) return;
+          before++;
+          const key = `${anchor.uuid}|${m.material.uuid}|${ATTRS.filter((n) => m.geometry.getAttribute(n)).join(',')}`;
+          if (!bulbs.has(key)) bulbs.set(key, { anchor, items: [] });
+          bulbs.get(key).items.push({ mesh: m, node: o });
+        });
+        return;
+      }
+      if (!o.visible || skipNode(o) || moving.has(o.name) || extraSkip?.(o)) return;
+      if (ANCHOR.test(o.name || '')) anchor = o;
+    }
+    if (o.isMesh) before++;
+    if (eligible(o)) {
+      const key = bucketKey(o, anchor.uuid);
+      if (!buckets.has(key)) buckets.set(key, { anchor, items: [] });
+      buckets.get(key).items.push({ mesh: o });
+    }
+    for (const c of o.children) walk(c, anchor);
+  };
+  walk(root, root);
+  let removed = 0;
+  for (const b of buckets.values()) {
+    if (b.items.length < 2) continue;
+    const mesh = mergeItems(b.items, b.anchor);
+    if (!mesh) continue;
+    mesh.name = `merged_${b.items[0].mesh.material.name || 'mesh'}`;
+    b.anchor.add(mesh);
+    for (const it of b.items) it.mesh.removeFromParent();
+    removed += b.items.length - 1;
+  }
+  for (const b of bulbs.values()) {
+    if (b.items.length < 2) continue;
+    const mesh = mergeItems(b.items, b.anchor);
+    if (!mesh) continue;
+    mesh.name = 'bulbs_merged';
+    mesh.userData.bulbs = true;
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    b.anchor.add(mesh);
+    for (const it of b.items) it.mesh.visible = false; // the bulbs_ nodes stay (the lighting module knows them)
+    removed += b.items.length - 1;
+  }
+  return { before, after: before - removed };
+}
+
+/**
+ * Riders (the Riesenrad's gondolas, the carousel's horses) are built alike: each part of every rider is drawn
+ * as one instance of an InstancedMesh, one per part, instead of one mesh per part per rider. Parts are matched
+ * by material and shape (sampled vertices, in the rider's own frame); a part that differs keeps its own mesh.
+ * The rider nodes still move as before (makeRides); `sync()` copies their poses into the instances, once per
+ * frame after the rides have moved. The original meshes stay, hidden, for the seat and picking code.
+ * Returns { sync, parts, riders } or null.
+ */
+export function instanceRiders(riders, frame) {
+  if (riders.length < 2) return null;
+  const inv = new THREE.Matrix4();
+  // a rider's parts, each with its pose and bounds in the rider's own frame. The meshopt export orders (and
+  // sometimes welds) the vertices of each copy differently, so parts are matched by material, triangle count
+  // and bounds, not vertex by vertex.
+  const partsOf = (r) => {
+    r.updateWorldMatrix(true, true);
+    inv.copy(r.matrixWorld).invert();
+    const out = [];
+    r.traverse((m) => {
+      if (!m.isMesh || !m.visible || m.isSkinnedMesh || m.isInstancedMesh || Array.isArray(m.material) || m.morphTargetInfluences) return;
+      for (let p = m.parent; p && p !== r; p = p.parent) if (p.userData.live || !p.visible) return;
+      const local = new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld);
+      const g = m.geometry;
+      if (!g.boundingBox) g.computeBoundingBox();
+      const box = g.boundingBox.clone().applyMatrix4(local);
+      out.push({ mesh: m, local, box, key: `${m.material.uuid}|${g.index ? g.index.count : g.getAttribute('position').count}` });
+    });
+    return out.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : a.box.min.x - b.box.min.x || a.box.min.y - b.box.min.y || a.box.min.z - b.box.min.z));
+  };
+  const near = (a, b) => a.distanceToSquared(b) < 4e-6; // 2 mm
+  const same = (A, B) => A.length === B.length && A.every((a, i) => a.key === B[i].key && near(a.box.min, B[i].box.min) && near(a.box.max, B[i].box.max));
+  // riders built alike form a class (the carousel has a few horse designs; the wheel's gondolas are one class)
+  const classes = [];
+  for (const r of riders) {
+    const parts = partsOf(r);
+    if (!parts.length) continue;
+    const c = classes.find((k) => same(k.parts, parts));
+    if (c) c.members.push({ r, parts }); else classes.push({ parts, members: [{ r, parts }] });
+  }
+  const insts = [];
+  let saved = 0;
+  for (const c of classes) {
+    if (c.members.length < 2) continue;
+    c.parts.forEach((first, k) => {
+      const im = new THREE.InstancedMesh(first.mesh.geometry, first.mesh.material, c.members.length);
+      im.name = `riders_${first.mesh.material.name || 'part'}`;
+      im.castShadow = first.mesh.castShadow;
+      im.receiveShadow = first.mesh.receiveShadow;
+      im.frustumCulled = false; // the instances move; the geometry's bounds say nothing about them
+      if (first.mesh.userData.bulbs) im.userData.bulbs = true;
+      frame.add(im);
+      c.members.forEach((mb) => { mb.parts[k].mesh.visible = false; });
+      insts.push({ im, local: first.local, riders: c.members.map((mb) => mb.r) });
+      saved += c.members.length - 1;
+    });
+  }
+  const parts = insts;
+  if (!parts.length) return null;
+  const m = new THREE.Matrix4(), frameInv = new THREE.Matrix4();
+  function sync() {
+    frame.updateWorldMatrix(true, false);
+    frameInv.copy(frame.matrixWorld).invert();
+    for (const r of riders) r.updateWorldMatrix(true, false);
+    for (const p of parts) {
+      p.riders.forEach((r, i) => { m.multiplyMatrices(frameInv, r.matrixWorld).multiply(p.local); p.im.setMatrixAt(i, m); });
+      p.im.instanceMatrix.needsUpdate = true;
+    }
+  }
+  sync();
+  return { sync, parts: parts.length, riders: riders.length, classes: classes.length, saved };
+}
+
+/**
+ * Merge across several models that share a texture kit (the nine deco stalls and their goods): the meshes
+ * that hang directly off each model's root (not a rigid body of its own) and draw the same become one mesh
+ * for the whole row, in world space, under `into`. Returns how many draw calls that saved.
+ */
+export function mergeAcross(roots, into) {
+  const buckets = new Map();
+  for (const root of roots) {
+    root.updateMatrixWorld(true);
+    const moving = animatedNames(root);
+    const walk = (o) => {
+      if (o !== root && (!o.visible || skipNode(o) || ANCHOR.test(o.name || '') || moving.has(o.name))) return;
+      if (eligible(o) && !liveMaterial(o.material)) {
+        const key = bucketKey(o, 'world');
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push({ mesh: o });
+      }
+      for (const c of o.children) walk(c);
+    };
+    walk(root);
+  }
+  into.updateMatrixWorld(true);
+  let saved = 0;
+  for (const items of buckets.values()) {
+    if (items.length < 2) continue;
+    const mesh = mergeItems(items, into);
+    if (!mesh) continue;
+    mesh.name = `merged_row_${items[0].mesh.material.name || 'mesh'}`;
+    into.add(mesh);
+    for (const it of items) it.mesh.removeFromParent();
+    saved += items.length - 1;
+  }
+  return saved;
+}
+
+/**
+ * The warm pools on the ground (one quad per light_ the budget did not light) drawn as one instanced mesh per
+ * material instead of one draw each. The originals stay in the scene, hidden, so whoever made them can still
+ * remove them. Returns the instanced meshes made.
+ */
+export function instancePools(pools, scene) {
+  const groups = new Map();
+  for (const p of pools) {
+    if (!p?.isMesh || !p.visible || p.isInstancedMesh) continue;
+    const key = `${p.geometry.uuid}|${p.material.uuid}|${p.renderOrder}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(p);
+  }
+  const out = [];
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    const im = new THREE.InstancedMesh(list[0].geometry, list[0].material, list.length);
+    im.name = 'pools_instanced';
+    im.renderOrder = list[0].renderOrder;
+    im.raycast = () => {};
+    im.frustumCulled = false;
+    list.forEach((p, i) => { p.updateMatrixWorld(true); im.setMatrixAt(i, p.matrixWorld); p.visible = false; });
+    im.instanceMatrix.needsUpdate = true;
+    scene.add(im);
+    out.push(im);
+  }
+  return out;
+}

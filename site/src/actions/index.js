@@ -17,6 +17,7 @@ export function createActions(ctx) {
   return {
     get: (id) => byPlace[id] || null,
     pullBook: stalls.pullBook,
+    retractBook: () => stalls.retract?.(),
     featuredBooks: stalls.featuredBooks || [],
     pulledBook: () => stalls.pulledBook?.() || null,
     rides,
@@ -25,6 +26,7 @@ export function createActions(ctx) {
       anim.update(dt);
       stalls.update(dt, t, still);
       band.update(dt, t, still);
+      rides.update(dt);
     },
   };
 }

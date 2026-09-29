@@ -1,5 +1,13 @@
 """Clash test for the square's furniture against the tree and the placed stalls and rides.
 
+Round 1 pass 3: the test reads the shipped files (site/public/models/*.glb, decoded with
+blender/lib/decode.mjs into blender/square/out/decoded/, refreshed whenever a shipped file is newer) and
+checks the string lights against each stall's, ride's and the bandstand's actual mesh surface, not only
+their footprints:
+  4. no string wire or bulb comes within CLEAR (0.15 m) of any stall, ride or bandstand triangle, and no
+     wire, bulb or pole triangle intersects one (BVH overlap);
+  5. it prints the clearance of every span over the bandstand's roof.
+
 Checks, with the tree placed as layout.json places it:
   1. no string-light wire, bulb or pole vertex lies inside the fir's crown (its needle envelope,
      measured from the tree's own needle vertices in 0.5 m height bands, plus a 0.3 m margin);
@@ -9,7 +17,7 @@ Checks, with the tree placed as layout.json places it:
 Footprints are each placed asset's bounding box (read from its glb in site/public/models with
 `gltf-transform inspect`), in the asset's own frame, grown by a margin.
 
-Run after square.py and tree.py:
+Run after square.py and tree.py (it tests the files in site/public/models):
   /home/claude/tools/bpy-venv/bin/python blender/square/check_clash.py
 Exits 1 and lists the offenders when anything clashes.
 """
@@ -22,6 +30,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import bpy
 import numpy as np
 from mathutils import Matrix
+from mathutils.bvhtree import BVHTree
 
 import architect_common as C
 import architect_plan as P
@@ -29,6 +38,35 @@ import architect_plan as P
 MARGIN = 0.3            # around the fir's needles
 FOOT_MARGIN = 0.15      # around a stall or ride's bounding box
 TALL = ("riesenrad", "karussell")      # wires may not pass over these at any height
+CLEAR = 0.15            # string wires and bulbs keep this far from any stall, ride or bandstand surface
+DEC = os.path.join(C.REPO, "blender", "square", "out", "decoded")
+
+
+def decoded(asset):
+    """Path of a Blender-readable copy of a shipped glb (meshopt removed), refreshed when stale."""
+    src = os.path.join(C.MODELS, asset)
+    if not os.path.exists(src):
+        return None
+    os.makedirs(DEC, exist_ok=True)
+    dst = os.path.join(DEC, asset)
+    if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
+        subprocess.run(["node", os.path.join(C.REPO, "blender", "lib", "decode.mjs"), src, dst], check=True,
+                       capture_output=True)
+    return dst
+
+
+def bvh_of(objs):
+    """One BVH over the world-space triangles of several mesh objects."""
+    verts, polys = [], []
+    for o in objs:
+        if o.type != "MESH":
+            continue
+        v = world_verts(o)
+        base = len(verts)
+        verts.extend(map(tuple, v))
+        o.data.calc_loop_triangles()
+        polys.extend(tuple(base + i for i in t.vertices) for t in o.data.loop_triangles)
+    return BVHTree.FromPolygons(verts, polys) if polys else None
 ROUND = ("bandstand", "karussell")
 
 
@@ -67,13 +105,12 @@ def world_verts(ob):
 
 def main():
     C.reset()
-    out = os.path.join(C.REPO, "blender", "square", "out")
-    sq = import_glb(os.path.join(out, "square_raw.glb"))
+    sq = import_glb(decoded("square.glb"))
     layout = P.load_layout()
     places = {p["id"]: p for p in layout["places"]}
     tp = places["tree"]
     tx, ty = tp["pos"][0], -tp["pos"][1]
-    tr = import_glb(os.path.join(out, "tree_raw.glb"))
+    tr = import_glb(decoded("tree.glb"))
     for o in tr:
         if o.parent is None:
             o.matrix_world = Matrix.Translation((tx, ty, 0)) @ Matrix.Rotation(tp.get("rotY", 0), 4, "Z") @ o.matrix_world
@@ -150,6 +187,50 @@ def main():
                 if n:
                     problems.append(f"{o.name}: {n} vertices pass through {pid}")
 
+    # the placed assets' own surfaces: wires and bulbs keep CLEAR from them, nothing intersects them
+    sq_bvh = {o.name: bvh_of([o]) for o in sq if o.type == "MESH" and o.name.startswith(("string_wire", "bulbs_string", "poles_wood", "street_iron", "benches_wood"))}
+    fly_verts = {o.name: world_verts(o) for o in flying}
+    bandstand_report = []
+    for pid, p in places.items():
+        if p["kind"] == "scenery":
+            continue
+        path = decoded(p["asset"])
+        if not path:
+            continue
+        objs = import_glb(path)
+        x, y, rot = p["pos"][0], -p["pos"][1], p.get("rotY", 0)
+        for o in objs:
+            if o.parent is None:
+                o.matrix_world = Matrix.Translation((x, y, 0)) @ Matrix.Rotation(rot, 4, "Z") @ o.matrix_world
+        bpy.context.view_layer.update()
+        tree = bvh_of(objs)
+        if tree is None:
+            continue
+        for name, v in fly_verts.items():
+            dmin = 1e9
+            n_close = 0
+            for co in v:
+                hit = tree.find_nearest(co, 3.0)
+                if hit[0] is not None:
+                    dmin = min(dmin, hit[3])
+                    n_close += hit[3] < CLEAR
+            if n_close:
+                problems.append(f"{name}: {n_close} vertices within {CLEAR} m of {pid}'s surface (closest {dmin:.3f} m)")
+            if pid == "bandstand" and dmin < 3.0:
+                bandstand_report.append((name, dmin))
+        for name, b in sq_bvh.items():
+            if b is None:
+                continue
+            hits = b.overlap(tree)
+            if hits:
+                problems.append(f"{name}: {len(hits)} triangle pairs intersect {pid}")
+        for o in objs:
+            bpy.data.objects.remove(o, do_unlink=True)
+    if bandstand_report:
+        print("[clash] clearance of the string lights passing over the bandstand (m, to its mesh surface):")
+        for name, d in sorted(bandstand_report, key=lambda kv: kv[1]):
+            print(f"  {name}: {d:.2f}")
+
     # the poles themselves, by position
     for i, (x, z) in enumerate(P.POLES_THREE):
         d = math.hypot(x - tp["pos"][0], z - tp["pos"][1])
@@ -161,7 +242,8 @@ def main():
         for s in problems:
             print("  -", s)
         sys.exit(1)
-    print("[clash] OK: no wire, bulb or pole in the fir; benches clear of the boughs; nothing in a stall or ride")
+    print(f"[clash] OK: no wire, bulb or pole in the fir; benches clear of the boughs; nothing in a stall or ride; "
+          f"wires and bulbs at least {CLEAR} m from every stall, ride and bandstand surface")
 
 
 main()

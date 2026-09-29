@@ -12,7 +12,10 @@ reads the books atlas; its front cover (the +X board of a standing book, spine o
 at it) carries the cover art, whose UV rect items.json gives as cover_uv.
 
 The Bücherstand shelves are 2.08 m wide, but diagonal braces stand at x = +-0.95 from 0.22 m up, so the
-shelf sets keep to x = +-0.925. Each shelf has a 5 cm front lip at y = -0.14; spines stand just behind it.
+shelf sets keep to x = +-0.925. A third knee brace under the upper shelf rises from 0.22 m above shelf 1
+at x = -0.015..0.015, so books standing across the middle of shelf 1 stay under 0.205 m (LOW_ZONES), and
+the reading-list block stands left of it. Each shelf has a 5 cm front lip at y = -0.14; spines stand just
+behind it. check_props' seat check fails if a book cuts into any of these.
 The lamp has no light_ empty: the stall already has its two (light_0, light_1). Its bulb is emissive.
 """
 import math
@@ -23,7 +26,7 @@ import atlas_books
 import goods as G
 import vendor_atlas
 import vlib
-from vlib import C, T, WHITE, jit, lite, rng, seg
+from vlib import C, T, WHITE, drng, jit, lite, rng, seg
 
 TWO_PI = 2 * math.pi
 NAMED = ["order_of_time", "geb", "feynman_1", "feynman_2", "feynman_3", "being_you", "book_of_why"]
@@ -34,6 +37,9 @@ NAMED_KIND = {"order_of_time": "hard", "geb": "paper", "feynman_1": "hard", "fey
               "being_you": "hard", "book_of_why": "hard"}
 SHELF_X = 0.925
 SPINE_Y = -0.118
+# (x0, x1, max height): stall parts above a shelf that books must stay under (see the docstring)
+LOW_ZONES = {"prop_books_shelf_1": [(-0.04, 0.04, 0.205)], "prop_books_shelf_2": []}
+NAMED_X = -0.52                     # where the reading-list block starts on shelf 1 (it ends near -0.19)
 
 
 def spine_kinds():
@@ -49,8 +55,10 @@ def book(m, w, h, d, spine, kind, mat, M=None, page_col=C("efe6d0")):
     plain = vlib.R(sreg.rect, sub=(0.04, 0.25, 0.12, 0.75))
     edge = vlib.R("pages_edge")
     if lite():
+        # a plain box: spine, both boards and the head; no tail (it stands on it) and no fore-edge (it
+        # faces the back wall, or lies under the next book)
         m.box((w, d, h), M @ T(0, d / 2, h / 2), plain, WHITE, mat,
-              faces={"ny": sreg, "px": front, "pz": edge, "py": edge}, skip=("nz",))
+              faces={"ny": sreg, "px": front, "pz": edge}, skip=("nz", "py"))
         return
     if kind == "hard":
         bt = 0.0028                     # board thickness
@@ -75,7 +83,7 @@ def book(m, w, h, d, spine, kind, mat, M=None, page_col=C("efe6d0")):
         m.add(verts, faces, uvs, M, WHITE, mat, True)
         # headband: a thin coloured strip at the head of the spine
         m.box((w - 2 * bt, 0.004, 0.003), M @ T(0, 0.005, h - ov - 0.0015), "bk_satin",
-              C(rng.choice(["a8261e", "e8d8a8", "2a3a6a", "d8b048"])), mat, skip=("nz", "ny"))
+              C(drng.choice(["a8261e", "e8d8a8", "2a3a6a", "d8b048"])), mat, skip=("nz", "ny"))
     else:
         # paperback: flush soft covers, a square spine
         m.box((w, d, h), M @ T(0, d / 2, h / 2), plain, WHITE, mat,
@@ -106,20 +114,29 @@ def cover_uv_gltf(spine):
     return [round(u0, 5), round(1 - v1, 5), round(u1, 5), round(1 - v0, 5)]
 
 
-def fill_shelf(s, x0, x1, start, named=()):
-    """Books standing along the shelf from x0 to x1, with a horizontal stack; the named block mid-run."""
+def fill_shelf(s, x0, x1, start, named=(), low=()):
+    """Books standing along the shelf from x0 to x1, with a horizontal stack; the named block left of the
+    middle. Standing books that reach into a `low` zone (x0, x1, h) are kept under h."""
     kinds = spine_kinds()
     order = list(kinds)
     rng.shuffle(order)
     idx, x, gi = start, x0, 0
     named = list(named)
-    named_x = (x0 + x1) / 2 - 0.15
+    named_x = NAMED_X
+
+    def cap(xa, w, h):
+        for z0, z1, hmax in low:
+            if xa - w / 2 < z1 and xa + w / 2 > z0:
+                h = min(h, hmax)
+        return h
     placed_named = False
     stack_at = [x1 - 0.42 + rng.uniform(-0.1, 0.1)] if named else [x0 + 0.5 + rng.uniform(-0.1, 0.1)]
     while x < x1 - 0.02:
         if named and not placed_named and x >= named_x:
             for key in named:
                 w, h, d = NAMED_SIZE[key]
+                if cap(x + w / 2, w, h) < h:
+                    raise RuntimeError(f"reading-list book {key} would stand under a brace; move NAMED_X")
                 add_book(s, idx, (x + w / 2, SPINE_Y, 0), w, h, d, "spine_" + key, NAMED_KIND[key])
                 idx += 1
                 x += w + 0.0015
@@ -148,6 +165,7 @@ def fill_shelf(s, x0, x1, start, named=()):
         h = min(0.3, max(0.17, w * (304 / 48) * rng.uniform(0.85, 1.25)))
         if kinds[reg] == "leather":
             h = min(0.3, max(h, 0.22))
+        h = cap(x + w / 2, w, h)
         d = min(0.22, max(0.12, h * rng.uniform(0.62, 0.72)))
         if x + w > x1:
             break
@@ -169,7 +187,7 @@ def bookend(m, M, col=C("8a6a3a"), side=1):
 
 def shelf_set(name, slot, start, named):
     s = vlib.PropSet(name, slot, "buecherstand", footprint=(2.08, 0.28))
-    fill_shelf(s, -SHELF_X + 0.012, SHELF_X - 0.012, start, named)
+    fill_shelf(s, -SHELF_X + 0.012, SHELF_X - 0.012, start, named, LOW_ZONES.get(name, ()))
     bookend(s.static, T(-SHELF_X, SPINE_Y, 0), side=1)
     bookend(s.static, T(SHELF_X, SPINE_Y, 0), side=-1)
     s.finish()
@@ -211,8 +229,8 @@ def lamp(m, x, y):
     n = seg(20, 8)
     m.lathe([(0.0, 0.0), (0.085, 0.0), (0.09, 0.006), (0.085, 0.018), (0.06, 0.026), (0.02, 0.032), (0.0, 0.032)],
             n, "brass", T(x, y + 0.03, 0), WHITE)
-    m.cyl(0.009, 0.009, 0.3, 10, "brass", T(x, y + 0.03, 0.03), WHITE)
-    m.cyl(0.006, 0.006, 0.2, 8, "brass", T(x - 0.1, y + 0.03, 0.33, ry=math.pi / 2), WHITE)
+    m.cyl(0.009, 0.009, 0.3, seg(10, 6), "brass", T(x, y + 0.03, 0.03), WHITE, caps=not lite())
+    m.cyl(0.006, 0.006, 0.2, seg(8, 5), "brass", T(x - 0.1, y + 0.03, 0.33, ry=math.pi / 2), WHITE, caps=not lite())
     Ms = T(x, y + 0.01, 0.315, rx=-0.18)
     k = seg(12, 6)
     L = 0.26
@@ -228,8 +246,8 @@ def lamp(m, x, y):
             m.tube(pts, 0.004, 5, "brass", Ms, WHITE)
         m.tube([Ms @ Vector((0.05, -0.04, 0.01)), Ms @ Vector((0.05, -0.05, -0.08))], 0.0015, 4, "brass", None, WHITE)
         m.sphere(0.006, 6, 4, "brass", T(*(Ms @ Vector((0.05, -0.05, -0.085)))), WHITE)
-    m.cyl(0.018, 0.02, 0.05, 10, "brass", Ms @ T(0, 0, 0.03), WHITE)
-    m.sphere(0.024, 10, 6, "sw_satin", Ms @ T(0, 0, 0.012), WHITE, "lamp", scale=(1.8, 1, 1))
+    m.cyl(0.018, 0.02, 0.05, seg(10, 6), "brass", Ms @ T(0, 0, 0.03), WHITE)
+    m.sphere(0.024, seg(10, 6), seg(6, 3), "sw_satin", Ms @ T(0, 0, 0.012), WHITE, "lamp", scale=(1.8, 1, 1))
 
 
 def cash_box(m, M):
@@ -239,11 +257,15 @@ def cash_box(m, M):
     m.box((0.01, 0.002, 0.022), M @ T(0, -0.091, 0.07), "brass", WHITE)
     for sx in (-1, 1):
         m.box((0.03, 0.01, 0.006), M @ T(sx * 0.13, 0, 0.104), "brass", WHITE)
-    m.tube([(-0.05, 0, 0.108), (-0.05, 0, 0.13), (0.05, 0, 0.13), (0.05, 0, 0.108)], 0.004, 5, "brass", M, WHITE)
-    for k in range(6 if not lite() else 2):
-        m.cyl(0.012, 0.012, 0.002, 10, "brass", M @ T(0.18, -0.02, k * 0.0021), WHITE)
-    for dx, dy in ((0.21, 0.03), (0.16, 0.05)):
-        m.cyl(0.011, 0.011, 0.002, 10, "sw_metal", M @ T(dx, dy, 0), C("c8c8c8"))
+    m.tube([(-0.05, 0, 0.108), (-0.05, 0, 0.13), (0.05, 0, 0.13), (0.05, 0, 0.108)], 0.004, 5 if not lite() else 3,
+           "brass", M, WHITE)
+    if not lite():
+        for k in range(6):
+            m.cyl(0.012, 0.012, 0.002, 10, "brass", M @ T(0.18, -0.02, k * 0.0021), WHITE)
+        for dx, dy in ((0.21, 0.03), (0.16, 0.05)):
+            m.cyl(0.011, 0.011, 0.002, 10, "sw_metal", M @ T(dx, dy, 0), C("c8c8c8"))
+    else:
+        m.cyl(0.012, 0.012, 0.012, 6, "brass", M @ T(0.18, -0.02, 0), WHITE)
 
 
 def price_card(m, M, k):
@@ -323,7 +345,7 @@ SETS = {
     "prop_books_shelf_1": dict(fn=lambda: shelf_set("prop_books_shelf_1", "slot_shelf_1", 0, NAMED),
                                slot="slot_shelf_1", stall="buecherstand", kind="shelf", section=True, seed=51,
                                width=2.1, cam=((0.0, -1.35, 0.2), (0.0, 0.0, 0.14), 32),
-                               hero=((0.03, -0.72, 0.17), (0.03, 0.0, 0.14), 36)),
+                               hero=((-0.36, -0.72, 0.17), (-0.36, 0.0, 0.14), 36)),
     "prop_books_shelf_2": dict(fn=lambda: shelf_set("prop_books_shelf_2", "slot_shelf_2", 100, ()),
                                slot="slot_shelf_2", stall="buecherstand", kind="shelf2", section=True, seed=52,
                                width=2.1, cam=((0.35, -1.1, 0.25), (0.1, 0.0, 0.14), 32)),

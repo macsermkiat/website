@@ -552,9 +552,37 @@ def simple_material(key, name=None):
 # A variant reuses a kit's (shared) textures with a different glTF factor, so it costs no
 # texture bytes. metal: metallicFactor multiplied into the kit's metal channel (the exporter
 # writes it as pbrMetallicRoughness.metallicFactor).
+# color_gain: a lighter copy of the kit's base colour (linear gain with a soft shoulder), written
+# as kit_<variant>_color.png: its own small image (the iron colour map is ~8 KB as WebP), shared
+# like the kit maps (deco_kit_<variant>_color.webp) by every stall that uses the variant.
 KIT_VARIANTS = {
-    "iron_matte": ("iron", dict(metal=0.4)),   # sooty sheet iron that stays readable without an env map
+    # sheet iron for hoods and fireboxes: lighter and far less metallic than the forged-iron kit,
+    # so it reads as grey sooty metal under the site's point lights without an environment map
+    # (the plain kit, base colour mean 84/255 at metal 0.65, renders as a black slab there)
+    # emit: a faint warm emissive copy of the base colour (emissiveTexture = the colour map) that
+    # stands in for the eave bulbs and the fire right beside the hood: the engine's bulbs glow but
+    # light nothing, and no site light reaches a hood face that looks up and out under the eave
+    "iron_matte": ("iron", dict(metal=0.35, color_gain=2.1, emit=(0.2, 0.14, 0.08))),
 }
+
+
+def _variant_color(key, base, gain):
+    """Path of the lighter base-colour copy of kit `base` for variant `key` (made on demand)."""
+    path = os.path.join(state.KIT_DIR, f"kit_{key}_color.png")
+    stamp = path + ".version"
+    tag = f"{KIT_VERSION}:{gain}"
+    if os.path.exists(path) and os.path.exists(stamp) and open(stamp).read().strip() == tag:
+        return path
+    from PIL import Image
+    srgb = np.asarray(Image.open(kit_path(base, "color")).convert("RGB")).astype(np.float32) / 255.0
+    lin = np.where(srgb <= 0.04045, srgb / 12.92, ((srgb + 0.055) / 1.055) ** 2.4)
+    x = lin * gain
+    lin = np.where(x < 0.6, x, 0.6 + 0.4 * (1.0 - np.exp(-(x - 0.6) / 0.4)))     # soft shoulder
+    out = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(lin, 1 / 2.4) - 0.055)
+    Image.fromarray(np.clip(out * 255.0 + 0.5, 0, 255).astype(np.uint8)).save(path)
+    with open(stamp, "w") as f:
+        f.write(tag)
+    return path
 
 
 def kit_variant_material(key):
@@ -562,6 +590,26 @@ def kit_variant_material(key):
     m = kit_material(base, name=key)
     nt = m.node_tree
     bsdf = nt.nodes["Principled BSDF"]
+    if "color_gain" in opts:
+        name = f"kit_{key}_color"
+        img = bpy.data.images.get(name)
+        if img is None:
+            img = bpy.data.images.load(_variant_color(key, base, opts["color_gain"]))
+            img.name = name
+            img.colorspace_settings.name = "sRGB"
+        for n in nt.nodes:
+            if n.type == 'TEX_IMAGE' and n.image and n.image.name == f"kit_{base}_color":
+                n.image = img
+    if "emit" in opts:
+        tc = next(n for n in nt.nodes if n.type == 'TEX_IMAGE' and n.image and n.image.name.endswith("_color"))
+        mul = nt.nodes.new("ShaderNodeMix")
+        mul.data_type = 'RGBA'
+        mul.blend_type = 'MULTIPLY'
+        mul.inputs[0].default_value = 1.0
+        nt.links.new(tc.outputs["Color"], mul.inputs[6])
+        mul.inputs[7].default_value = (*opts["emit"], 1)
+        nt.links.new(mul.outputs[2], bsdf.inputs["Emission Color"])
+        bsdf.inputs["Emission Strength"].default_value = 1.0
     if "metal" in opts:
         link = bsdf.inputs["Metallic"].links[0]
         src = link.from_socket

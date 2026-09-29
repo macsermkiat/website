@@ -42,6 +42,8 @@ if os.environ.get("FORCE_TEX") or not os.path.exists(FROND):
     TX.save_png(SNOWF, np.concatenate([sn[..., :3] ** (1 / 2.2), sn[..., 3:]], -1))
 T_BARK = C.make_texture_set("square", "bark", lambda: TX.bark(256), normal_strength=4.0)
 T_WOOD = C.make_texture_set("square", "timber", lambda: TX.timber(512), normal_strength=3.0)
+if LITE:
+    T_WOOD = C.lite_texture_set(T_WOOD, 256, keep=("color",))      # the fence: colour only in lite
 
 M = {}
 M["needles"] = C.pbr("fir_needles", base_tex=FROND, alpha_tex=True, rough=0.65)
@@ -54,7 +56,7 @@ M["matte"] = C.solid("bauble_matte_red", (0.35, 0.03, 0.04), rough=0.55)
 M["straw"] = C.solid("straw", (0.78, 0.6, 0.3), rough=0.6)
 M["bead"] = C.solid("bead_gold", (0.9, 0.7, 0.35), rough=0.25, metal=1.0)
 M["bulb"] = C.solid("bulb_warm", (1.0, 0.8, 0.55), rough=0.3, emit=(1.0, 0.62, 0.28), strength=6.0)
-M["wood"] = C.pbr("fence_wood", tex=T_WOOD, factor=(1.1, 1.0, 0.9))
+M["wood"] = C.pbr("fence_wood", tex=T_WOOD, factor=(1.1, 1.0, 0.9), rough=0.75)
 M["snow"] = C.solid("snow", (0.82, 0.85, 0.92), rough=0.75)
 for k, m in M.items():
     m.use_backface_culling = k not in ("needles", "snowcard", "straw")
@@ -92,50 +94,115 @@ def card(g, base, d, up, L, W, curl=0.15, segs=2, snow=False):
 
 
 # ------------------------------------------------------------------ branches
+# Round 1 pass 3: above about 6.5 m the crown is seen nearly side-on from the home camera (9 m up,
+# 48 m away), where flat, horizontal fronds vanish edge-on and the trunk showed through.  The upper
+# whorls are now closer together with more branches, their side fronds are pitched up and rolled
+# 30-60 degrees from horizontal, every upper branch carries outward-facing cross cards along its
+# outer half, and interwhorl shoots grow from the leader between the whorls.
+UP0 = 5.0          # the upper crown starts here (blends in over 1.5 m)
+
+
+def upper(z):
+    return float(np.clip((z - UP0) / 1.5, 0, 1))
+
+
+def rolled(z):
+    """Share of fronds rolled 30-60 degrees: from 2 m up (the home camera sees the whole crown side-on)."""
+    return float(np.clip((z - 2.0) / 3.0, 0, 1))
+
+
+def tilted_up(d, dh, lo=30, hi=60):
+    """Card 'up' vector that rolls a frond lying along d by 30-60 degrees about its own axis, so its
+    face turns toward a horizontal viewer (alternating sides)."""
+    side = d.cross(Vector((0, 0, 1)))
+    if side.length < 1e-6:
+        side = dh.cross(Vector((0, 0, 1)))
+    side.normalize()
+    th = math.radians(random.uniform(lo, hi)) * random.choice((-1, 1))
+    return Vector((0, 0, 1)) * math.cos(th) + side * math.sin(th)
+
+
 fronds = 0
 z = Z0
 whorl = 0
 branch_tips = []
 while z < ZT - 0.5:
     rz = R(z)
+    u = upper(z)
     nb = int(np.clip(4 + rz * 1.3, 4, 10)) if not LITE else int(np.clip(3 + rz * 0.8, 3, 6))
+    nb += int(round(u * 2))
     a0 = random.uniform(0, 2 * math.pi)
     for b in range(nb):
         ang = a0 + 2 * math.pi * b / nb + random.uniform(-0.25, 0.25)
         L = rz * random.uniform(0.85, 1.05)
-        droop = math.radians(random.uniform(-14, -4) if z < 8 else random.uniform(-6, 6))
+        if u > 0:        # upper branches rise (a young fir's top grows upward)
+            droop = math.radians(random.uniform(-6, 6) * (1 - u) + random.uniform(12, 30) * u)
+        else:
+            droop = math.radians(random.uniform(-14, -4) if z < 8 else random.uniform(-6, 6))
         dh = Vector((math.cos(ang), math.sin(ang), 0))
         d = (dh * math.cos(droop) + Vector((0, 0, math.sin(droop)))).normalized()
         base = Vector((0, 0, z)) + dh * 0.15
-        step = 0.42 if not LITE else 0.8
+        step = (0.42 if not LITE else 0.8) * (1 - 0.25 * u)
         s = 0.25
         while s < L - 0.1:
             p = base + d * s + Vector((0, 0, 0.08 * (s / L) ** 2 * L))
             fl = max(0.35, min(1.05, (L - s) * 0.55 + 0.35))
             for sgn in (-1, 1):
                 sd = (d + dh.cross(Vector((0, 0, 1))) * sgn * random.uniform(0.7, 1.1)).normalized()
-                sd.z += random.uniform(-0.05, 0.12)
-                up = Vector((random.uniform(-0.2, 0.2), random.uniform(-0.2, 0.2), 1))
+                sd.z += random.uniform(-0.05, 0.12) + u * random.uniform(0.25, 0.6)     # pitched up in the top
+                sd.normalize()
+                if random.random() < 0.5 * rolled(z) + 0.5 * u:
+                    up = tilted_up(sd, dh, 25 if u == 0 else 30, 50 if u == 0 else 60)
+                else:
+                    up = Vector((random.uniform(-0.2, 0.2), random.uniform(-0.2, 0.2), 1))
                 card(needles, p, sd, up, fl, fl * 0.55, curl=0.12)
                 fronds += 1
-                if not LITE and random.random() < 0.5:
+                if not LITE and random.random() < 0.12 + 0.5 * u:
                     card(needles, p + Vector((0, 0, 0.04)), sd, (sd.cross(Vector((0, 0, 1)))).normalized() * 0.8 + Vector((0, 0, 0.6)), fl * 0.8, fl * 0.44, curl=0.1)
                     fronds += 1
-                if z > 3.0 and random.random() < (0.5 if z > 6 else 0.3) and s > L * 0.3:
+                if z > 3.0 and random.random() < (0.5 if z > 6 else 0.3) * (1 - 0.4 * u) and s > L * 0.3:
                     card(snowc, p + Vector((0, 0, 0.035)), sd, up, fl * 0.95, fl * 0.55, curl=0.12)
+            # outward-facing cross cards on the outer part of the upper branches: they face the
+            # viewer from any side, so the crown reads solid where the whorls are small
+            if u > 0 and s > L * 0.3 and random.random() < 0.45 + 0.4 * u:
+                tang = Vector((-dh.y, dh.x, 0))
+                cw = fl * random.uniform(0.8, 1.05)
+                outn = (dh + Vector((0, 0, random.uniform(0.15, 0.45)))).normalized()
+                cd = (tang * random.choice((-1, 1)) + Vector((0, 0, random.uniform(0.35, 0.8)))).normalized()
+                cp = p + dh * 0.05 - cd * cw * 0.5
+                card(needles, cp, cd, outn, cw, cw * 0.6, curl=0.08, segs=1)
+                fronds += 1
             s += step * random.uniform(0.85, 1.15)
         # the branch tip
         tipL = min(1.1, 0.5 + L * 0.2)
         tp = base + d * (L - 0.1)
-        card(needles, tp, d + Vector((0, 0, 0.1)), Vector((0, 0, 1)), tipL, tipL * 0.55, curl=0.18)
+        card(needles, tp, d + Vector((0, 0, 0.1)), Vector((0, 0, 1)) if u < 0.5 else tilted_up(d, dh), tipL, tipL * 0.55, curl=0.18)
         if not LITE:
             card(needles, tp, d + Vector((0, 0, 0.1)), d.cross(Vector((0, 0, 1))).normalized() + Vector((0, 0, 0.3)), tipL * 0.9, tipL * 0.45)
+        if u > 0:        # an outward cross card over the tip
+            tang = Vector((-dh.y, dh.x, 0))
+            cd = (tang + Vector((0, 0, random.uniform(0.3, 0.7)))).normalized() * random.choice((-1, 1))
+            card(needles, tp + dh * 0.1 - cd * tipL * 0.45, cd, (dh + Vector((0, 0, 0.3))).normalized(), tipL * 0.9, tipL * 0.55, curl=0.1, segs=1)
+            fronds += 1
         if z > 2.5 and random.random() < 0.6:
             card(snowc, tp + Vector((0, 0, 0.04)), d + Vector((0, 0, 0.1)), Vector((0, 0, 1)), tipL * 0.9, tipL * 0.5, curl=0.18)
         branch_tips.append((tp + d * tipL * 0.6, ang, z))
         fronds += 2
-    z += random.uniform(0.38, 0.5) if not LITE else random.uniform(0.6, 0.75)
+    dz = random.uniform(0.38, 0.5) if not LITE else random.uniform(0.6, 0.75)
+    z += dz * (1 - 0.3 * upper(z))
     whorl += 1
+# interwhorl shoots on the leader through the upper crown: short fronds rising 30-60 degrees
+zz = UP0
+while zz < ZT - 0.3:
+    for k in range(3 if not LITE else 2):
+        a = random.uniform(0, 2 * math.pi)
+        dh = Vector((math.cos(a), math.sin(a), 0))
+        el = math.radians(random.uniform(30, 60))
+        d = (dh * math.cos(el) + Vector((0, 0, math.sin(el)))).normalized()
+        ln = min(1.2, 0.35 + R(zz) * 0.35)
+        card(needles, Vector((0, 0, zz)) + dh * 0.05, d, tilted_up(d, dh), ln, ln * 0.55, curl=0.1, segs=1)
+        fronds += 1
+    zz += random.uniform(0.22, 0.32) if not LITE else 0.5
 # leader at the top
 for k in range(5 if not LITE else 3):
     a = 2 * math.pi * k / 5
@@ -188,10 +255,10 @@ while len(placed) < nba and tries < 5000:
         continue
     placed.append((p, size))
     kind = random.choice(["red", "red", "gold", "champ", "matte"])
-    seg = 8 if not LITE else 6
-    bal[kind].uvsphere(tuple(p), size, seg=seg, rings=5 if not LITE else 4)
+    seg = 7 if not LITE else 6          # small, smooth-shaded: 7x4 reads round at 7-14 cm
+    bal[kind].uvsphere(tuple(p), size, seg=seg, rings=4)
     if not LITE:
-        caps.cyl((p.x, p.y, p.z + size + 0.012), size * 0.25, size * 0.25, 0.03, seg=4, bottom=False)
+        caps.cyl((p.x, p.y, p.z + size + 0.012), size * 0.25, size * 0.25, 0.03, seg=4, caps=False)
 C.log("baubles", len(placed))
 
 straw = C.Geo("tree_straw_stars", M["straw"], (1, 1))
@@ -215,8 +282,8 @@ bead = C.Geo("tree_bead_garland", M["bead"], (1, 1))
 if not LITE:
     turns = 3.2
     pts = []
-    for k in range(240):
-        t = k / 239
+    for k in range(180):
+        t = k / 179
         zz = Z0 + 0.6 + t * (ZT - Z0 - 2.5)
         a = t * turns * 2 * math.pi + 0.4 + 0.25 * math.sin(t * 60)
         rr = R(zz) * 0.93
@@ -231,7 +298,7 @@ for k in range(nbl):
     zz = Z0 + 0.2 + (ZT - Z0 - 0.4) * (1 - math.sqrt(1 - t))   # more bulbs low down (wider)
     a = random.uniform(0, 2 * math.pi)
     rr = R(zz) * random.uniform(0.82, 1.0)
-    bulbs.bulb((rr * math.cos(a), rr * math.sin(a), zz - 0.05), 0.028 if not LITE else 0.04, sides=4)
+    bulbs.bulb((rr * math.cos(a), rr * math.sin(a), zz - 0.05), 0.028 if not LITE else 0.04, sides=3)
 
 # the star
 star = C.Geo("bulbs_star", M["bulb"], (1, 1))
