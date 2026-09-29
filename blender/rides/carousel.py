@@ -117,8 +117,38 @@ def body_at(x):
     return BODY[-1][1:]
 
 
+def saddle_cloth(cloth, gl, lite, tint):
+    """A cut fabric saddle cloth draped over the barrel: a surface 12 mm off the coat from the
+    spine down each flank, with a scalloped bottom edge trimmed in gilt cord."""
+    xs = [-0.30 + 0.48 * i / (5 if lite else 9) for i in range(6 if lite else 10)]
+    nt = 7 if lite else 9
+    off = 0.012
+
+    def t_bottom(x):
+        u = (x - xs[0]) / (xs[-1] - xs[0])
+        return -0.62 + 0.10 * abs(math.sin(math.pi * u * 3))       # three scallops per side
+
+    rings = []
+    for x in xs:
+        z, w, h = body_at(x)
+        tb = t_bottom(x)
+        ring = []
+        for j in range(nt):
+            t = tb + (math.pi - 2 * tb) * j / (nt - 1)            # right flank, over the spine, left flank
+            ring.append(Vector((x, (w + off) * math.cos(t), z + (h + off) * math.sin(t))))
+        rings.append(ring)
+    cloth.loft(rings, closed=False, smooth=True, tint=tint)
+    if not lite:
+        for side in (0, -1):
+            edge = [r[side] + Vector((0, 0, -0.004)) for r in rings]
+            gl.tube(edge, 0.007, tseg=4)
+
+
 def build_horse(k, lite, var):
+    """One carved galloper in its own frame (nose toward +X, origin at the pole). Horses with the
+    same coat (k and k + 6) come out identical, so the web export stores their mesh once."""
     coat, gilt_mane, saddle_t, dapple = HORSE_COATS[var % len(HORSE_COATS)]
+    state.seed(300 + var)
     R = state.rng
     if dapple:
         def shade(p):
@@ -129,15 +159,31 @@ def build_horse(k, lite, var):
             return 1.0 + 0.05 * noise.noise(Vector((p.x * 5, p.y * 5, p.z * 5)))
     en = Part(f"h{k}_enamel", "enamel", shade=shade, var=0.02)
     gl = Part(f"h{k}_gilt", "gilt", var=0.03)
-    n = 6 if lite else 11
+    dark = Part(f"h{k}_mouth", "enamel", var=0.0)
+    n = 6 if lite else 10
     body = BODY[::2] + [BODY[-1]] if lite else BODY
     # trunk, neck and head in one loft
     sweep(en, [(x, 0, z) for x, z, w, h in body], [w for *_, w, h in body], [h for *_, w, h in body],
           n=n, tint=coat)
-    # jaw / cheek bulk and the forehead
+    # carved muscle: shoulder blades sloping forward, forearm swell, hindquarters and gaskins, chest
+    ms = 6 if lite else 8
+    mr = 4 if lite else 5
+    for s in (() if lite else (-1, 1)):
+        en.sphere((0.29, s * 0.10, 0.05), 1.0, seg=ms, rings=mr, scale=(0.12, 0.062, 0.16), rot=(0, -0.45, 0), tint=coat)
+        en.sphere((-0.47, s * 0.11, 0.04), 1.0, seg=ms, rings=mr, scale=(0.17, 0.078, 0.15), rot=(0, 0.25, 0), tint=coat)
+    en.sphere((0.37, 0, -0.04), 1.0, seg=ms, rings=mr, scale=(0.09, 0.13, 0.15), tint=coat)
+    # head: cheek and jaw bulk, then an open mouth (lower jaw dropped, dark mouth, teeth)
     en.sphere((0.74, 0, 0.555), 0.07, seg=6 if lite else 12, rings=4 if lite else 8, scale=(1.3, 0.95, 0.85),
               tint=coat, rot=(0, 0.5, 0))
-    # legs: jumper pose, front legs tucked, hind legs stretched back
+    jaw = [(0.80, 0, 0.50, 0.040), (0.88, 0, 0.44, 0.032), (0.95, 0, 0.385, 0.024), (0.985, 0, 0.365, 0.02)]
+    limb(en, jaw, n=6 if lite else 8, per=1 if lite else 2, tint=coat)
+    dark.sphere((0.935, 0, 0.405), 1.0, seg=6 if lite else 8, rings=3 if lite else 5, scale=(0.06, 0.026, 0.022), rot=(0, 0.45, 0),
+                tint=(0.30, 0.03, 0.04))
+    if not lite:
+        g_iv = Part(f"h{k}_teeth", "ivory", var=0.0)
+        for zt, xt in ((0.422, 0.985), (0.382, 0.965)):
+            g_iv.box((xt, 0, zt), (0.018, 0.034, 0.008), rot=(0, 0.45, 0))
+    # legs: jumper pose, front legs tucked, hind legs stretched back; knee and hock bulges
     ln = 5 if lite else 7
     wob = [R.uniform(-0.03, 0.03) for _ in range(4)]
     legs = [
@@ -151,7 +197,7 @@ def build_horse(k, lite, var):
          (-0.66 + wob[3], -0.10, -0.53, 0.030), (-0.72 + wob[3], -0.10, -0.58, 0.032)],
     ]
     for L in legs:
-        limb(en, L[:-1], n=ln, per=1 if lite else 3, tint=coat, cap1=False)
+        limb(en, L[:-1], n=ln, per=1 if lite else 2, tint=coat, cap1=False)
         a, b = Vector(L[-2][:3]), Vector(L[-1][:3])
         d = (b - a).normalized()
         rod(en, a - d * 0.01, b + d * 0.04, 0.034, r2=0.042, seg=ln, caps=True, tint=(0.05, 0.04, 0.035))
@@ -159,51 +205,51 @@ def build_horse(k, lite, var):
     for s in (-1, 1):
         rod(en, (0.66, s * 0.035, 0.66), (0.62, s * 0.05, 0.76), 0.022, r2=0.004, seg=5 if lite else 7,
             caps=True, tint=coat)
-        en.sphere((0.79, s * 0.058, 0.60), 0.014, seg=6, rings=4, tint=(0.02, 0.02, 0.02))
+        en.sphere((0.79, s * 0.058, 0.60), 0.014, seg=6, rings=3, tint=(0.02, 0.02, 0.02))
         if not lite:
-            en.sphere((1.005, s * 0.022, 0.415), 0.009, seg=6, rings=4, tint=(0.05, 0.03, 0.03))
+            en.sphere((1.005, s * 0.022, 0.43), 0.009, seg=5, rings=3, tint=(0.05, 0.03, 0.03))
     # tail: carved, sweeping down
     tail = [(-0.64, 0, 0.07, 0.045), (-0.74, 0, 0.04, 0.055), (-0.81, 0, -0.10, 0.05),
             (-0.82, 0, -0.27, 0.04), (-0.77, 0, -0.40, 0.022)]
-    limb(gl if gilt_mane else en, tail, n=ln, per=1 if lite else 3,
+    limb(gl if gilt_mane else en, tail, n=ln, per=1,
          tint=None if gilt_mane else (0.18, 0.12, 0.08))
-    # mane: carved locks along the crest, falling to the outer side (+y)
+    # mane: carved locks along the crest, falling to the outer side (+y), alternating in size
     mp = gl if gilt_mane else en
     mt = None if gilt_mane else (0.2, 0.13, 0.08)
-    locks = 3 if lite else 6
+    locks = 4 if lite else 6
     for i in range(locks):
         t = i / (locks - 1)
-        x = 0.40 + 0.25 * t
+        x = 0.40 + 0.26 * t
         z = 0.20 + 0.40 * t + 0.08
-        mp.sphere((x - 0.02, 0.05, z), 0.06, seg=6, rings=4,
-                  scale=(1.0, 0.45, 1.6), rot=(0.35, 0.9 - 0.4 * t, 0), tint=mt)
+        big = 1.0 if i % 2 == 0 else 0.8
+        mp.sphere((x - 0.02, 0.045 + 0.01 * (i % 2), z), 0.055 * big, seg=6, rings=4,
+                  scale=(1.0, 0.45, 1.7), rot=(0.35 + 0.1 * (i % 2), 0.9 - 0.4 * t, 0), tint=mt)
     mp.sphere((0.70, 0.0, 0.67), 0.05, seg=6, rings=4, scale=(1.2, 0.6, 0.6), rot=(0, 0.6, 0), tint=mt)  # forelock
-    # saddle cloth, saddle, cantle and pommel
-    en.sphere((-0.05, 0, -0.02), 1.0, seg=8 if lite else 14, rings=5 if lite else 8,
-              scale=(0.26, 0.192, 0.218), tint=saddle_t)
-    en.sphere((-0.04, 0, 0.17), 1.0, seg=8 if lite else 12, rings=4 if lite else 6, scale=(0.22, 0.17, 0.07),
+    # saddle cloth (cut edge), saddle, cantle and pommel
+    saddle_cloth(en, gl, lite, saddle_t)
+    en.sphere((-0.04, 0, 0.19), 1.0, seg=8 if lite else 12, rings=4 if lite else 6, scale=(0.22, 0.17, 0.07),
               tint=(0.16, 0.06, 0.03))
-    en.sphere((-0.21, 0, 0.21), 1.0, seg=8, rings=5, scale=(0.05, 0.13, 0.06), tint=(0.16, 0.06, 0.03))
-    gl.sphere((0.13, 0, 0.22), 0.045, seg=8, rings=6)
+    en.sphere((-0.21, 0, 0.23), 1.0, seg=8, rings=5, scale=(0.05, 0.13, 0.06), tint=(0.16, 0.06, 0.03))
+    gl.sphere((0.13, 0, 0.24), 0.045, seg=8, rings=6)
     if not lite:
-        # gilt edging on the saddle cloth, stirrups, bridle, reins and a jewelled breast collar
-        gl.torus((-0.05, 0, -0.02), 0.2, 0.012, seg=16, tseg=4, rot=(math.pi / 2, 0, 0), arc=math.pi)
+        # stirrups, bridle, reins and a jewelled breast collar
         for s in (-1, 1):
-            gl.box((-0.02, s * 0.19, -0.12), (0.02, 0.008, 0.2), rot=(0, 0, 0))
-            gl.torus((-0.02, s * 0.2, -0.26), 0.035, 0.006, seg=8, tseg=3, rot=(math.pi / 2, 0, 0))
+            gl.box((-0.02, s * 0.20, -0.10), (0.02, 0.008, 0.22), rot=(0, 0, 0))
+            gl.torus((-0.02, s * 0.21, -0.25), 0.035, 0.006, seg=8, tseg=3, rot=(math.pi / 2, 0, 0))
         for x, z, w, h in ((0.95, 0.47, 0.05, 0.06), (0.80, 0.585, 0.069, 0.086)):
             sweep(gl, [(x - 0.008, 0, z), (x + 0.008, 0, z)], [w + 0.006] * 2, [h + 0.006] * 2,
                   n=12, cap0=False, cap1=False)
         for s in (-1, 1):
-            rc_pts = [(0.96, s * 0.045, 0.44), (0.60, s * 0.09, 0.40), (0.30, s * 0.12, 0.30), (0.13, s * 0.03, 0.22)]
-            gl.tube([Vector(p) for p in smooth_path(rc_pts, 3)], 0.006, tseg=4)
-        for i in range(7):
-            a = -0.9 + 1.8 * i / 6
+            rc_pts = [(0.96, s * 0.045, 0.44), (0.60, s * 0.09, 0.40), (0.30, s * 0.12, 0.30), (0.13, s * 0.03, 0.24)]
+            gl.tube([Vector(p) for p in smooth_path(rc_pts, 2)], 0.006, tseg=4)
+        for i in range(5):
+            a = -0.9 + 1.8 * i / 4
             z0, w0, h0 = body_at(0.33)
-            p = Vector((0.36 + 0.03 * math.cos(a), (w0 + 0.01) * math.sin(a), z0 - 0.02 - 0.08 * math.cos(a)))
-            gl.sphere(p, 0.024, seg=6, rings=4)
-        gl.sphere((0.40, 0, -0.08), 0.04, seg=10, rings=6, scale=(0.6, 1, 1))
-    return [en, gl]
+            p = Vector((0.36 + 0.05 * math.cos(a), (w0 + 0.03) * math.sin(a), z0 - 0.02 - 0.08 * math.cos(a)))
+            gl.sphere(p, 0.026, seg=5, rings=3)
+        gl.sphere((0.45, 0, -0.08), 0.04, seg=10, rings=6, scale=(0.6, 1, 1))
+        return [en, gl, dark, g_iv]
+    return [en, gl, dark]
 
 
 # ------------------------------------------------------------------ rotating structure
@@ -213,7 +259,7 @@ def barley_pole(part, x, y, z0, z1, lite):
         return
     n = 8
     rings = []
-    steps = int((z1 - z0) / 0.17)
+    steps = int((z1 - z0) / 0.22)
     for i in range(steps + 1):
         z = z0 + (z1 - z0) * i / steps
         tw = z * 4.2
@@ -235,6 +281,7 @@ def build_rotating(lite, rot):
     bulbs = Part("bulbs_carousel", "bulb_warm")
     snow = Part("snow_canopy", "snow")
     frame = Part("car_frame", "rsteel", tint=(0.15, 0.12, 0.10), bevel=0.0)
+    ink = Part("car_cartouche", "enamel", var=0.02)
 
     # platform: radial planks, painted skirt, brass nosing
     nw = 36 if lite else 60
@@ -287,7 +334,7 @@ def build_rotating(lite, rot):
                   band="red")
     for j in range(24):
         a = TAU * (j + 0.5) / 24
-        rc.bulb(bulbs, (1.18 * math.cos(a), 1.18 * math.sin(a), Z_SW - 0.1), 0.035)
+        rc.bulb(bulbs, (1.18 * math.cos(a), 1.18 * math.sin(a), Z_SW - 0.1), 0.035, lite=True)
 
     # sweeps and pole rings under the canopy
     for j in range(NB):
@@ -332,14 +379,20 @@ def build_rotating(lite, rot):
         for yy in (hh - 0.05, -hh + 0.05):
             paint.mbox(Ms @ Matrix.Translation((0, yy, 0.035)), (L - 0.1, 0.035, 0.022), band="gold", grain=0)
         Mo = Ms @ Matrix.Translation((0, 0, 0.03))
-        if j in (0, NB // 2):
-            paint.text("Karussell", state.font("fraktur_bold"), 0.40, 0.02,
-                       M=Mo @ Matrix.Translation((0, -0.02, 0.01)), max_width=L * 0.86, band="gold")
+        if j % 4 == 0:
+            # the name on four sides, gilt on a dark green cartouche so it reads from the rail
+            cw, chh = L * 0.93, 0.60
+            ink.shape(rounded_rect(cw, chh, 0.08), depth=0.012, M=Mo @ Matrix.Translation((0, -0.01, 0.012)),
+                      tint=(0.015, 0.075, 0.045))
+            gilt.shape(rounded_rect(cw + 0.06, chh + 0.06, 0.11), holes=[rounded_rect(cw, chh, 0.08)],
+                       depth=0.03, M=Mo @ Matrix.Translation((0, -0.01, 0.012)))
+            paint.text("Karussell", state.font("fraktur_bold"), 0.52, 0.02,
+                       M=Mo @ Matrix.Translation((0, -0.05, 0.026)), max_width=cw * 0.9, band="gold")
         else:
             ne = 10 if lite else 16
             ell = [(0.26 * math.cos(TAU * i / ne), 0.19 * math.sin(TAU * i / ne)) for i in range(ne)]
             ell2 = [(0.31 * math.cos(TAU * i / ne), 0.235 * math.sin(TAU * i / ne)) for i in range(ne)]
-            mirror.shape(ell, depth=0.012, M=Mo)
+            bevelled_mirror(mirror, ell, Mo, lite)
             gilt.shape(ell2, holes=[ell], depth=0.03, M=Mo)
             if not lite:
                 for sx in (-1, 1):
@@ -404,7 +457,7 @@ def build_rotating(lite, rot):
         rod(gilt, p0, p1, 0.022, seg=5)
         nr = 3 if lite else 5
         for i in range(nr):
-            rc.bulb(bulbs, p0.lerp(p1, (i + 0.5) / nr) + Vector((0, 0, 0.05)), 0.04)
+            rc.bulb(bulbs, p0.lerp(p1, (i + 0.5) / nr) + Vector((0, 0, 0.05)), 0.04, lite=True)
     # second tier: drum with mirrors, its own striped roof and a finial
     r_t, z0, z1 = TIER
     nt = 16
@@ -417,10 +470,10 @@ def build_rotating(lite, rot):
         if j % 2 == 0:
             e = [(0.16 * math.cos(TAU * i / 14), 0.2 * math.sin(TAU * i / 14)) for i in range(14)]
             e2 = [(0.2 * math.cos(TAU * i / 14), 0.25 * math.sin(TAU * i / 14)) for i in range(14)]
-            mirror.shape(e, depth=0.01, M=Ms @ Matrix.Translation((0, 0, 0.025)))
+            bevelled_mirror(mirror, e, Ms @ Matrix.Translation((0, 0, 0.025)), lite, rise=0.018)
             gilt.shape(e2, holes=[e], depth=0.025, M=Ms @ Matrix.Translation((0, 0, 0.025)))
         ac = a + math.pi / nt
-        rc.bulb(bulbs, Vector(((r_t + 0.08) * math.cos(ac), (r_t + 0.08) * math.sin(ac), z1 - 0.05)), 0.04)
+        rc.bulb(bulbs, Vector(((r_t + 0.08) * math.cos(ac), (r_t + 0.08) * math.sin(ac), z1 - 0.05)), 0.04, lite=True)
     rc.lathe_poly(gilt, [(r_t + 0.04, z1), (r_t + 0.1, z1 + 0.03), (r_t + 0.1, z1 + 0.06), (r_t, z1 + 0.07)], nt)
     for g in range(nt):
         a0 = TAU * g / nt - math.pi / 2 - math.pi / nt
@@ -447,7 +500,26 @@ def build_rotating(lite, rot):
                   flat=False)
     rc.lathe_poly(snow, [(r_t + 0.27, z1 + 0.1), (r_t * 0.6, z1 + 0.45), (0.2, z1 + 0.8), (0.001, z1 + 0.84)],
                   16, flat=False)
-    return rc.finish_all([paint, wood, gilt, mirror, brass, canvas, bulbs, snow, frame], rot)
+    return rc.finish_all([paint, wood, gilt, mirror, brass, canvas, bulbs, snow, frame, ink], rot)
+
+
+def bevelled_mirror(mirror, ell, M, lite, scale=0.8, rise=0.022):
+    """An oval mirror with a ring of bevelled facets round a flat centre: the facets face
+    different ways, so each catches a different bulb."""
+    inner = [(x * scale, y * scale) for x, y in ell]
+    mirror.shape(inner, depth=0.004, M=M @ Matrix.Translation((0, 0, rise - 0.002)))
+    rings = [[M @ Vector((x, y, -0.004)) for x, y in ell], [M @ Vector((x, y, rise)) for x, y in inner]]
+    mirror.loft(rings, closed=True, smooth=False)
+
+
+def rounded_rect(w, h, r, n=4):
+    pts = []
+    for cx, cy, a0 in ((w / 2 - r, h / 2 - r, 0), (-w / 2 + r, h / 2 - r, 90), (-w / 2 + r, -h / 2 + r, 180),
+                       (w / 2 - r, -h / 2 + r, 270)):
+        for i in range(n + 1):
+            a = math.radians(a0 + 90 * i / n)
+            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    return pts
 
 
 def chariot(paint, gilt, wood, r, phi, lite):
@@ -509,14 +581,14 @@ def build_static(lite):
         rod(iron, p, p + Vector((0, 0, 1.0)), 0.028, seg=6)
         gilt.sphere(p + Vector((0, 0, 1.04)), 0.04, seg=6, rings=4)
     for z, rr in ((0.95, 0.03), (0.5, 0.02), (0.12, 0.02)):
-        iron.torus((0, 0, z), Rr, rr, seg=40 if lite else 72, tseg=4, arc=TAU - 2 * gap,
+        iron.torus((0, 0, z), Rr, rr, seg=40 if lite else 48, tseg=4, arc=TAU - 2 * gap,
                    rot=(0, 0, front + gap))
     if not lite:
         for a0, a1 in zip(angs[:-1], angs[1:]):
             p0 = Vector((Rr * math.cos(a0), Rr * math.sin(a0), 0.5))
             p1 = Vector((Rr * math.cos(a1), Rr * math.sin(a1), 0.5))
             m = (p0 + p1) / 2
-            iron.torus(m + Vector((0, 0, 0.22)), 0.16, 0.012, seg=8, tseg=3,
+            iron.torus(m + Vector((0, 0, 0.22)), 0.16, 0.012, seg=6, tseg=3,
                        rot=(math.pi / 2, 0, (a0 + a1) / 2 + math.pi / 2))
     for s in (-1, 1):
         a = front + s * gap
@@ -534,16 +606,17 @@ def build(lite):
         phi, r = horse_place(k)
         yaw = math.atan2(-math.cos(phi), math.sin(phi))
         pos = (r * math.cos(phi), r * math.sin(phi), Z_H)
-        h = node(f"horse_{k}", pos, parent=rot)
-        parts = build_horse(k, lite, k)
-        objs = rc.finish_all(parts)
-        M = Matrix.Translation(pos) @ Euler((0, 0, yaw)).to_matrix().to_4x4() @ \
-            Euler((0, 0.04 * math.sin(k * 1.7), 0)).to_matrix().to_4x4()
-        for ob in objs:
-            ob.data.transform(M)
-            rc.attach(ob, h)
+        pitch = 0.04 * math.sin((k % 6) * 1.7)
+        h = node(f"horse_{k}", pos, parent=rot, rot=(0, pitch, yaw))
+        rc.bpy.context.view_layer.update()
+        for ob in rc.finish_all(build_horse(k, lite, k % 6)):
+            # built in the horse's own frame: parent with identity transforms, no re-baking, so
+            # horses k and k + 6 stay bit-identical and the export stores their meshes once
+            ob.parent = h
+            ob.matrix_parent_inverse = Matrix()
+            ob.matrix_basis = Matrix()
         if k == 2:
-            seat = M @ Vector((-0.04, 0, 0.24 + 0.75))
+            seat = h.matrix_world @ Vector((-0.04, 0, 0.24 + 0.75))
             node("horse_seat_2", tuple(seat), parent=h)
     build_static(lite)
     node("light_0", (0, -3.2, 3.0))

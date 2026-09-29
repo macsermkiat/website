@@ -18,7 +18,7 @@ TWO_PI = 2 * math.pi
 ROD_Z, ROD_Y = 1.08, -0.03
 
 
-def heart_poly(s, n=24):
+def heart_poly(s, n=18):
     pts = []
     for i in range(n):
         a = TWO_PI * i / n
@@ -54,11 +54,11 @@ def hang(m, x, drop, col=C("b0282a"), r=0.0018):
 
 # ------------------------------------------------------------------ Lebkuchen
 def lebkuchen_heart(m, M, size, k):
-    poly = heart_poly(size)
+    poly = heart_poly(size, 18 if size >= 0.14 and not vlib.lite() else 12)
     reg = f"lebkuchen_{k % 6}"
     dough = vlib.R(reg, sub=(0.0, 0.0, 0.08, 0.08))
     # heart polygon spans x +-size/2, y from -size*0.53 to +size*0.36 roughly; face UVs by bbox
-    m.extrude(poly, 0.012, M, reg, dough, WHITE, "glaze", bevel=0.0 if (vlib.lite() or size < 0.13) else 0.003,
+    m.extrude(poly, 0.012, M, reg, dough, WHITE, "glaze", bevel=0.0 if (vlib.lite() or size < 0.17) else 0.003,
               back_region=dough)
 
 
@@ -77,24 +77,24 @@ def lebkuchen():
         lebkuchen_heart(m, M @ T(0, 0, 0, rz=0), size, i)
     # on the counter: a basket of small hearts, round Elisenlebkuchen on paper, Pfeffernüsse
     G.crate(m, T(-0.6, 0.02, 0), 0.4, 0.3, 0.07, C("b48c5c"))
-    for k in range(7):
+    for k in range(6 if not vlib.lite() else 3):
         size = 0.1
         lebkuchen_heart(m, T(-0.72 + (k % 4) * 0.08, -0.05 + (k // 4) * 0.12, 0.05 + (k % 2) * 0.01,
                              rx=-0.9 + rng.uniform(-0.1, 0.1), rz=rng.uniform(-0.2, 0.2)), size, k + 2)
     m.box((0.36, 0.26, 0.002), T(0.1, 0.0, 0.001), "paper", C("f6f2ea"))
-    for k in range(9):
+    for k in range(9 if not vlib.lite() else 5):
         x, y = 0.0 + (k % 3) * 0.1, -0.08 + (k // 3) * 0.09
         Mc = T(x, y, 0.002 + (0.012 if k == 4 else 0))
-        m.lathe([(0.0, 0.0), (0.042, 0.0), (0.044, 0.006), (0.04, 0.011), (0.0, 0.013)], seg(16, 8), "sausage_dark",
-                Mc, C("b87a4a"), "glaze")
-        for j in range(3 if not vlib.lite() else 0):
+        m.lathe([(0.0, 0.0), (0.042, 0.0), (0.044, 0.006), (0.04, 0.011), (0.0, 0.013)], seg(12, 6), "roll",
+                Mc, C("9a5a2a"), "glaze")
+        for j in range(2 if not vlib.lite() else 0):
             a = TWO_PI * j / 3 + k
-            m.sphere(0.009, 5, 3, "sw_satin", Mc @ T(0.02 * math.cos(a), 0.02 * math.sin(a), 0.013, rz=a),
+            m.sphere(0.009, 5, 3, "sw_satin", Mc @ T(0.018 * math.cos(a), 0.018 * math.sin(a), 0.012, rz=a),
                      C("e8d0a0"), scale=(1.6, 0.8, 0.4))
     G.bowl(m, T(0.62, 0.0, 0), r=0.13, h=0.05)
-    for k in range(18 if not vlib.lite() else 8):
+    for k in range(14 if not vlib.lite() else 5):
         a, rr = rng.uniform(0, TWO_PI), 0.09 * math.sqrt(rng.random())
-        m.sphere(0.017, 7, 4, "wax", T(0.62 + rr * math.cos(a), rr * math.sin(a), 0.03 + (0.09 - rr) * 0.25), C("f4efe6"),
+        m.sphere(0.017, 6, 4, "wax", T(0.62 + rr * math.cos(a), rr * math.sin(a), 0.03 + (0.09 - rr) * 0.25), C("f4efe6"),
                  scale=(1, 1, 0.75))
     s.finish()
     return s
@@ -102,8 +102,8 @@ def lebkuchen():
 
 # ------------------------------------------------------------------ Gebrannte Mandeln
 def almond_heap(m, M, r, h, col=WHITE):
-    k = seg(16, 8)
-    prof = [(r, 0.0), (r * 0.9, h * 0.45), (r * 0.6, h * 0.85), (r * 0.25, h), (0.0, h * 1.02)]
+    k = seg(12, 6)
+    prof = [(r, 0.0), (r * 0.85, h * 0.55), (r * 0.35, h * 0.95), (0.0, h * 1.02)]
     m.lathe(prof, k, "almonds", M, col, "glaze", v_by="z")
 
 
@@ -112,7 +112,7 @@ def mandeln():
     m = s.static
     # the copper roasting kettle on its stand with a stirring paddle
     Mk = T(-0.72, 0.02, 0)
-    n = seg(36, 14)
+    n = seg(24, 10)
     m.lathe([(0.2, 0.0), (0.21, 0.01), (0.21, 0.1), (0.2, 0.11)], n, vlib.RW("iron"), Mk, WHITE)
     m.lathe([(0.0, 0.1), (0.12, 0.1), (0.19, 0.14), (0.225, 0.22), (0.232, 0.232), (0.222, 0.23), (0.182, 0.15),
              (0.11, 0.115), (0.0, 0.112)], n, vlib.RW("copper"), Mk, WHITE)
@@ -125,16 +125,16 @@ def mandeln():
     m.box((0.62, 0.2, 0.02), Mr @ T(0, 0, 0.11), vlib.RW("wood"), C("a07448"))
     for sx in (-1, 1):
         m.box((0.02, 0.2, 0.11), Mr @ T(sx * 0.3, 0, 0.055), vlib.RW("wood"), C("a07448"))
-    for k in range(10):
+    for k in range(10 if not vlib.lite() else 5):
         cx, cy = -0.24 + (k % 5) * 0.12, -0.05 + (k // 5) * 0.1
         Mc = Mr @ T(cx, cy, 0.0, rz=rng.uniform(0, 6))
-        m.lathe([(0.004, 0.0), (0.042, 0.2), (0.044, 0.205)], seg(16, 8), "cone_paper", Mc, jit(WHITE, 0.04), "atlas")
-        m.lathe([(0.0405, 0.2), (0.004, 0.02)], seg(16, 8), "paper", Mc, C("e8e0d0"))
+        m.lathe([(0.004, 0.0), (0.042, 0.2), (0.044, 0.205)], seg(12, 6), "cone_paper", Mc, jit(WHITE, 0.04), "atlas")
+        m.lathe([(0.0405, 0.2), (0.004, 0.02)], seg(12, 6), "paper", Mc, C("e8e0d0"))
         almond_heap(m, Mc @ T(0, 0, 0.19), 0.04, 0.035, jit(C("c07850"), 0.1))
     # little bags and a scoop, a bowl of loose almonds
     G.bowl(m, T(0.72, 0.0, 0), r=0.12, h=0.05)
     almond_heap(m, T(0.72, 0.0, 0.02), 0.1, 0.05, C("b86840"))
-    m.lathe([(0.0, 0.0), (0.04, 0.0), (0.045, 0.03), (0.0, 0.035)], 12, "steel", T(0.95, -0.1, 0, rx=0.3), WHITE)
+    m.lathe([(0.0, 0.0), (0.04, 0.0), (0.045, 0.03), (0.0, 0.035)], seg(12, 5), "steel", T(0.95, -0.1, 0, rx=0.3), WHITE)
     for k in range(3):
         m.box((0.07, 0.04, 0.12), T(0.98, 0.08 - k * 0.06, 0.06, rz=0.1 * k), "cone_paper", WHITE)
     s.finish()
@@ -146,13 +146,12 @@ CANDLE_COLS = ["b0282a", "f2ead8", "2a6a3a", "d8b048", "2a4a8a", "7a3a7a", "e8d0
 
 
 def candle(m, M, r, h, col, lit=False, kind="pillar"):
-    n = seg(10, 6)
+    n = seg(8, 5)
     region = "honeycomb" if kind == "beeswax" else vlib.RW("wax")
-    m.lathe([(0.0, 0.0), (r, 0.0), (r, h - 0.006), (r * 0.94, h), (0.0, h - 0.004)], n,
-            region, M, col, "atlas", v_by="z")
-    m.cyl(0.0012, 0.0012, 0.012, 4, "sw_matte", M @ T(0, 0, h - 0.004), C("1a1410"))
+    m.lathe([(r, 0.0), (r, h - 0.006), (r * 0.92, h), (0.0, h - 0.004)], n, region, M, col, "atlas", v_by="z")
     if lit:
-        m.lathe([(0.0, 0.0), (0.0035, 0.004), (0.004, 0.012), (0.0022, 0.02), (0.0, 0.03)], 8, "sw_satin",
+        m.cyl(0.0012, 0.0012, 0.012, 3, "sw_matte", M @ T(0, 0, h - 0.004), C("1a1410"), caps=False)
+        m.lathe([(0.0, 0.0), (0.0038, 0.008), (0.0022, 0.02), (0.0, 0.03)], 6, "sw_satin",
                 M @ T(0, 0, h + 0.006), WHITE, "flame")
 
 
@@ -161,8 +160,8 @@ def taper_pair(m, x, drop, col):
     for dx in (-0.012, 0.012):
         m.tube([(x, ROD_Y, ROD_Z - 0.01), (x + dx, ROD_Y, ROD_Z - 0.03)], 0.001, 3, "sw_matte", None, C("e8e0d0"))
         Mc = T(x + dx, ROD_Y, ROD_Z - 0.03, rx=math.pi)
-        n = seg(10, 6)
-        m.lathe([(0.0, 0.0), (0.006, 0.004), (0.0085, 0.05), (0.011, drop), (0.0, drop + 0.004)], n, vlib.RW("wax"),
+        n = seg(7, 5)
+        m.lathe([(0.0, 0.0), (0.0085, 0.05), (0.011, drop), (0.0, drop + 0.004)], n, vlib.RW("wax"),
                 Mc, col, "atlas")
 
 
@@ -170,7 +169,7 @@ def kerzen():
     s = vlib.PropSet("prop_deco_kerzen", "slot_counter", "deco-kerzen")
     m = s.static
     rod(m, -1.05, 1.05)
-    for i, x in enumerate((-0.95, -0.85, -0.75, -0.65, 0.65, 0.75, 0.85, 0.95)):
+    for i, x in enumerate((-0.95, -0.85, -0.75, 0.75, 0.85, 0.95) if not vlib.lite() else (-0.9, 0.8)):
         taper_pair(m, x, rng.uniform(0.22, 0.3), C(CANDLE_COLS[i % len(CANDLE_COLS)]))
     # stepped risers with candles of many sizes
     for k, (dz, dy) in enumerate(((0.0, -0.1), (0.07, 0.05), (0.14, 0.17))):
@@ -190,7 +189,7 @@ def kerzen():
         candle(m, T(x, dy + rng.uniform(-0.02, 0.02), dz), r, h, jit(col, 0.05), lit=(k % 7 == 3), kind=kind)
         k += 1
         if tier == 2:
-            x += 0.12
+            x += 0.15 if not vlib.lite() else 0.36
     # a glass lantern with a lit candle and a cluster of tealights
     Ml = T(0.85, 0.0, 0)
     m.box((0.13, 0.13, 0.015), Ml @ T(0, 0, 0.0075), "iron", WHITE)
@@ -201,10 +200,10 @@ def kerzen():
             m.box((0.01, 0.01, 0.2), Ml @ T(sx * 0.058, sy * 0.058, 0.11), "iron", WHITE)
     m.box((0.11, 0.11, 0.19), Ml @ T(0, 0, 0.11), "sw_vgloss", C("f4f6f2"), "glass")
     candle(m, Ml @ T(0, 0, 0.015), 0.025, 0.09, C("f2ead8"), lit=True)
-    for k in range(5):
-        a = TWO_PI * k / 5
-        Mt = T(0.62 + 0.05 * math.cos(a), -0.14 + 0.05 * math.sin(a), 0)
-        m.lathe([(0.0, 0.0), (0.019, 0.0), (0.019, 0.016), (0.0175, 0.016), (0.0175, 0.003)], 12, "steel", Mt, WHITE)
+    for k in range(4 if not vlib.lite() else 2):
+        a = TWO_PI * k / 4
+        Mt = T(0.62 + 0.045 * math.cos(a), -0.14 + 0.045 * math.sin(a), 0)
+        m.lathe([(0.019, 0.0), (0.019, 0.016), (0.0175, 0.016), (0.0175, 0.003)], seg(8, 5), "steel", Mt, WHITE)
         candle(m, Mt @ T(0, 0, 0.003), 0.0172, 0.011, C("f4f0e8"), lit=(k % 2 == 0))
     s.finish()
     return s
@@ -213,21 +212,24 @@ def kerzen():
 # ------------------------------------------------------------------ Holzspielzeug
 def nutcracker(m, M, coat=C("a8181c"), trousers=C("f2ead8"), hat=C("141414"), s=1.0):
     S = M @ Matrix.Diagonal((s, s, s, 1))
-    n = seg(10, 6)
+    n = seg(8, 5)
     m.box((0.1, 0.07, 0.02), S @ T(0, 0, 0.01), vlib.RW("wood"), C("2a6a3a"))
     for sx in (-1, 1):
         m.cyl(0.017, 0.017, 0.03, n, "sw_gloss", S @ T(sx * 0.022, 0.0, 0.02), C("141414"), "glaze")
         m.cyl(0.016, 0.016, 0.07, n, "sw_gloss", S @ T(sx * 0.022, 0.0, 0.05), trousers, "glaze")
     m.lathe([(0.0, 0.12), (0.044, 0.12), (0.046, 0.16), (0.04, 0.21), (0.0, 0.215)], n, "sw_gloss", S, coat, "glaze")
-    m.torus(0.045, 0.004, n, 4, "sw_metal", S @ T(0, 0, 0.135), C("d8b048"))
+    if not vlib.lite():
+        m.torus(0.045, 0.004, n, 4, "sw_metal", S @ T(0, 0, 0.135), C("d8b048"))
     for sx in (-1, 1):
-        m.cyl(0.012, 0.011, 0.08, 8, "sw_gloss", S @ T(sx * 0.05, 0, 0.13, ry=sx * 0.2), coat, "glaze")
+        m.cyl(0.012, 0.011, 0.08, 6 if not vlib.lite() else 4, "sw_gloss", S @ T(sx * 0.05, 0, 0.13, ry=sx * 0.2), coat,
+              "glaze")
     # head: face texture on the front
     m.cyl(0.03, 0.03, 0.055, n, "sw_gloss", S @ T(0, 0, 0.215), C("f0c8a0"), "glaze")
     m.box((0.05, 0.004, 0.05), S @ T(0, -0.0302, 0.243), "toy_face", WHITE, "glaze", faces={"ny": "toy_face"})
     m.lathe([(0.032, 0.268), (0.034, 0.275), (0.034, 0.33), (0.03, 0.335), (0.0, 0.336)], n, "sw_gloss", S, hat, "glaze")
-    m.torus(0.034, 0.003, n, 4, "sw_metal", S @ T(0, 0, 0.285), C("d8b048"))
-    m.sphere(0.008, 8, 5, "sw_metal", S @ T(0, -0.034, 0.315), C("d8b048"))
+    if not vlib.lite():
+        m.torus(0.034, 0.003, n, 4, "sw_metal", S @ T(0, 0, 0.285), C("d8b048"))
+        m.sphere(0.008, 8, 5, "sw_metal", S @ T(0, -0.034, 0.315), C("d8b048"))
 
 
 def train(m, M):
@@ -245,23 +247,24 @@ def train(m, M):
             for j in range(2):
                 m.box((0.035, 0.035, 0.035), Mw @ T(-0.025 + j * 0.05, 0, 0.068, rz=j), vlib.RW("wood"),
                       C(["d8b048", "c8a070", "b0282a"][j + k - 1]), "atlas")
-        for sx in (-1, 1):
+        for sx in (-1, 1) if not vlib.lite() or k == 0 else ():
             for sy in (-1, 1):
-                m.cyl(0.015, 0.015, 0.008, 10, "sw_satin", Mw @ T(sx * 0.035, sy * 0.034, 0.015, rx=math.pi / 2),
+                m.cyl(0.015, 0.015, 0.008, seg(8, 5), "sw_satin", Mw @ T(sx * 0.035, sy * 0.034, 0.015, rx=math.pi / 2),
                       C("d8b048") if k == 0 else C("f2ead8"), "glaze")
 
 
 def top(m, M, col):
-    n = seg(14, 8)
+    n = seg(10, 6)
     m.lathe([(0.0, 0.0), (0.02, 0.02), (0.035, 0.035), (0.033, 0.045), (0.006, 0.05), (0.006, 0.08), (0.0, 0.082)],
             n, "sw_gloss", M, col, "glaze")
-    m.torus(0.034, 0.004, n, 4, "sw_gloss", M @ T(0, 0, 0.038), C("f2ead8"), "glaze")
+    if not vlib.lite():
+        m.torus(0.034, 0.004, n, 4, "sw_gloss", M @ T(0, 0, 0.038), C("f2ead8"), "glaze")
 
 
 def pyramid(s, x, y):
     """A small Weihnachtspyramide: turned posts, two tiers of figures, a vane wheel on top (rot_pyramid)."""
     m = s.static
-    n = seg(14, 8)
+    n = seg(10, 6)
     for z, r in ((0.0, 0.1), (0.15, 0.085)):
         m.cyl(r, r, 0.012, n, vlib.RW("wood"), T(x, y, z), C("c89a64"))
     for k in range(4):
@@ -273,14 +276,16 @@ def pyramid(s, x, y):
     rot.cyl(0.004, 0.004, 0.42, 6, "sw_satin", None, C("c89a64"))
     for z in (0.012, 0.162):
         rot.cyl(0.075, 0.075, 0.008, n, vlib.RW("wood"), T(0, 0, z), C("d8b078"))
-        for k in range(5):
-            a = TWO_PI * k / 5
+        for k in range(4):
+            a = TWO_PI * k / 4
             rot.cyl(0.009, 0.007, 0.05, 6, "sw_gloss", T(0.055 * math.cos(a), 0.055 * math.sin(a), z + 0.008),
                     C(CANDLE_COLS[k]), "glaze")
-            rot.sphere(0.008, 6, 4, "sw_gloss", T(0.055 * math.cos(a), 0.055 * math.sin(a), z + 0.064),
-                       C("f0c8a0"), "glaze")
-    for k in range(8):
-        a = TWO_PI * k / 8
+            if not vlib.lite():
+                rot.sphere(0.008, 6, 4, "sw_gloss", T(0.055 * math.cos(a), 0.055 * math.sin(a), z + 0.064),
+                           C("f0c8a0"), "glaze")
+    nv = 8 if not vlib.lite() else 4
+    for k in range(nv):
+        a = TWO_PI * k / nv
         rot.box((0.07, 0.022, 0.002), T(0.045 * math.cos(a), 0.045 * math.sin(a), 0.41, rz=a, rx=0.5), vlib.RW("wood"),
                 C("d8b078"))
 
@@ -318,11 +323,12 @@ def spielzeug():
 BAUBLE_COLS = ["a8161d", "d8b048", "1d3a78", "e8e4dc", "1f5a3a", "8a2a6a", "c0c4c8", "e07a2a"]
 
 
-def bauble(m, M, r, col, shiny=True):
-    n, rings = seg(10, 6), seg(6, 4)
+def bauble(m, M, r, col, shiny=True, loop=True):
+    n, rings = seg(8, 6), seg(5, 4)
     m.sphere(r, n, rings, "sw_metal_polish" if shiny else "sw_satin", M @ T(0, 0, -r), col, "glaze" if not shiny else "atlas")
-    m.cyl(r * 0.28, r * 0.25, r * 0.28, 8, "sw_metal", M @ T(0, 0, -0.004), C("d8c080"))
-    m.torus(r * 0.15, 0.0012, 8, 3, "sw_metal", M @ T(0, 0, r * 0.3, rx=math.pi / 2), C("d8c080"))
+    m.cyl(r * 0.28, r * 0.25, r * 0.28, 6, "sw_metal", M @ T(0, 0, -0.004), C("d8c080"), caps=False)
+    if loop and not vlib.lite():
+        m.torus(r * 0.15, 0.0012, 6, 3, "sw_metal", M @ T(0, 0, r * 0.3, rx=math.pi / 2), C("d8c080"))
 
 
 def schmuck():
@@ -337,6 +343,8 @@ def schmuck():
             # straw star
             Ms = T(p.x, p.y, p.z - 0.06, rx=math.pi / 2, ry=rng.uniform(-0.3, 0.3))
             for k in range(4):
+                if vlib.lite() and k % 2:
+                    continue
                 sp = star_poly(0.06, 0.012, 4, rot=k * math.pi / 8)
                 m.extrude(sp, 0.002, Ms @ T(0, 0, k * 0.002), "straw", "straw", C("e8c880"))
         elif i % 4 == 1:
@@ -352,14 +360,16 @@ def schmuck():
         Mt = T(tx, 0.0, 0)
         m.box((0.44, 0.3, 0.035), Mt @ T(0, 0, 0.0175), "kraft", C("d8c8a8"))
         for k in range(12):
+            if vlib.lite() and (k + k // 4) % 2:
+                continue
             cx, cy = -0.165 + (k % 4) * 0.11, -0.1 + (k // 4) * 0.1
             r = 0.035 if t != 2 else 0.04
             bauble(m, Mt @ T(cx, cy, 0.035 + 2 * r - 0.008, rx=rng.uniform(-0.4, 0.4), ry=rng.uniform(-0.4, 0.4)),
-                   r, C(cols[(k + t) % len(cols)]), shiny=(k % 5 != 2))
+                   r, C(cols[(k + t) % len(cols)]), shiny=(k % 5 != 2), loop=False)
     # a glass tree-top spire
     Mp = T(0.9, 0.02, 0)
     m.lathe([(0.0, 0.0), (0.03, 0.0), (0.03, 0.02), (0.012, 0.04), (0.035, 0.09), (0.012, 0.13), (0.004, 0.3),
-             (0.0, 0.31)], seg(16, 8), "sw_metal_polish", Mp, C("a8161d"))
+             (0.0, 0.31)], seg(12, 6), "sw_metal_polish", Mp, C("a8161d"))
     s.finish()
     return s
 
@@ -425,7 +435,7 @@ def griddle(m, M, with_crepe=True):
     m.box((0.44, 0.44, 0.1), M @ T(0, 0, 0.05), "steel", WHITE)
     m.cyl(0.2, 0.2, 0.012, n, vlib.RW("iron"), M @ T(0, 0, 0.1), C("7a7a7a"), cap_region="iron")
     m.torus(0.2, 0.004, n, 4, "iron", M @ T(0, 0, 0.112), C("5a5a5a"))
-    m.cyl(0.012, 0.012, 0.012, 10, "sw_satin", M @ T(0.17, -0.225, 0.05, rx=math.pi / 2), C("1a1a1a"))
+    m.cyl(0.012, 0.012, 0.012, seg(10, 5), "sw_satin", M @ T(0.17, -0.225, 0.05, rx=math.pi / 2), C("1a1a1a"))
     if with_crepe:
         m.lathe([(0.0, 0.0), (0.16, 0.0), (0.175, -0.001)], n, "crepe", M @ T(0, 0, 0.1125), WHITE, v_by="len")
         m.disc(0.176, n, "crepe", M @ T(0, 0, 0.1128), WHITE, "atlas")
@@ -439,7 +449,7 @@ def crepes():
     # batter on the second griddle being spread with the wooden rake
     m.disc(0.12, seg(24, 12), "sw_wet", T(-0.28, 0.0, 0.1128), C("f0dca0"), "liquid")
     m.box((0.02, 0.16, 0.006), T(-0.24, 0.02, 0.118, rz=0.5), vlib.RW("wood"), C("c8a070"))
-    m.cyl(0.006, 0.006, 0.14, 6, vlib.RW("wood"), T(-0.24, 0.02, 0.12, ry=math.pi / 2 - 0.3, rz=0.5), C("c8a070"))
+    m.cyl(0.006, 0.006, 0.14, 5, vlib.RW("wood"), T(-0.24, 0.02, 0.12, ry=math.pi / 2 - 0.3, rz=0.5), C("c8a070"))
     # batter bowl with ladle, a jar of hazelnut spread, sugar shaker, a plate of folded crêpes
     Mb = T(0.12, 0.05, 0)
     m.lathe([(0.0, 0.0), (0.06, 0.0), (0.1, 0.06), (0.11, 0.09), (0.105, 0.09), (0.095, 0.06), (0.0, 0.01)],
@@ -447,25 +457,25 @@ def crepes():
     m.disc(0.095, seg(20, 10), "sw_wet", Mb @ T(0, 0, 0.07), C("f0dca0"), "liquid")
     m.tube([(0.0, 0.0, 0.06), (0.03, 0.02, 0.1), (0.09, 0.06, 0.2)], 0.005, 5, "steel", Mb, WHITE)
     G.jar(m, T(0.34, 0.12, 0), "jar_orange", C("3a1a0a"), "sw_wet", h=0.1, r=0.04, lid=C("d8b048"))
-    m.lathe([(0.0, 0.0), (0.03, 0.0), (0.03, 0.09), (0.02, 0.12), (0.0, 0.125)], 12, "sw_vgloss", T(0.44, 0.12, 0),
+    m.lathe([(0.0, 0.0), (0.03, 0.0), (0.03, 0.09), (0.02, 0.12), (0.0, 0.125)], seg(12, 5), "sw_vgloss", T(0.44, 0.12, 0),
             C("f0f4f4"), "glass")
-    m.lathe([(0.0, 0.002), (0.027, 0.002), (0.027, 0.06), (0.0, 0.06)], 10, "wax", T(0.44, 0.12, 0), C("fbfaf6"))
+    m.lathe([(0.0, 0.002), (0.027, 0.002), (0.027, 0.06), (0.0, 0.06)], seg(10, 5), "wax", T(0.44, 0.12, 0), C("fbfaf6"))
     m.lathe([(0.0, 0.0), (0.12, 0.0), (0.13, 0.012), (0.0, 0.006)], seg(20, 10), "ceramic", T(0.35, -0.1, 0),
             C("f4f0e8"), "glaze")
-    for k in range(4):
+    for k in range(4 if not vlib.lite() else 2):
         tri = [(0.0, 0.0), (0.16, 0.0), (0.0, 0.16)]
         m.extrude(tri, 0.006, T(0.3 + k * 0.012, -0.16 + k * 0.01, 0.012 + k * 0.006, rz=0.6 + k * 0.2), "crepe",
                   "crepe", WHITE)
     # paper cones for crêpes to go
-    for k in range(5):
-        m.lathe([(0.004, 0.0), (0.04, 0.17)], 10, "paper", T(0.72 + k * 0.06, 0.12, 0), C("f4f0e8"))
+    for k in range(5 if not vlib.lite() else 2):
+        m.lathe([(0.004, 0.0), (0.04, 0.17)], seg(10, 5), "paper", T(0.72 + k * 0.06, 0.12, 0), C("f4f0e8"))
     s.finish()
     return s
 
 
 # ------------------------------------------------------------------ Heiße Maroni
 def chestnut(m, M, r=0.016, col=WHITE):
-    n, k = seg(8, 5), seg(4, 3)
+    n, k = seg(7, 5), seg(4, 3)
     prof = []
     for i in range(k + 1):
         a = -math.pi / 2 + math.pi * i / k
@@ -487,7 +497,7 @@ def maroni():
     m.lathe([(0.19, 0.0), (0.19, 0.2)], n, "iron", Md, C("4a4a4a"), arc=TWO_PI * 0.8, u0=-math.pi / 2 + TWO_PI * 0.1)
     m.disc(0.2, n, "iron", Md @ T(0, 0, 0.012), C("3a3a3a"))
     full = vlib.Reg([0.0, 0.0, 1.0, 1.0])
-    for k in range(14 if not vlib.lite() else 6):
+    for k in range(10 if not vlib.lite() else 4):
         a, rr = rng.uniform(0, TWO_PI), 0.16 * math.sqrt(rng.random())
         lump(m, Md @ T(rr * math.cos(a), rr * math.sin(a), 0.03 + rng.uniform(0, 0.02)), rng.uniform(0.025, 0.035), full,
              jit(WHITE, 0.2), "coal_glow", seed=k * 0.7)
@@ -496,14 +506,14 @@ def maroni():
     m.lathe(pan, n, vlib.RW("iron"), Md, C("5a5a5a"))
     m.cyl(0.012, 0.012, 0.3, 8, "iron", Md @ T(0.22, 0, 0.245, ry=math.pi / 2), WHITE)
     m.cyl(0.016, 0.016, 0.12, 8, vlib.RW("wood"), Md @ T(0.5, 0, 0.245, ry=math.pi / 2), C("5a3622"))
-    for k in range(28 if not vlib.lite() else 12):
+    for k in range(24 if not vlib.lite() else 8):
         a, rr = rng.uniform(0, TWO_PI), 0.17 * math.sqrt(rng.random())
         chestnut(m, Md @ T(rr * math.cos(a), rr * math.sin(a), 0.212 + (0.17 - rr) * 0.08,
                            rx=rng.uniform(-0.6, 0.6), ry=rng.uniform(-0.6, 0.6), rz=rng.uniform(0, 6)),
                  rng.uniform(0.014, 0.018), jit(WHITE, 0.1))
     # a basket of roasted chestnuts, paper bags ready to fill, a scoop
     G.bowl(m, T(0.05, 0.0, 0), r=0.14, h=0.06, col=C("8a6a40"))
-    for k in range(14 if not vlib.lite() else 6):
+    for k in range(12 if not vlib.lite() else 4):
         a, rr = rng.uniform(0, TWO_PI), 0.1 * math.sqrt(rng.random())
         chestnut(m, T(0.05 + rr * math.cos(a), rr * math.sin(a), 0.02 + (0.1 - rr) * 0.3,
                       rx=rng.uniform(-0.8, 0.8), rz=rng.uniform(0, 6)), 0.016, jit(WHITE, 0.1))
@@ -542,7 +552,7 @@ def puffer():
     pancake(m, Mp @ T(0, 0, 0.082), 0.042)
     # a steel tray of finished Puffer, applesauce bowl, batter bowl with ladle, paper plates
     m.box((0.36, 0.26, 0.012), T(-0.1, 0.02, 0.006), "steel", WHITE)
-    for k in range(9):
+    for k in range(9 if not vlib.lite() else 5):
         pancake(m, T(-0.2 + (k % 3) * 0.1, -0.07 + (k // 3) * 0.09, 0.012 + (0.009 if k == 4 else 0),
                      rz=rng.uniform(0, 6)), 0.045)
     Ma = T(0.28, 0.05, 0)
@@ -553,8 +563,8 @@ def puffer():
     m.lathe([(0.0, 0.0), (0.1, 0.0), (0.12, 0.14), (0.115, 0.14), (0.0, 0.02)], seg(20, 10), "steel", Mb, WHITE)
     m.disc(0.112, seg(20, 10), "puffer", Mb @ T(0, 0, 0.11), C("f0e0b0"))
     m.tube([(0.0, 0.0, 0.1), (0.05, 0.05, 0.18), (0.1, 0.08, 0.26)], 0.006, 5, "steel", Mb, WHITE)
-    for k in range(10):
-        m.lathe([(0.0, k * 0.004), (0.1, k * 0.004), (0.115, k * 0.004 + 0.012)], seg(18, 10), "paper",
+    for k in range(10 if not vlib.lite() else 3):
+        m.lathe([(0.0, k * 0.004), (0.1, k * 0.004), (0.115, k * 0.004 + 0.012)], seg(18, 8), "paper",
                 T(0.85, -0.05, 0), C("f6f2ea"))
     s.finish()
     return s

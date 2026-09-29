@@ -4,7 +4,12 @@ Owner: carpenter. Other roles may import these modules and may add their own fil
 `blender/lib/<role>_*.py`. The API below is meant to stay stable. New optional arguments
 may be added, but existing names and defaults will not change without a note in the round notes.
 
-Run everything with the team's bpy: `/home/claude/tools/bpy-venv/bin/python your_script.py`.
+Run everything with the team's bpy. On Mac's MacBook Air:
+`NM_DEVICE=METAL NM_THREADS=0 NPM_CONFIG_PREFIX=~/nachtmarkt-tools/npm ~/nachtmarkt-tools/bpy-venv/bin/python your_script.py`
+(on the cloud machine: `/home/claude/tools/bpy-venv/bin/python your_script.py`, CPU). `NM_DEVICE` and
+`NM_THREADS` apply to every Cycles job the library starts: kit bakes, AO bakes and preview renders
+(see `state.configure_cycles`). `NPM_CONFIG_PREFIX` lets `optimize.mjs` find the gltf-transform libraries.
+The AO post-process needs numpy, scipy and Pillow in the bpy environment.
 
 ```python
 import os, sys
@@ -13,7 +18,7 @@ import bpy                      # import bpy before mathutils
 from nmlib import state, geo, mats, carpentry as cp, bake, export, render
 from nmlib.geo import Part
 
-state.reset(seed_value=7, lite_mode=False)   # empty file, Cycles 2 threads, seeded RNG, LOD
+state.reset(seed_value=7, lite_mode=False)   # empty file, Cycles per NM_DEVICE/NM_THREADS, seeded RNG, LOD
 wood = Part("myprop_wood", "wood")            # one Part = one mesh object = one material
 wood.box((0, 0, 0.5), (1.2, 0.14, 0.03), tint="honey")            # a plank, grain along X
 cp.plank_wall(wood, -1, 1, 0.0, 2.0, axis='x', at=0.0, tint="grey")
@@ -35,14 +40,23 @@ turns the one light, neutral wood into pine, honey, oak, dark, grey or soot boar
 
 | key | kind | notes |
 |---|---|---|
-| `wood` | kit, 1 m tile, 1024 px | spruce: growth rings, fibre, knots with ring deflection, cracks, dents, silvering |
+| `wood` | kit, 1 m tile, 1024 px | spruce: growth rings with hard latewood, fibre, resin pores, knots with ring deflection, cracks, dents, silvering |
+| `oak` | kit, 1 m tile, 1024 px | ring-porous oak for counter tops: pore bands, ray flecks, cross-grain scratches, a few mug rings; `hut.OAK_TINT` holds multipliers |
 | `paint` | kit atlas, 8 bands | chipped paint over wood. Bands (`geo.PAINT_BANDS`): `red gold blue white green cream black rauten`. `gold` is metallic. `rauten` is the Bavarian blue-and-white lozenge pattern |
-| `iron` | kit, 0.5 m tile, 512 px | forged iron with rust streaks and soot |
-| `snow bulb_warm bulb_cold wire glass fir brass copper ember ornament_red ornament_gold fabric_* lamp_glass` | simple | flat PBR values (still multiplied by `COLOR_0`) |
+| `iron` | kit, 0.5 m tile, 512 px | forged iron, mid-grey: hammer dents, scattered rust blooms and runs, soot, pitting |
+| `snow bulb_warm bulb_cold wire glass fir brass copper ember ash ornament_red ornament_gold fabric_* lamp_glass` | simple | flat PBR values (still multiplied by `COLOR_0`) |
+
+Metal is 0 wherever a kit's metal is a constant 0 (wood, oak); only gold paint and iron are metallic.
+`mats.KIT_VERSION` is stamped next to the cached bakes, and any script that calls `mats.ensure_kit()`
+rebakes the kit when the version changes. **After a version bump, re-export every asset that uses a
+kit material**, because the glb files embed (or, for the deco kit, reference) copies of the kit maps.
 
 Maps per kit: base colour (sRGB), roughness in G and metal in B, and a tangent normal map.
 No lighting is baked into base colour. Ambient occlusion is baked per asset with
-`bake.bake_ao` into a second UV map. If the AO resolution equals the kit roughness texture's,
+`bake.bake_ao` into a second UV map. The AO atlas is post-processed so it is safe in three.js:
+tiny islands (rivets, letters, bulb sockets) get no texels and point at a light patch, empty texels
+are filled from the nearest island (no black bleeding through mipmaps), and values are remapped to
+`[bake.AO_FLOOR, 1]` (0.32) so no surface goes black under the site's lights. If the AO resolution equals the kit roughness texture's,
 the Blender exporter packs both into one ORM image. Use a different size (the deco kit uses
 512) to keep the kit roughness texture shareable.
 
@@ -51,7 +65,8 @@ Named tints (`geo.TINTS`): `pine honey oak dark walnut grey soot shingle white`,
 ## Modules
 
 ### `state`
-- `reset(seed_value=1, lite_mode=False)`: factory-empty file, Cycles on CPU with 2 threads, seeds `state.rng`, sets the LOD.
+- `reset(seed_value=1, lite_mode=False)`: factory-empty file, Cycles set up by `configure_cycles`, seeds `state.rng`, sets the LOD.
+- `configure_cycles(scene=None)`: device from `NM_DEVICE` (CPU, or METAL/CUDA/OPTIX/HIP/ONEAPI for the GPU) and threads from `NM_THREADS` (0 = all cores, default 2).
 - `lite()`: True while building a `*.lite.glb`. The helpers then drop bevels, shingles become one strip per course, and spheres, text and garlands get fewer segments.
 - `rng`: the only random stream the helpers use. Seed it for repeatable builds.
 - `font(name)`: bundled OFL fonts: `fraktur` (UnifrakturMaguntia), `fraktur_bold` (UnifrakturCook), `fell_sc`, `fell_italic` (IM Fell English), `alegreya_sc` (Alegreya SC ExtraBold).
@@ -62,7 +77,7 @@ Named tints (`geo.TINTS`): `pine honey oak dark walnut grey soot shingle white`,
 Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shading.
 - `shade(p)` → factor or RGB, evaluated per vertex at its world position. Use it for grime near the ground or soot above a grill (see `stalls/hut.grime` and `stalls/bratwurst.soot_shade`).
 - Every primitive accepts `tint=`, `var=` (random per-primitive brightness), `band=` (paint only), `grain=` (0/1/2: local axis the grain runs along, default: the longest) and `uv_off=`.
-- `box(center, size, rot=(0,0,0), bevel=None, segs=1, bevel_segments=1, jitter=0)`: a chamfered board or beam. The default bevel is 4 mm on kit materials, and it is off in lite. `segs` subdivides along the grain so vertex shading can vary along a long plank.
+- `box(center, size, rot=(0,0,0), bevel=None, segs=1, bevel_segments=1, jitter=0, drop=None)`: a chamfered board or beam. The default bevel is 4 mm on kit materials, and it is off in lite. `segs` subdivides along the grain so vertex shading can vary along a long plank; `segs=(nx, ny, nz)` subdivides each local axis (the counter's wear grid). `drop=("-z",)` leaves out faces that are never seen (a shingle's underside).
 - `mbox(M, size, ...)`: the same with any 4x4 matrix. `slab(p0, p1, width, thick, up=)` is a board from p0 to p1.
 - `cyl(center, r1, r2, depth, seg, rot, caps)`, `sphere(center, r, seg, rings, scale, rot)`, `ico(...)`, `torus(center, R, r, seg, tseg, rot, arc)`, `tube(points, radius, tseg)`, `lathe([(r, z), ...], seg, M)`, `loft(rings, closed)`.
 - `shape(outer, holes=[], depth, M, bevel=0)`: extrudes a 2D polygon with cut-outs (stars, hearts, scallops).
@@ -73,14 +88,14 @@ Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shad
 ### `carpentry` (all sizes in metres, front = -Y)
 - Walls: `plank_wall(part, a, b, z0, top, axis, at, pw, th, gap, lean, tint, band, bevel, skip)`, where `top` may be a function (gables). Also `lap_siding(...)` (overlapping horizontal boards), `floor_boards(...)` and `nails(part, pts, normal)`.
 - Roofs: `Slope(eave, along, down, length, a0, a1)` describes one roof plane (right-handed basis, `point(a, s, n)`), and `gable_slopes(W, D, eave_z, ridge_z, ov_eave, ov_gable, ridge_axis)` returns the two planes of a gable. Covering and trim: `roof_deck`, `shingles(part, slope, sw, sh, st, expo, tint)`, `board_roof`, `barge_boards` and `fascia`.
-- `snow_cap(part, slope, thick, lip)`: a lumpy snow blanket with a lip curling over the eave. Put it in a Part named `snow_<n>` (material `snow`).
+- `snow_cap(part, slope, thick=0.05, lip=0.05, cover=0.9, ridge_clear=0.24, patch_scale=1.1)`: thin snow with a lip curling over the eave. A wind-scoured band under the ridge (wandering lower edge) and a few melted patches (`cover` = exact fraction of the slope under snow) let the top courses and some shingles show; the snow edge sinks into the roof instead of ending in a wall. Lite: no patches, coarser grid. Put it in a Part named `snow_<n>` (material `snow`).
 - `valance(part, x0, x1, y, z_top, h, drop, n, style, holes, band, M=None)`: a carved eave board. Styles: `scallop point wave step straight`. Holes: `star circle heart`. Pass `M` to run it along a rake.
 - `sign(board, letters, text, font, center, w, h, board_band, text_band, frame_band, board_shape, text_size, resolution, text_bevel)`: a painted board (`rect arch banner oval`) with raised letters facing -Y.
-- `bulb_string(bulbs, wire, anchors, sag, spacing, bulb_r)`: fairy bulbs on a sagging wire. Use a Part named `bulbs_<n>` with material `bulb_warm` or `bulb_cold`.
+- `bulb_string(bulbs, wire, anchors, sag, spacing, bulb_r, seg=None, rings=None)`: fairy bulbs on a sagging wire (bulb detail 7x5 by default, 5x3 in lite). Use a Part named `bulbs_<n>` with material `bulb_warm` or `bulb_cold`.
 - `fir_garland(fir, beads, a, b, sag, radius)`: fir rope with baubles. `beads` is `{"ornament_red": Part, "ornament_gold": Part}`.
 
 ### `bake`
-- `bake_ao(objs, name, res=1024, samples=24, distance=0.5, ground=True, hide=[])` adds UV map `AO` to every kit-material object and packs them into one layout. It then bakes Cycles AO (with a temporary ground plane) and wires the result into the `glTF Material Output` group, so the exporter writes `occlusionTexture` with `texCoord: 1`. Hide snow caps and bulbs from the bake.
+- `bake_ao(objs, name, res=1024, samples=24, distance=0.6, ground=True, hide=[], margin_px=None, tiny_area=0.0006, floor=0.32)` adds UV map `AO` to every kit-material object and packs them into one layout (islands under `tiny_area` m² get no texels). It then bakes Cycles AO (with a temporary ground plane), post-processes it (see "How materials work") and wires the result into the `glTF Material Output` group, so the exporter writes `occlusionTexture` with `texCoord: 1`. Hide snow caps and bulbs from the bake. It prints island coverage and the mean before and after the remap.
 
 ### `export`
 - `empty(name, loc, rot=(0,0,0), look_at=None)`: a named empty in the export collection. It raises an error if the name is already taken.
@@ -89,7 +104,15 @@ Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shad
 
 ### `render`
 - `night_scene()`: night world, moon, sky fill and trodden-snow ground. It is render-only and goes in the Env collection.
-- `add_light(...)`, `lights_at_markers(energy)` (a point light at each `light_*`), `camera(loc, target, lens, dof)`, `render(png, samples=48, res=(1280,720), jpeg=...)` with 2 threads and OIDN, `contact_sheet(items, out_jpg)`.
+- `add_light(name, kind, loc, energy, color, size, rot, spot_size=None, spot_blend=None, size_y=None, target=None)` (`target` aims a spot/area light), `lights_at_markers(energy)` (a point light at each `light_*`), `camera(loc, target, lens, dof)`, `render(png, samples=48, res=(1280,720), jpeg=...)` on the `NM_DEVICE` device with OIDN, `contact_sheet(items, out_jpg)`.
+
+## Checking a stall in the browser
+
+`node blender/stalls/web/shoot.mjs [--only stall_bier] [--ao both|on|off] [--lite] [--out dir]` loads a
+glb from `site/public/models` under the lighting designer's `site/src/lighting` module (Vite dev
+server on port 4395, `three` from `site/node_modules`, so run `npm ci` in `site/` first) and saves a
+screenshot framed like the Cycles preview, with and without the AO map. Set `PLAYWRIGHT_MODULE` to a
+Playwright `index.mjs` if Playwright is not installed next to the script. On macOS it uses the GPU.
 
 ## Command-line tools (plain Node / Python, no bpy)
 
@@ -99,8 +122,8 @@ Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shad
 
 ## Stall scripts built on this
 
-`blender/stalls/hut.py` is a parametric market hut (carcass, counter at exactly 1.05 m, shelves,
-roof, bulbs, snow, markers). `blender/stalls/pipeline.py` runs full build → AO → export → lite
+`blender/stalls/hut.py` is a parametric market hut (carcass, oak counter at exactly 1.05 m with a
+worn front edge from `hut.counter_wear`, shelves, roof, bulbs, snow, markers). `blender/stalls/pipeline.py` runs full build → AO → export → lite
 build → AO → export → Cycles preview. The four section stalls and `deco.py` show how to use them.
 
 ## Fonts

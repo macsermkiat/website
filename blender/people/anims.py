@@ -9,6 +9,7 @@ Vendors (people_vendor_*): serve (hand a mug across the counter), wipe (idle beh
 All clips loop: pose(0) == pose(duration).
 """
 import math
+import zlib
 
 from mathutils import Vector, Matrix, Quaternion
 
@@ -510,7 +511,8 @@ SAX, BASS, DRUMS = _instrument_targets()
 
 
 def crowd_clips(fig):
-    c = Clips(fig, seed=(hash(fig.spec["name"]) % 628) / 100.0)
+    # crc32, not hash(): str hashes are salted per process, so hash() gave every build different phases
+    c = Clips(fig, seed=(zlib.crc32(fig.spec["name"].encode()) % 628) / 100.0)
     out = [
         ("idle", lambda t: c.idle(t, True), 6.0),
         ("walk", lambda t: c.walk(t, True), 1.2),

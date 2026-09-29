@@ -50,11 +50,8 @@ def half_barrel(staves, hoops, cx, cy, lite):
                     tint=state.rng.choice(["oak", "oak", "honey", "dark"]), var=0.12)
     for z in (0.1, 0.32, 0.7, 0.9):
         r = R_END + (R_BELLY - R_END) * math.sin(math.pi * (z - 0.02) / BARREL_H) + 0.006
-        hoops.torus((cx, cy, z), r, 0.009 if lite else 0.007, seg=10 if lite else 18,
+        hoops.torus((cx, cy, z), r, 0.009, seg=10 if lite else 16,
                     tseg=4, rot=(0, 0, math.pi), arc=math.pi)
-        # hoop is a flat band: add a thin ring to broaden it
-        if not lite:
-            hoops.torus((cx, cy, z + 0.018), r, 0.006, seg=18, tseg=4, rot=(0, 0, math.pi), arc=math.pi)
 
 
 def pennants(P, a, b, z, n, lite, drop=0.3, width=0.2):
@@ -146,7 +143,7 @@ def build(lite):
 
     # ------------------------------------------------------------ wreath of fir with bulbs in the opening
     cp.fir_garland(h.fir, h.beads, (-W / 2 + 0.1, yF - 0.07, 2.2), (W / 2 - 0.1, yF - 0.07, 2.2), sag=0.1,
-                   radius=0.04, bead_bands=("ornament_gold",))
+                   radius=0.04, bead_bands=("ornament_gold",), bead_every=0.22)
     h.eave_bulbs(sides=True)
     h.interior_bulbs(xs=(-1.2, 0.0, 1.2), z=2.3)
     h.markers(sign_pos=tuple(sign_c + Vector((0, -0.06, 0))),

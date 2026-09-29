@@ -68,12 +68,13 @@ def build_variant(key, lite):
             wall=v["wall"], wall_tint=v["wall_tint"], frame_tint="walnut" if v["wall_tint"] != "walnut" else "dark",
             roof=v["roof"], roof_tint=v["roof_tint"], inner_tint="pine", counter_tint="oak",
             counter_depth=0.5, counter_over=0.2, shelves=(1.4, 1.8), bulb_spacing=0.22,
-            wall_band=v.get("wall_band"), plank_w=0.15, plank_bevel=0.0, shingle_size=(0.22, 0.16))
+            wall_band=v.get("wall_band"), plank_w=0.15, plank_bevel=0.0, shingle_size=(0.26, 0.19),
+            bulb_detail=(6, 4))
     yF = h.yF
     P = h.paint
     trim, accent = v["trim"], v["accent"]
     h.build_carcass()
-    h.build_counter(brackets=3)
+    h.build_counter(brackets=3, grid=0.28)
     h.build_shelves()
     h.build_roof(fascia_band=trim, barge_band=trim)
     h.build_snow()
@@ -108,7 +109,7 @@ def build_variant(key, lite):
                         up=(1, 0, 0))
         tip = hinge + d * L
         cp.bulb_string(h.bulbs, h.wire, [(-(W - 0.3) / 2, tip.y, tip.z - 0.02), (0, tip.y, tip.z - 0.02),
-                                         ((W - 0.3) / 2, tip.y, tip.z - 0.02)], sag=0.03, spacing=0.22)
+                                         ((W - 0.3) / 2, tip.y, tip.z - 0.02)], sag=0.03, spacing=0.22, seg=6, rings=4)
     # small stove pipe for the hot-food stalls
     if v.get("stove"):
         x, y = W / 2 - 0.55, 0.35
@@ -161,7 +162,7 @@ def build_variant(key, lite):
         y = sl.point(0, 0).y - 0.02
         for xa, xb in ((sl.a0 + 0.05, -sw / 2 - 0.05), (sw / 2 + 0.05, sl.a1 - 0.05)):
             cp.bulb_string(h.bulbs, h.wire, [(xa, y, e.z), ((xa + xb) / 2, y, e.z), (xb, y, e.z)], sag=0.04,
-                           spacing=0.22)
+                           spacing=0.22, seg=6, rings=4)
     h.interior_bulbs(xs=(-0.6, 0.6), z=2.3)
     h.markers(sign_pos=tuple(sign_c + Vector((0, -0.05, 0))), lights=[(0, -0.2, 2.3)], cam_dist=3.2, cam_h=1.7)
     return h.finish()
@@ -195,12 +196,12 @@ def main():
             render.lights_at_markers(energy=120)
             render.add_light("env_fill", 'AREA', (0, 0.1, 2.35), 90, size=1.8)
             for p, t in lamp_spots:
-                render.add_light("env_signlamp", 'SPOT', p, 24, size=0.1, spot_size=math.radians(110),
+                render.add_light("env_signlamp", 'SPOT', p, 60, size=0.1, spot_size=math.radians(110),
                                  spot_blend=1.0, target=t)
             render.add_light("env_neighbour", 'POINT', (-4.2, -1.4, 2.6), 120, size=0.6)
-            render.camera((-2.9, -5.0, 1.85), (0.05, -0.45, 2.05), lens=28)
+            render.camera((-3.1, -5.4, 1.9), (0.05, -0.45, 2.25), lens=28)
             png = os.path.join(state.OUT_DIR, "renders", f"{name}.png")
-            render.render(png, samples=min(a.samples, 32), res=(840, 600))
+            render.render(png, samples=a.samples, res=(840, 600))
             renders.append((png, VARIANTS[key]["text"]))
     if renders and not only:
         os.makedirs(pipeline.REVIEW, exist_ok=True)

@@ -72,98 +72,127 @@ class Group:
 
 
 # =================================================================== tenor saxophone
+# Tenor proportions: a 0.64 m straight body from the neck socket to the bow, the bell rim at 54 %
+# of the body height, a 15 cm bell, and a neck with the tenor's rise-and-hump.
+SAX_TOP, SAX_BOW = 0.78, 0.14
+SAX_R_TOP, SAX_R_BOW = 0.0145, 0.041
+
+
 def sax_body_r(z):
-    return 0.044 + (0.016 - 0.044) * (z - 0.13) / (0.64 - 0.13)
+    t = min(max((z - SAX_BOW) / (SAX_TOP - SAX_BOW), 0.0), 1.0)
+    return SAX_R_BOW + (SAX_R_TOP - SAX_R_BOW) * t
 
 
 def build_sax(lite):
     # sax frame: body axis +Z, bell and pearls toward -Y (away from the player)
-    tip = Vector((0, 0.275, 0.79))
+    tip = Vector((0, 0.272, 0.896))
     beta = 0.36
     Mh = Ry(beta)
     t = Mh @ tip
     M = Matrix.Translation(Vector((0.0, -0.10, 1.53)) - t) @ Mh
-    strap = M @ Vector((0, 0.05, 0.52))
+    strap = M @ Vector((0, 0.04, 0.60))
     g = Group("sax", "act_sax", pivot=strap, M=M)
     br, iv, eb, ch = g["saxbrass"], g["ivory"], g["ebony"], g["chrome"]
-    n = 8 if lite else 16
-    # one continuous tube: body, bow and bell
-    ctrl = [(0, 0, 0.645, 0.0165), (0, 0, 0.52, 0.024), (0, 0, 0.38, 0.031), (0, 0, 0.24, 0.038),
-            (0, 0, 0.14, 0.044), (0, -0.018, 0.078, 0.046), (0, -0.07, 0.056, 0.047), (0, -0.124, 0.074, 0.048),
-            (0, -0.146, 0.13, 0.05), (0, -0.152, 0.25, 0.052), (0, -0.158, 0.35, 0.056), (0, -0.163, 0.415, 0.064),
-            (0, -0.168, 0.448, 0.076), (0, -0.175, 0.468, 0.092)]
-    pipe(br, ctrl, n=n, per=1 if lite else 3, side=(1, 0, 0))
-    br.torus((0, -0.176, 0.469), 0.092, 0.006, seg=n + 4, tseg=4 if lite else 6, rot=(0.05, 0, 0))
-    # neck (crook), cork, mouthpiece, ligature, reed
-    neck = [(0, 0, 0.64, 0.0168), (0, 0.004, 0.68, 0.016), (0, 0.03, 0.74, 0.0145), (0, 0.08, 0.782, 0.0128),
-            (0, 0.14, 0.797, 0.0115), (0, 0.20, 0.797, 0.0105)]
-    pipe(br, neck, n=6 if lite else 12, per=1 if lite else 3, side=(1, 0, 0))
-    rod(g["leather"], (0, 0.195, 0.797), (0, 0.222, 0.796), 0.0108, seg=8)
-    rod(eb, (0, 0.215, 0.796), (0, 0.275, 0.790), 0.0145, r2=0.009, seg=10, caps=True)
-    rod(ch, (0, 0.226, 0.795), (0, 0.24, 0.795), 0.0155, seg=10)
+    lea = g["leather"]
+    n = 10 if lite else 16
+    # one continuous tube: body, bow, bell tube and a short flare
+    ctrl = [(0, 0, SAX_TOP, SAX_R_TOP), (0, 0, 0.66, 0.0195), (0, 0, 0.52, 0.0253), (0, 0, 0.38, 0.031),
+            (0, 0, 0.24, 0.0366), (0, 0, SAX_BOW, SAX_R_BOW), (0, -0.012, 0.075, 0.043), (0, -0.065, 0.047, 0.044),
+            (0, -0.118, 0.075, 0.045), (0, -0.131, 0.14, 0.047), (0, -0.134, 0.24, 0.050), (0, -0.137, 0.31, 0.054),
+            (0, -0.141, 0.36, 0.059), (0, -0.144, 0.39, 0.064), (0, -0.147, 0.408, 0.069), (0, -0.150, 0.42, 0.075)]
+    pipe(br, ctrl, n=n, per=1 if lite else 2, side=(1, 0, 0))
+    br.torus((0, -0.1505, 0.4215), 0.075, 0.0045, seg=n + 6, tseg=4 if lite else 6, rot=(0.06, 0, 0))
+    # bow guard band and the ring where body meets bow
     if not lite:
-        g["canvas"].box((0, 0.25, 0.782), (0.011, 0.055, 0.002), rot=(0.08, 0, 0), tint=(0.85, 0.72, 0.45))
-        # octave key along the top of the neck
-        rod(br, (0, 0.03, 0.765), (0, 0.13, 0.812), 0.0028, seg=4)
-        rod(br, (0, 0.13, 0.812), (0, 0.15, 0.813), 0.006, seg=6, caps=True)
+        br.torus((0, 0, 0.15), sax_body_r(0.15) + 0.002, 0.003, seg=16, tseg=4)
+        br.torus((0, -0.131, 0.15), 0.048, 0.003, seg=16, tseg=4)
+    # neck (crook) with the tenor's hump, cork, mouthpiece, ligature, reed
+    neck = [(0, 0, 0.775, 0.0148), (0, 0.004, 0.82, 0.0142), (0, 0.025, 0.872, 0.013), (0, 0.07, 0.903, 0.0118),
+            (0, 0.13, 0.911, 0.0106), (0, 0.185, 0.905, 0.0097)]
+    pipe(br, neck, n=6 if lite else 12, per=1 if lite else 3, side=(1, 0, 0))
+    br.torus((0, 0, 0.772), 0.0165, 0.0025, seg=12, tseg=4)                       # neck receiver
+    rod(lea, (0, 0.18, 0.906), (0, 0.206, 0.9035), 0.0108, seg=8, tint=(0.62, 0.48, 0.32))    # cork
+    rod(eb, (0, 0.20, 0.904), (0, 0.272, 0.896), 0.0152, r2=0.0092, seg=12, caps=True)
+    rod(ch, (0, 0.214, 0.9025), (0, 0.229, 0.901), 0.0162, seg=12)
+    if not lite:
+        g["canvas"].box((0, 0.246, 0.886), (0.012, 0.058, 0.002), rot=(0.1, 0, 0), tint=(0.85, 0.72, 0.45))
+        # octave key along the top of the neck, with its pad cup and ring
+        rod(br, (0, 0.03, 0.887), (0, 0.118, 0.924), 0.0026, seg=4)
+        rod(br, (0, 0.118, 0.924), (0, 0.131, 0.926), 0.0065, seg=8, caps=True)
+        br.torus((0, 0.045, 0.894), 0.006, 0.0018, seg=8, tseg=3, rot=(math.pi / 2, 0, 0))
 
     def surf(z, a, off=0.0):
         r = sax_body_r(z) + off
         return Vector((r * math.cos(a), r * math.sin(a), z))
 
-    def cup(z, a, rad, h=0.01):
-        p = surf(z, a, 0.002)
+    def cup(z, a, rad, rod_a=None):
+        """A tone hole with its chimney, the pad and a flat domed cup lying on the body; an arm
+        joins it to the hinge rod at angle rod_a."""
+        p = surf(z, a)
         d = Vector((math.cos(a), math.sin(a), 0))
-        rod(br, p, p + d * h, rad, seg=8 if lite else 12, caps=True)
+        rod(br, p - d * 0.012, p + d * 0.004, rad * 0.82, seg=8 if lite else 12)           # chimney
         if not lite:
-            rod(g["leather"], p + d * (h - 0.001), p + d * (h + 0.0015), rad * 0.8, seg=8, caps=True,
-                tint=(0.7, 0.6, 0.45))
-        return p + d * h
+            rod(lea, p + d * 0.0035, p + d * 0.0058, rad * 0.97, seg=12, tint=(0.62, 0.50, 0.36))   # pad edge
+        rod(br, p + d * 0.0055, p + d * 0.0105, rad, seg=8 if lite else 12)                  # cup wall
+        br.sphere(p + d * 0.0105, rad, seg=8 if lite else 12, rings=2 if lite else 3, scale=(1, 1, 0.16),
+                  rot=(0, math.pi / 2, a))                                                    # domed top
+        if rod_a is not None and not lite:
+            rod(br, p + d * 0.009, surf(z, rod_a, 0.012), 0.0022, seg=4)
+        return p + d * 0.012
 
     front = -math.pi / 2
-    # left-hand stack (B, A, G) and right-hand stack (F, E, D) with pearl touches
-    for zs, a0 in (((0.585, 0.545, 0.505), front), ((0.37, 0.33, 0.29), front - 0.55)):
-        for z in zs:
-            top = cup(z, a0 + 0.35, 0.015 + 0.012 * (0.6 - z))
-            pearl = surf(z - 0.012, a0, 0.028)
-            rod(br, top, pearl, 0.0022, seg=4)
-            iv.sphere(pearl, 0.0075, seg=5 if lite else 8, rings=3 if lite else 6, scale=(1, 1, 0.55),
-                      rot=(0, math.pi / 2, a0))
-            if not lite:
-                br.sphere(pearl - Vector((0, 0, 0.002)), 0.0095, seg=6, rings=4, scale=(1, 1, 0.4))
-    # side and trill cups around the body
-    cups = [(0.60, 0.9), (0.47, 1.4), (0.43, -0.3), (0.40, 0.7), (0.25, -0.2), (0.22, 1.1), (0.19, -2.4),
-            (0.16, 0.4)]
-    for z, a in cups[:4] if lite else cups:
-        cup(z, a, 0.013 + 0.02 * (0.62 - z))
-    # palm keys near the top on the player's left
-    for i, z in enumerate((0.60, 0.625, 0.648)):
-        p = surf(z, 0.25 + 0.2 * i, 0.02)
-        br.box(p, (0.012, 0.022, 0.006), rot=(0, 0.3, 0.25 + 0.2 * i))
-        iv.sphere(p + Vector((0, 0, 0.004)), 0.006, seg=6, rings=4, scale=(1, 1, 0.5))
-    # key rods along the body with posts
+    rods = (front + 0.95, front - 1.05, 0.55)
+    # hinge rods along the body on posts
     if not lite:
-        for a in (front + 0.75, front - 1.0, 0.6):
-            p0, p1 = surf(0.2, a, 0.013), surf(0.6, a, 0.013)
-            rod(br, p0, p1, 0.0024, seg=5)
-            for z in (0.2, 0.4, 0.6):
-                rod(br, surf(z, a, 0.0), surf(z, a, 0.015), 0.003, seg=5)
-        # low C / Eb near the bow, low B / Bb on the bell tube, with wire guards
-        for z, a, r in ((0.16, front - 0.3, 0.028), (0.19, front + 0.9, 0.022)):
-            top = cup(z, a, r, h=0.012)
-            d = Vector((math.cos(a), math.sin(a), 0))
-            gp = [surf(z - 0.045, a, 0.006), surf(z - 0.04, a, 0.04), surf(z + 0.04, a, 0.04), surf(z + 0.045, a, 0.006)]
+        for a, z0, z1 in ((rods[0], 0.27, 0.72), (rods[1], 0.22, 0.70), (rods[2], 0.30, 0.74)):
+            rod(br, surf(z0, a, 0.012), surf(z1, a, 0.012), 0.0024, seg=5)
+            for z in (z0, (z0 + z1) / 2, z1):
+                rod(br, surf(z, a, 0.0), surf(z, a, 0.0125), 0.0032, seg=5)
+                br.sphere(surf(z, a, 0.013), 0.004, seg=6, rings=4)
+    # left-hand stack (B, A, G) and right-hand stack (F, E, D): cups on the front, pearls on arms
+    for zs, a0, ra in (((0.665, 0.615, 0.565), front, rods[0]), ((0.42, 0.37, 0.32), front - 0.5, rods[1])):
+        for z in zs:
+            rad = 0.62 * sax_body_r(z) + 0.004
+            top = cup(z, a0 + 0.42, rad, ra)
+            pearl = surf(z - 0.014, a0 - 0.1, 0.026)
+            rod(br, top, pearl, 0.0024, seg=4)
+            iv.sphere(pearl, 0.0068, seg=6 if lite else 10, rings=4 if lite else 6, scale=(1, 1, 0.55),
+                      rot=(0, math.pi / 2, a0 - 0.1))
+            if not lite:
+                br.sphere(pearl - Vector((0, 0, 0.0015)), 0.0088, seg=10, rings=4, scale=(1, 1, 0.42),
+                          rot=(0, math.pi / 2, a0 - 0.1))
+    # side, trill and auxiliary cups round the body
+    cups = [(0.73, 0.95, rods[2]), (0.59, 1.45, rods[2]), (0.535, -0.35, rods[0]), (0.49, 0.75, rods[2]),
+            (0.29, -0.25, rods[1]), (0.255, 1.15, rods[2]), (0.21, -2.35, rods[1]), (0.185, 0.45, rods[2])]
+    for z, a, ra in cups[::2] if lite else cups:
+        cup(z, a, 0.55 * sax_body_r(z) + 0.004, ra)
+    # palm keys near the top on the player's left
+    for i, z in enumerate((0.705, 0.73, 0.755)):
+        p = surf(z, 0.25 + 0.2 * i, 0.02)
+        br.box(p, (0.012, 0.024, 0.006), rot=(0, 0.3, 0.25 + 0.2 * i))
+        iv.sphere(p + Vector((0, 0, 0.004)), 0.0062, seg=6, rings=4, scale=(1, 1, 0.5))
+    if not lite:
+        # low C and E-flat on the front near the bow, with wire guards
+        for z, a, r in ((0.175, front - 0.3, 0.030), (0.205, front + 0.9, 0.024)):
+            cup(z, a, r, None)
+            gp = [surf(z - 0.05, a, 0.006), surf(z - 0.045, a, 0.042), surf(z + 0.045, a, 0.042), surf(z + 0.05, a, 0.006)]
             br.tube(gp, 0.0022, tseg=4)
-        for z in (0.22, 0.31):
-            c = Vector((0, -0.152, z))
-            a = math.pi
+        # low B and B-flat on the bell tube, facing the player's left
+        for z in (0.23, 0.31):
+            c = Vector((0, -0.134 - 0.003 * (z - 0.23) / 0.08, z))
             d = Vector((-1, 0, 0))
-            p = c + d * (0.054 + 0.002)
-            rod(br, p, p + d * 0.012, 0.028, seg=12, caps=True)
-        # thumb rest, thumb hook and strap ring on the back
-        rod(br, surf(0.34, math.pi / 2, 0), surf(0.34, math.pi / 2, 0.025), 0.004, seg=5)
-        br.box(surf(0.335, math.pi / 2, 0.028), (0.03, 0.006, 0.012))
-        br.torus(surf(0.52, math.pi / 2, 0.012), 0.008, 0.0022, seg=10, tseg=4, rot=(0, math.pi / 2, 0))
+            rbt = 0.050 + 0.004 * (z - 0.23) / 0.08
+            p = c + d * rbt
+            rod(br, p - d * 0.01, p + d * 0.004, 0.024, seg=14)
+            rod(br, p + d * 0.0055, p + d * 0.011, 0.029, seg=14)
+            br.sphere(p + d * 0.011, 0.029, seg=14, rings=5, scale=(1, 1, 0.16), rot=(0, math.pi / 2, math.pi))
+            rod(br, p + d * 0.009, surf(z, math.pi * 0.9, 0.012), 0.0024, seg=4)
+        # thumb rest and octave thumb key (left hand), thumb hook (right hand), strap ring
+        rod(br, surf(0.63, math.pi / 2, 0), surf(0.63, math.pi / 2, 0.014), 0.007, seg=10, caps=True)
+        iv.sphere(surf(0.66, math.pi / 2, 0.016), 0.006, seg=8, rings=5, scale=(1, 1, 0.5), rot=(math.pi / 2, 0, 0))
+        rod(br, surf(0.43, math.pi / 2, 0), surf(0.43, math.pi / 2, 0.025), 0.004, seg=5)
+        br.box(surf(0.425, math.pi / 2, 0.028), (0.03, 0.006, 0.012))
+        br.torus(surf(0.60, math.pi / 2, 0.012), 0.008, 0.0022, seg=10, tseg=4, rot=(0, math.pi / 2, 0))
     return [g]
 
 
@@ -241,16 +270,18 @@ def build_piano(lite):
     wd.box((0, yB + 0.015, H / 2), (W - 0.06, 0.03, H), tint=(0.28, 0.2, 0.14))
     wd.box((0, yF + 0.015, 1.24), (W - 0.09, 0.03, 0.06), tint=WAL)
     # brass candle sconces with lit candles
-    for sx in (() if lite else (-1, 1)):
+    # (the lite piano keeps them too, with fewer segments: the lit candles are part of the scene)
+    cs = 6 if lite else 10
+    for sx in (-1, 1):
         base = Vector((sx * 0.6, yF + 0.035, 1.02))
-        brass.cyl(base, 0.035, 0.035, 0.012, seg=10, rot=(math.pi / 2, 0, 0))
+        brass.cyl(base, 0.035, 0.035, 0.012, seg=cs, rot=(math.pi / 2, 0, 0))
         arm = [base + Vector((0, 0.01, 0)), base + Vector((0, 0.07, -0.02)), base + Vector((0, 0.13, 0.02))]
-        brass.tube(arm, 0.006, tseg=5)
+        brass.tube(arm, 0.006, tseg=4 if lite else 5)
         cupc = base + Vector((0, 0.13, 0.03))
-        brass.lathe([(0.001, -0.01), (0.03, 0.0), (0.035, 0.01), (0.015, 0.012), (0.014, 0.03)], seg=10,
+        brass.lathe([(0.001, -0.01), (0.03, 0.0), (0.035, 0.01), (0.015, 0.012), (0.014, 0.03)], seg=cs,
                     M=Matrix.Translation(cupc))
-        g["ivory"].cyl(cupc + Vector((0, 0, 0.09)), 0.011, 0.011, 0.12, seg=8, tint=(1.0, 0.97, 0.9))
-        g["bulb_warm"].sphere(cupc + Vector((0, 0, 0.165)), 0.009, seg=6, rings=5, scale=(1, 1, 1.9))
+        g["ivory"].cyl(cupc + Vector((0, 0, 0.09)), 0.011, 0.011, 0.12, seg=cs, tint=(1.0, 0.97, 0.9))
+        g["bulb_warm"].sphere(cupc + Vector((0, 0, 0.165)), 0.009, seg=cs, rings=4 if lite else 5, scale=(1, 1, 1.9))
     # bench
     seat_z = 0.50
     wd.box((0, 0.02, seat_z - 0.03), (0.92, 0.36, 0.05), tint=WAL)
@@ -304,7 +335,7 @@ def build_bass(lite):
     wd = g["wood"]
     VARN = (0.62, 0.30, 0.12)
     eb = g["ebony"]
-    ring = bass_outline(28 if lite else 44)
+    ring = bass_outline(18 if lite else 44)
     zc = 0.70
 
     def plate(s, y):
@@ -313,6 +344,8 @@ def build_bass(lite):
     front = [(1.0, -0.10), (0.86, -0.10 - arch * (1 - 0.86 ** 2)), (0.62, -0.10 - arch * (1 - 0.62 ** 2)),
              (0.36, -0.10 - arch * (1 - 0.36 ** 2))]
     back = [(0.4, 0.108), (0.75, 0.104), (1.0, 0.10)]
+    if lite:
+        back, front = back[1:], front[::2]
     rings = [plate(s, y) for s, y in back] + [plate(s, y) for s, y in front]
     wd.loft(rings, closed=True, cap_start=True, cap_end=True, smooth=True, grain=2, tint=VARN)
     # purfling line and the edge overhang of the top
@@ -323,32 +356,58 @@ def build_bass(lite):
         w = max(bass_width(z), 1e-3)
         s = min(1.0, abs(x) / w)
         return -0.10 - arch * (1 - s * s)
-    # f-holes: slotted S curves with round eyes
+    # f-holes: an italic f each. The upper eye sits toward the centre line and the lower eye
+    # toward the edge; the stem is an S that swells into a wing below the upper eye and above the
+    # lower eye, with the two nicks cut at its waist. Each is laid on the arch of the top.
     hole = g["hole"]
+    path_c = [(-0.022, 0.848), (-0.012, 0.826), (-0.002, 0.795), (0.006, 0.76), (0.011, 0.725),
+              (0.014, 0.70), (0.018, 0.672), (0.024, 0.64), (0.033, 0.61), (0.042, 0.588), (0.050, 0.575)]
+    path = rc.smooth_path(path_c, 1 if lite else 3)
+    m = len(path)
+
+    def wdt(i):
+        t = i / (m - 1)
+        wing = 0.0045 * math.exp(-((t - 0.24) / 0.1) ** 2) + 0.0055 * math.exp(-((t - 0.76) / 0.1) ** 2)
+        return 0.0026 + 0.0022 * math.sin(math.pi * t) + wing
     for sx in (-1, 1):
-        pts = [(0.0, 0.84), (0.014, 0.81), (0.022, 0.76), (0.01, 0.70), (-0.012, 0.645), (-0.02, 0.595), (-0.01, 0.565)]
-        path = rc.smooth_path(pts, 1 if lite else 3)
         x0 = sx * 0.125
         band_l, band_r = [], []
         for i, (dx, z) in enumerate(path):
             a = path[max(i - 1, 0)]
-            b = path[min(i + 1, len(path) - 1)]
+            b = path[min(i + 1, m - 1)]
             tx, tz = b[0] - a[0], b[1] - a[1]
             ln = math.hypot(tx, tz) or 1
             nx, nz = -tz / ln, tx / ln
-            wdt = 0.0065 if 2 < i < len(path) - 3 else 0.004
-            band_l.append((x0 + sx * dx + nx * wdt * sx, z + nz * wdt))
-            band_r.append((x0 + sx * dx - nx * wdt * sx, z - nz * wdt))
+            w = wdt(i)
+            band_l.append((x0 + sx * (dx + nx * w), z + nz * w))
+            band_r.append((x0 + sx * (dx - nx * w), z - nz * w))
         poly = band_l + list(reversed(band_r))
-        # orient polygon for the shape fill (any winding works for curves)
-        yy = top_y(x0, 0.70) - 0.001
-        M = basis((1, 0, 0), (0, 0, 1), (0, -1, 0), (0, yy, 0))
-        hole.shape(poly, depth=0.004, M=M)
-        for (dx, z) in (pts[0], pts[-1]):
-            hole.shape(geo.circle_polygon(x0 + sx * dx, z, 0.013, 6 if lite else 10), depth=0.004, M=M)
+        slope = 0.13 * sx                     # the top plate's arch across the f-hole
+        yy = top_y(x0, 0.70) - 0.0005
+        M = Matrix.Translation((x0, yy, 0)) @ Rz(slope) @ Matrix.Translation((-x0, 0, 0)) @ \
+            basis((1, 0, 0), (0, 0, 1), (0, -1, 0))
+        hole.shape(poly, depth=0.005, M=M)
+        seg = 8 if lite else 14
+        (ux, uz), (lx, lz) = path_c[0], path_c[-1]
+        hole.shape(geo.circle_polygon(x0 + sx * ux, uz, 0.0105, seg), depth=0.005, M=M)
+        hole.shape(geo.circle_polygon(x0 + sx * lx, lz, 0.0135, seg), depth=0.005, M=M)
+        if not lite:
+            # the nicks at the waist, one each side
+            k = m // 2
+            dx, z = path[k]
+            a, b = path[k - 1], path[k + 1]
+            tx, tz = b[0] - a[0], b[1] - a[1]
+            ln = math.hypot(tx, tz) or 1
+            nx, nz = -tz / ln, tx / ln
+            for sgn in (-1, 1):
+                w = wdt(k) * 0.8
+                cx, cz = x0 + sx * (dx + sgn * nx * w), z + sgn * nz * w
+                tip = (x0 + sx * (dx + sgn * nx * (w + 0.009)), z + sgn * nz * (w + 0.009))
+                hole.shape([(cx - sx * tx / ln * 0.0025, cz - tz / ln * 0.0025), tip,
+                            (cx + sx * tx / ln * 0.0025, cz + tz / ln * 0.0025)], depth=0.005, M=M)
     # neck, fingerboard, nut, pegbox, scroll, machines
     neck = [(0, 0.0, 1.20, 0.05), (0, -0.02, 1.35, 0.038), (0, -0.04, 1.55, 0.034), (0, -0.07, 1.73, 0.032)]
-    pipe(wd, neck, n=8 if lite else 10, per=2, cap1=True, side=(1, 0, 0), tint=(0.7, 0.42, 0.2))
+    pipe(wd, neck, n=6 if lite else 10, per=1 if lite else 2, cap1=True, side=(1, 0, 0), tint=(0.7, 0.42, 0.2))
     fb = []
     for t in (0.0, 1.0):
         z = 0.80 + (1.735 - 0.80) * t
@@ -360,15 +419,15 @@ def build_bass(lite):
     g["ivory"].box((0, -0.128, 1.738), (0.07, 0.024, 0.01), tint=(0.9, 0.85, 0.7))
     wd.box((0, -0.085, 1.82), (0.075, 0.075, 0.18), tint=(0.62, 0.36, 0.17))
     spiral = []
-    for i in range(22 if not lite else 12):
-        t = i / (21 if not lite else 11)
+    for i in range(22 if not lite else 7):
+        t = i / (21 if not lite else 6)
         a = -math.pi / 2 + t * 3.4 * math.pi
         r = 0.055 * (1 - 0.72 * t)
         spiral.append((0, -0.08 + r * math.sin(a) * -1, 1.935 + r * math.cos(a), 0.022 * (1 - 0.45 * t)))
     spiral = [(0, -0.085, 1.905, 0.035)] + spiral
     pts = [p[:3] for p in spiral]
     sweep(wd, pts, [0.036 * (1 - 0.5 * i / len(pts)) for i in range(len(pts))], [p[3] for p in spiral],
-          n=8, cap0=True, cap1=True, side=(1, 0, 0), tint=(0.62, 0.36, 0.17))
+          n=5 if lite else 8, cap0=True, cap1=True, side=(1, 0, 0), tint=(0.62, 0.36, 0.17))
     br = g["brass"]
     for sx in (-1, 1):
         br.box((sx * 0.04, -0.085, 1.81), (0.004, 0.06, 0.16))
@@ -376,7 +435,7 @@ def build_bass(lite):
             rod(br, (sx * 0.04, -0.085, z), (sx * 0.085, -0.085, z), 0.005, seg=6)
             if not lite:
                 br.sphere((sx * 0.1, -0.085, z), 0.022, seg=8, rings=5, scale=(0.4, 1, 1))
-            rod(br, (sx * 0.042, -0.06, z + 0.02), (sx * 0.042, -0.035, z + 0.02), 0.012, seg=8, caps=True)
+            rod(br, (sx * 0.042, -0.06, z + 0.02), (sx * 0.042, -0.035, z + 0.02), 0.012, seg=5 if lite else 8, caps=True)
     # bridge standing on the top (maple, with heart and kidney cut-outs)
     zb = 0.705
     yb = top_y(0.0, zb)
@@ -409,33 +468,34 @@ def build_bass(lite):
         c = Vector((xn, -0.142, 1.74))
         d = Vector((xn * 0.5, -0.095, 1.80))
         for p, q in ((a, b), (b, c), (c, d)):
-            rod(st, p, q, r, seg=4 if lite else 5)
+            rod(st, p, q, r, seg=3 if lite else 5)
     # endpin
     rod(g["chrome"], (0, 0, 0.0), (0, 0, 0.16), 0.006, seg=6, caps=True)
-    rod(eb, (0, 0, 0.13), (0, 0, 0.16), 0.022, seg=10, caps=True)
+    rod(eb, (0, 0, 0.13), (0, 0, 0.16), 0.022, seg=6 if lite else 10, caps=True)
     groups = [g]
 
     # the stand with the bow in its holder (static, to the player's right)
     s = Group("bassstand", None, M=Matrix.Translation((-0.66, -0.12, 0)) @ Rz(0.4))
     bm = s["blackmetal"]
     for a in (0.0, 2.3, -2.3):
-        rod(bm, (0, 0, 0.12), (0.34 * math.cos(a), 0.34 * math.sin(a), 0.01), 0.012, seg=6)
-        s["ebony"].sphere((0.34 * math.cos(a), 0.34 * math.sin(a), 0.012), 0.02, seg=6, rings=4)
-    rod(bm, (0, 0, 0.08), (0, 0, 0.95), 0.015, seg=8)
+        rod(bm, (0, 0, 0.12), (0.34 * math.cos(a), 0.34 * math.sin(a), 0.01), 0.012, seg=4 if lite else 6)
+        if not lite:
+            s["ebony"].sphere((0.34 * math.cos(a), 0.34 * math.sin(a), 0.012), 0.02, seg=6, rings=4)
+    rod(bm, (0, 0, 0.08), (0, 0, 0.95), 0.015, seg=5 if lite else 8)
     # cradle and yoke with padding
     for z, w, h in ((0.3, 0.2, 0.12), (0.95, 0.1, 0.1)):
         pts = [(-w, -0.12, z + h), (-w, -0.1, z), (0, -0.04, z - 0.03), (w, -0.1, z), (w, -0.12, z + h)]
-        s["leather"].tube([Vector(p) for p in pts], 0.018, tseg=6, tint=(0.25, 0.25, 0.25))
+        s["leather"].tube([Vector(p) for p in pts], 0.018, tseg=4 if lite else 6, tint=(0.25, 0.25, 0.25))
         rod(bm, (0, 0, z), (0, -0.05, z - 0.02), 0.012, seg=6)
     # bow holder cup and the bow standing in it
-    rod(s["leather"], (0.07, 0.02, 0.45), (0.07, 0.02, 0.60), 0.022, seg=10)
+    rod(s["leather"], (0.07, 0.02, 0.45), (0.07, 0.02, 0.60), 0.022, seg=6 if lite else 10)
     rod(bm, (0, 0, 0.55), (0.07, 0.02, 0.55), 0.008, seg=5)
     bw = s["wood"]
     bow0 = Vector((0.07, 0.02, 0.46))
     bow1 = Vector((0.08, 0.03, 1.16))
     mid = bow0.lerp(bow1, 0.5) + Vector((0.012, -0.006, 0))
     pipe(bw, [(bow0.x, bow0.y, bow0.z, 0.0055), (mid.x, mid.y, mid.z, 0.0048), (bow1.x, bow1.y, bow1.z, 0.004)],
-         n=6, per=3, tint=(0.42, 0.14, 0.06))
+         n=4 if lite else 6, per=1 if lite else 3, tint=(0.42, 0.14, 0.06))
     s["ebony"].box(bow0 + Vector((-0.012, 0, 0.05)), (0.016, 0.02, 0.06))
     s["canvas"].box((bow0 + bow1) / 2 + Vector((-0.017, 0, 0.01)), (0.002, 0.012, 0.64), tint=(1.1, 1.05, 0.95))
     s["ivory"].box(bow1 + Vector((-0.01, 0, 0.0)), (0.02, 0.012, 0.02))
@@ -452,7 +512,7 @@ def cymbal(part, c, R, rot, lite, tint=None):
 
 def drum(g, c, r, h, M_axis, lite, shell_tint, lugs=8, heads=(True, True)):
     """Drum with shell, two heads, hoops and lugs. M_axis turns local Z into the drum axis."""
-    seg = 14 if lite else 32
+    seg = 14 if lite else 26
     M = Matrix.Translation(c) @ M_axis
     g["wood"].lathe([(r, -h / 2), (r, h / 2)], seg=seg, M=M, tint=shell_tint)
     if heads[0]:
@@ -619,9 +679,9 @@ def preview_one(key):
         render.add_light("env_warm", 'POINT', (-1.2, -1.5 * f, 1.8), 60, size=0.4)
         render.add_light("env_rim", 'AREA', (-1.0, 1.8, 2.2), 70, color=(0.6, 0.7, 1.0), size=1.5,
                          rot=(math.radians(-60), 0, math.radians(200)))
-        cams = {"sax": ((0.75, -1.9, 1.4), (-0.12, -0.3, 1.15), 40),
+        cams = {"sax": ((1.55, -1.60, 1.38), (-0.14, -0.40, 1.16), 42),
                 "piano": ((1.25, 1.35, 1.55), (0.0, -0.55, 0.85), 34),
-                "bass": ((-0.9, -2.4, 1.3), (-0.05, -0.3, 0.95), 34),
+                "bass": ((-1.0, -3.3, 1.25), (-0.1, -0.3, 1.0), 34),
                 "drums": ((0.9, -2.6, 1.7), (-0.05, -0.55, 0.6), 36)}
         loc, tgt, lens = cams[key]
         return render.camera(loc, tgt, lens=lens)

@@ -133,13 +133,18 @@ class Figure:
             w[f"upperarm.{side}"] = w.get(f"upperarm.{side}", 0) + wa
             w[f"shoulder.{side}"] = w.get(f"shoulder.{side}", 0) + ws
         zh = P["z_hip"]
-        if p.z < zh + 0.03 * s:
-            f = smoothstep(zh + 0.03 * s, zh - 0.42 * s, p.z) * (0.85 if p.y < 0.0 else 0.5)
+        if p.z < zh + 0.04 * s:
+            # The skirt is split at the hip line: below it every vertex rides the thigh on its side, front
+            # and back, so a seated coat lies on the lap and is sat on at the back instead of stretching
+            # between hips and thighs into a flat disc. The transition is short (0.20 m) because a long
+            # hips/thigh blend collapses toward the hip joint when the thigh turns 90 degrees.
+            f = smoothstep(zh + 0.04 * s, zh - 0.16 * s, p.z)
             lat = 0.5 + 0.5 * math.tanh(p.x / (0.045 * s))
             hw = w.get("hips", 0.0)
             w["hips"] = hw * (1 - f)
-            zk = P["z_knee"] + 0.06 * s
-            g = smoothstep(zk, zk - 0.14 * s, p.z) * smoothstep(0.0, -0.08 * s, p.y) * 0.75
+            # below the knee the hem drapes with the shins (over the knees when seated)
+            zk = P["z_knee"] + 0.04 * s
+            g = smoothstep(zk, zk - 0.12 * s, p.z) * (0.8 if p.y < 0.0 else 0.65)
             w["thigh.L"] = w.get("thigh.L", 0) + hw * f * lat * (1 - g)
             w["thigh.R"] = w.get("thigh.R", 0) + hw * f * (1 - lat) * (1 - g)
             if g > 0:
@@ -589,7 +594,8 @@ class Figure:
                 cen = W + d * ca + n * cb
                 rows.append([cen + nn * th * s * 0.55 * math.sin(TAU * j / nc) + t * w * s * math.cos(TAU * j / nc)
                              for j in range(nc)])
-            self.m.grid(rows, "body", wv, col=col, closed=True, cap_start=False, cap_end=True)
+            # the hand frame is mirrored for the right hand, which turns the winding inside out: flip it back
+            self.m.grid(rows, "body", wv, col=col, closed=True, cap_start=False, cap_end=True, flip=side == "R")
             # thumb
             th_pts = [P3(0.1 * lh, 0.004 * s, 0.024 * s), P3(0.28 * lh, 0.012 * s, 0.042 * s),
                       P3(0.44 * lh, 0.026 * s, 0.047 * s), P3(0.55 * lh, (0.036 + curl * 0.01) * s, 0.038 * s)]
@@ -812,13 +818,19 @@ class Figure:
         else:
             prof += [(-0.03, 0.012 * s)]
         tops = (0.45, 0.7, 0.88, 1.0) if not self.lite else (0.6, 1.0)
-        slouch = spec.get("slouch", 0.0)
+        # knit sits loose over the crown: the gap to the scalp grows toward the top and the crown is a little
+        # gathered and slouched back, so the hat reads as wool rather than a smooth helmet shell
+        slouch = spec.get("slouch", 0.0 if pompom else 0.35)
         for t in tops:
-            prof.append((t, (0.012 + 0.02 * slouch * t) * s))
+            loose = 0.012 + 0.012 * math.sin(math.pi * min(t, 0.9) / 0.9 * 0.5) + 0.02 * slouch * t
+            prof.append((t, loose * s))
 
         def extra(q, az, t):
             if slouch and t > 0.3:
                 q = q + Vector((0, 0.03 * s * slouch * (t - 0.3), 0.01 * s * slouch * t))
+            if t > 0.0:
+                # soft irregular folds of the knit (about 3 mm), fading out at the cuff
+                q = q + (q - self.C).normalized() * (0.003 * s * t * math.sin(3 * az + 1.3) * math.cos(2 * az))
             return q
         rows = self.dome(ats, prof, extra)
         col = lambda p, i, j: (0.86, 0.86, 0.86) if (rib and 1 <= i <= 3) else (1, 1, 1)

@@ -101,13 +101,13 @@ VENDORS = [
          apron=dict(color="#e8e4dc", stripe=True),
          scarf=dict(style="neckerchief", color="#2f4f7f"),
          hat=dict(style="beanie", color="#1e1e22", brim=True),
-         trousers="#26282e", boots=dict(style="boot", color="#1e1a18"), curl=0.75),
+         trousers="#26282e", boots=dict(style="boot", color="#1e1a18"), curl=0.75, serve_mug=False),
     dict(name="people_vendor_buecher", role="vendor", stall="buecherstand", body="man", H=1.72, skin="#e9c2ad",
          hair="bald", hair_color="#d8d4ce", glasses=True, beard=True,
          coat=dict(style="short", color="#6a5a44", collar="turn", buttons=3, below_hip=0.12),
          scarf=dict(style="long", color="#7d2f35", stripes=(2, 0.7)),
          hat=dict(style="flatcap", color="#5b5145"),
-         trousers="#3b3a36", boots=dict(style="shoe", color="#3a2518"), gloves="#4a3a2c", curl=0.75),
+         trousers="#3b3a36", boots=dict(style="shoe", color="#3a2518"), gloves="#4a3a2c", curl=0.75, serve_mug=False),
 ]
 
 ALL = BASE + BAND + VENDORS

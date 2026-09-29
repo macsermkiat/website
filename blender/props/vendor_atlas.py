@@ -764,12 +764,6 @@ def g_coaster(w, h, seed):
     return t
 
 
-def g_foam(w, h, seed):
-    t = Tex(w, h, hexc("fbf6ea"), 0.55)
-    d1, d21, _ = voronoi(h, w, int(w * h / 10), seed)
-    t.height = np.clip(d1 / 3, 0, 1) * 0.8
-    t.col = mix(t.col, np.array(hexc("e7d9bb")), smooth(0.6, 0.0, d21) * 0.25 + fbm(h, w, 30, seed) * 0.15)
-    return t
 
 
 def g_dimples(w, h, seed):
@@ -791,33 +785,6 @@ def g_dimples(w, h, seed):
     return t
 
 
-def g_sausage(dark):
-    """Grilled sausage skin along U (length), v around. Grill marks, blisters, char."""
-    def f(w, h, seed):
-        base = hexc("7a3a1c") if dark else hexc("a8653a")
-        t = Tex(w, h, base, 0.32)
-        yy, xx = np.mgrid[0:h, 0:w].astype(float)
-        brown = fbm(h, w, 18, seed)
-        t.col = mix(t.col, np.array(hexc("6a2f16")), smooth(0.35, 0.8, brown) * 0.7)
-        # diagonal grill marks, darker and slightly sunken, twice around (both sides grilled)
-        marks = np.zeros((h, w))
-        for k in range(9):
-            c = (k + 0.5) * w / 9
-            dd = np.abs((xx - c) + (yy - h * 0.25) * 0.35)
-            marks = np.maximum(marks, smooth(5, 1.5, dd) * (smooth(h * 0.05, h * 0.2, yy) * smooth(h * 0.48, h * 0.32, yy)))
-            dd2 = np.abs((xx - c) + (yy - h * 0.75) * 0.35)
-            marks = np.maximum(marks, smooth(5, 1.5, dd2) * (smooth(h * 0.55, h * 0.7, yy) * smooth(h * 0.98, h * 0.82, yy)))
-        marks *= 0.6 + 0.4 * fbm(h, w, 4, seed + 1)
-        t.paint(marks, hexc("1d0f08"), 0.55, height=-0.6)
-        blist = smooth(0.7, 0.85, fbm(h, w, 3, seed + 2))
-        t.paint(blist * 0.6, hexc("e0a36b"), 0.18, height=0.5)
-        # tied ends slightly paler
-        ends = smooth(w * 0.05, 0, np.minimum(xx, w - 1 - xx))
-        t.col = mix(t.col, t.col * 1.2, ends * 0.4)
-        t.height += fbm(h, w, 6, seed + 3) * 0.3
-        t.col = np.clip(t.col, 0, 1)
-        return t
-    return f
 
 
 def g_roll(w, h, seed):
@@ -855,28 +822,6 @@ def g_kraft(w, h, seed, text=None):
         t.paint(text_mask(w, h, [(text, "alegreya", h * 0.16, None, (w / 2, h * 0.45), "mm")]), hexc("5a1a12"), 0.8)
     t.height = fib * 0.3
     return t
-
-
-def g_coal(w, h, seed):
-    """Charcoal bed: black, grey ash, glowing cracks (base colour; the glow is in atlas_emit)."""
-    t = Tex(w, h, hexc("181614"), 0.9)
-    d1, d21, cid = voronoi(h, w, int(w * h / 350), seed)
-    crack = smooth(2.4, 0.0, d21) * smooth(0.3, 0.55, fbm(h, w, 30, seed + 6))
-    ash = smooth(0.45, 0.75, fbm(h, w, 10, seed + 1))
-    t.col = mix(t.col, np.array(hexc("8a8580")), ash * 0.75)
-    t.col = mix(t.col, np.array(hexc("c85a1a")), crack * 0.6)
-    t.height = -crack * 1.0 + np.clip(d1 / 12, 0, 1) * 0.8
-    return t
-
-
-def coal_emit(w, h, seed):
-    d1, d21, cid = voronoi(h, w, int(w * h / 350), seed)
-    crack = smooth(2.4, 0.0, d21) * smooth(0.3, 0.55, fbm(h, w, 30, seed + 6))
-    hot = smooth(0.35, 0.7, fbm(h, w, 25, seed + 5))
-    glow = np.clip(crack * 1.0 + hot * smooth(0.8, 0, np.clip(d1 / 12, 0, 1)) * 0.8, 0, 1)
-    glow = ndimage.gaussian_filter(glow, 1.2)
-    col = np.stack([glow, glow ** 1.6 * 0.42, glow ** 3 * 0.08], -1)
-    return col
 
 
 def g_lebkuchen(text, border_col, text_col, seed_flowers=True):
@@ -1136,19 +1081,13 @@ def region_specs():
     add("orange_slice", 128, 128, g_orange_slice)
     add("peel", 64, 64, g_peel)
     add("cinnamon", 64, 128, g_cinnamon)
-    add("pages_edge", 256, 48, g_pages_edge)
-    add("pages_open", 512, 352, g_pages_open)
     add("chalkboard", 512, 352, g_chalkboard)
     add("coaster", 128, 128, g_coaster)
-    add("foam", 128, 128, g_foam)
     add("dimples", 256, 128, g_dimples)
-    add("sausage", 256, 64, g_sausage(False))
-    add("sausage_dark", 256, 64, g_sausage(True))
     add("roll", 128, 96, g_roll)
     add("paper", 128, 128, lambda w, h, s: g_paper(w, h, s, True))
     add("kraft", 128, 128, lambda w, h, s: g_kraft(w, h, s, None))
     add("kraft_maroni", 128, 128, lambda w, h, s: g_kraft(w, h, s, "Heiße Maroni"))
-    add("coal", 256, 256, g_coal)
     for i, (txt, bc, tc) in enumerate((("Ich liebe\nDich", "f7f2e8", "f7f2e8"), ("Frohe\nWeihnachten", "f2d23a", "f7f2e8"),
                                        ("Für Dich", "e05a8a", "f7f2e8"), ("Schatz", "5aa0e0", "f7f2e8"),
                                        ("Prost!", "f7f2e8", "f2d23a"), ("Nacht-\nmarkt", "e05a8a", "f7f2e8"))):
@@ -1166,12 +1105,8 @@ def region_specs():
     add("burlap", 128, 128, g_burlap)
     add("grate", 128, 64, g_grate)
     add("toy_face", 64, 64, g_toy_face)
-    # book spines
-    for key, spec in named_spines().items():
-        add("spine_" + key, 80, 448, g_spine(spec))
-    rng = np.random.default_rng(3)
-    for i, (title, author, kind) in enumerate(GENERIC_TITLES):
-        add(f"spine_g{i}", 48, 304, g_spine(generic_spine(i, title, author, kind, rng)))
+    import atlas_goods
+    R.extend(atlas_goods.main_specs())
     return R
 
 
@@ -1201,9 +1136,8 @@ def normal_from_height(hgt, k):
     return n * 0.5 + 0.5
 
 
-def build(size=SIZE, out=OUT):
-    os.makedirs(out, exist_ok=True)
-    specs = region_specs()
+def _render_atlas(specs, size, prefix, out):
+    """Pack, generate and save one atlas (<prefix>_color / _rm / _normal.png). Returns (regions, used px)."""
     rects, used = pack(specs, size)
     col = np.zeros((size, size, 3))
     col[:] = 0.5
@@ -1217,23 +1151,38 @@ def build(size=SIZE, out=OUT):
         n = normal_from_height(np.pad(t.height, 1, mode="edge"), t.hscale)[1:-1, 1:-1]
         layers = [(col, np.clip(t.col, 0, 1)), (rm, np.stack([np.ones((h, w)), np.clip(t.rough, 0.02, 1),
                                                            np.clip(t.metal, 0, 1)], -1)), (nrm, n)]
-        for dst, src in layers:
-            padded = np.pad(src, ((PAD, PAD), (PAD, PAD), (0, 0)), mode="edge")
+        for dst, src_ in layers:
+            padded = np.pad(src_, ((PAD, PAD), (PAD, PAD), (0, 0)), mode="edge")
             dst[y - PAD:y + h + PAD, x - PAD:x + w + PAD] = padded
         # UV rect with a half-texel inset (v up)
         regions[name] = [(x + 0.5) / size, 1 - (y + h - 0.5) / size, (x + w - 0.5) / size, 1 - (y + 0.5) / size]
     to8 = lambda a: Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8))
-    to8(col).save(os.path.join(out, "atlas_color.png"))
-    to8(rm).save(os.path.join(out, "atlas_rm.png"))
-    to8(nrm).save(os.path.join(out, "atlas_normal.png"))
+    to8(col).save(os.path.join(out, f"{prefix}_color.png"))
+    to8(rm).save(os.path.join(out, f"{prefix}_rm.png"))
+    to8(nrm).save(os.path.join(out, f"{prefix}_normal.png"))
+    return regions, used
+
+
+def build(size=SIZE, out=OUT):
+    """Main atlas (atlas_*), the Bücherstand atlas (books_*) and the coal pair -> regions.json."""
+    import atlas_books
+    import atlas_goods
+    os.makedirs(out, exist_ok=True)
+    specs = region_specs()
+    regions, used = _render_atlas(specs, size, "atlas", out)
+    bspecs = atlas_books.books_specs()
+    bregions, bused = _render_atlas(bspecs, size, "books", out)
+    to8 = lambda a: Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8))
     # coal_glow has its own small texture pair (UV 0..1): base colour and the glow of the cracks
     cseed = 1000 + [s[0] for s in specs].index("coal") * 13
-    to8(g_coal(256, 256, cseed).col).save(os.path.join(out, "coal_color.png"))
-    to8(coal_emit(256, 256, cseed)).save(os.path.join(out, "coal_emit.png"))
-    meta = {"size": size, "used_rows_px": used, "regions": regions}
+    to8(atlas_goods.g_coal(256, 256, cseed).col).save(os.path.join(out, "coal_color.png"))
+    to8(atlas_goods.coal_emit(256, 256, cseed)).save(os.path.join(out, "coal_emit.png"))
+    meta = {"size": size, "used_rows_px": used, "regions": regions,
+            "books": {"size": size, "used_rows_px": bused, "regions": bregions}}
     with open(os.path.join(out, "regions.json"), "w") as f:
         json.dump(meta, f, indent=0)
-    print(f"[atlas] {len(regions)} regions, {used}px of {size} used -> {out}")
+    print(f"[atlas] main: {len(regions)} regions, {used}px of {size}; books: {len(bregions)} regions, "
+          f"{bused}px of {size} -> {out}")
     return meta
 
 

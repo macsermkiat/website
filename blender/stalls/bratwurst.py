@@ -146,7 +146,7 @@ def build(lite):
     # ember bed: an ash layer heaped toward the back, glowing coals on it just under the grate,
     # half of them ash-coated (grey tops)
     ash = Part("bratwurst_ash", "ash", var=0.15)
-    ash_z = COUNTER_TOP - 0.075
+    ash_z = COUNTER_TOP - 0.035              # heaped high: the coals glow just under the grate
     ash.box((GX, gcy, ash_z), (gw - 0.08, gd - 0.08, 0.05), bevel=0)
     for k in range(40 if not lite else 10):
         x = R.uniform(GRILL_X0 + 0.07, GRILL_X1 - 0.07)
@@ -157,7 +157,7 @@ def build(lite):
     for k in range(120 if not lite else 30):
         x = R.uniform(GRILL_X0 + 0.07, GRILL_X1 - 0.07)
         y = R.uniform(gy0 + 0.06, gy1 - 0.06)
-        z = ash_z + 0.03 + R.uniform(0.0, 0.045) + 0.02 * (y - gy0) / gd
+        z = ash_z + 0.02 + R.uniform(0.0, 0.02)
         r = R.uniform(0.022, 0.04)
         coals.ico((x, y, z), r, subd=0, scale=(1, 1, 0.7), smooth=False)
         if R.random() < 0.45:           # grey ash skin on top of this coal
@@ -278,13 +278,20 @@ def preview(objs):
     rolls = Part("env_rolls", "fabric_white")
     for i in range(8):
         rolls.sphere((0.25 + i * 0.16, yF - 0.05, COUNTER_TOP + 0.035), 0.07, seg=10, rings=6, scale=(1.1, 0.55, 0.45))
-    wurst.finish(env)
+    ob = wurst.finish(env)
+    m = bpy.data.materials.new("env_wurst_skin")          # browned, glossy skin (not metal)
+    m.use_nodes = True
+    b = m.node_tree.nodes["Principled BSDF"]
+    b.inputs["Base Color"].default_value = (0.20, 0.07, 0.025, 1)
+    b.inputs["Roughness"].default_value = 0.35
+    b.inputs["Coat Weight"].default_value = 0.4
+    ob.data.materials[0] = m
     rolls.finish(env)
     render.lights_at_markers(energy=90)
     # the fire: a warm area light just above the coals shining up into the hood, and a low glow
-    render.add_light("env_ember", 'AREA', (GX, (gy0 + gy1) / 2, COUNTER_TOP + 0.06), 70, (1.0, 0.32, 0.07),
+    render.add_light("env_ember", 'AREA', (GX, (gy0 + gy1) / 2, COUNTER_TOP + 0.03), 35, (1.0, 0.32, 0.07),
                      size=1.3, size_y=0.45, rot=(math.pi, 0, 0))
-    render.add_light("env_ember_front", 'POINT', (GX, gy0 - 0.2, COUNTER_TOP + 0.15), 25, (1.0, 0.38, 0.1), size=0.3)
+    render.add_light("env_ember_front", 'POINT', (GX, gy0 - 0.2, COUNTER_TOP + 0.15), 12, (1.0, 0.38, 0.1), size=0.3)
     render.add_light("env_fill", 'AREA', (0.4, 0.2, 2.3), 160, size=2.0)
     # the two gooseneck sign lamps: wide, soft spots aimed at the middle of the board
     sign_mid = (0.45, -0.58, 3.5)

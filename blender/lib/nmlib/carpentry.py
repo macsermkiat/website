@@ -166,7 +166,7 @@ def shingles(part, sl, sw=0.19, sh=0.30, st=0.016, expo=0.14, lift=0.012, tint="
                          math.radians(R().uniform(-2.5, 2.5)))).to_matrix().to_4x4()
             M = Matrix.Translation(p) @ B @ jit
             part.mbox(M, (w - 0.006, L, st * R().uniform(0.8, 1.25)), grain=1, tint=tint, var=var,
-                      bevel=0.0)
+                      bevel=0.0, drop=("-z",) if r > 0 else None)    # undersides lie on the course below
             a += w
 
 
@@ -198,23 +198,36 @@ def fascia(part, sl, h=0.14, th=0.028, tint=None, band=None):
     part.mbox(M, (sl.a1 - sl.a0 + 0.04, th, h), grain=0, tint=tint, band=band)
 
 
-def snow_cap(part, sl, thick=0.05, lip=0.05, nx=None, ns=None, edge_in=0.07, seed=0.0, cover=0.72,
-             ridge_clear=0.2, patch_scale=1.7, base=0.03):
-    """Thin, patchy snow on a slope with a soft lip curling over the eave.
+def snow_cap(part, sl, thick=0.05, lip=0.05, nx=None, ns=None, edge_in=0.07, seed=0.0, cover=0.93,
+             ridge_clear=0.24, patch_scale=1.4, base=0.03):
+    """Thin snow on a slope with a soft lip curling over the eave.
 
-    cover:       roughly the fraction of the slope under snow (the rest shows shingles);
-    ridge_clear: metres below the ridge that the wind has scoured bare;
+    cover:       fraction of the slope (below the ridge band) under snow; the rest is a few
+                 melted strips, long along the courses and short down the slope, so single
+                 shingle rows show through. Lite builds skip the patches.
+    ridge_clear: mean depth (metres, down from the ridge) of the wind-scoured bare band; its
+                 lower edge wanders, so the top shingle courses and the ridge show;
     patch_scale: frequency of the bare patches (per metre).
     Where the snow runs out its edge sinks below the roof surface, so the boundary cuts
     through the shingles like real thin snow instead of ending in a vertical wall.
     Faces with no snow at all are dropped (they cost nothing)."""
     import bmesh
-    nx = nx or (12 if state.lite() else 34)
-    ns = ns or (6 if state.lite() else 14)
-    bm = bmesh.new()
+    lite = state.lite()
     a0, a1 = sl.a0 + edge_in, sl.a1 - edge_in
     s0, s1 = -lip, sl.L - 0.03
-    thr = 1.0 - cover
+    nx = nx or (12 if lite else max(20, int((a1 - a0) / 0.15)))
+    ns = ns or (7 if lite else max(16, int((s1 - s0) / 0.07)))
+    bm = bmesh.new()
+
+    def density(a, s):
+        """Melt noise; the patches are where it falls below a threshold."""
+        q = Vector((a * patch_scale + seed * 1.7, s * patch_scale * 3.0, seed * 2.3 + 5.0))
+        return noise.noise(q) + 0.3 * noise.noise(q * 2.3)
+
+    # threshold = the (1 - cover) quantile of the noise over the grid, so `cover` is exact
+    samples = sorted(density(a0 + (a1 - a0) * i / nx, s0 + (s1 - s0) * j / ns)
+                     for j in range(ns + 1) for i in range(nx + 1))
+    thr = -9.0 if lite else samples[int((1.0 - cover) * (len(samples) - 1))]
     grid, dens = [], []
     for j in range(ns + 1):
         row, drow = [], []
@@ -227,11 +240,10 @@ def snow_cap(part, sl, thick=0.05, lip=0.05, nx=None, ns=None, edge_in=0.07, see
             fall = min(1.0, edge / 0.10) ** 0.6
             p3 = Vector((a * 3.1 + seed, s * 3.1, seed * 0.7))
             lump = 0.75 + 0.45 * noise.noise(p3) + 0.15 * noise.noise(p3 * 3.3)
-            q = Vector((a * patch_scale + seed * 1.7, s * patch_scale * 1.4, seed * 2.3 + 5.0))
-            d = 0.5 + 0.55 * noise.noise(q) + 0.25 * noise.noise(q * 2.7)
-            ridge = min(1.0, max(0.0, (sl.L - ridge_clear - s) / 0.25))   # scoured band under the ridge
-            d = d * ridge
-            k = max(0.0, min(1.0, (d - thr) / 0.18))
+            # wind-scoured band under the ridge, its lower edge wandering along the slope
+            rc = ridge_clear * (0.55 + 0.9 * (0.5 + 0.5 * noise.noise(Vector((a * 1.3 + seed, seed * 0.4, 9.1)))))
+            ridge = min(1.0, max(0.0, (sl.L - rc - s) / 0.12))
+            k = max(0.0, min(1.0, (density(a, s) - thr) / 0.12)) * ridge
             k = k * k * (3 - 2 * k)
             h = thick * fall * max(0.25, lump) * k
             if s < 0:                       # the lip curls down past the eave
@@ -351,21 +363,22 @@ def sign(board, letters, text, font, center, w, h, depth=0.03, text_depth=0.012,
                         tint=text_tint, spacing=spacing, resolution=resolution, bevel=text_bevel)
 
 
-def bulb_string(bulbs, wire, anchors, sag=0.06, spacing=0.2, bulb_r=0.028, drop=0.05, seg=None):
-    """Fairy bulbs hanging from a sagging wire through `anchors`. bulbs: Part('bulb_warm')."""
-    seg = seg or (5 if state.lite() else 8)
-    rings = 3 if state.lite() else 6
+def bulb_string(bulbs, wire, anchors, sag=0.06, spacing=0.2, bulb_r=0.028, drop=0.05, seg=None, rings=None):
+    """Fairy bulbs hanging from a sagging wire through `anchors`. bulbs: Part('bulb_warm').
+    seg/rings: sphere detail of each bulb (default 7x5, lite 5x3)."""
+    seg = seg or (5 if state.lite() else 7)
+    rings = rings or (3 if state.lite() else 5)
     for a, b in zip(anchors[:-1], anchors[1:]):
         a, b = Vector(a), Vector(b)
         L = (b - a).length
         n = max(1, round(L / spacing))
-        pts = catenary(a, b, sag, max(3, n) if state.lite() else max(4, n * 3))
-        wire.tube(pts, 0.004, tseg=3 if state.lite() else 5)
+        pts = catenary(a, b, sag, max(3, n) if state.lite() else max(4, n * 2))
+        wire.tube(pts, 0.004, tseg=3 if state.lite() else 4)
         for i in range(n):
             t = (i + 0.5) / n
             p = a.lerp(b, t) - Vector((0, 0, sag * 4 * t * (1 - t)))
             if not state.lite():
-                wire.cyl(p - Vector((0, 0, drop * 0.45)), 0.011, 0.009, drop * 0.5, seg=6, caps=False)
+                wire.cyl(p - Vector((0, 0, drop * 0.45)), 0.011, 0.009, drop * 0.5, seg=5, caps=False)
             bulbs.sphere(p - Vector((0, 0, drop + bulb_r * 0.6)), bulb_r, seg=seg, rings=rings,
                          scale=(1, 1, 1.35), var=0.05)
 
@@ -392,5 +405,5 @@ def fir_garland(fir, beads, a, b, sag=0.25, radius=0.05, tufts_per_m=None, bead_
         t = (k + 0.5) / nb
         p = a.lerp(b, t) - Vector((0, 0, sag * 4 * t * (1 - t))) + Vector((0, -radius * 0.9, -radius * 0.4))
         part = beads[keys[k % len(keys)]]
-        part.sphere(p, R().uniform(0.016, 0.024), seg=10 if not state.lite() else 6,
-                    rings=7 if not state.lite() else 4, var=0.05)
+        part.sphere(p, R().uniform(0.016, 0.024), seg=8 if not state.lite() else 6,
+                    rings=6 if not state.lite() else 4, var=0.05)

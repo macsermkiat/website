@@ -25,9 +25,10 @@ from nmlib import carpentry as cp  # noqa: E402
 from nmlib import geo, render  # noqa: E402
 
 NAME = "ferris"
-HUB = 14.55         # axle height
+HUB = 14.70         # axle height (lowest gondola clears the boarding deck by 9 cm)
 RO = 11.2           # outer ring = gondola axles
 RI = 10.05          # inner ring
+RT = 7.40           # transverse tie ring: 3.8 m inside the gondola axles, outside every gondola's swing
 YR = 1.42           # rim planes at y = +-YR
 GS = 1.25           # gondola scale (modelled at 1.0: 1.87 m across, 2.33 m tall)
 N = 16
@@ -42,6 +43,11 @@ def P(r, a, y):
     return Vector((r * math.cos(a), y, HUB + r * math.sin(a)))
 
 
+def spoke_y(r):
+    """|y| of a main spoke at radius r (the spokes run from the hub flange at YR + 0.62 to the rim)."""
+    return (YR + 0.62) + (YR - (YR + 0.62)) * (r - 1.05) / (RI - 1.05)
+
+
 def gondola_angle(i):
     return -math.pi / 2 + TAU * i / N
 
@@ -51,7 +57,7 @@ def build_wheel(lite, wheel):
     st = Part("wheel_steel", "rsteel", tint=CREAM, bevel=0.0, var=0.05)
     gilt = Part("wheel_gilt", "gilt", var=0.03)
     bulbs = Part("bulbs_wheel", "bulb_warm")
-    dark = Part("wheel_hub", "rsteel", tint=(0.55, 0.06, 0.05), bevel=0.0)
+    dark = Part("wheel_hub", "rsteel", tint=(0.20, 0.19, 0.18), bevel=0.0)
     rs = 4 if lite else 6            # rod segments
     tor_seg = 64 if lite else 128
     rot_x = (math.pi / 2, 0, 0)
@@ -93,19 +99,21 @@ def build_wheel(lite, wheel):
                 yy = yf + (y - yf) * t
                 p = P(r, a, yy) + Vector((0, math.copysign(0.07, y), 0))
                 rc.bulb(bulbs, p, 0.042)
-    # transverse members: gondola axles, inner ties, X braces on the outer ring
+    # transverse members. Each gondola swings through a disc of radius 3.0 m round its axle
+    # between the rims (|y| < 1.25), so nothing may cross between the rims there: the rims are
+    # tied only by the gondola axles themselves and, well inside the swing discs, by a tie ring
+    # at RT with X braces between the two spoke planes (3.8 m from the nearest axle).
+    ty = spoke_y(RT)
     for i in range(N):
         a = gondola_angle(i)
         a2 = gondola_angle(i + 1)
         rod(st, P(RO, a, -YR - 0.05), P(RO, a, YR + 0.05), 0.075, seg=rs + 2)
-        rod(st, P(RI, a, -YR), P(RI, a, YR), 0.05, seg=rs)
-        am = (a + a2) / 2
-        rod(st, P(RO, am, -YR), P(RO, am, YR), 0.04, seg=rs)
-        if not lite:
-            rod(st, P(RO, a, -YR), P(RO, am, YR), 0.028, seg=4)
-            rod(st, P(RO, a, YR), P(RO, am, -YR), 0.028, seg=4)
-            rod(st, P(RO, am, -YR), P(RO, a2, YR), 0.028, seg=4)
-            rod(st, P(RO, am, YR), P(RO, a2, -YR), 0.028, seg=4)
+        rod(st, P(RT, a, -ty), P(RT, a, ty), 0.05, seg=rs)
+        for s in (-1, 1):
+            rod(st, P(RT, a, s * ty), P(RT, a2, s * ty), 0.04, seg=rs)
+        if not lite or i % 2 == 0:
+            rod(st, P(RT, a, -ty), P(RT, a2, ty), 0.028, seg=4)
+            rod(st, P(RT, a, ty), P(RT, a2, -ty), 0.028, seg=4)
         # gilt bearing collars where each gondola hangs
         for s in (() if lite else (-1, 1)):
             gilt.cyl(P(RO, a, s * (YR - 0.12)), 0.1, 0.1, 0.06, seg=10, rot=rot_x)
@@ -118,14 +126,21 @@ def build_wheel(lite, wheel):
             for k in range(16):
                 a = TAU * k / 16
                 gilt.cyl(P(1.02, a, s * (YR + 0.68)), 0.035, 0.035, 0.05, seg=6, rot=rot_x)
-        # gilt sunburst on the hub face
-        Ms = Matrix.Translation((0, s * (hl + 0.03), HUB)) @ Euler((math.pi / 2, 0, 0)).to_matrix().to_4x4()
-        gilt.shape(geo.star_polygon(0, 0, 1.12, 0.52, 16), depth=0.04, M=Ms)
-        gilt.shape(geo.star_polygon(0, 0, 0.62, 0.34, 8, rot=math.pi / 8),
-                   depth=0.06, M=Ms @ Matrix.Translation((0, 0, -s * 0.03)))
+        # gilt sunburst on the hub face: a stepped 16-ray star (rays reach past the flange) with
+        # a raised 8-point star, a bulb at every ray tip and along each ray
+        Ms = Matrix.Translation((0, s * (hl + 0.03), HUB)) @ Euler((-s * math.pi / 2, 0, 0)).to_matrix().to_4x4()
+        gilt.shape(geo.star_polygon(0, 0, 1.55, 0.62, 16), depth=0.04, M=Ms)
+        gilt.shape(geo.star_polygon(0, 0, 1.30, 0.55, 16), depth=0.04, M=Ms @ Matrix.Translation((0, 0, 0.03)))
+        gilt.shape(geo.star_polygon(0, 0, 0.70, 0.36, 8, rot=math.pi / 8),
+                   depth=0.05, M=Ms @ Matrix.Translation((0, 0, 0.06)))
+        rays = TAU / 16
+        for k in range(16):
+            a = math.pi / 2 + rays * k
+            for r in ((1.58,) if lite else (0.95, 1.25, 1.58)):
+                rc.bulb(bulbs, P(r, a, s * (hl + 0.13)), 0.045)
         for k in range(12 if lite else 24):
-            a = TAU * k / (12 if lite else 24)
-            rc.bulb(bulbs, P(1.35, a, s * (hl + 0.05)), 0.05)
+            a = TAU * (k + 0.5) / (12 if lite else 24)
+            rc.bulb(bulbs, P(1.78, a, s * (hl + 0.03)), 0.045)
     objs = rc.finish_all([st, gilt, dark, bulbs], wheel)
     return objs
 
@@ -147,48 +162,53 @@ def build_gondola(i, g, lite):
     bulbs = Part(f"bulbs_g{i}", "bulb_warm")
     snow = Part(f"snow_g{i}", "snow")
     # hanger yoke from the axle down to the roof
-    rod(trim, O + Vector((0, -YR / GS + 0.05, 0)), O + Vector((0, YR / GS - 0.05, 0)), 0.062, seg=8)
+    yk = (YR - 0.17) / GS          # the yoke stops short of the gilt bearing collars on the axle
+    rod(trim, O + Vector((0, -yk, 0)), O + Vector((0, yk, 0)), 0.062, seg=8)
     for s in (-1, 1):
-        rod(trim, O + Vector((0, s * 0.62, 0)), O + Vector((0, s * 0.16, -0.30)), 0.028, seg=5)
+        rod(trim, O + Vector((0, s * min(0.62, yk - 0.05), 0)), O + Vector((0, s * 0.16, -0.30)), 0.028, seg=5)
     rod(trim, O + Vector((0, 0, -0.02)), O + Vector((0, 0, -0.30)), 0.03, seg=5)
-    # roof (ogee, octagonal), header, glass band, sill, lower body
+    # roof (ogee, octagonal), a thin header, a tall glass band (sill at bench height, so a
+    # seated rider sees down over the market), sill, lower body
     roof = [(0.10, -0.25), (0.20, -0.29), (0.44, -0.39), (0.68, -0.49), (0.88, -0.60),
             (0.935, -0.645), (0.935, -0.685), (0.80, -0.70)]
     if lite:
         roof = [(0.10, -0.25), (0.44, -0.39), (0.88, -0.60), (0.935, -0.685), (0.80, -0.70)]
     rc.lathe_poly(body, roof, seg, M=T)
-    rc.lathe_poly(trim, [(0.80, -0.70), (0.80, -0.82)], seg, M=T)
-    rc.lathe_poly(gilt, [(0.815, -0.80), (0.822, -0.81), (0.815, -0.825)], seg, M=T)
-    rc.lathe_poly(glass, [(0.775, -0.82), (0.775, -1.42)], seg, M=T)
-    rc.lathe_poly(trim, [(0.84, -1.42), (0.84, -1.47), (0.80, -1.47)], seg, M=T)
-    lower = [(0.80, -1.47), (0.80, -1.95), (0.75, -2.08), (0.62, -2.20), (0.40, -2.29), (0.001, -2.33)]
+    rc.lathe_poly(trim, [(0.80, -0.70), (0.80, -0.76)], seg, M=T)
+    rc.lathe_poly(gilt, [(0.815, -0.745), (0.822, -0.755), (0.815, -0.765)], seg, M=T)
+    rc.lathe_poly(glass, [(0.775, -0.76), (0.775, -1.56)], seg, M=T)
+    rc.lathe_poly(trim, [(0.84, -1.56), (0.84, -1.61), (0.80, -1.61)], seg, M=T)
+    lower = [(0.80, -1.61), (0.80, -1.95), (0.75, -2.08), (0.62, -2.20), (0.40, -2.29), (0.001, -2.33)]
     rc.lathe_poly(body, lower, seg, M=T)
     if not lite:
-        rc.lathe_poly(gilt, [(0.805, -1.70), (0.81, -1.71), (0.805, -1.72)], seg, M=T)
+        rc.lathe_poly(gilt, [(0.805, -1.77), (0.81, -1.78), (0.805, -1.79)], seg, M=T)
     gilt.sphere(O + Vector((0, 0, -0.22)), 0.07, seg=6 if lite else 12, rings=4 if lite else 8)
     gilt.cyl(O + Vector((0, 0, -2.36)), 0.05, 0.001, 0.08, seg=8)
     # window posts at the octagon corners (corner angles: k*45 deg + 22.5)
     Rc = 0.80 / math.cos(math.pi / seg)
     for k in range(seg):
         a = TAU * k / seg + math.pi / seg
-        trim.box(O + Vector((Rc * math.cos(a), Rc * math.sin(a), -1.12)), (0.055, 0.055, 0.62),
+        trim.box(O + Vector((Rc * math.cos(a), Rc * math.sin(a), -1.16)), (0.038, 0.038, 0.80),
                  rot=(0, 0, a))
-    # cabin interior: floor, two benches facing each other, ceiling lamp
+    # cabin interior: floor, two benches facing each other across the cabin (along X), ceiling
+    # lamp; the door is on the front (-Y) face, toward the boarding step
     wood.cyl(O + Vector((0, 0, -1.99)), 0.76, 0.76, 0.03, seg=8, rot=(0, 0, math.pi / 8))
     if not lite:
         for s in (-1, 1):
-            wood.box(O + Vector((0, s * 0.50, -1.62)), (0.95, 0.34, 0.05), grain=0)
-            wood.box(O + Vector((0, s * 0.70, -1.40)), (0.95, 0.05, 0.40), rot=(s * 0.12, 0, 0), grain=0)
-            body.box(O + Vector((0, s * 0.50, -1.82)), (0.9, 0.3, 0.32))
-        # door on the +X face: gilt frame and handle
-        for dy in (-0.26, 0.26):
-            gilt.box(O + Vector((0.805, dy, -1.72)), (0.012, 0.022, 0.46))
-        gilt.box(O + Vector((0.805, 0, -1.96)), (0.012, 0.52, 0.02))
-        gilt.cyl(O + Vector((0.83, 0.18, -1.62)), 0.012, 0.012, 0.06, seg=6, rot=(0, math.pi / 2, 0))
-        # gilt stars on the front, back and outer panels
-        for a in (math.pi / 2, -math.pi / 2, math.pi):
+            wood.box(O + Vector((s * 0.50, 0, -1.62)), (0.34, 0.95, 0.05), grain=0)
+            wood.box(O + Vector((s * 0.70, 0, -1.40)), (0.05, 0.95, 0.40), rot=(0, s * 0.12, 0), grain=0)
+            body.box(O + Vector((s * 0.50, 0, -1.82)), (0.3, 0.9, 0.32))
+        # door: its upper half is the cabin's glass band; gilt frame on the lower leaf, handle, hinges
+        for dx in (-0.26, 0.26):
+            gilt.box(O + Vector((dx, -0.805, -1.785)), (0.018, 0.012, 0.35))
+        gilt.box(O + Vector((0, -0.805, -1.96)), (0.54, 0.012, 0.02))
+        gilt.cyl(O + Vector((0.18, -0.83, -1.66)), 0.012, 0.012, 0.06, seg=6, rot=(math.pi / 2, 0, 0))
+        for z in (-1.0, -1.8):
+            gilt.cyl(O + Vector((-0.27, -0.815, z)), 0.014, 0.014, 0.08, seg=6)
+        # gilt stars on the side and back panels
+        for a in (0.0, math.pi / 2, math.pi):
             n = Vector((math.cos(a), math.sin(a), 0))
-            Ms = Matrix.Translation(O + n * 0.81 + Vector((0, 0, -1.72))) @ \
+            Ms = Matrix.Translation(O + n * 0.81 + Vector((0, 0, -1.79))) @ \
                 Euler((math.pi / 2, 0, a + math.pi / 2)).to_matrix().to_4x4()
             gilt.shape(geo.star_polygon(0, 0, 0.13, 0.055, 5), depth=0.012, M=Ms)
     rc.bulb(bulbs, O + Vector((0, 0, -0.80)), 0.06)
@@ -282,16 +302,25 @@ def build_frame(lite):
                     rod(st, p0 + Vector((0, 0, -0.28)), p1 + Vector((0, 0, 0.28)), 0.03, seg=4)
                 else:
                     rod(st, p0 + Vector((0, 0, 0.28)), p1 + Vector((0, 0, -0.28)), 0.03, seg=4)
+    # ground beams between the A-frames, and raking stays from each beam up to the legs. The
+    # stays stay outside the wheel (|y| >= 1.9, where the wheel reaches only 3 m from the hub).
     for sx in (-1, 1):
         darks.box((sx * 7.6, 0, 0.62), (0.22, 2 * FY, 0.30))
-        rod(st, feet[(sx, -1)] + Vector((0, 0.3, 0.2)), Vector((sx * 4.2, 0, 7.6)), 0.05, seg=6)
-        rod(st, feet[(sx, 1)] + Vector((0, -0.3, 0.2)), Vector((sx * 4.2, 0, 7.6)), 0.05, seg=6)
+        for sy in (-1, 1):
+            A = Vector((0, sy * ay, HUB - 0.2))
+            leg = A.lerp(feet[(sx, sy)], (HUB - 0.2 - 4.4) / (HUB - 0.2 - 0.62))
+            rod(st, Vector((sx * 7.6, sy * 1.9, 0.77)), leg - Vector((0, sy * 0.3, 0)), 0.05, seg=6)
     # axle and bearing blocks at the apex
     darks.cyl((0, 0, HUB), 0.3, 0.3, 2 * ay + 0.5, seg=12 if lite else 20, rot=(math.pi / 2, 0, 0))
     for sy in (-1, 1):
         darks.box((0, sy * ay, HUB - 0.12), (0.95, 0.5, 0.7))
-        red.cyl((0, sy * (ay + 0.3), HUB), 0.42, 0.42, 0.1, seg=16, rot=(math.pi / 2, 0, 0))
-        rc.bulb(bulbs, (0, sy * (ay + 0.4), HUB + 0.62), 0.07)
+        # gilt domed axle cap ringed with bulbs (it sits in the middle of the sunburst seen from the square)
+        gilt.cyl((0, sy * (ay + 0.28), HUB), 0.40, 0.40, 0.06, seg=16 if lite else 24, rot=(math.pi / 2, 0, 0))
+        gilt.sphere((0, sy * (ay + 0.31), HUB), 0.3, seg=12 if lite else 20, rings=6 if lite else 10,
+                    scale=(1, 0.5, 1))
+        for k in range(8 if lite else 12):
+            a = TAU * k / (8 if lite else 12)
+            rc.bulb(bulbs, (0.48 * math.cos(a), sy * (ay + 0.3), HUB + 0.48 * math.sin(a)), 0.045)
 
     # boarding deck under the lowest gondola, steps to the front, railings
     x0, x1, y0, y1 = -2.6, 2.6, -2.1, 1.7
@@ -310,13 +339,24 @@ def build_frame(lite):
         yy = y0 - 0.3 * (i + 0.5)
         wood.box((0, yy, z + 0.07 - 0.02), (2.4, 0.3, 0.04), grain=0)
         darks.box((0, yy, z / 2 + 0.01), (2.3, 0.28, max(0.02, z)))
-    # railings on the deck sides and the stair
+    # railings: the gondolas swing through the deck's middle band (|y| < 1.3) as they pass, so
+    # the side rails stop either side of it and the back rail closes the far edge
+    GAP = 1.38
     for sx in (-1, 1):
         xx = sx * (x1 - 0.05)
-        for yy in (y0 + 0.05, (y0 + y1) / 2, y1 - 0.05):
-            rod(red, (xx, yy, DECK), (xx, yy, DECK + 1.0), 0.03, seg=6)
-        for z in (DECK + 0.5, DECK + 1.0):
-            rod(red, (xx, y0 + 0.05, z), (xx, y1 - 0.05, z), 0.022 if z < 1 else 0.028, seg=6)
+        for ya, yb in ((y0 + 0.05, -GAP), (GAP, y1 - 0.05)):
+            for yy in (ya, yb):
+                rod(red, (xx, yy, DECK), (xx, yy, DECK + 1.0), 0.03, seg=6)
+            for z in (DECK + 0.5, DECK + 1.0):
+                rod(red, (xx, ya, z), (xx, yb, z), 0.022 if z < 1 else 0.028, seg=6)
+    for xx in (x0 + 0.05, 0.0, x1 - 0.05):
+        rod(red, (xx, y1 - 0.05, DECK), (xx, y1 - 0.05, DECK + 1.0), 0.03, seg=6)
+    for z in (DECK + 0.5, DECK + 1.0):
+        rod(red, (x0 + 0.05, y1 - 0.05, z), (x1 - 0.05, y1 - 0.05, z), 0.022 if z < 1 else 0.028, seg=6)
+    # boarding step up to the gondola floor (1.03 m), in front of the gondola path
+    for k, (zt, yy) in enumerate(((DECK + 0.30, -1.28), (DECK + 0.15, -1.55))):
+        wood.box((0, yy, zt - 0.02), (1.6, 0.34 if k == 0 else 0.22, 0.04), grain=0)
+        darks.box((0, yy, (zt - 0.04 + DECK) / 2), (1.5, 0.3 if k == 0 else 0.2, zt - 0.04 - DECK))
         # stair rails
         rod(red, (sx * 1.25, y0, DECK + 1.0), (sx * 1.25, y0 - 0.9, 0.55 + 0.4), 0.028, seg=6)
         rod(red, (sx * 1.25, y0 - 0.9, 0.0), (sx * 1.25, y0 - 0.9, 0.95), 0.03, seg=6)
@@ -410,7 +450,14 @@ def build(lite):
         g = node(f"gondola_{i}", tuple(P(RO, a, 0)), parent=wheel)
         build_gondola(i, g, lite)
         if i == 0:
-            node("gondola_seat_0", tuple(P(RO, a, 0) + Vector((0, -0.3, -1.45))), parent=g)
+            # a rider leaning to the front pane, 1.18 m above the floor and 0.37 m below the window
+            # head, placed 0.35 m back from the pane's centre along the line to the market (18.5 deg
+            # off the front axis for this layout), so the corner posts stay outside a 42 deg view
+            m = market_in_local()
+            d = Vector((m.x, m.y, 0)).normalized()
+            face = Vector((0, -0.775 * GS, 0))
+            eye = face - d * 0.35
+            node("gondola_seat_0", tuple(P(RO, a, 0) + Vector((eye.x, eye.y, -1.30))), parent=g)
     build_frame(lite)
     node("light_0", (0, -3.4, 3.2))
     node("light_1", (-4.1, -5.2, 2.6))
@@ -436,17 +483,71 @@ def market_strings(y=-13.0, span=34.0, z=4.6):
         p.finish(env)
 
 
+# where the market centre lies in this model's frame (layout.json: Riesenrad at [-22, -17],
+# rotY 0.65; the engine's ride camera looks at three.js (0, 1.5, -2))
+PLACE = (-22.0, -17.0, 0.65)
+MARKET_LOOK = (0.0, 1.5, -2.0)
+
+
+def market_in_local():
+    px, pz, ry = PLACE
+    wx, wy, wz = MARKET_LOOK[0] - px, MARKET_LOOK[1], MARKET_LOOK[2] - pz
+    lx = wx * math.cos(ry) - wz * math.sin(ry)
+    lz = wx * math.sin(ry) + wz * math.cos(ry)
+    return Vector((lx, -lz, wy))         # three.js local (x, y, z) -> Blender (x, -z, y)
+
+
+def turn_wheel(angle):
+    """Render-only pose: turn rot_wheel about the axle and keep every gondola hanging upright."""
+    rc.bpy.data.objects["rot_wheel"].rotation_euler = (0, angle, 0)
+    for i in range(N):
+        rc.bpy.data.objects[f"gondola_{i}"].rotation_euler = (0, -angle, 0)
+    rc.bpy.context.view_layer.update()
+
+
+def market_standins():
+    """Render-only: warm stall glows and light strings where the market is, for the ride view."""
+    m = market_in_local()
+    d = Vector((m.x, m.y, 0)).normalized()
+    side = Vector((-d.y, d.x, 0))
+    env = state.env_collection()
+    bulbs = Part("env_mkt_bulbs", "bulb_warm")
+    wire = Part("env_mkt_wire", "wire")
+    roofs = Part("env_mkt_roofs", "wood", tint="soot")
+    for k, off in enumerate((-9, -3, 3, 9)):
+        c = Vector((m.x, m.y, 0)) + side * off + d * (2.0 * (k % 2))
+        pts = [c + side * u - d * 6 + Vector((0, 0, 4.2)) for u in (-3, 3)]
+        cp.bulb_string(bulbs, wire, [tuple(p) for p in pts], sag=0.5, spacing=0.5, bulb_r=0.06)
+        for j, u in enumerate((-6, 0, 6)):
+            b = c + d * u + side * 2.5
+            roofs.box(tuple(b + Vector((0, 0, 1.3))), (3.0, 2.4, 2.6))
+            render.add_light(f"env_mkt_{k}_{j}", 'POINT', tuple(b + Vector((0, 0, 1.8)) - d * 1.4), 350, size=0.6)
+    for p in (bulbs, wire, roofs):
+        p.finish(env)
+
+
 def preview(objs):
+    pose = os.environ.get("NM_POSE", "")
     for o in objs:
         if o.name.startswith("snow_"):
             o.hide_render = True
-    market_strings()
     render.lights_at_markers(energy=260)
-    render.add_light("env_hubglow", 'POINT', (0, -3.2, HUB), 900, size=1.5)
     render.add_light("env_warm_l", 'POINT', (-9, -9, 3.0), 700, size=1.0)
     render.add_light("env_warm_r", 'POINT', (8, -10, 3.5), 500, size=1.0, color=(1.0, 0.55, 0.3))
     render.add_light("env_rim", 'AREA', (6, 14, 18), 3000, color=(0.55, 0.65, 1.0), size=10,
                      rot=(math.radians(-60), 0, math.radians(20)))
+    if pose == "seat":
+        # gondola_0 carried to the top; the camera sits at gondola_seat_0 and looks at the market
+        turn_wheel(math.pi)
+        market_standins()
+        eye = rc.bpy.data.objects["gondola_seat_0"].matrix_world.translation.copy()
+        return render.camera(tuple(eye), tuple(market_in_local()), lens=26)   # the engine camera: 42 deg vertical
+    market_strings()
+    render.add_light("env_hubglow", 'POINT', (0, -3.2, HUB), 900, size=1.5)
+    if pose == "turned":
+        # a quarter turn, seen from the side, to show the gondolas swinging clear between the rims
+        turn_wheel(math.radians(-90))
+        return render.camera((31.0, -21.0, 5.5), (0.0, 0.0, 12.8), lens=27)
     return render.camera((13.8, -30.5, 1.8), (-0.8, 0, 11.9), lens=24)
 
 

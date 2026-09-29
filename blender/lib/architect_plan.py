@@ -73,14 +73,37 @@ def layout_places():
 
 
 # string-light poles (three.js [x, z]) and spans, from the prototype, extended for the wider market.
-# Round 2: the back-row poles 16 and 17 stand clear of the tree (6.5 m+ from its axis at [6.5, -15])
-# and the spans behind it are re-routed so no wire or bulb passes through the fir
+# Round 1 pass 2: the back-row poles 16 and 17 stand clear of the tree (6.5 m+ from its axis at
+# [6.5, -15]), poles 7 and 8 behind the bandstand moved 0.9 m inward to clear it too, and the spans
+# behind the tree are re-routed so no wire or bulb passes through the fir
 # (see blender/square/check_clash.py, which tests every wire and bulb vertex against the fir's needles).
 TREE_THREE = (6.5, -15.0)
 POLES_THREE = [[-15, 4], [-7.5, 6.5], [0, 7.5], [7.5, 6.5], [15, 4], [-10.5, -6.5], [10.5, -6.5],
-               [-3.5, -9.5], [3.5, -9.5], [-17.5, -3], [-17.5, 5], [-17.5, 13], [17.5, -3], [17.5, 5],
+               [-2.6, -9.6], [2.6, -9.6], [-17.5, -3], [-17.5, 5], [-17.5, 13], [17.5, -3], [17.5, 5],
                [17.5, 13], [-7, -18], [0, -20], [12.2, -19.6]]
 SPANS = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [4, 6], [5, 7], [7, 8], [8, 6], [1, 7], [3, 8], [2, 7],
          [2, 8], [1, 5], [3, 6], [9, 10], [10, 11], [12, 13], [13, 14], [9, 12], [11, 1], [14, 3],
          [10, 13], [5, 9], [6, 12], [15, 16], [16, 17], [15, 7], [16, 7], [15, 5], [17, 6]]
 POLE_H = 6.4
+# spans that carry a light_string_NN empty (the rest have bulbs only): the four crossings over the
+# lanes in front of the section stalls and the bandstand first, then two back spans (lite keeps 3)
+STRING_LIGHT_SPANS = [11, 12, 9, 10, 20, 21]
+# ride footprints (half-sizes in the asset's frame, three.js x across and z front-to-back), from the
+# ride builder's ferris.glb and carousel.glb bounding boxes; furniture keeps out of them
+RIDE_HALF = {"riesenrad": (12.5, 5.6), "karussell": (6.4, 6.4), "bandstand": (4.5, 4.9)}
+TREE_BENCH_R = 6.6          # the tree benches' distance from the fir's axis
+TREE_CLEAR_R = 6.5          # no pole within this distance of the fir's axis
+
+
+def in_ride(x_b, y_b, pad=0.5):
+    """True if Blender point (x, y) lies inside a ride's or the bandstand's footprint (+pad)."""
+    for p in load_layout()["places"]:
+        half = RIDE_HALF.get(p["id"])
+        if not half:
+            continue
+        dx, dy = x_b - p["pos"][0], y_b + p["pos"][1]
+        c, s = math.cos(-p.get("rotY", 0)), math.sin(-p.get("rotY", 0))
+        lx, lz = dx * c - dy * s, -(dx * s + dy * c)
+        if abs(lx) < half[0] + pad and abs(lz) < half[1] + pad:
+            return True
+    return False

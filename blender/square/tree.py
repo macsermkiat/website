@@ -3,7 +3,13 @@ branch whorls, glass baubles, straw stars, a bead garland, warm fairy lights (bu
 a glowing star (bulbs_star), a low picket fence and a snow_ layer on the upper boughs.
 Exports site/public/models/tree.glb (tree.lite.glb with LITE=1).
 
-Run: /home/claude/tools/bpy-venv/bin/python blender/square/tree.py   (LITE=1 for the lite model)
+Ambient occlusion goes into the glTF occlusion slot of every material except the bulbs: the trunk,
+fence and fence snow share a baked lightmap atlas, and the needle fronds, snow cards, baubles, straw
+stars and garland carry per-vertex occlusion (dark inside the crown, open at the tips) through a ramp
+kept in the same image (see architect_common.vertex_ao_to_ramp).
+
+Run: NM_DEVICE=METAL NM_THREADS=0 ~/nachtmarkt-tools/bpy-venv/bin/python blender/square/tree.py
+     (LITE=1 for the lite model)
 """
 import os, sys, math, random
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
@@ -249,9 +255,11 @@ starstem.cyl((0, 0, HT - 1.0), 0.04, 0.04, 0.6, seg=6)
 snowp.cyl((0, 0, 0.02), RF - 0.1, RF - 0.1, 0.04, seg=16 if not LITE else 8, bottom=False)
 
 objs = []
+built = {}
 for g in [needles, snowc, bark, wood, snowp, caps, straw, bead, bulbs, star, starstem] + list(bal.values()):
     ob = g.finish(col, smooth=g in (bark,) or g in bal.values())
-    if ob: objs.append(ob)
+    if ob:
+        objs.append(ob); built[g.name] = ob
 for p, (name, loc) in enumerate([("light_tree_0", (0, -4.2, 4.5)), ("light_tree_1", (0.5, 3.5, 8.5))]):
     objs.append(C.empty(name, loc, col))
 tris = C.count_tris(objs)
@@ -259,6 +267,31 @@ by = sorted(((o.name, C.count_tris([o])) for o in objs), key=lambda kv: -kv[1])
 C.log("TREE TRIANGLES", tris, by[:8])
 if os.environ.get("STATS_ONLY"):
     sys.exit(0)
+# ------------------------------------------------------------------ ambient occlusion
+AO_RES = 512 if LITE else 1024
+STRIP = 0.96                    # u >= STRIP holds the ramp used by the per-vertex occlusion
+AO_PATH = os.path.join(TD, f"tree_ao{'_lite' if LITE else ''}.png")
+scene.world = bpy.data.worlds.new("ao_world")
+# a temporary ground (not exported) so the trunk foot, fence and lowest boughs darken toward it
+gme = bpy.data.meshes.new("ao_ground")
+gme.from_pydata([(-12, -12, 0), (12, -12, 0), (12, 12, 0), (-12, 12, 0)], [], [(0, 1, 2, 3)])
+gob = bpy.data.objects.new("ao_ground", gme); scene.collection.objects.link(gob)
+for o in objs:
+    if o.name.startswith("bulbs_"):
+        o.hide_render = True
+atlas = [built[n] for n in ("tree_trunk", "tree_fence", "snow_tree_fence") if n in built]
+C.lightmap_atlas(atlas, reserve_u=1 - STRIP + 0.005, margin=0.004)
+ao_img = C.bake_ao(atlas, "tree_ao", AO_RES, AO_PATH, samples=64, distance=1.5, post=False)
+small = [o for o in objs if o.type == "MESH" and o not in atlas and not o.name.startswith("bulbs_")]
+C.vertex_ao_to_ramp(small, STRIP + 0.01, 0.995, samples=64, distance=1.2, lift=0.3)
+C.finish_ao_image(ao_img, AO_PATH, lift=0.3, strip=(STRIP, "ramp"))
+for o in atlas + small:
+    for m in o.data.materials:
+        C.attach_ao(m, ao_img)
+for o in objs:
+    o.hide_render = False
+bpy.data.objects.remove(gob)
+
 name = "tree.lite" if LITE else "tree"
 raw = C.export_glb(objs, os.path.join(OUT, f"{name}_raw.glb"))
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, f"{name}.blend"))

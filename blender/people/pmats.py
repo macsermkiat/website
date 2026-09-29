@@ -119,7 +119,9 @@ def _mat(name, color, rough, normal=None, nstrength=1.0, double=False, sheen=0.0
     return m
 
 
-def make(spec):
+def make(spec, lite=False):
+    """lite: no fabric normal maps. At lite-market distances the knit and twill are sub-pixel, and dropping
+    them also drops the tiling TEXCOORD_0 from coat, scarf and hat (about 15 kB per lite figure)."""
     tex = ensure_textures()
     knit = _img(tex["people_knit_normal"], "people_knit_normal")
     wool = _img(tex["people_wool_normal"], "people_wool_normal")
@@ -127,6 +129,8 @@ def make(spec):
     hat = spec.get("hat") or {"color": "#444444", "style": "beanie"}
     felt = hat["style"] in ("trilby", "flatcap", "beret")
     coat_n = knit if spec["coat"].get("knit") else wool
+    if lite:
+        knit = wool = coat_n = None
     return {
         "body": _mat("body", (1, 1, 1), 0.72),
         "coat": _mat("coat", lin(spec["coat"]["color"]), spec["coat"].get("rough", 0.86), coat_n,

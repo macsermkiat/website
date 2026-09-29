@@ -1,14 +1,23 @@
 """Check the vendor's prop sets against the build contract (plain Python, no bpy).
 
-    python3 blender/props/check_props.py
+    python3 blender/props/check_props.py          (any Python 3; no third-party modules)
 
-- props.json maps every prop_*.glb to a stall and slot, and every set has a .lite.glb
-- the required act_ nodes exist (mugs, taps, glasses + foam, grill, sausages, books)
-- section stall + its prop sets stay within 60k triangles (full) and 3 MB (with the shared atlas)
-- bounding boxes and pivots from blender/out/props_report.json (written by build_props.py)
+FAIL (exit 1):
+- props.json lists every prop_*.glb with a stall, slot, full and lite file; all 19 sets exist
+- required act_ nodes: >= 8 mugs, taps 0..2 pivoting at their base, glasses with foam, the grill and its
+  swing, sausages riding the swing, books, 8-12 wine bottles, wine glasses, rolls
+- no prop set adds a light_ empty (the stalls already carry their 2 or 1)
+- every act_book_<n> has a book_cover_<n> material; act_ names are unique across all sets
+- items.json names every act_ node of every set, and books carry title and author
+- every set fits a 0.5 m deep counter or shelf, stands on the slot (z >= 0) and stays under the
+  1.15 m front opening; clickable goods have their origin at their base
+- every material except glass, liquids and emissives has a baked occlusion texture (TEXCOORD_1)
+- section stall + its props <= 60k triangles with >= 2k headroom, and <= 3 MB with shared textures
+WARN (listed, exit 0): deco stall + goods over 20k, lite versions above 40 % of the full triangles.
 """
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -17,85 +26,196 @@ sys.path.insert(0, os.path.join(REPO, "blender", "lib"))
 import glb_tools  # noqa: E402
 
 MODELS = os.path.join(REPO, "site", "public", "models")
-REQUIRED = {
-    "prop_gluehwein_counter": ["act_pot_lid", "act_mug_0", "act_mug_7"],
-    "prop_bier_counter": ["act_tap_0", "act_tap_1", "act_tap_2", "act_glass_0", "foam_0"],
-    "prop_wurst_counter": ["act_grill", "act_sausage_0"],
-    "prop_books_shelf_1": ["act_book_0"],
-    "prop_books_shelf_2": ["act_book_100"],
-    "prop_books_counter": ["light_lamp"],
-}
+REPORT = os.path.join(REPO, "blender", "out", "props_report.json")
 SECTION = {"gluehwein": "stall_gluehwein", "bierstand": "stall_bier", "bratwurst": "stall_bratwurst",
            "buecherstand": "stall_buecher"}
+SECTION_SETS = ["prop_gluehwein_counter", "prop_gluehwein_shelf", "prop_gluehwein_wine", "prop_bier_counter",
+                "prop_bier_back", "prop_bier_shelf", "prop_wurst_counter", "prop_books_shelf_1", "prop_books_shelf_2",
+                "prop_books_counter"]
 DECO_KEYS = ["lebkuchen", "mandeln", "kerzen", "spielzeug", "schmuck", "kaese", "crepes", "maroni", "puffer"]
+NO_AO = ("vendor_glass", "flame", "lamp_glow", "coal_glow", "vendor_beer", "vendor_liquid")
+BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served)_\d+$")
+HEADROOM, SECTION_TRIS, SECTION_MB, DECO_TRIS = 2000, 60000, 3.0, 20000
+
+fails, warns = [], []
+
+
+def fail(msg):
+    fails.append(msg)
+    print("  FAIL", msg)
+
+
+def warn(msg):
+    warns.append(msg)
+    print("  WARN", msg)
+
+
+def acts(nodes, prefix):
+    return sorted((n for n in nodes if re.match(rf"^{prefix}\d+$", n)), key=lambda n: int(n.rsplit("_", 1)[1]))
+
+
+def is_act(n):
+    """An action node the engine sees: act_x, not its geometry child act_x_mesh (engine/conventions.js)."""
+    return n.startswith("act_") and not n.endswith("_mesh")
+
+
+def uris(path):
+    js, _ = glb_tools.read_glb(path)
+    return {im["uri"] for im in js.get("images", []) if im.get("uri")}
+
+
+def parents(js):
+    out = {}
+    for i, nd in enumerate(js.get("nodes", [])):
+        for c in nd.get("children", []):
+            out[js["nodes"][c].get("name")] = nd.get("name")
+    return out
+
+
+def check_nodes(name, js, nodes):
+    par = parents(js)
+    lights = [n for n in nodes if n.startswith("light_")]
+    if lights:
+        fail(f"{name}: adds light_ empties {lights} (the stall has its own)")
+    need = {
+        "prop_gluehwein_counter": lambda: len(acts(nodes, "act_mug_")) >= 8 and "act_pot_lid" in nodes,
+        "prop_gluehwein_wine": lambda: 8 <= len(acts(nodes, "act_bottle_")) <= 12 and acts(nodes, "act_wineglass_"),
+        "prop_bier_counter": lambda: all(f"act_tap_{i}" in nodes for i in range(3)) and acts(nodes, "act_glass_")
+        and all(par.get(f"foam_{g.rsplit('_', 1)[1]}") == g for g in acts(nodes, "act_glass_")),
+        "prop_wurst_counter": lambda: "act_grill" in nodes and "act_grill_swing" in nodes
+        and acts(nodes, "act_sausage_") and acts(nodes, "act_roll_"),
+        "prop_books_shelf_1": lambda: acts(nodes, "act_book_"),
+        "prop_books_shelf_2": lambda: acts(nodes, "act_book_"),
+    }
+    if name in need and not need[name]():
+        fail(f"{name}: required act_ nodes missing")
+    if name == "prop_wurst_counter":
+        on_grate = [n for n in acts(nodes, "act_sausage_") if par.get(n) == "act_grill_swing"]
+        if len(on_grate) < 8:
+            fail(f"{name}: only {len(on_grate)} sausages are children of act_grill_swing")
+    mats = set(m.get("name") for m in js.get("materials", []))
+    for b in acts(nodes, "act_book_"):
+        if f"book_cover_{b.rsplit('_', 1)[1]}" not in mats:
+            fail(f"{name}: {b} has no book_cover material")
+
+
+def check_ao(name, js):
+    for m in js.get("materials", []):
+        mn = m.get("name", "")
+        if mn.startswith(NO_AO):
+            continue
+        occ = m.get("occlusionTexture")
+        if not occ or occ.get("texCoord") != 1:
+            fail(f"{name}: material {mn} has no occlusion texture on TEXCOORD_1")
+            return
+
+
+def check_geometry(name, r):
+    size, lo, hi = r.get("size"), r.get("bbox_min"), r.get("bbox_max")
+    if not size:
+        fail(f"{name}: no bounding box in props_report.json (rebuild)")
+        return
+    if size[1] > 0.5 + 1e-3:
+        fail(f"{name} is {size[1]:.3f} m deep (> 0.5)")
+    if lo[2] < -0.002:
+        fail(f"{name} reaches {lo[2]:.3f} m below its slot")
+    if hi[2] > 1.15 + 1e-3:
+        fail(f"{name} is {hi[2]:.3f} m tall (front opening is 1.15)")
+    for node, p in r.get("pivots", {}).items():
+        # rest_min_z: lowest point of the node's geometry above its origin, measured along world Z, so an
+        # upside-down mug (rotated node) whose origin is on its rim counts as based correctly
+        z = p.get("rest_min_z", p["local_min"][2])
+        if BASE_PIVOT.match(node) and not (-0.004 <= z <= 0.004):
+            fail(f"{name}: {node} pivot is not at its base (geometry starts at z {z:+.3f})")
 
 
 def main():
-    ok = True
     with open(os.path.join(MODELS, "props.json")) as f:
         pj = json.load(f)
-    sets = {k: v for k, v in pj.items() if k.startswith("prop_")}
+    if set(pj) - {"about", "sets"}:
+        fail(f"props.json has extra top-level keys {sorted(set(pj) - {'about', 'sets'})}")
+    sets = {e["set"]: e for e in pj["sets"]}
+    with open(os.path.join(MODELS, "items.json")) as f:
+        items = json.load(f)["items"]
+    rep = {}
+    if os.path.exists(REPORT):
+        with open(REPORT) as f:
+            rep = json.load(f)
     files = sorted(f[:-4] for f in os.listdir(MODELS) if f.startswith("prop_") and f.endswith(".glb")
                    and not f.endswith(".lite.glb"))
     for f in files:
         if f not in sets:
-            print("NOT IN props.json:", f)
-            ok = False
-    for d in DECO_KEYS:
-        if f"prop_deco_{d}" not in sets:
-            print("missing deco set", d)
-            ok = False
-    rep = {}
-    rp = os.path.join(REPO, "blender", "out", "props_report.json")
-    if os.path.exists(rp):
-        with open(rp) as f:
-            rep = json.load(f)
+            fail(f"{f}.glb is not in props.json")
+    for n in SECTION_SETS + [f"prop_deco_{d}" for d in DECO_KEYS]:
+        if n not in sets:
+            fail(f"missing set {n}")
     tex = sum(os.path.getsize(os.path.join(MODELS, t)) for t in os.listdir(MODELS)
               if t.startswith("prop_tex_") and ".lite." not in t)
     tex_lite = sum(os.path.getsize(os.path.join(MODELS, t)) for t in os.listdir(MODELS)
                    if t.startswith("prop_tex_") and ".lite." in t)
-    per_stall = {}
-    print(f"{'set':26s} {'stall':16s} {'slot':13s} {'tris':>6s} {'lite':>6s} {'kB':>5s} {'lite kB':>7s}  size (m)")
+    per_stall, seen = {}, {}
+    print(f"{'set':24s} {'stall':14s} {'slot':13s} {'tris':>6s} {'lite':>5s} {'ratio':>5s} {'kB':>4s} {'lite':>4s}"
+          f"  size x y z (m)")
     for name, e in sets.items():
-        full = os.path.join(MODELS, e["model"])
-        lite = os.path.join(MODELS, e["lite"])
-        for p in (full, lite):
-            if not os.path.exists(p):
-                print("MISSING FILE", p)
-                ok = False
-        rf, rl = glb_tools.report(full), glb_tools.report(lite)
-        for n in REQUIRED.get(name, []):
-            for r in (rf, rl):
-                if n not in r["nodes"]:
-                    print(f"{name}: node {n} missing in {os.path.basename(r['file'])}")
-                    ok = False
-        size = rep.get(name, {}).get("size")
-        print(f"{name:26s} {e['stall']:16s} {e['slot']:13s} {rf['triangles']:6d} {rl['triangles']:6d} "
-              f"{rf['bytes'] / 1e3:5.0f} {rl['bytes'] / 1e3:7.0f}  {size}")
-        if size and (size[1] > 0.5 + 1e-3):
-            print(f"  ! {name} is {size[1]:.3f} m deep (> 0.5)")
-            ok = False
-        per_stall.setdefault(e["stall"], []).append((rf, rl))
-    print(f"\nshared atlas textures: {tex / 1e6:.2f} MB (lite {tex_lite / 1e6:.2f} MB), loaded once for all sets")
-    print(f"\n{'section stall':16s} {'stall tris':>10s} {'+ props':>8s} {'= total':>8s} {'budget':>7s} {'MB total':>9s}")
+        paths = [os.path.join(MODELS, e["model"]), os.path.join(MODELS, e["lite"])]
+        if not all(os.path.exists(p) for p in paths):
+            fail(f"{name}: missing {[os.path.basename(p) for p in paths if not os.path.exists(p)]}")
+            continue
+        rf, rl = glb_tools.report(paths[0]), glb_tools.report(paths[1])
+        r = rep.get(name, {})
+        ratio = rl["triangles"] / max(1, rf["triangles"])
+        size = r.get("size") or [0, 0, 0]
+        print(f"{name:24s} {e['stall']:14s} {e['slot']:13s} {rf['triangles']:6d} {rl['triangles']:5d} {ratio:5.0%} "
+              f"{rf['bytes'] / 1e3:4.0f} {rl['bytes'] / 1e3:4.0f}  {size[0]:.2f} {size[1]:.2f} {size[2]:.2f}")
+        for variant, p in zip(("full", "lite"), paths):
+            js, _ = glb_tools.read_glb(p)
+            nodes = glb_tools.node_names(js)
+            check_nodes(f"{name} ({variant})", js, nodes)
+            check_ao(f"{name} ({variant})", js)
+        for n in glb_tools.node_names(glb_tools.read_glb(paths[0])[0]):
+            if is_act(n):
+                if n in seen:
+                    fail(f"{n} is in both {seen[n]} and {name}")
+                seen[n] = name
+                if n not in items:
+                    fail(f"items.json has no entry for {n} ({name})")
+                elif items[n].get("kind") == "book" and not (items[n].get("title") and items[n].get("author")):
+                    fail(f"items.json: {n} lacks title or author")
+        check_geometry(name, r)
+        if ratio > 0.4:
+            warn(f"{name}: lite has {ratio:.0%} of the full triangles (target about a third)")
+        per_stall.setdefault(e["stall"], []).append((rf, rl, uris(paths[0])))
+    print(f"\nshared textures: {tex / 1e6:.2f} MB (lite {tex_lite / 1e6:.2f} MB), loaded once for all sets")
+    print(f"\n{'section stall':14s} {'stall':>6s} {'props':>6s} {'total':>6s} {'room':>6s} {'MB':>5s}")
     for stall, base in SECTION.items():
         sr = glb_tools.report(os.path.join(MODELS, base + ".glb"))
         pt = sum(r[0]["triangles"] for r in per_stall.get(stall, []))
         pb = sum(r[0]["bytes"] for r in per_stall.get(stall, []))
+        # the shared prop textures this stall's sets actually reference (each counted once)
+        used = set().union(*(r[2] for r in per_stall.get(stall, []))) if per_stall.get(stall) else set()
+        tb = sum(os.path.getsize(os.path.join(MODELS, u)) for u in used)
         tot = sr["triangles"] + pt
-        mb = (sr["bytes"] + pb + tex) / 1e6
-        flag = "OK" if tot <= 60000 and mb <= 3.0 else "OVER"
-        ok &= flag == "OK"
-        print(f"{stall:16s} {sr['triangles']:10d} {pt:8d} {tot:8d} {60000:7d} {mb:9.2f}  {flag}")
-    print(f"\n{'deco stall':16s} {'stall tris':>10s} {'+ goods':>8s} {'= total':>8s} {'budget':>7s}")
+        mb = (sr["bytes"] + pb + tb) / 1e6
+        print(f"{stall:14s} {sr['triangles']:6d} {pt:6d} {tot:6d} {SECTION_TRIS - tot:6d} {mb:5.2f}")
+        if tot > SECTION_TRIS - HEADROOM:
+            fail(f"{stall}: {tot} triangles leaves {SECTION_TRIS - tot} headroom (< {HEADROOM})")
+        if mb > SECTION_MB:
+            fail(f"{stall}: {mb:.2f} MB with the shared textures (> {SECTION_MB})")
+    print(f"\n{'deco stall':14s} {'stall':>6s} {'goods':>6s} {'total':>6s}")
     for d in DECO_KEYS:
         sid = "deco-" + ("kartoffelpuffer" if d == "puffer" else d)
         sr = glb_tools.report(os.path.join(MODELS, f"deco_{d}.glb"))
         pt = sum(r[0]["triangles"] for r in per_stall.get(sid, []))
         tot = sr["triangles"] + pt
-        print(f"{d:16s} {sr['triangles']:10d} {pt:8d} {tot:8d} {20000:7d}  {'OK' if tot <= 20000 else 'over'}")
-    print("\nALL CHECKS PASSED" if ok else "\nSOME CHECKS FAILED")
-    return 0 if ok else 1
+        print(f"{d:14s} {sr['triangles']:6d} {pt:6d} {tot:6d}")
+        if tot > DECO_TRIS:
+            warn(f"deco {d}: stall {sr['triangles']} + goods {pt} = {tot} > {DECO_TRIS} "
+                 f"({'the stall alone leaves ' + str(max(0, DECO_TRIS - sr['triangles'])) + ' for goods'})")
+    if fails:
+        print(f"\nFAILED: {len(fails)} check(s) failed, {len(warns)} warning(s)")
+        return 1
+    print(f"\nPASSED WITH {len(warns)} WARNING(S)" if warns else "\nALL CHECKS PASSED")
+    return 0
 
 
 if __name__ == "__main__":

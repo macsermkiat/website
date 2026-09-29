@@ -70,7 +70,7 @@ class Hut:
                  counter_depth=0.6, counter_over=0.22, shelves=(1.38, 1.78), shade=None,
                  plank_w=0.14, bulbs_sides=False, bulb_spacing=0.2, front_posts=None,
                  header_h=0.16, open_top=OPEN_TOP, wall_band=None, plank_bevel=None,
-                 shingle_size=(0.19, 0.14)):
+                 shingle_size=(0.19, 0.14), bulb_detail=(None, None)):
         self.key = key
         self.W, self.D, self.eave, self.ridge = W, D, eave, ridge
         self.ridge_axis = ridge_axis
@@ -88,6 +88,7 @@ class Hut:
         self.wall_band = wall_band
         self.plank_bevel = plank_bevel
         self.shingle_size = shingle_size
+        self.bulb_detail = bulb_detail          # (seg, rings) of the eave bulbs; None = library default
         self.x0, self.x1 = -W / 2, W / 2
         self.yF, self.yB = -D / 2, D / 2
         self.front_posts = front_posts or [self.x0 + 0.05, self.x1 - 0.05]
@@ -221,7 +222,7 @@ class Hut:
                 self.wood.box((at, c, z0 + h / 2), (0.012, w, h), tint=self.inner_tint, var=0.05, grain=2, bevel=0)
             pos += w
 
-    def build_counter(self, x0=None, x1=None, brackets=4, front_band=None, wear=0.5):
+    def build_counter(self, x0=None, x1=None, brackets=4, front_band=None, wear=0.5, grid=0.16):
         """Counter top exactly at COUNTER_TOP, overhanging to the front, on brackets.
         Oak kit boards; the front board has a rounded, worn nosing, and the top and lip carry a
         vertex grid shaded by counter_wear (darkened front edge where hands rest)."""
@@ -234,7 +235,7 @@ class Hut:
         C = self.counter
         C.shade = counter_wear(y_front, x0, x1, strength=wear, seed=len(self.key))
         L = x1 - x0 + 0.06
-        nx = max(2, int(L / (0.25 if state.lite() else 0.1)))
+        nx = max(2, int(L / (0.3 if state.lite() else grid)))       # wear-grid columns
         # three thick boards along X; the front one is split lengthwise into a grid for the wear
         n = 3
         bw = (y_back - y_front) / n
@@ -243,8 +244,8 @@ class Hut:
             C.box(((x0 + x1) / 2 + state.rng.uniform(-0.01, 0.01), y_front + (i + 0.5) * bw,
                    COUNTER_TOP - th / 2), (L, bw - 0.004, th),
                   tint=OAK_TINT.get(self.counter_tint, self.counter_tint), grain=0, var=0.1,
-                  bevel=0.012 if front else 0.005, bevel_segments=3 if front else 2,
-                  segs=(nx, 4 if front else 1, 1) if front else nx // 2)
+                  bevel=0.012 if front else 0.005, bevel_segments=2,
+                  segs=(nx, 3, 1) if front else max(1, nx // 3))
         # front edge lip board
         C.box(((x0 + x1) / 2, y_front0 - 0.012, COUNTER_TOP - 0.06), (x1 - x0 + 0.08, 0.024, 0.09),
               tint=OAK_TINT.get(self.counter_tint, self.counter_tint), grain=0, segs=(nx, 1, 2), bevel=0.006,
@@ -313,23 +314,28 @@ class Hut:
             z = sl.point(0, 0, -0.08).z
             xa, xb = sl.a0 + 0.05, sl.a1 - 0.05
             anchors = [(xa + (xb - xa) * i / 4, y, z) for i in range(5)]
-            cp.bulb_string(self.bulbs, self.wire, anchors, sag=sag, spacing=self.bulb_spacing)
+            cp.bulb_string(self.bulbs, self.wire, anchors, sag=sag, spacing=self.bulb_spacing,
+                           seg=self.bulb_detail[0], rings=self.bulb_detail[1])
             if sides:
                 for a in (sl.a0 - 0.02, sl.a1 + 0.02):
                     pts = [sl.point(a, s, -0.06) for s in (0.05, sl.L * 0.5, sl.L - 0.05)]
-                    cp.bulb_string(self.bulbs, self.wire, pts, sag=0.03, spacing=self.bulb_spacing)
+                    cp.bulb_string(self.bulbs, self.wire, pts, sag=0.03, spacing=self.bulb_spacing,
+                           seg=self.bulb_detail[0], rings=self.bulb_detail[1])
         else:
             # front gable: follow both rake edges up to the apex
             for sl in self.slopes:
                 a = sl.a0 - 0.03 if sl.A.y > 0 else sl.a1 + 0.03
                 pts = [sl.point(a, s, -0.07) for s in (0.02, sl.L * 0.35, sl.L * 0.7, sl.L - 0.02)]
-                cp.bulb_string(self.bulbs, self.wire, pts, sag=0.035, spacing=self.bulb_spacing)
+                cp.bulb_string(self.bulbs, self.wire, pts, sag=0.035, spacing=self.bulb_spacing,
+                           seg=self.bulb_detail[0], rings=self.bulb_detail[1])
             if sides:
                 for sl in self.slopes:
                     pts = [sl.point(a, -0.02, -0.08) for a in (sl.a0 + 0.1, 0, sl.a1 - 0.1)]
-                    cp.bulb_string(self.bulbs, self.wire, pts, sag=0.05, spacing=self.bulb_spacing)
+                    cp.bulb_string(self.bulbs, self.wire, pts, sag=0.05, spacing=self.bulb_spacing,
+                           seg=self.bulb_detail[0], rings=self.bulb_detail[1])
         if extra_anchors:
-            cp.bulb_string(self.bulbs, self.wire, extra_anchors, sag=sag, spacing=self.bulb_spacing)
+            cp.bulb_string(self.bulbs, self.wire, extra_anchors, sag=sag, spacing=self.bulb_spacing,
+                           seg=self.bulb_detail[0], rings=self.bulb_detail[1])
 
     def interior_bulbs(self, xs=(-0.9, 0.0, 0.9), y=0.1, z=None):
         z = z or self.eave - 0.35

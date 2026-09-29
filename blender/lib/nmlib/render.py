@@ -157,18 +157,9 @@ def camera(loc, target, lens=32, dof=None):
 
 
 def render(path_png, samples=48, res=(1280, 720), exposure=0.0, jpeg=None, jpeg_width=1280):
-    """Render the scene camera to PNG (and a review JPEG). Uses 2 threads, OIDN denoise."""
+    """Render the scene camera to PNG (and a review JPEG). Device/threads from NM_DEVICE/NM_THREADS, OIDN denoise."""
     scene = bpy.context.scene
-    scene.render.engine = 'CYCLES'
-    scene.cycles.device = 'CPU'
-    dev = os.environ.get('NM_DEVICE', 'CPU').upper()
-    if dev in ('METAL', 'CUDA', 'OPTIX', 'HIP', 'ONEAPI'):
-        prefs = bpy.context.preferences.addons['cycles'].preferences
-        prefs.compute_device_type = dev
-        prefs.get_devices()
-        for d in prefs.devices:
-            d.use = True
-        scene.cycles.device = 'GPU'
+    state.configure_cycles(scene)
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
     try:
@@ -177,12 +168,6 @@ def render(path_png, samples=48, res=(1280, 720), exposure=0.0, jpeg=None, jpeg_
         pass
     scene.cycles.max_bounces = 6
     scene.cycles.use_adaptive_sampling = True
-    threads = int(os.environ.get('NM_THREADS', '2'))
-    if threads > 0:
-        scene.render.threads_mode = 'FIXED'
-        scene.render.threads = threads
-    else:
-        scene.render.threads_mode = 'AUTO'
     scene.render.resolution_x, scene.render.resolution_y = res
     scene.render.resolution_percentage = 100
     scene.view_settings.view_transform = 'AgX'

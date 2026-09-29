@@ -1,257 +1,154 @@
 {
- "about": "Vendor prop sets. Each glb's root node is the set origin: parent it to the named slot_ empty of the stall (layout.json id). 'sets' repeats the same data as a list for the engine.",
- "prop_gluehwein_counter": {
-  "slot": "slot_counter",
-  "stall": "gluehwein",
-  "model": "prop_gluehwein_counter.glb",
-  "lite": "prop_gluehwein_counter.lite.glb",
-  "asset": "stall_gluehwein.glb"
- },
- "prop_gluehwein_shelf": {
-  "slot": "slot_shelf_1",
-  "stall": "gluehwein",
-  "model": "prop_gluehwein_shelf.glb",
-  "lite": "prop_gluehwein_shelf.lite.glb",
-  "asset": "stall_gluehwein.glb"
- },
- "prop_bier_counter": {
-  "slot": "slot_counter",
-  "stall": "bierstand",
-  "model": "prop_bier_counter.glb",
-  "lite": "prop_bier_counter.lite.glb",
-  "asset": "stall_bier.glb"
- },
- "prop_bier_back": {
-  "slot": "slot_shelf_1",
-  "stall": "bierstand",
-  "model": "prop_bier_back.glb",
-  "lite": "prop_bier_back.lite.glb",
-  "asset": "stall_bier.glb"
- },
- "prop_wurst_counter": {
-  "slot": "slot_counter",
-  "stall": "bratwurst",
-  "model": "prop_wurst_counter.glb",
-  "lite": "prop_wurst_counter.lite.glb",
-  "asset": "stall_bratwurst.glb"
- },
- "prop_books_shelf_1": {
-  "slot": "slot_shelf_1",
-  "stall": "buecherstand",
-  "model": "prop_books_shelf_1.glb",
-  "lite": "prop_books_shelf_1.lite.glb",
-  "asset": "stall_buecher.glb"
- },
- "prop_books_shelf_2": {
-  "slot": "slot_shelf_2",
-  "stall": "buecherstand",
-  "model": "prop_books_shelf_2.glb",
-  "lite": "prop_books_shelf_2.lite.glb",
-  "asset": "stall_buecher.glb"
- },
- "prop_books_counter": {
-  "slot": "slot_counter",
-  "stall": "buecherstand",
-  "model": "prop_books_counter.glb",
-  "lite": "prop_books_counter.lite.glb",
-  "asset": "stall_buecher.glb"
- },
- "prop_deco_lebkuchen": {
-  "slot": "slot_counter",
-  "stall": "deco-lebkuchen",
-  "model": "prop_deco_lebkuchen.glb",
-  "lite": "prop_deco_lebkuchen.lite.glb",
-  "asset": "deco_lebkuchen.glb"
- },
- "prop_deco_mandeln": {
-  "slot": "slot_counter",
-  "stall": "deco-mandeln",
-  "model": "prop_deco_mandeln.glb",
-  "lite": "prop_deco_mandeln.lite.glb",
-  "asset": "deco_mandeln.glb"
- },
- "prop_deco_kerzen": {
-  "slot": "slot_counter",
-  "stall": "deco-kerzen",
-  "model": "prop_deco_kerzen.glb",
-  "lite": "prop_deco_kerzen.lite.glb",
-  "asset": "deco_kerzen.glb"
- },
- "prop_deco_spielzeug": {
-  "slot": "slot_counter",
-  "stall": "deco-spielzeug",
-  "model": "prop_deco_spielzeug.glb",
-  "lite": "prop_deco_spielzeug.lite.glb",
-  "asset": "deco_spielzeug.glb"
- },
- "prop_deco_schmuck": {
-  "slot": "slot_counter",
-  "stall": "deco-schmuck",
-  "model": "prop_deco_schmuck.glb",
-  "lite": "prop_deco_schmuck.lite.glb",
-  "asset": "deco_schmuck.glb"
- },
- "prop_deco_kaese": {
-  "slot": "slot_counter",
-  "stall": "deco-kaese",
-  "model": "prop_deco_kaese.glb",
-  "lite": "prop_deco_kaese.lite.glb",
-  "asset": "deco_kaese.glb"
- },
- "prop_deco_crepes": {
-  "slot": "slot_counter",
-  "stall": "deco-crepes",
-  "model": "prop_deco_crepes.glb",
-  "lite": "prop_deco_crepes.lite.glb",
-  "asset": "deco_crepes.glb"
- },
- "prop_deco_maroni": {
-  "slot": "slot_counter",
-  "stall": "deco-maroni",
-  "model": "prop_deco_maroni.glb",
-  "lite": "prop_deco_maroni.lite.glb",
-  "asset": "deco_maroni.glb"
- },
- "prop_deco_puffer": {
-  "slot": "slot_counter",
-  "stall": "deco-kartoffelpuffer",
-  "model": "prop_deco_puffer.glb",
-  "lite": "prop_deco_puffer.lite.glb",
-  "asset": "deco_puffer.glb"
- },
+ "about": "Vendor prop sets. Each glb's root node is the set origin: parent it to the named slot_ empty of the stall (layout.json id in 'stall', stall file in 'asset').",
  "sets": [
   {
    "set": "prop_gluehwein_counter",
-   "slot": "slot_counter",
    "stall": "gluehwein",
+   "slot": "slot_counter",
    "model": "prop_gluehwein_counter.glb",
    "lite": "prop_gluehwein_counter.lite.glb",
    "asset": "stall_gluehwein.glb"
   },
   {
    "set": "prop_gluehwein_shelf",
-   "slot": "slot_shelf_1",
    "stall": "gluehwein",
+   "slot": "slot_shelf_1",
    "model": "prop_gluehwein_shelf.glb",
    "lite": "prop_gluehwein_shelf.lite.glb",
    "asset": "stall_gluehwein.glb"
   },
   {
+   "set": "prop_gluehwein_wine",
+   "stall": "gluehwein",
+   "slot": "slot_shelf_2",
+   "model": "prop_gluehwein_wine.glb",
+   "lite": "prop_gluehwein_wine.lite.glb",
+   "asset": "stall_gluehwein.glb"
+  },
+  {
    "set": "prop_bier_counter",
-   "slot": "slot_counter",
    "stall": "bierstand",
+   "slot": "slot_counter",
    "model": "prop_bier_counter.glb",
    "lite": "prop_bier_counter.lite.glb",
    "asset": "stall_bier.glb"
   },
   {
    "set": "prop_bier_back",
-   "slot": "slot_shelf_1",
    "stall": "bierstand",
+   "slot": "slot_shelf_1",
    "model": "prop_bier_back.glb",
    "lite": "prop_bier_back.lite.glb",
    "asset": "stall_bier.glb"
   },
   {
+   "set": "prop_bier_shelf",
+   "stall": "bierstand",
+   "slot": "slot_shelf_2",
+   "model": "prop_bier_shelf.glb",
+   "lite": "prop_bier_shelf.lite.glb",
+   "asset": "stall_bier.glb"
+  },
+  {
    "set": "prop_wurst_counter",
-   "slot": "slot_counter",
    "stall": "bratwurst",
+   "slot": "slot_counter",
    "model": "prop_wurst_counter.glb",
    "lite": "prop_wurst_counter.lite.glb",
    "asset": "stall_bratwurst.glb"
   },
   {
    "set": "prop_books_shelf_1",
-   "slot": "slot_shelf_1",
    "stall": "buecherstand",
+   "slot": "slot_shelf_1",
    "model": "prop_books_shelf_1.glb",
    "lite": "prop_books_shelf_1.lite.glb",
    "asset": "stall_buecher.glb"
   },
   {
    "set": "prop_books_shelf_2",
-   "slot": "slot_shelf_2",
    "stall": "buecherstand",
+   "slot": "slot_shelf_2",
    "model": "prop_books_shelf_2.glb",
    "lite": "prop_books_shelf_2.lite.glb",
    "asset": "stall_buecher.glb"
   },
   {
    "set": "prop_books_counter",
-   "slot": "slot_counter",
    "stall": "buecherstand",
+   "slot": "slot_counter",
    "model": "prop_books_counter.glb",
    "lite": "prop_books_counter.lite.glb",
    "asset": "stall_buecher.glb"
   },
   {
    "set": "prop_deco_lebkuchen",
-   "slot": "slot_counter",
    "stall": "deco-lebkuchen",
+   "slot": "slot_counter",
    "model": "prop_deco_lebkuchen.glb",
    "lite": "prop_deco_lebkuchen.lite.glb",
    "asset": "deco_lebkuchen.glb"
   },
   {
    "set": "prop_deco_mandeln",
-   "slot": "slot_counter",
    "stall": "deco-mandeln",
+   "slot": "slot_counter",
    "model": "prop_deco_mandeln.glb",
    "lite": "prop_deco_mandeln.lite.glb",
    "asset": "deco_mandeln.glb"
   },
   {
    "set": "prop_deco_kerzen",
-   "slot": "slot_counter",
    "stall": "deco-kerzen",
+   "slot": "slot_counter",
    "model": "prop_deco_kerzen.glb",
    "lite": "prop_deco_kerzen.lite.glb",
    "asset": "deco_kerzen.glb"
   },
   {
    "set": "prop_deco_spielzeug",
-   "slot": "slot_counter",
    "stall": "deco-spielzeug",
+   "slot": "slot_counter",
    "model": "prop_deco_spielzeug.glb",
    "lite": "prop_deco_spielzeug.lite.glb",
    "asset": "deco_spielzeug.glb"
   },
   {
    "set": "prop_deco_schmuck",
-   "slot": "slot_counter",
    "stall": "deco-schmuck",
+   "slot": "slot_counter",
    "model": "prop_deco_schmuck.glb",
    "lite": "prop_deco_schmuck.lite.glb",
    "asset": "deco_schmuck.glb"
   },
   {
    "set": "prop_deco_kaese",
-   "slot": "slot_counter",
    "stall": "deco-kaese",
+   "slot": "slot_counter",
    "model": "prop_deco_kaese.glb",
    "lite": "prop_deco_kaese.lite.glb",
    "asset": "deco_kaese.glb"
   },
   {
    "set": "prop_deco_crepes",
-   "slot": "slot_counter",
    "stall": "deco-crepes",
+   "slot": "slot_counter",
    "model": "prop_deco_crepes.glb",
    "lite": "prop_deco_crepes.lite.glb",
    "asset": "deco_crepes.glb"
   },
   {
    "set": "prop_deco_maroni",
-   "slot": "slot_counter",
    "stall": "deco-maroni",
+   "slot": "slot_counter",
    "model": "prop_deco_maroni.glb",
    "lite": "prop_deco_maroni.lite.glb",
    "asset": "deco_maroni.glb"
   },
   {
    "set": "prop_deco_puffer",
-   "slot": "slot_counter",
    "stall": "deco-kartoffelpuffer",
+   "slot": "slot_counter",
    "model": "prop_deco_puffer.glb",
    "lite": "prop_deco_puffer.lite.glb",
    "asset": "deco_puffer.glb"

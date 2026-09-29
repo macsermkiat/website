@@ -183,7 +183,10 @@ class Mesh:
                 a = TAU * j / seg + (twist(i) if twist else 0.0)
                 ring.append(p + (s * math.cos(a) * scale[0] + u * math.sin(a) * scale[1]) * radii[i])
             P.append(ring)
-        return self.grid(P, mat, wfn, col=col, closed=True, cap_start=caps, cap_end=caps, uv_tile=uv_tile)
+        # the ring runs clockwise about the tube direction, so the faces are flipped to point outward (they
+        # pointed inward before: invisible under double-sided materials, but it culled the outside of
+        # single-sided legs in three.js and made the AO bake shoot its rays into the limb)
+        return self.grid(P, mat, wfn, col=col, closed=True, cap_start=caps, cap_end=caps, uv_tile=uv_tile, flip=True)
 
     def merge(self, other):
         off = len(self.V)

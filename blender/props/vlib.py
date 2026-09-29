@@ -47,8 +47,8 @@ def lite():
 
 
 def seg(n, lo=6):
-    """Segment count, reduced for the lite build."""
-    return max(lo, int(round(n * 0.5))) if lite() else n
+    """Segment count, reduced for the lite build (lite aims at about a third of the triangles)."""
+    return max(lo, int(round(n * 0.4))) if lite() else n
 
 
 def regions():
@@ -59,7 +59,9 @@ def regions():
             import vendor_atlas
             vendor_atlas.build()
         with open(path) as f:
-            _REG = json.load(f)["regions"]
+            meta = json.load(f)
+        _REG = dict(meta["regions"])
+        _REG.update(meta["books"]["regions"])      # books_* atlas (spines, covers, pages)
     return _REG
 
 
@@ -120,7 +122,7 @@ def R(name, sub=None, phys=None):
 
 
 # Physical sizes of the tiling-style regions (metres covered by the region window)
-PHYS = {"wood": (1.0, 0.25), "copper": (0.35, 0.35), "iron": (0.4, 0.4), "brass": (0.15, 0.15),
+PHYS = {"stave": (0.3, 0.4), "wood": (1.0, 0.25), "copper": (0.35, 0.35), "iron": (0.4, 0.4), "brass": (0.15, 0.15),
         "steel": (0.2, 0.2), "burlap": (0.3, 0.3), "straw": (0.05, 0.05), "paper": (0.25, 0.25),
         "kraft": (0.25, 0.25), "grate": (0.12, 0.06), "ceramic": (0.2, 0.2), "wax": (0.15, 0.15), "honeycomb": (0.12, 0.12),
         "cheese_rind": (0.3, 0.3), "coal": (0.35, 0.35), "cinnamon": (0.03, 0.1)}
@@ -471,7 +473,8 @@ def _vcol_mult(nt, color_socket, bsdf):
     nt.links.new(mixn.outputs[2], bsdf.inputs["Base Color"])
 
 
-def _atlas_nodes(m, color=True, rm=True, normal=True, normal_strength=1.0):
+def _atlas_nodes(m, color=True, rm=True, normal=True, normal_strength=1.0, atlas="atlas"):
+    """Wire one of the two atlases ('atlas' = the goods, 'books' = the Bücherstand) into material m."""
     nt = m.node_tree
     N, L = nt.nodes, nt.links
     b = N["Principled BSDF"]
@@ -479,14 +482,14 @@ def _atlas_nodes(m, color=True, rm=True, normal=True, normal_strength=1.0):
     uv.uv_map = "UVMap"
     if color:
         tc = N.new("ShaderNodeTexImage")
-        tc.image = _img("vendor_atlas_color", "atlas_color.png", False)
+        tc.image = _img(f"vendor_{atlas}_color", f"{atlas}_color.png", False)
         L.new(uv.outputs[0], tc.inputs[0])
         _vcol_mult(nt, tc.outputs["Color"], b)
     else:
         _vcol_mult(nt, (1.0, 1.0, 1.0), b)
     if rm:
         tr = N.new("ShaderNodeTexImage")
-        tr.image = _img("vendor_atlas_rm", "atlas_rm.png", True)
+        tr.image = _img(f"vendor_{atlas}_rm", f"{atlas}_rm.png", True)
         L.new(uv.outputs[0], tr.inputs[0])
         sep = N.new("ShaderNodeSeparateColor")
         L.new(tr.outputs["Color"], sep.inputs[0])
@@ -494,7 +497,7 @@ def _atlas_nodes(m, color=True, rm=True, normal=True, normal_strength=1.0):
         L.new(sep.outputs[2], b.inputs["Metallic"])
     if normal:
         tn = N.new("ShaderNodeTexImage")
-        tn.image = _img("vendor_atlas_normal", "atlas_normal.png", True)
+        tn.image = _img(f"vendor_{atlas}_normal", f"{atlas}_normal.png", True)
         L.new(uv.outputs[0], tn.inputs[0])
         nm = N.new("ShaderNodeNormalMap")
         nm.uv_map = "UVMap"
@@ -517,6 +520,13 @@ def material(key):
     """Materials by key. Names are what the glb carries (coal_glow is named by the build contract)."""
     if key in _MATS and _MATS[key].name in bpy.data.materials:
         return _MATS[key]
+    if key.startswith("book:") or key == "books":
+        # one material per book, book_cover_<n>, so the engine can find a book's cover by name
+        m = bpy.data.materials.new(f"book_cover_{key[5:]}" if key != "books" else "vendor_books")
+        m.use_nodes = True
+        _atlas_nodes(m, atlas="books")
+        _MATS[key] = m
+        return m
     names = {"atlas": "vendor_atlas", "glaze": "vendor_glaze", "glass": "vendor_glass", "liquid": "vendor_liquid",
              "beer": "vendor_beer", "coal_glow": "coal_glow", "flame": "flame", "lamp": "lamp_glow",
              "grill_iron": "grill_iron", "lamp_shade": "vendor_lamp_shade"}
@@ -596,11 +606,19 @@ class PropSet:
         self.static = Mesh(f"{name}_static")
         self.nodes = []              # (Mesh, name, loc, parent_name)
         self.empties = []            # (name, loc)
+        self.rot = {}                # node name -> Euler XYZ applied after finish()
+        self.items = {}              # act_ node -> display data for items.json
 
-    def node(self, name, loc=(0, 0, 0), parent=None):
+    def node(self, name, loc=(0, 0, 0), parent=None, rot=None):
         m = Mesh(name)
         self.nodes.append((m, name, tuple(loc), parent))
+        if rot is not None:
+            self.rot[name] = tuple(rot)
         return m
+
+    def item(self, node, name, kind, **extra):
+        """Register what a clickable act_ node is, for site/public/models/items.json."""
+        self.items[node] = {"name": name, "kind": kind, **extra}
 
     def empty(self, name, loc, parent=None):
         self.empties.append((name, tuple(loc), parent))
@@ -647,6 +665,8 @@ class PropSet:
             if e.name != name:
                 raise RuntimeError(f"name clash {name}")
             objs[name] = e
+        for k, r in self.rot.items():
+            objs[k].rotation_euler = r
         self.objs = objs
         return objs
 
@@ -696,79 +716,16 @@ def tex_uri(lite_mode):
     return lambda name: "prop_tex_" + name + (".lite" if lite_mode else "") + ".webp"
 
 
+SHARED_TEX = ("atlas_", "coal_", "books_")   # images shipped once as prop_tex_*.webp for all sets
+TEX_FULL, TEX_LITE = 2048, 512                # the contract: lite textures are 512 px
+AO_FULL, AO_LITE = 512, 256                   # per-set AO atlas (occlusion texture, TEXCOORD_1)
+
+
 def export_set(name, lite_mode):
     from nmlib import export as nexport
     out = name + (".lite" if lite_mode else "")
-    return nexport.export_glb(out, texture_size=1024 if lite_mode else 2048,
-                              externalize=(lambda n: n.startswith(("atlas_", "coal_")), tex_uri(lite_mode)))
-
-
-def env_counter(kind="counter", width=3.0):
-    """Render-only surroundings: a plain wooden counter (or shelf) in a stall interior at night."""
-    from nmlib import render
-    from nmlib.geo import Part
-    env = state.env_collection()
-    wood = Part("env_counter_wood", "wood")
-    frame = Part("env_counter_frame", "wood")
-    top = 1.05
-    if kind == "counter":
-        for i, (y, t) in enumerate(((-0.17, "oak"), (0.0, "oak"), (0.17, "oak"))):
-            frame.box((0, y, top - 0.025), (width, 0.166, 0.05), tint=t, bevel=0.005, bevel_segments=2, var=0.1)
-        frame.box((0, -0.262, top - 0.06), (width + 0.02, 0.024, 0.09), tint="oak")
-        x = -width / 2
-        while x < width / 2:
-            w = 0.14
-            wood.box((x + w / 2, -0.22, top / 2 - 0.05), (w - 0.006, 0.02, top - 0.12), tint="honey", grain=2, var=0.08)
-            x += w
-        back_y = 1.1
-    else:
-        # shelf board at the slot height with the one above, brackets, a back wall right behind
-        top = 1.38
-        for z in (top, top + 0.4):
-            frame.box((0, 0, z - 0.015), (width, 0.3, 0.03), tint="pine")
-            frame.box((0, -0.145, z + 0.02), (width, 0.015, 0.05), tint="pine")
-        frame.box((0, -1.0, 1.05 - 0.025), (width, 0.5, 0.05), tint="oak")     # counter in the foreground
-        back_y = 0.165
-    x = -width / 2 - 0.5
-    while x < width / 2 + 0.5:
-        w = 0.15
-        wood.box((x + w / 2, back_y + 0.01, 1.4), (w - 0.005, 0.02, 2.8), tint="honey", grain=2, var=0.1)
-        x += w
-    # floor and side walls to hold the light in
-    wood.box((0, 0, 0.01), (width + 1.2, 3.0, 0.02), tint="dark")
-    for sx in (-1, 1):
-        wood.box((sx * (width / 2 + 0.6), 0.0, 1.4), (0.02, 3.0, 2.8), tint="honey", grain=2)
-    wood.finish(env)
-    frame.finish(env)
-    return top
-
-
-def preview(ps, cam, out_jpg, samples=48, res=(1280, 720), kind="counter", width=3.0, extra_lights=()):
-    from nmlib import render
-    render.night_scene(ground_size=30)
-    top = env_counter(kind, width)
-    ps.objs[ps.name].location = (0, 0, top)
-    bpy.context.view_layer.update()
-    # the stall's two real-time light spots (light_0 inside above the vendor, light_1 on the front beam),
-    # given relative to this slot, plus a soft warm fill from the visitor's side
-    if kind == "counter":
-        l0, l1 = (0, 1.27, 1.25), (0, -0.78, 1.3)
-    else:
-        l0, l1 = (0, -0.96, 0.92), (0, -3.0, 0.97)
-    render.add_light("env_light_0", 'POINT', (l0[0], l0[1], top + l0[2]), 110, size=0.25)
-    render.add_light("env_light_1", 'POINT', (l1[0], l1[1], top + l1[2]), 110, size=0.25)
-    render.add_light("env_fill", 'AREA', (-0.4, -1.3, top + 0.7), 45, (1.0, 0.72, 0.48), size=1.2,
-                     rot=(math.radians(62), 0, math.radians(-15)))
-    render.add_light("env_rim", 'POINT', (1.4, 0.2, top + 0.9), 14, (1.0, 0.7, 0.45), size=0.2)
-    for L in extra_lights:
-        render.add_light(*L)
-    loc, tgt, lens = cam
-    loc = (loc[0], loc[1], loc[2] + top)
-    tgt = (tgt[0], tgt[1], tgt[2] + top)
-    render.camera(loc, tgt, lens=lens, dof=None)
-    png = os.path.join(state.OUT_DIR, "renders", os.path.basename(out_jpg).replace(".jpg", ".png"))
-    render.render(png, samples=samples, res=res, jpeg=out_jpg)
-    return png
+    return nexport.export_glb(out, texture_size=TEX_LITE if lite_mode else TEX_FULL,
+                              externalize=(lambda n: n.startswith(SHARED_TEX), tex_uri(lite_mode)))
 
 
 def pivot_report(ps):
@@ -779,18 +736,23 @@ def pivot_report(ps):
         if not name.startswith(("act_", "rot_")) or o.type != 'EMPTY':
             continue
         inv = o.matrix_world.inverted()
+        org = o.matrix_world.translation
         lo = Vector((1e9, 1e9, 1e9))
         hi = -lo
+        wz = 1e9
         for c in o.children_recursive:
             if c.type != 'MESH' or c.name.startswith(("act_", "foam_")) and c.name != f"{name}_mesh":
                 continue
             for v in c.data.vertices:
-                p = inv @ (c.matrix_world @ v.co)
+                w = c.matrix_world @ v.co
+                p = inv @ w
                 lo = Vector(map(min, lo, p))
                 hi = Vector(map(max, hi, p))
+                wz = min(wz, w.z - org.z)
         if lo.x < 1e8:
-            out[name] = {"origin": [round(v, 3) for v in o.matrix_world.translation],
-                         "local_min": [round(v, 3) for v in lo], "local_max": [round(v, 3) for v in hi]}
+            out[name] = {"origin": [round(v, 3) for v in org],
+                         "local_min": [round(v, 3) for v in lo], "local_max": [round(v, 3) for v in hi],
+                         "rest_min_z": round(wz, 4)}
     return out
 
 

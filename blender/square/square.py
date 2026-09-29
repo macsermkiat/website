@@ -2,8 +2,16 @@
 cast-iron street lamps, string-light poles with swagged bulb wires, benches, bins, bollards and a
 snow layer.  Exports site/public/models/square.glb (and square.lite.glb with LITE=1).
 
-Run:  /home/claude/tools/bpy-venv/bin/python blender/square/square.py          (full + AO bake)
-      LITE=1 /home/claude/tools/bpy-venv/bin/python blender/square/square.py   (lite, reuses the AO)
+Round 1 pass 2: worn relief (settled hollows and a trodden low line) displaces the plaza on a denser
+mesh; puddles lie in the hollows with soft, see-through edges; the kerb's riser now runs under the
+kerbstones (a sliver of the ground's riser, with a degenerate UV, poked through every other stone and
+rendered black); the tree benches stand 6.6 m from the fir; the string-light poles clear the tree
+(blender/square/check_clash.py tests it); lamps, poles, benches, bins, bollards and kerbs carry
+per-vertex occlusion through a ramp stored in the ground's AO image; light_ empties are ranked by name.
+
+Run:  NM_DEVICE=METAL NM_THREADS=0 ~/nachtmarkt-tools/bpy-venv/bin/python blender/square/square.py
+      (full + AO bake; build the town first so its houses shade the sidewalk)
+      LITE=1 (same command) for square.lite.glb (reuses the ground AO, bakes its own part occlusion)
 """
 import os, sys, math, random
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
@@ -50,10 +58,15 @@ M["pole"] = C.pbr("pole_wood", tex=T_WOOD, factor=(0.8, 0.75, 0.7))
 M["wire"] = C.solid("wire_black", (0.01, 0.01, 0.01), rough=0.5)
 M["bulb"] = C.solid("bulb_warm", (1.0, 0.8, 0.55), rough=0.3, emit=(1.0, 0.62, 0.28), strength=6.0)
 M["snow"] = C.solid("snow", (0.82, 0.85, 0.92), rough=0.75)
-M["puddle"] = C.solid("puddle_water", (0.06, 0.058, 0.055), rough=0.1)
+M["puddle"] = C.pbr("puddle_water", color=(0.05, 0.048, 0.045), rough=0.07, vcol="puddle")
 M["bands"] = C.pbr("granite_bands", tex=T_WALK, factor=(1.12, 1.1, 1.05), ao_img=ao_img)
 for m in M.values():
     m.use_backface_culling = True
+# the puddle's vertex alpha (0 at the rim) drives its opacity: a thin film over the wet cobbles
+_pn = M["puddle"].node_tree
+_vc = next(n for n in _pn.nodes if n.type == "VERTEX_COLOR")
+_pn.links.new(_vc.outputs["Alpha"], _pn.nodes["Principled BSDF"].inputs["Alpha"])
+M["puddle"].surface_render_method = "BLENDED"
 
 UV = {"cobble": (3.2, 3.2), "gutter": (2.4, 2.4), "street": (2.4, 2.4), "walk": (2.4, 2.4)}
 
@@ -72,15 +85,51 @@ def grime_at(x, y):
     return (a * (1 - fu) + b * fu) * (1 - fv) + (c * (1 - fu) + d * fu) * fv
 
 
+relief_noise = TX.pnoise(256, 28, 3, 0.5, seed=12)                 # ~6 m features over 160 m
+random.seed(31)
+HOLLOWS = []                                                         # settled hollows (x, y, radius, depth)
+while len(HOLLOWS) < 16:
+    tt = random.uniform(0, 2 * math.pi); rr = 30 * math.sqrt(random.random())
+    HOLLOWS.append((rr * math.cos(tt), rr * math.sin(tt), random.uniform(1.6, 3.6), random.uniform(0.012, 0.03)))
+random.seed(3)
+
+
+def _bilin(a, x, y):
+    n = a.shape[0]
+    u = ((x + 80) / 160 * n) % n; v = ((y + 80) / 160 * n) % n
+    i, j = int(u), int(v); fu, fv = u - i, v - j
+    return ((a[j % n, i % n] * (1 - fu) + a[j % n, (i + 1) % n] * fu) * (1 - fv)
+            + (a[(j + 1) % n, i % n] * (1 - fu) + a[(j + 1) % n, (i + 1) % n] * fu) * fv)
+
+
+def relief(x, y):
+    """Worn relief of the plaza (m, added to the camber): gentle settling, hollows where water
+    stands, and a trodden low line along the main walk from the home view to the bandstand.
+    Fades out 1.5 m before the gutter so the edge profile stays clean."""
+    r = math.hypot(x, y)
+    Rp = P.plaza_r(math.atan2(y, x) % (2 * math.pi))
+    fade = min(1.0, max(0.0, (Rp - 1.5 - r) / 3.0))
+    if fade <= 0:
+        return 0.0
+    h = 0.016 * (_bilin(relief_noise, x, y) - 0.5)
+    for hx, hy, hr, hd in HOLLOWS:
+        d2 = ((x - hx) ** 2 + (y - hy) ** 2) / (hr * hr)
+        if d2 < 4:
+            h -= hd * math.exp(-d2 * 1.6)
+    h -= 0.012 * math.exp(-(x / 3.5) ** 2) * (1 if -30 < y < 4 else 0)          # the trodden walk
+    return h * fade
+
+
 def profile(t):
     """Radial samples for angle t: list of (r, z, zone) from the centre outward."""
     Rp = P.plaza_r(t)
     ex = P.exit_at(t, P.house_r(t), pad=0.5) >= 0
     pts = []
-    inner = [0.14, 0.3, 0.46, 0.6, 0.72, 0.82, 0.9, 0.96] if not LITE else [0.2, 0.45, 0.7, 0.88]
+    # a ring every ~1.9 m so the relief reads (the lite ground keeps the camber only)
+    inner = [0.04 + 0.92 * k / 18 for k in range(19)] + [0.975] if not LITE else [0.2, 0.45, 0.7, 0.88]
     for f in inner:
         r = Rp * f
-        pts.append((r, -0.06 * f * f, "cobble"))
+        pts.append((r, -0.06 * f * f, "cobble"))     # relief is added per vertex (build_ground)
     pts.append((Rp, -0.06, "cobble"))
     # gutter: shallow V of three rows of setts
     pts += [(Rp + 0.25, -0.1, "gutter"), (Rp + GW, -0.075, "gutter")]
@@ -95,8 +144,10 @@ def profile(t):
         pts += [(Rp + P.CURB_S, -0.07, "street"), (Rp + P.CURB_S + 4, -0.04, "street"),
                 (Rp + P.CURB_S + 14, 0.0, "street"), (78, 0.02, "street")]
     else:
-        pts += [(Rp + P.CURB_S - 0.25, -0.11, "gutter"), (Rp + P.CURB_S, -0.08, "gutter"),
-                (Rp + P.CURB_S + 0.001, P.SIDEWALK_Z, "walk"),
+        # the riser up to the sidewalk sits in the middle of the kerbstones (which span CURB_S..+0.3),
+        # so no sliver of it can poke out in front of a stone
+        pts += [(Rp + P.CURB_S - 0.25, -0.11, "gutter"), (Rp + P.CURB_S + 0.12, -0.08, "gutter"),
+                (Rp + P.CURB_S + 0.16, P.SIDEWALK_Z, "walk"),
                 (Rp + P.CURB_S + 3, P.SIDEWALK_Z + 0.02, "walk"), (78, P.SIDEWALK_Z + 0.05, "walk")]
     return pts
 
@@ -107,11 +158,12 @@ GW = P.GUTTER_W
 def ground_height(x, y):
     t = math.atan2(y, x) % (2 * math.pi); r = math.hypot(x, y)
     pr = profile(t)
+    rel = 0.0 if LITE else relief(x, y)
     if r <= pr[0][0]:
-        return pr[0][1]
+        return pr[0][1] + rel
     for (r0, z0, _), (r1, z1, _) in zip(pr, pr[1:]):
         if r0 <= r <= r1:
-            return z0 + (z1 - z0) * (r - r0) / max(r1 - r0, 1e-6)
+            return z0 + (z1 - z0) * (r - r0) / max(r1 - r0, 1e-6) + rel
     return pr[-1][1]
 
 
@@ -125,10 +177,11 @@ def build_ground():
         t = 2 * math.pi * i / NTH
         cols.append((t, profile(t)))
     # profiles may have different lengths (exits); build per column pair by matching radii indices
-    centre = bm.verts.new((0, 0, 0))
+    centre = bm.verts.new((0, 0, 0.0 if LITE else relief(0, 0)))
     vcols = []
     for t, pr in cols:
-        vcols.append([bm.verts.new((r * math.cos(t), r * math.sin(t), z)) for r, z, _ in pr])
+        vcols.append([bm.verts.new((r * math.cos(t), r * math.sin(t),
+                                    z + (0.0 if LITE else relief(r * math.cos(t), r * math.sin(t))))) for r, z, _ in pr])
 
     def uv_of(zone, x, y, t, r, Rp):
         if zone == "cobble":
@@ -149,6 +202,8 @@ def build_ground():
             v *= 0.82                      # wet, dirty edges along the gutters
         if zone == "walk":
             v *= 1.05
+        if zone == "cobble" and not LITE:
+            v *= 1.0 + 6.0 * min(0.0, relief(x, y) + 0.004)          # damp, darker hollows
         return min(v, 1.0)
 
     faces = 0
@@ -210,6 +265,9 @@ def build_ground():
 ground = build_ground()
 C.log("ground tris", C.count_tris([ground]))
 
+places = P.layout_places()
+TREE_B = next(((x, y) for (_id, kind, x, y, _r, _p) in places if _id == "tree"), (6.5, 15.0))
+
 # ------------------------------------------------------------------ bands of granite slabs dividing the cobble field
 bands = C.Geo("plaza_bands", M["bands"], (7.2, 7.2))
 
@@ -248,7 +306,7 @@ for k in range(8):
     pts = [((RB + 0.3 + (r1 - RB - 0.3) * j / 6) * math.cos(t), (RB + 0.3 + (r1 - RB - 0.3) * j / 6) * math.sin(t)) for j in range(7)]
     strip(pts, 0.6)
 # a ring of slabs round the tree
-tpx, tpy = 6.5, 15.0
+tpx, tpy = TREE_B
 strip([(tpx + 3.4 * math.cos(2 * math.pi * k / 40), tpy + 3.4 * math.sin(2 * math.pi * k / 40)) for k in range(41)], 0.5)
 bands_ob = bands.finish(col)
 
@@ -274,42 +332,65 @@ while t < 2 * math.pi:
 curb_ob = curb.finish(col)
 
 # ------------------------------------------------------------------ puddles
-pud = C.Geo("puddles", M["puddle"], (2, 2))
-places = P.layout_places()
+# Water stands in the settled hollows and along the gutters.  Each puddle is a fan with an opaque-ish
+# core and a rim that fades to nothing (vertex alpha), so it reads as a film over wet cobbles.
 occupied = [(x, y, 3.2) for (_id, kind, x, y, _r, _p) in places if kind in ("section", "deco", "landmark")]
-occupied.append((6.5, 15, 3.5))
+occupied.append((TREE_B[0], TREE_B[1], 3.5))
 
 
 def free_spot(x, y, rad):
     return all(math.hypot(x - ox, y - oy) > orad + rad for ox, oy, orad in occupied)
 
 
-npud = 0
-tries = 0
-while npud < (12 if not LITE else 6) and tries < 500:
-    tries += 1
-    if npud < 8:     # along the gutters
-        t = random.uniform(0, 2 * math.pi)
-        r = P.plaza_r(t) + random.choice([0.2, 0.3, P.CURB_S - 0.2])
-        rad = random.uniform(0.35, 0.9)
-    else:            # low spots on the plaza
-        t = random.uniform(0, 2 * math.pi); r = random.uniform(6, 30); rad = random.uniform(0.4, 0.9)
-    x, y = r * math.cos(t), r * math.sin(t)
-    if not free_spot(x, y, rad):
-        continue
-    nv = 10 if LITE else 16
+pbm = bmesh.new()
+p_uv = pbm.loops.layers.uv.new("UVMap")
+p_col = pbm.loops.layers.color.new("puddle")
+
+
+def puddle(x, y, rad, core=0.72):
+    nv = 10 if LITE else 14
     ph = [random.uniform(0, 6.28) for _ in range(3)]
-    ring = []
+    stretch = random.uniform(1.0, 1.5); rot = random.uniform(0, math.pi)
+    zc = ground_height(x, y) + 0.008
+    c = pbm.verts.new((x, y, zc))
+    inner, outer = [], []
     for k in range(nv):
         a = 2 * math.pi * k / nv
         rr = rad * (1 + 0.25 * math.sin(2 * a + ph[0]) + 0.15 * math.sin(3 * a + ph[1]) + 0.08 * math.sin(5 * a + ph[2]))
-        px_, py_ = x + rr * math.cos(a) * 1.3, y + rr * math.sin(a) * 0.8
-        ring.append((px_, py_, ground_height(px_, py_) + 0.012))
-    zc = max(p[2] for p in ring)
-    ring = [(p[0], p[1], zc) for p in ring]
-    pud.poly(ring)
-    npud += 1
-pud_ob = pud.finish(col)
+        lx, ly = rr * math.cos(a) * stretch, rr * math.sin(a) / stretch
+        dx, dy = lx * math.cos(rot) - ly * math.sin(rot), lx * math.sin(rot) + ly * math.cos(rot)
+        for f, lst in ((0.62, inner), (1.0, outer)):
+            px_, py_ = x + dx * f, y + dy * f
+            lst.append(pbm.verts.new((px_, py_, max(zc - 0.004, ground_height(px_, py_) + 0.006))))
+    alpha = {c: core}
+    alpha.update({v: core for v in inner}); alpha.update({v: 0.0 for v in outer})
+    for k in range(nv):
+        j = (k + 1) % nv
+        for f in (pbm.faces.new((c, inner[k], inner[j])), pbm.faces.new((inner[k], outer[k], outer[j], inner[j]))):
+            for l in f.loops:
+                l[p_uv].uv = (l.vert.co.x / 2, l.vert.co.y / 2)
+                l[p_col] = (1, 1, 1, alpha[l.vert])
+
+
+npud = 0
+for hx, hy, hr, hd in HOLLOWS:              # the deepest hollows first
+    if LITE and npud >= 5:
+        break
+    if hd > 0.018 and free_spot(hx, hy, hr * 0.5) and math.hypot(hx, hy) > 4:
+        puddle(hx, hy, min(0.9, hr * 0.3), core=0.72); npud += 1
+tries = 0
+while npud < (10 if not LITE else 7) and tries < 500:        # along the gutters
+    tries += 1
+    t = random.uniform(0, 2 * math.pi)
+    r = P.plaza_r(t) + random.choice([0.2, 0.3, P.CURB_S - 0.2])
+    rad = random.uniform(0.3, 0.7)
+    x, y = r * math.cos(t), r * math.sin(t)
+    if free_spot(x, y, rad) and P.exit_at(t, P.house_r(t), pad=0.5) < 0:
+        puddle(x, y, rad, core=0.6); npud += 1
+pme = bpy.data.meshes.new("puddles"); pbm.normal_update(); pbm.to_mesh(pme); pbm.free()
+pud_ob = bpy.data.objects.new("puddles", pme); col.objects.link(pud_ob)
+pme.materials.append(M["puddle"])
+C.log("puddles", npud)
 
 # ------------------------------------------------------------------ street lamps
 iron = C.Geo("street_iron", M["iron"], (1, 1))
@@ -321,7 +402,7 @@ def lamp(idx, x, y, rot):
     z0 = ground_height(x, y)
     F = Matrix.Translation((x, y, z0)) @ Matrix.Rotation(rot, 4, "Z")
     iron.frame = F; snowp.frame = F
-    seg = 6 if LITE else 10
+    seg = 6 if LITE else 8
     iron.cyl((0, 0, 0.18), 0.2, 0.17, 0.36, seg=seg, bottom=False)
     if not LITE:
         iron.cyl((0, 0, 0.39), 0.15, 0.12, 0.06, seg=seg, bottom=False)
@@ -376,14 +457,17 @@ def lamp(idx, x, y, rot):
     ob = bulbs.finish(col)
     bulb_objs.append(ob)
     lw = F @ Vector((0, 0, 3.62))
-    light_objs.append(C.empty(f"light_lamp_{idx:02d}", lw, col))
+    # plaza-edge lamps first (light_lamp_00..11), then the street-corner lamps (light_lamp_street_*)
+    nm = f"light_lamp_{idx:02d}" if idx < N_PLAZA_LAMPS else f"light_lamp_street_{idx - N_PLAZA_LAMPS:02d}"
+    light_objs.append(C.empty(nm, lw, col))
     # snow on the lantern roof
     snowp.cyl((0, 0, ztop + 0.2), 0.3, 0.07, 0.24, seg=6, caps=False)
     iron.frame = Matrix.Identity(4); snowp.frame = Matrix.Identity(4)
 
 
 lamp_spots = []
-for k in range(12):
+N_PLAZA_LAMPS = 12
+for k in range(N_PLAZA_LAMPS):
     t = math.radians(15 + 30 * k + random.uniform(-4, 4))
     if P.exit_at(t, P.plaza_r(t) + 1, pad=1.0) >= 0:
         t += math.radians(6)
@@ -440,11 +524,9 @@ for si, (i, j) in enumerate(P.SPANS):
     for k in range(1, nb):
         t = k / nb
         p = a.lerp(b, t); p.z -= sag * 4 * t * (1 - t)
-        if not LITE:
-            wire.cyl((p.x, p.y, p.z - 0.03), 0.012, 0.012, 0.04, seg=3, caps=False)
         bl.bulb((p.x, p.y, p.z - 0.075), 0.027 if not LITE else 0.034, sides=4 if not LITE else 3)
     bulb_objs.append(bl.finish(col))
-    if not LITE or si % 2 == 0:
+    if si in P.STRING_LIGHT_SPANS and (not LITE or P.STRING_LIGHT_SPANS.index(si) < 3):
         mid = catenary(a, b, sag, 2)[1]
         light_objs.append(C.empty(f"light_string_{si:02d}", mid - Vector((0, 0, 0.25)), col))
 wood_ob = wood.finish(col)
@@ -505,10 +587,12 @@ for k in range(7):
         continue
     r = P.plaza_r(t) - 2.4
     x, y = r * math.cos(t), r * math.sin(t)
-    if free_spot(x, y, 1.2):
+    if free_spot(x, y, 1.2) and not P.in_ride(x, y, pad=1.2):
         bench_spots.append((x, y, t + math.pi / 2))
-# two benches by the tree, facing the square
-bench_spots += [(6.5 - 4.2, 15 - 2.6, math.radians(-30)), (6.5 + 4.4, 15 - 2.4, math.radians(28))]
+# two benches by the tree, backs to it, 6.6 m out so they sit clear of the lowest boughs (5.4 m)
+for deg in (-140, -52):
+    a = math.radians(deg)
+    bench_spots.append((TREE_B[0] + P.TREE_BENCH_R * math.cos(a), TREE_B[1] + P.TREE_BENCH_R * math.sin(a), a + math.pi / 2))
 for i, (x, y, rot) in enumerate(bench_spots):
     bench(x, y, rot)
     if i % 2 == 0:
@@ -592,6 +676,34 @@ C.log("BREAKDOWN", sorted(by.items(), key=lambda kv: -kv[1]))
 if os.environ.get("STATS_ONLY"):
     sys.exit(0)
 
+# The ground's AO lightmap covers x, y in [-80, 80]; the ground ends at r = 78, so the image's
+# corner beyond it (u > RAMP_U0, v < 0.32, i.e. x > 77, y < -29) is free.  A ramp stored there
+# carries the per-vertex occlusion of the lamps, poles, benches, bins, bollards and kerbs.
+RAMP_U0, RAMP_V0, RAMP_V1 = 0.982, 0.02, 0.30
+parts = [o for o in (iron_ob, wood_ob, bench_ob, curb_ob, snowp_ob) if o]
+
+
+def finish_square_ao(img):
+    res = img.size[0]
+    px = np.array(img.pixels[:], np.float32).reshape(res, res, 4)
+    ao = np.clip(0.25 + 0.75 * px[..., 0], 0, 1)
+    c0 = int(RAMP_U0 * res)
+    rows = (np.arange(res) + 0.5) / res
+    ramp = np.clip((rows - RAMP_V0) / (RAMP_V1 - RAMP_V0), 0, 1)
+    band = rows < RAMP_V1 + 0.02
+    ao[band, c0:] = ramp[band, None]
+    px[..., 0] = px[..., 1] = px[..., 2] = ao; px[..., 3] = 1
+    img.pixels.foreach_set(px.ravel())
+    img.filepath_raw = AO_PATH; img.file_format = "PNG"; img.save()
+    return img
+
+
+C.add_lightmap_uv_planar(ground, AO_X0, AO_X0, AO_SIZE)
+C.add_lightmap_uv_planar(bands_ob, AO_X0, AO_X0, AO_SIZE)
+C.add_lightmap_uv_planar(snow_ob, AO_X0, AO_X0, AO_SIZE)
+scene.world = bpy.data.worlds.new("w")
+hidden = [o for o in col.objects if o.name.startswith(("snow_ground", "bulbs_", "puddles", "string_wire"))]
+for o in hidden: o.hide_render = True
 if not LITE and not REUSE_AO:
     # occluders: the town, if it has been built, darkens the sidewalk at the house fronts
     town_raw = os.path.join(C.REPO, "blender", "town", "out", "town_raw.glb")
@@ -601,23 +713,23 @@ if not LITE and not REUSE_AO:
         for o in set(bpy.data.objects) - before:
             for c in list(o.users_collection): c.objects.unlink(o)
             occ.objects.link(o)
-    scene.world = bpy.data.worlds.new("w")
-    C.add_lightmap_uv_planar(ground, AO_X0, AO_X0, AO_SIZE)
-    C.add_lightmap_uv_planar(bands_ob, AO_X0, AO_X0, AO_SIZE)
-    snow_hidden = [o for o in col.objects if o.name.startswith("snow_") or o.name.startswith("bulbs_")]
-    for o in snow_hidden: o.hide_render = True
-    baked = C.bake_ao([ground], "square_ao", 1024, AO_PATH, samples=32, distance=2.5)
-    for o in snow_hidden: o.hide_render = False
+    baked = finish_square_ao(C.bake_ao([ground], "square_ao", 1024, AO_PATH, samples=64, distance=2.5, post=False))
     # swap the placeholder for the baked image in the ground materials
     for m in list(ground.data.materials) + list(bands_ob.data.materials):
         for n in m.node_tree.nodes:
             if n.type == "TEX_IMAGE" and n.image and n.image.name == "square_ao":
                 n.image = baked
-    for o in list(occ.objects):
-        bpy.data.objects.remove(o)
-else:
-    C.add_lightmap_uv_planar(ground, AO_X0, AO_X0, AO_SIZE)
-    C.add_lightmap_uv_planar(bands_ob, AO_X0, AO_X0, AO_SIZE)
+    ao_img = baked
+# the snow sheet shares the ground's lightmap; the parts point into the ramp
+vao = C.bake_vertex_ao(parts, samples=48, distance=1.0, lift=0.3)
+for o in parts:
+    C.ramp_uv(o, vao[o.name], RAMP_U0 + 0.004, 0.996, RAMP_V0, RAMP_V1)
+for o in parts + [snow_ob]:
+    for m in o.data.materials:
+        C.attach_ao(m, ao_img)
+for o in list(occ.objects):
+    bpy.data.objects.remove(o)
+for o in hidden: o.hide_render = False
 
 name = "square.lite" if LITE else "square"
 raw = C.export_glb(exported, os.path.join(OUT, f"{name}_raw.glb"))

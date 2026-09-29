@@ -13,7 +13,9 @@ Builds on the carpenter's nmlib (blender/lib/nmlib). Adds:
   * a build -> AO -> export pipeline for full and lite, and the Cycles preview step.
 
 Run the landmark scripts with the team's bpy:
-    /home/claude/tools/bpy-venv/bin/python blender/rides/ferris.py [--no-render] [--no-lite]
+    ~/nachtmarkt-tools/bpy-venv/bin/python blender/rides/ferris.py [--no-render] [--no-lite]
+    (renders honour NM_DEVICE=METAL|CPU and NM_THREADS; previews default to 1920x1080, 128
+    samples, with a 1280 px JPEG in review/round-1/rides/)
 """
 import argparse
 import json
@@ -70,7 +72,9 @@ def register_materials():
     extra = {
         # key: (base colour linear, roughness, metallic, emission colour, strength, alpha)
         "chrome":     ((0.90, 0.90, 0.90), 0.14, 1.0, None, 0.0, 1.0),
-        "mirror":     ((0.93, 0.92, 0.90), 0.035, 1.0, None, 0.0, 1.0),
+        # old fairground mirror glass: warm silvering, slightly soft, so it spreads the bulbs'
+        # glow instead of showing a black night sky
+        "mirror":     ((0.97, 0.84, 0.64), 0.16, 1.0, None, 0.0, 1.0),
         "enamel":     ((0.86, 0.84, 0.79), 0.26, 0.0, None, 0.0, 1.0),
         "gilt":       ((0.93, 0.68, 0.30), 0.30, 1.0, None, 0.0, 1.0),
         "ebony":      ((0.016, 0.014, 0.013), 0.32, 0.0, None, 0.0, 1.0),
@@ -222,8 +226,10 @@ def args():
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--no-lite", action="store_true")
     ap.add_argument("--no-full", action="store_true")
-    ap.add_argument("--samples", type=int, default=40)
-    ap.add_argument("--res", default="1280x720")
+    ap.add_argument("--samples", type=int, default=128)
+    ap.add_argument("--res", default="1920x1080")
+    ap.add_argument("--preview-only", action="store_true",
+                    help="build the full model and render the preview, without AO bake or export")
     ap.add_argument("--only", default=None)
     ap.add_argument("--cam", default=None, help="x,y,z,tx,ty,tz,lens debug camera")
     ap.add_argument("--preview-name", default=None)
@@ -260,6 +266,12 @@ def build_and_export(name, build, seed, lite, ao_res=None, texture_size=None, ao
 def run(name, build, preview=None, seed=1, ao_full=1024, ao_lite=512, tex_full=1024, tex_lite=512,
         ground=60):
     a = args()
+    if a.preview_only:
+        state.reset(seed, lite_mode=False)
+        mats.ensure_kit()
+        build(False)
+        do_preview(name, mesh_objs(), preview, a, ground=ground)
+        return {}
     rep_path = os.path.join(state.OUT_DIR, f"{name}_report.json")
     reports = {}
     if os.path.exists(rep_path):

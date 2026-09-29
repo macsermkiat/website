@@ -6,8 +6,9 @@ import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 
+// Playwright: PLAYWRIGHT_MODULE (path to playwright/index.mjs), a local install, or the cloud machine's copy.
 let pw;
-try { pw = await import('playwright'); } catch { pw = await import('/opt/node22/lib/node_modules/playwright/index.mjs'); }
+try { pw = await import(process.env.PLAYWRIGHT_MODULE || 'playwright'); } catch { pw = await import('/opt/node22/lib/node_modules/playwright/index.mjs'); }
 const { chromium } = pw.default || pw;
 
 const HERE = import.meta.dirname;
@@ -38,9 +39,11 @@ await new Promise((res, rej) => {
   server.on('exit', (c) => rej(new Error('vite exited ' + c)));
   setTimeout(() => { clearTimeout(t); res(); }, 8000);
 });
-const browser = await chromium.launch({
-  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
-});
+// macOS: the real GPU through ANGLE/Metal; elsewhere (cloud machine) SwiftShader software GL.
+const glArgs = process.platform === 'darwin'
+  ? ['--use-angle=metal', '--ignore-gpu-blocklist']
+  : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
+const browser = await chromium.launch({ args: glArgs });
 try {
   for (const name of only) {
     const cam = opt('--cam', CAMS[name] || '-2.9,-5.0,1.85,0.05,-0.45,2.05,28');

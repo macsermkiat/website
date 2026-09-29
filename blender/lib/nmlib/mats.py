@@ -20,7 +20,7 @@ import numpy as np
 
 from . import state
 
-KIT_VERSION = "v8"   # v8: metal of constant-valued kits bakes to 0 (was the roughness); new wood/iron/oak
+KIT_VERSION = "v10"  # v10: iron rust in smaller, browner blooms; v9: oak with more figure and contrast; v8: metal of constant-valued kits bakes to 0 (was the roughness); new wood/iron/oak
 KIT_RES = {"wood": 1024, "oak": 1024, "paint": 1024, "iron": 512}
 _mats = {}
 
@@ -212,7 +212,8 @@ def _oak_graph(nb):
     each ring, silver-grain ray flecks, oiled sheen, fine scratches across the grain and the
     odd mug ring. Grain along V, like the spruce tile."""
     d1 = nb.noise(2, 1.2, detail=3, rough=0.5, off=(5.3, 0.7, 1.1, 2.4))
-    phase = nb.add(nb.mul(nb.u, 24.0), nb.mul(d1, 3.5))
+    d2 = nb.noise(7, 2.5, detail=2, off=(2.9, 4.1, 0.6, 7.7))
+    phase = nb.add(nb.mul(nb.u, 17.0), nb.mul(d1, 6.0), nb.mul(d2, 0.8))
     ringf = nb.m('FRACT', phase)                                   # 0 at the start of a ring
     porezone = nb.m('SUBTRACT', 1.0, nb.smooth(0.0, 0.30, ringf))  # earlywood pore band
     pores = nb.mul(nb.smooth(0.56, 0.66, nb.noise(260, 20, detail=1, off=(0.3, 4.4, 2.2, 6.1))), porezone)
@@ -229,9 +230,9 @@ def _oak_graph(nb):
     mug = nb.mul(nb.m('SUBTRACT', 1.0, nb.smooth(0.0, 0.028, nb.m('ABSOLUTE', nb.m('SUBTRACT', dist, 0.2)))), ring_sel)
     stain = nb.smooth(0.55, 0.75, nb.noise(6, 4, detail=4, rough=0.6, off=(6.6, 2.1, 5.4, 3.3)))
 
-    light = nb.rgb((0.58, 0.44, 0.28))
-    dark = nb.rgb((0.36, 0.25, 0.14))
-    col = nb.mix(nb.add(nb.mul(nb.smooth(0.25, 0.9, ringf), 0.55), nb.mul(tone, 0.35)), light, dark)
+    light = nb.rgb((0.60, 0.45, 0.28))
+    dark = nb.rgb((0.28, 0.18, 0.095))
+    col = nb.mix(nb.add(nb.mul(nb.smooth(0.25, 0.9, ringf), 0.62), nb.mul(tone, 0.40)), light, dark)
     col = nb.mix(nb.mul(fib, 0.30), col, nb.rgb((0.30, 0.20, 0.11)))
     col = nb.mix(nb.mul(pores, 0.85), col, nb.rgb((0.10, 0.065, 0.035)))
     col = nb.mix(nb.mul(latepores, 0.45), col, nb.rgb((0.16, 0.10, 0.06)))
@@ -310,8 +311,8 @@ def _iron_graph(nb):
     dent = nb.smooth(0.0, 0.55, ham_d)                              # 0 in a dent centre
     blotch = nb.remap(nb.noise(6, 6, detail=4, rough=0.6, off=(7.2, 3.1, 0.6, 1.5)), 0.32, 0.68, 0.0, 1.0)
     rust_n = nb.remap(nb.noise(9, 9, detail=6, rough=0.62, off=(1.2, 0.3, 4.4, 2.0)), 0.30, 0.70, 0.0, 1.0)
-    rust = nb.smooth(0.55, 0.75, rust_n)
-    rust_core = nb.smooth(0.72, 0.88, rust_n)
+    rust = nb.smooth(0.62, 0.80, rust_n)                            # scattered blooms, not a coat
+    rust_core = nb.smooth(0.78, 0.92, rust_n)
     runs = nb.mul(nb.smooth(0.55, 0.78, nb.noise(34, 2.5, detail=3, off=(0.4, 2.2, 1.0, 3.0))),
                   nb.smooth(0.35, 0.7, rust_n))
     soot = nb.smooth(0.45, 0.8, nb.remap(nb.noise(3, 3, detail=4, off=(6.1, 1.9, 0.2, 3.3)), 0.3, 0.7, 0.0, 1.0))
@@ -320,9 +321,9 @@ def _iron_graph(nb):
     base = nb.mix(nb.add(nb.mul(blotch, 0.6), nb.mul(fine, 0.25)), nb.rgb((0.125, 0.12, 0.115)),
                   nb.rgb((0.055, 0.052, 0.05)))
     col = nb.mix(nb.mul(nb.m('SUBTRACT', 1.0, dent), 0.25), base, nb.rgb((0.16, 0.155, 0.15)))   # dent rims catch wear
-    rustc = nb.mix(fine, nb.rgb((0.23, 0.085, 0.03)), nb.rgb((0.12, 0.05, 0.02)))
-    col = nb.mix(nb.mul(runs, 0.65), col, nb.rgb((0.15, 0.065, 0.03)))
-    col = nb.mix(nb.mul(rust, 0.85), col, rustc)
+    rustc = nb.mix(fine, nb.rgb((0.17, 0.075, 0.035)), nb.rgb((0.10, 0.05, 0.025)))
+    col = nb.mix(nb.mul(runs, 0.5), col, nb.rgb((0.13, 0.07, 0.04)))
+    col = nb.mix(nb.mul(rust, 0.75), col, rustc)
     col = nb.mix(nb.mul(rust_core, 0.7), col, nb.rgb((0.08, 0.035, 0.015)))
     col = nb.mix(nb.mul(soot, 0.55), col, nb.rgb((0.018, 0.016, 0.015)))
     col = nb.mix(nb.mul(pit, 0.6), col, nb.rgb((0.03, 0.025, 0.02)))
@@ -367,9 +368,7 @@ def bake_kit(key):
     t0 = time.time()
     res = KIT_RES[key]
     scene = bpy.context.scene
-    scene.render.engine = 'CYCLES'
-    scene.render.threads_mode = 'FIXED'
-    scene.render.threads = 2
+    state.configure_cycles(scene)
     scene.cycles.samples = 4
     me = bpy.data.meshes.new("kitplane")
     me.from_pydata([(-0.5, -0.5, 0), (0.5, -0.5, 0), (0.5, 0.5, 0), (-0.5, 0.5, 0)], [], [(0, 1, 2, 3)])
@@ -519,7 +518,7 @@ SIMPLE = {
     "fir":           ((0.030, 0.085, 0.035), 0.72, 0.0, None, 0.0, 1.0),
     "brass":         ((0.78, 0.56, 0.26), 0.32, 1.0, None, 0.0, 1.0),
     "copper":        ((0.80, 0.42, 0.26), 0.30, 1.0, None, 0.0, 1.0),
-    "ember":         ((0.25, 0.05, 0.01), 0.9, 0.0, (1.0, 0.28, 0.05), 3.0, 1.0),
+    "ember":         ((0.25, 0.05, 0.01), 0.9, 0.0, (1.0, 0.28, 0.05), 6.0, 1.0),
     "ash":           ((0.30, 0.29, 0.28), 0.95, 0.0, None, 0.0, 1.0),
     "ornament_red":  ((0.50, 0.015, 0.02), 0.18, 0.0, None, 0.0, 1.0),
     "ornament_gold": ((0.90, 0.64, 0.24), 0.22, 1.0, None, 0.0, 1.0),

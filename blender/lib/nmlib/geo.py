@@ -159,7 +159,9 @@ class Part:
         self.mbox(M, (sx, sy, sz), bevel=bevel, segs=segs, grain=grain,
                   bevel_segments=bevel_segments, **kw)
 
-    def mbox(self, M, size, bevel=None, segs=1, grain=None, bevel_segments=1, **kw):
+    def mbox(self, M, size, bevel=None, segs=1, grain=None, bevel_segments=1, drop=None, **kw):
+        """Box of `size` in the frame M. drop: local faces never seen, left out to save
+        triangles, e.g. ("-z",) for the underside of a shingle lying on the deck."""
         bm = bmesh.new()
         bmesh.ops.create_cube(bm, size=1.0)
         for v in bm.verts:
@@ -174,6 +176,14 @@ class Part:
                 edges = [e for e in bm.edges if abs((e.verts[0].co - e.verts[1].co)[ax]) > 1e-6 and
                          all(abs((e.verts[0].co - e.verts[1].co)[k]) < 1e-6 for k in range(3) if k != ax)]
                 bmesh.ops.subdivide_edges(bm, edges=edges, cuts=n - 1, use_grid_fill=True)
+        if drop:
+            bm.normal_update()
+            axes = {"x": 0, "y": 1, "z": 2}
+            dead = []
+            for d in drop:
+                sgn, ax = (-1.0 if d[0] == "-" else 1.0), axes[d[-1]]
+                dead += [f for f in bm.faces if f.normal[ax] * sgn > 0.99]
+            bmesh.ops.delete(bm, geom=list(set(dead)), context='FACES_ONLY')
         b = self.default_bevel if bevel is None else bevel
         if b is None:
             b = 0.004 if self.kind != "flat" else 0.0

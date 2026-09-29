@@ -1,9 +1,14 @@
-"""Build the organizer's figures: skinned glb + lite glb per figure, with all clips.
+"""Build the organizer's figures: skinned glb + lite glb per figure, and the shared clip library.
 
-    /home/claude/tools/bpy-venv/bin/python blender/people/build.py [--only name,name] [--no-lite] [--no-export]
+    NM_DEVICE=METAL NM_THREADS=0 NPM_CONFIG_PREFIX=~/nachtmarkt-tools/npm \
+        ~/nachtmarkt-tools/bpy-venv/bin/python blender/people/build.py [--only name,name] [--no-lite] [--no-anims]
 
-Writes site/public/models/people_*.glb and *.lite.glb via blender/lib/optimize.mjs, and a
+Writes site/public/models/people_*.glb and *.lite.glb via blender/lib/optimize.mjs,
+site/public/models/people_anims.glb (every crowd and vendor clip on one skeleton, no mesh), and a
 report to blender/out/people/report.json.
+
+Each figure file carries only the clips its role uses (CLIPSETS), because in glTF every animation
+channel costs about 200 bytes of JSON whatever its length: the clips were 60 % of a lite file.
 """
 import argparse
 import json
@@ -20,6 +25,7 @@ sys.path.insert(0, os.path.join(REPO, "blender", "lib"))
 import bpy  # noqa: E402
 
 import rig  # noqa: E402
+import pao  # noqa: E402
 import figures  # noqa: E402
 import pmats  # noqa: E402
 import anims  # noqa: E402
@@ -42,7 +48,26 @@ def reset():
     return scene, coll
 
 
+# Which clips each figure file carries. The four the brief checks (idle, walk, chat, drink) are in every file.
+# Crowd lite drops laugh and chat_free (the engine falls back to idle) and sit: crowd.json lists the bench
+# sitters after the lite cap, so the lite market never needs it. laugh_free and sit_free are not shipped at
+# all: crowd.json gives laughers and sitters a mug.
+CLIPSETS = {
+    ("crowd", False): ["idle", "walk", "chat", "drink", "laugh", "sit", "idle_free", "walk_free", "chat_free"],
+    ("crowd", True): ["idle", "walk", "chat", "drink", "idle_free", "walk_free"],
+    ("band", False): ["play", "rest", "idle", "walk", "chat", "drink"],
+    ("band", True): ["play", "rest", "idle", "walk", "chat", "drink"],
+    ("vendor", False): ["serve", "wipe", "idle", "walk", "chat", "drink"],
+    ("vendor", True): ["serve", "wipe", "idle", "walk", "chat", "drink"],
+}
+# the shared library (people_anims.glb): every crowd and vendor clip on the reference skeleton
+LIBRARY = ["idle", "walk", "chat", "drink", "laugh", "sit", "idle_free", "walk_free", "chat_free", "laugh_free",
+           "sit_free", "serve", "wipe"]
+LIBRARY_REF = "people_man_coat"
+
+
 def clip_list(fig, spec):
+    """Every clip this figure can play, as (name, fn(t) -> pose, duration). Baking picks from it by CLIPSETS."""
     c, out = anims.crowd_clips(fig)
     role = spec.get("role")
     if role == "band":
@@ -56,10 +81,11 @@ def clip_list(fig, spec):
             out.append(("rest", lambda t: dict(c.idle(t, mug=False), _mug=0.0), 6.0))
     elif role == "vendor":
         out = [("serve", lambda t: c.serve(t), 6.0), ("wipe", lambda t: dict(c.wipe(t), _mug=0.0), 4.0)] + out
-    # clips named *_free, play, wipe and rest hide the mug
+    # clips named *_free, play, wipe and rest hide the mug; so does serve for vendors who sell no drinks
+    no_serve_mug = spec.get("serve_mug", True) is False
     wrapped = []
     for name, fn, dur in out:
-        hide = name.endswith("_free") or name in ("play", "rest", "wipe")
+        hide = name.endswith("_free") or name in ("play", "rest", "wipe") or (name == "serve" and no_serve_mug)
         if hide:
             wrapped.append((name, (lambda fn: lambda t: dict(fn(t), _mug=0.0))(fn), dur))
         else:
@@ -67,15 +93,21 @@ def clip_list(fig, spec):
     return c, wrapped
 
 
-def assemble(spec, lite, coll, bake=True, name=None):
+def assemble(spec, lite, coll, bake=True, name=None, ao=False, clips_wanted=None):
     fig = figures.Figure(spec, lite).build()
-    mats = pmats.make(spec)
+    mats = pmats.make(spec, lite)
     arm = rig.make_armature(name or spec["name"], fig.J, coll)
     body = fig.m.to_object("body", mats, arm, coll)
     mug = fig.mug.to_object("mug", mats, arm, coll) if fig.mug.V else None
+    if ao:
+        # rest pose, before any NLA track exists
+        pao.bake([body, mug], spec["name"] + (".lite" if lite else ""), 128 if lite else 256, os.path.join(OUT, "ao"))
     clips = []
     if bake:
-        c, clips = clip_list(fig, spec)
+        want = clips_wanted or CLIPSETS[(spec.get("role", "crowd"), lite)]
+        c, allc = clip_list(fig, spec)
+        by = {n: (n, f, d) for n, f, d in allc}
+        clips = [by[n] for n in want]
         for cname, fn, dur in clips:
             step = 2 if cname.startswith("walk") else 3
             rig.bake_clip(arm, cname, fn, dur, fps=FPS, step=step)
@@ -83,7 +115,25 @@ def assemble(spec, lite, coll, bake=True, name=None):
     return fig, arm, body, mug, clips
 
 
-def export(fname, coll, lite):
+def trim_glb(path):
+    """Drop JSON defaults the optimiser writes (accessor "normalized": false), then re-pad the chunks."""
+    import struct
+    b = open(path, "rb").read()
+    n = struct.unpack("<I", b[12:16])[0]
+    j = json.loads(b[20:20 + n])
+    for a in j.get("accessors", []):
+        if a.get("normalized") is False:
+            del a["normalized"]
+        if a.get("byteOffset") == 0:
+            del a["byteOffset"]
+    js = json.dumps(j, separators=(",", ":"), ensure_ascii=False).encode()
+    js += b" " * (-len(js) % 4)
+    rest = b[20 + n:]
+    out = struct.pack("<III", 0x46546C67, 2, 12 + 8 + len(js) + len(rest)) + struct.pack("<II", len(js), 0x4E4F534A) + js + rest
+    open(path, "wb").write(out)
+
+
+def export(fname, coll, lite, texture_size=None):
     os.makedirs(RAW, exist_ok=True)
     raw = os.path.join(RAW, fname + ".glb")
     out = os.path.join(MODELS, fname + ".glb")
@@ -104,12 +154,34 @@ def export(fname, coll, lite):
     if r.returncode != 0:
         print(r.stdout, r.stderr)
         raise RuntimeError("slim_anims failed")
-    r = subprocess.run(["node", OPT, slim, out, "--texture-size", "128" if lite else "256"], capture_output=True,
-                       text=True)
+    size = texture_size or ("128" if lite else "256")
+    r = subprocess.run(["node", OPT, slim, out, "--texture-size", str(size)], capture_output=True, text=True)
     if r.returncode != 0:
         print(r.stdout, r.stderr)
         raise RuntimeError("optimize failed")
+    trim_glb(out)
     return out
+
+
+def build_library(report):
+    """people_anims.glb: the reference skeleton with every crowd and vendor clip and no mesh. Bone names are
+    shared by all figures, so three.js can play these clips on any figure by name (see NOTES.md)."""
+    scene, coll = reset()
+    spec = dict(specs.BY_NAME[LIBRARY_REF])
+    fig = figures.Figure(spec, False).build()
+    arm = rig.make_armature("people_anims", fig.J, coll)
+    c, allc = clip_list(fig, dict(spec, role="vendor", serve_mug=True))
+    by = {n: (n, f, d) for n, f, d in allc}
+    for cname in LIBRARY:
+        n_, fn, dur = by[cname]
+        rig.bake_clip(arm, cname, fn, dur, fps=FPS, step=2 if cname.startswith("walk") else 3)
+    rig.clear_pose(arm)
+    path = export("people_anims", coll, False)
+    info = glb_info(path)
+    info["reference"] = LIBRARY_REF
+    info["hips_rest"] = [round(v, 4) for v in (fig.J["pelvis"].x, fig.J["pelvis"].z, -fig.J["pelvis"].y)]
+    report["people_anims"] = info
+    print(f"[people] people_anims: {info['bytes'] / 1e3:.0f} kB, {len(info['animations'])} clips")
 
 
 def glb_info(path):
@@ -126,6 +198,7 @@ def glb_info(path):
         "bytes": len(b), "triangles": tris,
         "animations": [a.get("name") for a in j.get("animations", [])],
         "materials": [m.get("name") for m in j.get("materials", [])],
+        "occlusion": [m.get("name") for m in j.get("materials", []) if "occlusionTexture" in m],
         "nodes": len(j.get("nodes", [])),
         "skins": len(j.get("skins", [])),
         "joints": len(j["skins"][0]["joints"]) if j.get("skins") else 0,
@@ -136,6 +209,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default="")
     ap.add_argument("--no-lite", action="store_true")
+    ap.add_argument("--no-anims", action="store_true")
+    ap.add_argument("--no-ao", action="store_true")
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
     a = ap.parse_args(argv)
     want = [x for x in a.only.split(",") if x]
@@ -148,14 +223,17 @@ def main():
         for lite in ((False,) if a.no_lite else (False, True)):
             t0 = time.time()
             scene, coll = reset()
-            fig, arm, body, mug, clips = assemble(spec, lite, coll)
+            fig, arm, body, mug, clips = assemble(spec, lite, coll, ao=not a.no_ao)
             fname = spec["name"] + (".lite" if lite else "")
             path = export(fname, coll, lite)
             info = glb_info(path)
             info["blender_tris"] = fig.m.tris + fig.mug.tris
+            info["hips_rest"] = [round(v, 4) for v in (fig.J["pelvis"].x, fig.J["pelvis"].z, -fig.J["pelvis"].y)]
             report[fname] = info
             print(f"[people] {fname}: {info['triangles']} tris, {info['bytes'] / 1e3:.0f} kB, "
                   f"{len(info['animations'])} clips, {time.time() - t0:.1f}s")
+    if not a.no_anims and not want:
+        build_library(report)
     json.dump(report, open(rep_path, "w"), indent=1)
 
 

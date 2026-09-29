@@ -2,7 +2,9 @@
 numpy textures, AO baking, glb export + web optimisation, and night preview renders.
 
 Used by blender/square/*.py and blender/town/*.py. Run scripts with
-/home/claude/tools/bpy-venv/bin/python <script>.py
+~/nachtmarkt-tools/bpy-venv/bin/python <script>.py (on the Mac; /home/claude/tools/... on the cloud machine).
+Every Cycles render and bake honours NM_DEVICE (CPU, or METAL/CUDA/OPTIX/HIP/ONEAPI for the GPU) and
+NM_THREADS (0 = all cores), as blender/lib/nmlib/render.py does.
 """
 import bpy, bmesh, math, random, os, sys, json, subprocess, time
 import numpy as np
@@ -532,35 +534,56 @@ def add_lightmap_uv_pack(ob, margin=0.004):
     return uvl
 
 
-def lightmap_atlas(objs, reserve_u=0.03, margin=0.0015, angle=66.0):
+def lightmap_atlas(objs, reserve_u=0.03, margin=0.0015, angle=66.0, face_filter=None, const_v=None, ramp=None):
     """One shared 'lightmap' UV atlas for several meshes: smart-project them together in
     multi-object edit mode (islands scaled by world area, packed jointly), then squeeze the atlas
     into u < 1 - reserve_u.  The reserved strip on the right is free for constant values (white =
-    unoccluded, or a ramp) that meshes outside the bake can point at."""
+    unoccluded, or a ramp) that meshes outside the bake can point at.
+
+    face_filter(poly) -> bool keeps texels for the faces that need them (large, visible); the others
+    point into the strip: at their own per-corner occlusion when `ramp` (ob.name -> per-loop values
+    from bake_vertex_ao) is given, else at const_v(poly)."""
     t0 = time.time()
     for o in bpy.context.view_layer.objects: o.select_set(False)
+    skipped = {}
     for ob in objs:
         me = ob.data
         uvl = me.uv_layers.get("lightmap") or me.uv_layers.new(name="lightmap")
         me.uv_layers.active = uvl
+        if face_filter:
+            keep = np.array([bool(face_filter(p)) for p in me.polygons])
+            me.vertices.foreach_set("select", np.zeros(len(me.vertices), bool))
+            me.edges.foreach_set("select", np.zeros(len(me.edges), bool))
+            me.polygons.foreach_set("select", keep)
+            skipped[ob.name] = [(p.index, const_v(p) if const_v else 0.9) for p, k in zip(me.polygons, keep) if not k]
         ob.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
+    bpy.context.tool_settings.mesh_select_mode = (False, False, True)
     bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
+    if not face_filter:
+        bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.uv.smart_project(angle_limit=math.radians(angle), island_margin=margin, area_weight=0.0,
                              correct_aspect=True, scale_to_bounds=False)
     bpy.ops.object.mode_set(mode="OBJECT")
     k = 1.0 - reserve_u
+    uc = 1.0 - reserve_u / 2
+    n_skip = 0
     for ob in objs:
         me = ob.data
         uvl = me.uv_layers["lightmap"]
         a = np.zeros(len(uvl.data) * 2, np.float32)
         uvl.data.foreach_get("uv", a)
         a[0::2] *= k
+        rv = (ramp or {}).get(ob.name)
+        for pi, v in skipped.get(ob.name, []):
+            p = me.polygons[pi]
+            for li in p.loop_indices:
+                a[2 * li] = uc; a[2 * li + 1] = min(0.996, max(0.004, rv[li] if rv is not None else v))
+            n_skip += 1
         uvl.data.foreach_set("uv", a)
         me.uv_layers.active = me.uv_layers["UVMap"]
         ob.select_set(False)
-    log(f"lightmap atlas for {len(objs)} meshes in {time.time() - t0:.1f}s")
+    log(f"lightmap atlas for {len(objs)} meshes in {time.time() - t0:.1f}s ({n_skip} faces use the ramp)")
 
 
 def lightmap_const(ob, u, v=0.5):
@@ -630,13 +653,31 @@ def finish_ao_image(img, path, lift=0.25, strip=None, denoise=True):
     return img
 
 
+def use_device(scene=None):
+    """Cycles device and thread count from NM_DEVICE / NM_THREADS (defaults: CPU, 2 threads)."""
+    scene = scene or bpy.context.scene
+    scene.render.engine = "CYCLES"
+    scene.cycles.device = "CPU"
+    dev = os.environ.get("NM_DEVICE", "CPU").upper()
+    if dev in ("METAL", "CUDA", "OPTIX", "HIP", "ONEAPI"):
+        prefs = bpy.context.preferences.addons["cycles"].preferences
+        prefs.compute_device_type = dev
+        prefs.get_devices()
+        for d in prefs.devices:
+            d.use = True
+        scene.cycles.device = "GPU"
+    threads = int(os.environ.get("NM_THREADS", "2"))
+    if threads > 0:
+        scene.render.threads_mode = "FIXED"; scene.render.threads = threads
+    else:
+        scene.render.threads_mode = "AUTO"
+    return scene
+
+
 def bake_ao(targets, img_name, res, path, samples=24, distance=3.0, post=True, margin=4):
     """Bake AO for `targets` (objects sharing one 'lightmap' UV atlas) into one image.
     post=False leaves the raw bake for finish_ao_image()."""
-    scene = bpy.context.scene
-    scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
-    scene.render.threads_mode = "FIXED"; scene.render.threads = 2
+    scene = use_device()
     scene.cycles.samples = samples
     bpy.context.scene.world.light_settings.distance = distance
     img = bpy.data.images.new(img_name, res, res)
@@ -668,6 +709,59 @@ def bake_ao(targets, img_name, res, path, samples=24, distance=3.0, post=True, m
     for ob in targets:
         ob.data.uv_layers.active = ob.data.uv_layers["UVMap"]
     return img
+
+
+def bake_vertex_ao(objs, samples=32, distance=1.0, lift=0.25, gamma=1.0):
+    """Bake AO per face corner (Cycles, colour-attribute target).  Returns {ob.name: per-loop
+    occlusion, lifted (glTF occlusion only scales ambient light)}."""
+    scene = use_device()
+    scene.cycles.samples = samples
+    scene.world.light_settings.distance = distance
+    for o in bpy.context.view_layer.objects: o.select_set(False)
+    for ob in objs:
+        me = ob.data
+        if "ao_bake" in me.color_attributes:
+            me.color_attributes.remove(me.color_attributes["ao_bake"])
+        a = me.color_attributes.new("ao_bake", "FLOAT_COLOR", "CORNER")
+        me.color_attributes.active_color = a
+        ob.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    t0 = time.time()
+    bpy.ops.object.bake(type="AO", target="VERTEX_COLORS", use_clear=True)
+    log(f"vertex AO for {len(objs)} meshes in {time.time() - t0:.1f}s")
+    out = {}
+    for ob in objs:
+        me = ob.data
+        a = me.color_attributes["ao_bake"]
+        col = np.zeros(len(a.data) * 4, np.float32)
+        a.data.foreach_get("color", col)
+        ao = np.clip(col[0::4], 0, 1) ** gamma
+        out[ob.name] = np.clip(lift + (1 - lift) * ao, 0.004, 0.996)
+        me.color_attributes.remove(a)
+        ob.select_set(False)
+    return out
+
+
+def ramp_uv(ob, ao, u0, u1, v0=0.0, v1=1.0):
+    """Every loop's 'lightmap' UV points into the ramp strip [u0, u1] at its occlusion value
+    (the ramp runs from v0 (black) to v1 (white))."""
+    me = ob.data
+    uvl = me.uv_layers.get("lightmap") or me.uv_layers.new(name="lightmap")
+    uv = np.zeros(len(uvl.data) * 2, np.float32)
+    uv[0::2] = (u0 + u1) / 2; uv[1::2] = v0 + (v1 - v0) * ao
+    uvl.data.foreach_set("uv", uv)
+    me.uv_layers.active = me.uv_layers["UVMap"]
+
+
+def vertex_ao_to_ramp(objs, u0, u1, samples=32, distance=1.0, lift=0.25, gamma=1.0):
+    """Occlusion for small or numerous parts (timbers, frames, needles, baubles) that an atlas would
+    waste texels on: bake AO per face corner, then store each corner's value as a 'lightmap' UV
+    pointing into the vertical ramp kept in the atlas's reserved strip [u0, u1] (fill it with
+    finish_ao_image(strip=(u0, 'ramp'))).  The glTF occlusion texture then returns the baked value,
+    interpolated across each face."""
+    vals = bake_vertex_ao(objs, samples, distance, lift, gamma)
+    for ob in objs:
+        ramp_uv(ob, vals[ob.name], u0, u1)
 
 
 # ------------------------------------------------------------------ export
@@ -746,9 +840,7 @@ def glb_stats(path):
 # ------------------------------------------------------------------ preview rendering
 
 def setup_cycles(samples=48, res=(1280, 720)):
-    s = bpy.context.scene
-    s.render.engine = "CYCLES"
-    s.cycles.device = "CPU"
+    s = use_device()
     s.cycles.samples = samples
     s.cycles.use_denoising = True
     try:
@@ -757,7 +849,6 @@ def setup_cycles(samples=48, res=(1280, 720)):
         pass
     s.cycles.max_bounces = 6
     s.cycles.light_sampling_threshold = 0.01
-    s.render.threads_mode = "FIXED"; s.render.threads = 2
     s.render.resolution_x, s.render.resolution_y = res
     s.render.resolution_percentage = 100
     s.view_settings.view_transform = "AgX"
@@ -827,14 +918,26 @@ def compositor_fog_glare(fog_color=(0.035, 0.04, 0.07), near=25, far=160, fog_am
     L.new(mix.outputs[0], comp.inputs["Image"])
 
 
-def render(path, samples=None):
+def render(path, samples=None, review_width=1280):
+    """Render the scene camera. A .jpg path gets a full-size PNG next to the build output
+    (blender/square/out/renders/) and a review JPEG at most `review_width` px wide."""
     s = bpy.context.scene
     if samples: s.cycles.samples = samples
-    s.render.filepath = path
-    if path.lower().endswith((".jpg", ".jpeg")):
-        s.render.image_settings.file_format = "JPEG"; s.render.image_settings.quality = 90
-    else:
-        s.render.image_settings.file_format = "PNG"
+    jpg = path.lower().endswith((".jpg", ".jpeg"))
+    png = path
+    if jpg:
+        rd = os.path.join(REPO, "blender", "square", "out", "renders")
+        os.makedirs(rd, exist_ok=True)
+        png = os.path.join(rd, os.path.splitext(os.path.basename(path))[0] + ".png")
+    s.render.image_settings.file_format = "PNG"
+    s.render.filepath = png
     t0 = time.time()
     bpy.ops.render.render(write_still=True)
-    log(f"rendered {path} in {time.time() - t0:.1f}s")
+    log(f"rendered {png} in {time.time() - t0:.1f}s")
+    if jpg:
+        from PIL import Image
+        im = Image.open(png).convert("RGB")
+        if im.width > review_width:
+            im = im.resize((review_width, round(im.height * review_width / im.width)), Image.LANCZOS)
+        im.save(path, quality=88)
+        log("review jpeg", path)

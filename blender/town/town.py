@@ -4,8 +4,15 @@ shopfronts with signs), houses down the side streets, a skyline of roofs beyond,
 Marktkirche with its tower at three.js [8, -56].  Roofs carry snow_ caps.  Windows use the
 emissive material window_warm (an atlas of lit and dark panes).
 
-Run:  /home/claude/tools/bpy-venv/bin/python blender/town/town.py
-      LITE=1 /home/claude/tools/bpy-venv/bin/python blender/town/town.py
+Round 1 pass 2: the church tower's openings and clock dials now sit on the stage faces (they were
+buried inside the walls), the sandstone tiles at 2.4 m with real-size ashlar courses, the church has
+two floodlight empties (light_church_*), wedge fillers close the gaps that open behind neighbouring
+ring houses, and every material except the windows and bulbs has ambient occlusion in the glTF
+occlusion slot: walls, roofs and stonework share a baked 2048 lightmap atlas; timbers, frames,
+shutters, signs, ironwork and snow carry per-vertex occlusion through a ramp in the same image.
+
+Run:  NM_DEVICE=METAL NM_THREADS=0 ~/nachtmarkt-tools/bpy-venv/bin/python blender/town/town.py
+      LITE=1 (same command) for town.lite.glb
 """
 import os, sys, math, random
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
@@ -28,8 +35,8 @@ T_PL = C.make_texture_set("town", "plaster", lambda: TX.plaster(1024), normal_st
 T_TI = C.make_texture_set("town", "timber", lambda: TX.timber(512), normal_strength=3.0)
 T_RO = C.make_texture_set("town", "roof_tiles", lambda: TX.roof_tiles(1024), normal_strength=5.0)
 T_SL = C.make_texture_set("town", "slate", lambda: TX.roof_tiles(512, cols=16, rows=20, seed=77, slate=True), normal_strength=4.0)
-T_SR = C.make_texture_set("town", "sandstone_red", lambda: TX.sandstone(1024, 3.0, seed=81, red=True), normal_strength=3.0)
-T_SY = C.make_texture_set("town", "sandstone_yellow", lambda: TX.sandstone(512, 3.0, seed=83, red=False), normal_strength=3.0)
+T_SR = C.make_texture_set("town", "sandstone_red", lambda: TX.sandstone(1024, 2.4, seed=81, red=True), normal_strength=3.0)
+T_SY = C.make_texture_set("town", "sandstone_yellow", lambda: TX.sandstone(512, 2.4, seed=83, red=False), normal_strength=3.0)
 T_PW = C.make_texture_set("town", "painted_wood", lambda: TX.painted_wood(512), normal_strength=3.0)
 WIN_BASE = os.path.join(C.tex_dir("town"), "windows_base.png")
 WIN_EMIT = os.path.join(C.tex_dir("town"), "windows_emit.png")
@@ -77,7 +84,7 @@ for k in MATS:
     elif k.startswith("ti_"): UVM[k] = (1.0, 0.25)
     elif k.startswith("roof"): UVM[k] = (2.16, 2.10)
     elif k == "slate": UVM[k] = (1.2, 1.1)
-    elif k.startswith("stone"): UVM[k] = (3.0, 3.0)
+    elif k.startswith("stone"): UVM[k] = (2.4, 2.4)
     elif k.startswith("pw_"): UVM[k] = (1.0, 1.0)
     else: UVM[k] = (1.0, 1.0)
 G = C.GeoSet("town", MATS, UVM)
@@ -713,7 +720,7 @@ def build_church():
                 nrm = {"-y": (0, -1, 0), "+y": (0, 1, 0), "-x": (-1, 0, 0), "+x": (1, 0, 0)}[facing]
                 off = Vector(nrm) * 0.06
                 G["stone_yel"].beam(tuple(a + off), tuple(b + off), 0.14, 0.12, up=nrm)
-    half = [TW / 2 + 0.02 - 0.3 * k for k in range(4)]
+    half = [TW / 2 + 0.02 - 0.15 * k for k in range(4)]     # stage k's face (full width shrinks 0.3 m per stage)
     lancet(0, -half[1] - 0.02, 13, 1.6, 4.2, "-y")
     for face, hw in (("-y", half[3]), ("+y", half[3]), ("-x", half[3]), ("+x", half[3])):
         sgn = -1 if face[0] == "-" else 1
@@ -816,6 +823,9 @@ def build_church():
     G["pw_brown"].poly([(p[0], p[1] - 0.1, p[2]) for p in portal2])
     G["stone_yel"].prism([(p[0] + (p[0] - dxp) * 0.25, p[1] - 0.05, p[2] * 1.1) for p in portal2], (0, 0.05, 0))
     G.set_frame(Matrix.Identity(4))
+    # two floodlights at the tower foot on the square side, as German churches are lit at night
+    for k, sx in enumerate((-3.2, 3.2)):
+        C.empty(f"light_church_{k}", F @ Vector((sx, -TW / 2 - 3.5, 0.4)), col)
     # angular extent of the church block (for skipping houses)
     corners = [F @ Vector((-TW / 2 - 1, -TW / 2, 0)), F @ Vector((x0 + NL + NW / 2, -NW / 2, 0))]
     angs = [math.atan2(c.y, c.x) for c in corners]
@@ -841,6 +851,7 @@ def blocked(t, w):
 
 
 houses = []
+ring = []
 t = math.radians(0.5)
 prev = None
 idx = 0
@@ -865,9 +876,40 @@ for i, (ta, tb, tm, s_) in enumerate(slots):
     setback = random.uniform(-0.25, 0.35)
     rr = P.house_r(tm) + setback
     F = Matrix.Translation((rr * math.cos(tm), rr * math.sin(tm), 0.0)) @ Matrix.Rotation(tm - math.pi / 2, 4, "Z")
-    build_house(F, s_, i, open_sides)
+    ze_i = build_house(F, s_, i, open_sides)
     houses.append((tm, s_))
+    ring.append(dict(F=F, W=s_["W"], D=s_["D"], ze=ze_i, tint=s_["tint"], gap_after="left" in open_sides))
 C.log("ring houses", len(houses), "tris so far", G.tris())
+
+
+def wedge_fillers():
+    """Houses are rectangles on a ring, so a wedge opens between neighbours toward the back (about
+    1.8 m wide at 11 m depth), visible from the Ferris wheel.  Fill each wedge with a back range:
+    plastered walls up to just under the lower eave and a flat zinc roof with snow on it."""
+    n = 0
+    for a, b in zip(ring, ring[1:] + ring[:1]):
+        if a["gap_after"]:
+            continue
+        Fa, Fb = a["F"], b["F"]
+        y0 = 1.0
+        pts = [Fa @ Vector((-a["W"] / 2 + 0.06, y0, 0)), Fa @ Vector((-a["W"] / 2 + 0.06, a["D"] - 0.05, 0)),
+               Fb @ Vector((b["W"] / 2 - 0.06, b["D"] - 0.05, 0)), Fb @ Vector((b["W"] / 2 - 0.06, y0, 0))]
+        area = sum(p.x * q.y - q.x * p.y for p, q in zip(pts, pts[1:] + pts[:1])) / 2
+        if area < 0:
+            pts = pts[::-1]
+        if abs(area) < 0.3:
+            continue
+        h = min(a["ze"], b["ze"]) - 0.35
+        G.set_frame(Matrix.Identity(4))
+        G["pl_" + a["tint"]].prism([(p.x, p.y, -0.3) for p in pts], (0, 0, h + 0.3), caps=False)
+        G["zinc"].poly([(p.x, p.y, h) for p in pts])
+        c = sum(pts, Vector()) / 4
+        G["snow"].poly([(c.x + (p.x - c.x) * 0.9, c.y + (p.y - c.y) * 0.9, h + 0.05) for p in pts])
+        n += 1
+    C.log("wedge fillers", n)
+
+
+wedge_fillers()
 
 # ------------------------------------------------------------------ houses down the side streets (simpler)
 
@@ -930,6 +972,8 @@ for deg, w in P.EXITS:
 C.log("with side streets, tris", G.tris())
 
 # ------------------------------------------------------------------ skyline: roofs of the town beyond the ring
+G_RING = G
+G = GS = C.GeoSet("sky", MATS, UVM)      # far roofs go in their own meshes (per-vertex occlusion, no atlas texels)
 if not LITE:
     for k in range(48):
         tt = 2 * math.pi * k / 48 + random.uniform(-0.03, 0.03)
@@ -948,6 +992,7 @@ if not LITE:
             zr = gable_roof_along_y(roof, W, 0, D, h, math.radians(55), over_side=0.3, over_front=0.2)
             G["pl_" + random.choice(tints)].prism([(-W / 2, 0, h), (W / 2, 0, h), (0, 0, zr - 0.05)], (0, 0.3, 0))
     G.set_frame(Matrix.Identity(4))
+G = G_RING
 
 # ------------------------------------------------------------------ finish
 fir_ob, gb_ob = garlands() if not LITE else (None, None)
@@ -960,6 +1005,11 @@ for x, y, z, F in WALL_BULBS:
     wl.bulb((x, y, z), 0.09, stretch=1.6, sides=6)
 wl_ob = wl.finish(col)
 objs = G.finish(col)
+for k, ob in GS.finish(col).items():
+    if k == "snow":
+        ob.name = "snow_skyline"; ob.data.name = "snow_skyline"
+    elif k == "window":
+        ob.name = "town_windows_skyline"
 # snow must be its own node named snow_*: rename
 for k, ob in objs.items():
     if k == "snow":
@@ -968,6 +1018,59 @@ for k, ob in objs.items():
         ob.name = "town_windows"
 exported = list(col.objects)
 tris = C.count_tris(exported)
+C.log("TOWN TRIANGLES (before AO)", tris)
+if os.environ.get("STATS_ONLY"):
+    by = sorted(((o.name, C.count_tris([o])) for o in exported), key=lambda kv: -kv[1])
+    C.log("BREAKDOWN", by[:14])
+    sys.exit(0)
+
+# ------------------------------------------------------------------ ambient occlusion
+AO_RES = 512 if LITE else 2048
+STRIP = 0.975                    # u >= STRIP: the ramp for per-vertex occlusion
+AO_PATH = os.path.join(C.tex_dir("town"), f"town_ao{'_lite' if LITE else ''}.png")
+scene.world = bpy.data.worlds.new("ao_world")
+gme = bpy.data.meshes.new("ao_ground")          # the square and streets as an occluder (not exported)
+gme.from_pydata([(-140, -140, 0.06), (140, -140, 0.06), (140, 140, 0.06), (-140, 140, 0.06)], [], [(0, 1, 2, 3)])
+gob = bpy.data.objects.new("ao_ground", gme); scene.collection.objects.link(gob)
+meshes = [o for o in exported if o.type == "MESH"]
+ATLAS_KEYS = tuple("town_" + k for k in MATS if k.startswith(("pl_", "stone_", "roof_")) or k == "slate")
+atlas = [o for o in meshes if o.name in ATLAS_KEYS]
+skip = [o for o in meshes if o.name.startswith("bulbs_") or o.name.startswith("town_windows")]
+small = [o for o in meshes if o not in atlas and o not in skip]
+for o in skip:
+    o.hide_render = True
+
+
+def seen(p):
+    """Faces worth atlas texels: not the floor slabs hidden inside the stacked storeys, and not the
+    back walls of the ring that face away from the square (nobody walks behind the houses)."""
+    n, c = p.normal, p.center
+    if abs(n.z) > 0.99 and p.area > 3.0 and c.z > 0.5:
+        return False
+    if abs(n.z) < 0.3:
+        r = math.hypot(c.x, c.y)
+        if r > 45 and (n.x * c.x + n.y * c.y) / r > 0.8:
+            return False
+    return True
+
+
+# per-corner occlusion for everything (small parts use it directly, and small faces of the atlas meshes too)
+vao = C.bake_vertex_ao(atlas + small, samples=48, distance=1.2, lift=0.3)
+for o in small:
+    C.ramp_uv(o, vao[o.name], STRIP + 0.006, 0.996)
+# atlas texels only for large visible faces: walls, gables, roofs, chimneys, the church's walls
+C.lightmap_atlas(atlas, reserve_u=1 - STRIP, margin=0.003 if not LITE else 0.006,
+                 face_filter=lambda p: p.area > 1.2 and seen(p), ramp=vao)
+ao_img = C.bake_ao(atlas, "town_ao", AO_RES, AO_PATH, samples=48, distance=2.5, post=False,
+                   margin=8 if not LITE else 4)
+C.finish_ao_image(ao_img, AO_PATH, lift=0.3, strip=(STRIP, "ramp"))
+for o in atlas + small:
+    for m in o.data.materials:
+        C.attach_ao(m, ao_img)
+for o in skip:
+    o.hide_render = False
+bpy.data.objects.remove(gob)
+
 C.log("TOWN TRIANGLES", tris, "lite" if LITE else "full")
 by = sorted(((o.name, C.count_tris([o])) for o in exported), key=lambda kv: -kv[1])
 C.log("BREAKDOWN", by[:14])

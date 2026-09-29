@@ -1,6 +1,6 @@
 """Cycles previews of the organizer's figures (render-only scene; nothing here is exported).
 
-    /home/claude/tools/bpy-venv/bin/python blender/people/preview.py lineup|band|group|test [--samples N] [--res WxH]
+    NM_DEVICE=METAL NM_THREADS=0 ~/nachtmarkt-tools/bpy-venv/bin/python blender/people/preview.py lineup|band|group|bench|test [--samples N] [--res WxH]
 """
 import argparse
 import math
@@ -19,6 +19,7 @@ import rig  # noqa: E402
 import specs  # noqa: E402
 
 REVIEW = os.path.join(REPO, "review", "round-1", "organizer")
+DIAG = os.path.join(REPO, "blender", "out", "people", "renders")
 TMP = os.path.join(REPO, "blender", "out", "people", "renders")
 
 
@@ -149,9 +150,19 @@ def place(spec, coll, loc, rot_z, clip, t, lite=False, name=None):
     return fig, arm
 
 
-def render(scene, path, samples=48, res=(1280, 720), exposure=0.0):
+def render(scene, path, samples=128, res=(1920, 1080), exposure=0.0, jpeg_width=1280):
+    """Cycles render honouring NM_DEVICE (CPU or METAL/CUDA/...) and NM_THREADS (0 = all cores).
+    Writes the full-size PNG next to the review path and a JPEG at most `jpeg_width` wide."""
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
+    dev = os.environ.get('NM_DEVICE', 'CPU').upper()
+    if dev in ('METAL', 'CUDA', 'OPTIX', 'HIP', 'ONEAPI'):
+        prefs = bpy.context.preferences.addons['cycles'].preferences
+        prefs.compute_device_type = dev
+        prefs.get_devices()
+        for d in prefs.devices:
+            d.use = True
+        scene.cycles.device = 'GPU'
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
     try:
@@ -160,8 +171,12 @@ def render(scene, path, samples=48, res=(1280, 720), exposure=0.0):
         pass
     scene.cycles.use_adaptive_sampling = True
     scene.cycles.max_bounces = 6
-    scene.render.threads_mode = 'FIXED'
-    scene.render.threads = 2
+    threads = int(os.environ.get('NM_THREADS', '2'))
+    if threads > 0:
+        scene.render.threads_mode = 'FIXED'
+        scene.render.threads = threads
+    else:
+        scene.render.threads_mode = 'AUTO'
     scene.render.resolution_x, scene.render.resolution_y = res
     scene.render.resolution_percentage = 100
     scene.view_settings.view_transform = 'AgX'
@@ -169,13 +184,60 @@ def render(scene, path, samples=48, res=(1280, 720), exposure=0.0):
     scene.view_settings.exposure = exposure
     scene.render.image_settings.file_format = 'PNG'
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    png = path if path.endswith(".png") else path.rsplit(".", 1)[0] + ".png"
+    stem = path.rsplit(".", 1)[0]
+    png = path if path.endswith(".png") else os.path.join(TMP, os.path.basename(stem) + ".png")
+    os.makedirs(os.path.dirname(png), exist_ok=True)
     scene.render.filepath = png
     bpy.ops.render.render(write_still=True)
     if path.endswith(".jpg"):
         from PIL import Image
-        Image.open(png).convert("RGB").save(path, quality=90)
+        im = Image.open(png).convert("RGB")
+        if im.width > jpeg_width:
+            im = im.resize((jpeg_width, round(im.height * jpeg_width / im.width)), Image.LANCZOS)
+        im.save(path, quality=88)
     return path
+
+
+def decoded(names):
+    """Blender cannot import meshopt: decode the web glbs once into blender/out/people/decoded/."""
+    import subprocess
+    out = os.path.join(REPO, "blender", "out", "people", "decoded")
+    os.makedirs(out, exist_ok=True)
+    for n in names:
+        dst = os.path.join(out, n + ".glb")
+        src = os.path.join(REPO, "site", "public", "models", n + ".glb")
+        if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
+            subprocess.run(["node", os.path.join(HERE, "decode_glb.mjs"), src, dst], check=True)
+    return out
+
+
+def stack_strips(pngs, labels, out_jpg, gap, width=1280):
+    """Stack strip renders into one review JPEG with each figure's name under it."""
+    from PIL import Image, ImageDraw, ImageFont
+    ims = [Image.open(p).convert("RGB") for p in pngs]
+    W = ims[0].width
+    band = 34
+    sheet = Image.new("RGB", (W, sum(im.height for im in ims) + band * len(ims)), (12, 13, 20))
+    d = ImageDraw.Draw(sheet)
+    try:
+        font = ImageFont.truetype(os.path.join(REPO, "blender", "lib", "fonts", "AlegreyaSC-ExtraBold.ttf"), 22)
+    except Exception:
+        font = ImageFont.load_default()
+    y = 0
+    for im, names in zip(ims, labels):
+        sheet.paste(im, (0, y))
+        n = len(names)
+        # figure i stands at x = (i - (n-1)/2) * gap; the camera sees +-3.84 m at the figures (45 mm lens, 9.6 m)
+        half = 9.6 * 18.0 / 45.0
+        for i, nm in enumerate(names):
+            x = (i - (n - 1) / 2) * gap
+            px = W / 2 + x / half * W / 2
+            tw = d.textlength(nm, font=font)
+            d.text((px - tw / 2, y + im.height + 5), nm, fill=(235, 215, 170), font=font)
+        y += im.height + band
+    if sheet.width > width:
+        sheet = sheet.resize((width, round(sheet.height * width / sheet.width)), Image.LANCZOS)
+    sheet.save(out_jpg, quality=88)
 
 
 def market_lights(env_c, center=(0, 0, 0), span=6.0):
@@ -189,8 +251,8 @@ def market_lights(env_c, center=(0, 0, 0), span=6.0):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("what")
-    ap.add_argument("--samples", type=int, default=48)
-    ap.add_argument("--res", default="1280x720")
+    ap.add_argument("--samples", type=int, default=128)
+    ap.add_argument("--res", default="1920x1080")
     ap.add_argument("--only", default="")
     ap.add_argument("--clip", default="idle")
     ap.add_argument("--t", type=float, default=1.0)
@@ -229,27 +291,37 @@ def main():
         camera(env_c, v[:3], v[3:6], v[6] if len(v) > 6 else 50)
         render(scene, a.out or os.path.join(TMP, "clips.jpg"), a.samples, res)
     elif what == "lineup":
-        people = specs.BASE + specs.VENDORS + specs.BAND
-        clips = {"crowd": "idle", "vendor": "idle_free", "band": "rest"}
-        n = len(people)
-        # two rows: base figures in front, vendors and band behind
-        front = specs.BASE
-        back = specs.VENDORS + [s for s in specs.BAND]
-        for i, sp in enumerate(front):
-            x = -(len(front) - 1) * 0.42 + i * 0.84
-            clip = ["idle", "chat", "idle_free", "drink", "idle", "chat_free", "idle_free", "laugh_free"][i]
-            place(sp, coll, (x, 0, 0), 0.0 + 0.12 * math.sin(i * 1.7), clip, 1.3 + i * 0.7, name=f"a{i}")
-        for i, sp in enumerate(back):
-            x = -(len(back) - 1) * 0.47 + i * 0.94
-            clip = "idle_free" if sp["role"] == "vendor" else "chat_free"
-            place(sp, coll, (x, 1.25, 0), 0.08 * math.sin(i * 2.3), clip, 0.8 + i * 0.9, name=f"b{i}")
-        market_lights(env_c)
-        bokeh_strings(env_c, y=8.0)
-        camera(env_c, (0.0, -8.6, 1.55), (0, 0.5, 0.95), 42)
-        render(scene, a.out or os.path.join(REVIEW, "lineup.jpg"), a.samples, res)
+        # two strips, each rendered on its own and stacked: the 8 crowd figures on top, the 4 vendors and the
+        # 4 musicians below, so no figure hides another (pass 1 put vendors and band behind the crowd)
+        strips = [
+            ("crowd", [(sp, clip, t) for sp, clip, t in zip(
+                specs.BASE, ["idle", "chat", "idle_free", "drink", "laugh", "chat_free", "idle_free", "walk_free"],
+                [1.3, 2.0, 2.7, 3.4, 1.1, 4.8, 5.5, 0.35])]),
+            ("staff", [(sp, "serve", 2.6 + 0.3 * i) for i, sp in enumerate(specs.VENDORS)]
+             + [(sp, "idle" if sp["inst"] in ("piano", "drums") else "rest", 1.0 + 0.8 * i)
+                for i, sp in enumerate(specs.BAND)]),
+        ]
+        sw, sh = res[0], res[1] // 2
+        pngs = []
+        for k, (tag, row) in enumerate(strips):
+            scene, coll = build.reset()
+            env_c = env(scene)
+            n = len(row)
+            gap = 0.86
+            for i, (sp, clip, t) in enumerate(row):
+                x = -(n - 1) * gap / 2 + i * gap
+                place(sp, coll, (x, 0, 0), 0.1 * math.sin(i * 1.7), clip, t, name=f"{tag}{i}")
+            market_lights(env_c)
+            bokeh_strings(env_c, y=8.0)
+            camera(env_c, (0.0, -9.6, 1.25), (0, 0, 0.95), 45)
+            pngs.append(render(scene, os.path.join(TMP, f"lineup_{tag}.png"), a.samples, (sw, sh)))
+        labels = [[sp["name"].replace("people_", "") for sp, _, _ in row] for _, row in strips]
+        stack_strips(pngs, labels, a.out or os.path.join(REVIEW, "lineup.jpg"), gap)
     elif what == "band":
         # the ride builder's bandstand and instruments (raw exports), players at the slot_* empties
         RAWD = os.path.join(REPO, "blender", "out", "raw")
+        if not os.path.exists(os.path.join(RAWD, "bandstand.glb")):
+            RAWD = decoded(["bandstand", "instr_sax", "instr_piano", "instr_bass", "instr_drums"])
 
         def imp(path):
             before = set(bpy.data.objects)
@@ -291,18 +363,45 @@ def main():
         else:
             camera(env_c, (0.9, -6.6, 2.5), (-0.1, -0.3, 1.55), 36)
         render(scene, a.out or os.path.join(REVIEW, "band.jpg"), a.samples, res)
+    elif what == "bench":
+        # seated long coats (the pass-1 skirt flattened into a disc): the bench couple and an older man
+        # on a bench of the square's height (seat top 0.475 m), seen from the front three-quarter
+        wood = mat("env_bench_wood", (0.16, 0.09, 0.05), 0.7)
+        iron = mat("env_bench_iron", (0.02, 0.02, 0.02), 0.5)
+        for bx in (-0.55, 1.25):
+            for (cx, cy, cz), (sx, sy, sz), m in (((bx, 0.03, 0.4575), (1.65, 0.42, 0.035), wood),
+                                                  ((bx, 0.26, 0.78), (1.65, 0.04, 0.34), wood),
+                                                  ((bx - 0.72, 0.05, 0.22), (0.05, 0.4, 0.44), iron),
+                                                  ((bx + 0.72, 0.05, 0.22), (0.05, 0.4, 0.44), iron)):
+                bpy.ops.mesh.primitive_cube_add(size=1, location=(cx, cy, cz))
+                o = bpy.context.active_object
+                o.scale = (sx, sy, sz)
+                for c in list(o.users_collection):
+                    c.objects.unlink(o)
+                env_c.objects.link(o)
+                o.data.materials.append(m)
+        sitters = [("people_man_coat", -0.93, "sit", 1.2), ("people_woman_coat", -0.19, "sit", 3.1),
+                   ("people_man_older", 1.25, "sit", 4.4)]
+        for i, (nm, x, clip, t) in enumerate(sitters):
+            place(specs.BY_NAME[nm], coll, (x, 0.0, 0), 0.0, clip, t, name=f"s{i}")
+        market_lights(env_c)
+        bokeh_strings(env_c, y=7.0)
+        v = [float(x) for x in a.cam.split(",")] if a.cam else [1.9, -3.6, 1.15, 0.2, 0.1, 0.62, 38]
+        camera(env_c, v[:3], v[3:6], v[6] if len(v) > 6 else 40)
+        render(scene, a.out or os.path.join(REVIEW, "bench_sit.jpg"), a.samples, res)
     elif what == "group":
-        grp = [("people_woman_coat", (0.55, 0.05), "chat", 1.2), ("people_man_coat", (-0.5, 0.15), "drink", 2.2),
-               ("people_man_parka", (0.05, 0.75), "laugh", 1.3), ("people_woman_older", (-0.05, -0.55), "idle", 2.5)]
+        # the same spacing as crowd.json groups (radius 0.72 m, 0.1 m wider than pass 1, so chat hands clear coats)
+        grp = [("people_woman_coat", (0.66, 0.06), "chat", 1.2), ("people_man_coat", (-0.62, 0.18), "drink", 2.2),
+               ("people_man_parka", (0.06, 0.86), "laugh", 1.3), ("people_woman_older", (-0.06, -0.66), "idle", 2.5)]
         for i, (nm, (x, y), clip, t) in enumerate(grp):
             yaw = math.atan2(-x, -y) + math.pi / 2 + math.pi   # face the centre
             d = Vector((0, 0, 0)) - Vector((x, y, 0))
             yaw = math.atan2(d.y, d.x) + math.pi / 2
             place(specs.BY_NAME[nm], coll, (x, y, 0), yaw, clip, t, name=f"g{i}")
-        place(specs.BY_NAME["people_child_girl"], coll, (1.5, -0.35, 0), 2.6, "idle_free", 0.5, name="g5")
+        place(specs.BY_NAME["people_child_girl"], coll, (1.45, -0.55, 0), 2.6, "idle_free", 0.5, name="g5")
         market_lights(env_c)
         bokeh_strings(env_c, y=7.0)
-        camera(env_c, (1.6, -3.9, 1.7), (0.1, 0.1, 1.05), 45)
+        camera(env_c, (2.0, -4.9, 1.75), (0.3, 0.05, 0.95), 42)
         render(scene, a.out or os.path.join(REVIEW, "group_chat.jpg"), a.samples, res)
 
 

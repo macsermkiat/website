@@ -57,6 +57,30 @@ def env_collection():
     return c
 
 
+def configure_cycles(scene=None):
+    """Cycles device and threads from the environment (docs/BUILD.md, "Where things run"):
+    NM_DEVICE = CPU (default) or METAL / CUDA / OPTIX / HIP / ONEAPI for the GPU;
+    NM_THREADS = CPU threads, 0 = all cores (default 2). Used by renders and bakes."""
+    scene = scene or bpy.context.scene
+    scene.render.engine = 'CYCLES'
+    scene.cycles.device = 'CPU'
+    dev = os.environ.get('NM_DEVICE', 'CPU').upper()
+    if dev in ('METAL', 'CUDA', 'OPTIX', 'HIP', 'ONEAPI'):
+        prefs = bpy.context.preferences.addons['cycles'].preferences
+        prefs.compute_device_type = dev
+        prefs.get_devices()
+        for d in prefs.devices:
+            d.use = True
+        scene.cycles.device = 'GPU'
+    threads = int(os.environ.get('NM_THREADS', '2'))
+    if threads > 0:
+        scene.render.threads_mode = 'FIXED'
+        scene.render.threads = threads
+    else:
+        scene.render.threads_mode = 'AUTO'
+    return scene
+
+
 def reset(seed_value=1, lite_mode=False):
     """Empty the Blender file and set the random seed and LOD for a fresh build."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -68,10 +92,6 @@ def reset(seed_value=1, lite_mode=False):
     os.makedirs(OUT_DIR, exist_ok=True)
     os.makedirs(KIT_DIR, exist_ok=True)
     os.makedirs(MODELS_DIR, exist_ok=True)
-    scene = bpy.context.scene
-    scene.render.engine = 'CYCLES'
-    scene.cycles.device = 'CPU'
-    scene.render.threads_mode = 'FIXED'
-    scene.render.threads = 2
+    scene = configure_cycles(bpy.context.scene)
     export_collection()
     return scene

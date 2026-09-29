@@ -259,7 +259,9 @@ def bake_clip(arm_ob, name, fn, duration, fps=24, step=2):
         frames.append(nf)
     prev = None
     for f in frames:
-        t = f / fps
+        # time is scaled so the last frame is exactly t = duration: a 1.2 s walk has 28.8 frames at 24 fps,
+        # and baking t = f / fps left a 0.014 seam at the loop point
+        t = duration * f / nf
         prev = pose_to_bones(arm_ob, rest_mats, fn(t), prev)
         for b in ORDER:
             arm_ob.pose.bones[b].keyframe_insert("rotation_quaternion", frame=f, group=b)
