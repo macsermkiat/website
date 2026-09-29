@@ -22,7 +22,7 @@ It also returns these optional helpers:
 
 | Member | What it does |
 |---|---|
-| `placeLights(spots, { focus, reserved, shadowed, budget })` | Turns `light_` empties into warm lights within the profile's budget, and gives every section and deco stall an interior glow. It takes the engine's spot shape `[{ obj, kind, id }]` and returns `{ lights, pools, cap, interiors, glows, blockers, refreshShadows(), dispose() }`, a superset of `engine/lights.js`. |
+| `placeLights(spots, { focus, reserved, shadowed, budget })` | Turns `light_` empties into warm lights within the profile's budget, gives every section and deco stall an interior glow (and, where it has a front `light_`, a roof glow and a ground spill), and clips every unshadowed interior light to its stall. It takes the engine's spot shape `[{ obj, kind, id }]` and returns `{ lights, pools, cap, interiors, glows, clips, clipEntries, blockers, refreshShadows(), dispose() }`, a superset of `engine/lights.js`. It logs one `[lighting] placed …` line. |
 | `tune(root)` | Applies this module's emissive levels and bulb-string glows to a model that loads late. |
 | `captureEnvironment(position)` | Re-captures the global reflection map from the real scene now (six faces in one frame). |
 | `refreshEnvironment(delay)` | Re-captures it one cube face per frame, starting `delay` seconds from now (full only). Call it after changing the lights. The module calls it itself once the snow has settled after a toggle. There is no periodic refresh. |
@@ -89,13 +89,19 @@ three's built-in `AgXToneMapping` has no look. `grade.js` replaces three's `Outp
 | Fog | `FogExp2` `#0a1630`, density 0.0135, plus a ground mist: density × (1 + 1.1·e^(−h/3.2 m)). Patches three's fog chunks. | The town ring sinks into blue haze while roofs and the wheel stay crisp. |
 | Global environment | PMREM 256. The synthetic night at start; on full, the real market captured once on frame 3 from `[0, 1.6, 2]` (`environmentIntensity` 0.45). **No periodic refresh.** It is re-captured, one cube face per frame into the same texture, only 0.5 s after the snow blend has settled following a toggle, or when the engine calls `refreshEnvironment()`. | Wet cobbles and glass reflect the actual bulbs. The market is static apart from the rides and the crowd, which are too small in a 256² reflection to matter, so a periodic refresh (pass 2: six frames of about 950 extra draw calls every 30 s) only caused a hitch. |
 | Local probes | On frame 3, the 6 nearest stalls (lite: 2) that hold copper, glass or glaze get their own 128² probe (lite 64²), captured from the middle of those props with the props hidden, as their material's `envMap` at intensity 1.0. | The copper pot reflects the lit back wall, the bulbs and the dark market in front, as in Cycles, instead of a dark synthetic sky. |
-| Bloom | `UnrealBloomPass`, threshold 1.6 (knee 1.2), strength 0.40, mip weights `[1, .3, .09, .03, .01]`, radius 0. Input clamped to **5** by the brightest channel (hue kept). | Only emissives bloom (bulbs at 6, windows at 1.5, the moon at 4.2); lit wood (< 1.5) does not. The clamp means a specular glint on copper enters the bloom no brighter than a bulb, so glints cannot become glare stars. The weights keep a crisp core with a short tail. |
-| Bloom, half resolution | Lite, and full after the third adaptive step: weights `[1, .15, .03, .006, 0]`, strength 0.40 | At half resolution every mip is twice as wide on screen; shifting weight to the tight mips keeps the moon halo and lamp glows the same size as on full. |
+| Bloom | `UnrealBloomPass`, threshold 1.6 (knee 1.2), strength **0.32**, mip weights `[1, .2, .07, .025, .01]`, radius 0. Input clamped to **5** by the brightest channel (hue kept). | Only emissives bloom (bulbs at 6, windows at 1.5, the moon at 4.2); lit wood (< 1.5) does not. The clamp means a specular glint on copper enters the bloom no brighter than a bulb, so glints cannot become glare stars. The weights keep a crisp core with a short tail. Pass 4 (0.40 and `.3` before): the bulbs measure 12–19 px wide, median 16 (Cycles 13–16, median 14; pass 3 median 18). See "Bulb row" below for what is left. |
+| Bloom, half resolution | Lite, and full after the third adaptive step: weights `[1, .1, .025, .005, 0]`, strength 0.32 | At half resolution every mip is twice as wide on screen; shifting weight to the tight mips keeps the moon halo and lamp glows the same size as on full. |
 | Light size | For direct light only, roughness is floored at 0.32 and clear-coat roughness at 0.30 (`shading.js`) | three's lights are points, so a mirror clear coat (the reference mugs and pot have clear-coat roughness 0) reflects them as one blazing pixel. Real lamps have a size. Reflections of the environment stay sharp. |
 | Bulbs | `bulb_warm` emissive (1, .62, .30) × 6, `bulb_cold` (.62, .76, 1) × 5, also written to `userData.baseEmissive` | The same brightness across everyone's models. |
-| Bulb-string glow | Each short, level string of bulbs on a stall is a line light: 0.25 × bulb colour, 0.9 m reach, half-wrapped diffuse (`shading.js`). Strings longer than 5 m or taller than 1 m (wheel, carousel, tree, festoons) are skipped. | The garland and the lambrequin are lit by their bulbs, as in Cycles, at the cost of a small loop per pixel instead of more three.js lights. At 0.6 the fascia board behind the bulbs measured lightness 0.44 against 0.26 in Cycles. |
-| Stall interior glow | Every section and deco stall: a one-sided point glow 0.3 m below its interior `light_` empty, reach 2.6 m, clipped below 0.3 m over the stall's base and above 0.15 m over the empty. Intensity 9 where the stall has a shadowed light, 6 with an unshadowed one, 16 with none. | Every stall front reads warm from the home view, including the stalls the light budget cannot reach. One-sided, so it cannot shine out through the walls; clipped, so it lights no halo on the ground and no roof. |
+| Bulb-string glow | Each short, level string of bulbs on a stall is a line light: **0.18** × bulb colour, 0.9 m reach, half-wrapped diffuse (`shading.js`). Strings longer than 5 m or taller than 1 m (wheel, carousel, tree, festoons) are skipped. | The garland and the lambrequin are lit by their bulbs, as in Cycles, at the cost of a small loop per pixel instead of more three.js lights. The lambrequin measures lightness 0.28 (Cycles 0.26; 0.35 at 0.25 in pass 3, 0.44 at 0.6 in pass 2). |
+| Stall interior glow | Every section and deco stall: a one-sided point glow 0.3 m below its interior `light_` empty, reach 2.6 m, clipped below 0.3 m over the stall's base and above 0.15 m over the empty. Intensity **7** where the stall has a shadowed light (9 in pass 3), 6 with an unshadowed one, 16 with none. | Every stall front reads warm from the home view, including the stalls the light budget cannot reach. One-sided, so it cannot shine out through the walls; clipped, so it lights no halo on the ground and no roof. |
+| Roof glow (`glow.eave`) | Every stall with a front `light_`: a one-sided glow 0.6 m in front of and 0.5 m above that empty, intensity 38, reach 3 m, clipped below 5 cm under the empty. | It lights what faces it above the eave line: the front slope of the roof (or the soffit, where the lamp hangs under the eave). The downward front-fill spot cannot reach it. The strip of roof above the bulbs measures lightness 0.23 (Cycles 0.24; pass 3 0.06). |
+| Ground spill (`glow.spill`) | Every stall with a front `light_`: a one-sided glow where the front fill hangs, intensity 11, reach 8 m, clipped above 0.2 m over the base, so it lights only the ground. | The warm pool Cycles' omnidirectional front light spreads around the stall. The cobbles beside the stall, in its moon shadow, were blue (hue 250°) and are now warm grey (hue ~350°; Cycles 4°). A spot strong enough to reach them also lit the sign and the lower front wall to 0.24 against 0.14. |
 | Windows | `window_warm` × 1.5 | They read as lamplight, not as light sources. |
+
+### Bulb row
+
+`measure.py` also measures the bulb row: the width of each bright run along it (luma > 200) and the mean luma of the band just under it. Against Cycles (13–16 px, median 14; band 111), pass 3 had median 18 px, one 143 px run where the left bulbs merged, and band 177. Pass 4's bloom (strength 0.32, second level 0.2) gives median 16 px and band about 160; the merged run is down to about 120 px. What is left is not bloom: the top of the back wall right behind the bulbs is lit almost white by the interior light 0.3 m above it (Cycles' area light is shaded there by the fascia), so the gaps between the left bulbs stay above the threshold. Lowering the whole interior would darken the counter and shelves, which now match. A baked lightmap or AO on the carpenter's stalls would fix it properly.
 
 ### Warm lights at `light_` empties
 
@@ -103,29 +109,30 @@ The light colour is linear (1.0, 0.6, 0.3), the colour of the Cycles previews' l
 
 | Kind | Interior point | Front fill (spot under the front eave) | Spot | Reach (point / front / spot) |
 |---|---|---|---|---|
-| Section stall | 40 | 13, cone 1.15 rad, penumbra 0.45 | 34 | 4.2 / 8 / 8 m |
-| Deco stall | 18 | 8, cone 1.15 rad | 20 | 3.6 / 6 / 7 m |
+| Section stall | **34** (40 in pass 3) | **9**, cone 1.4 rad, penumbra 0.25 | 34 | 4.2 / 9 / 8 m |
+| Deco stall | 18 | 6, cone 1.4 rad, penumbra 0.25 | 20 | 3.6 / 6 / 7 m |
 | Landmark | 26 | – | 40 (stage lights above 2.8 m point down) | 10 / – / 12 m |
 | Lamp (`light_lamp_*`) | 7 | – | – | 10 m |
 | Tree (`light_tree_*`) | 16 | – | – | 10 m |
 
 How the helper places them:
 
-- **Front or interior.** A `light_` empty more than 0.9 m in front of its model's origin (model +Z) is the front fill: a wide spot aimed down and 0.6 m out, which lights the counter front, the sign and the cobbles but not the fascia right beside it. Anything else inside the model is the interior light.
+- **Front or interior.** A `light_` empty more than 0.9 m in front of its model's origin (model +Z) is the front fill: a wide spot hung 0.4 m above and 0.8 m in front of the empty (`frontLift`, `frontOut`) and aimed at the ground 1.7 m out (`frontAim`), which lights the counter front, the sign and the cobbles but not the fascia (outside its 80° cone). Its core is wide (penumbra 0.25), so its pool reaches about a metre further than pass 3's. Anything else inside the model is the interior light.
 - **Spots.** A spot is used when an empty's `userData.type` is `'spot'`, when its name contains `spot`, or for high landmark lights. `userData.intensity`, `userData.distance`, `userData.color` and `userData.aim` override the defaults.
 - **Interior shadows.** On the full market, the interior lights of the **4 section stalls** get a 512² cube shadow map, drawn **once** (`shadow.autoUpdate = false`), with shadow intensity **0.95**. Only stall interiors get these slots (pass 2 gave one to the tree). The kernel is wide (radius 5 texels, taken with 12 taps instead of three's 5; a lamp has a size), the near plane is 0.15 m and the bias -0.0003. The bias is in perspective depth: pass 2's -0.002 with a 5 cm near plane was about 0.3 m at the wall base, which let the light out onto a pale strip of ground around the stall.
 - **Shadow-only shell.** Each of those stalls also gets a shadow-only shell (`shadowBlocker`): a floor 5 cm over the base and planes 12 mm outside the side walls, the back wall and the lower front wall, found by casting rays at the stall from outside. It draws nothing on screen and nothing into the moon's shadow (its depth material culls every vertex). It closes the hairline gaps between wall planks, which a 512² cube map otherwise lets through as sharp streaks across the ground.
 - **The light the walls bounce** comes from the stall's interior glow (below), not from a see-through shadow.
-- **Unshadowed interiors** (every stall on lite) are moved 0.3 m down, below the eaves, so they cannot reach the top of the roof, and get a 3 m reach and 70 % intensity, so the leak through the walls stays a small pool at the stall's foot. The interior glow brings the warmth back.
+- **Unshadowed interiors** (every stall on lite) are **clipped to the stall's interior** (`interiorBox` in `lights.js`, the clip in `shading.js`). Rays cast from the light find the inner faces of the side walls, the back wall and the lower front wall, and the roof's underside as a tent (its ridge and its steepest slope). The light then reaches nothing outside that box: its faces sit 1 cm into the boards (1 cm fade), so the planks' edges in the wall gaps stay dark; the floor is 0.3 m over the base, so no ground; and in front there is 0.3 m of extra room only below the fascia, for the counter top and the mugs. Pass 3 had no clip: the light shone through the walls onto the barge boards, the eave, the ground and the plank edges (bright slits). The light stays at its empty (no drop), with a 3.2 m reach and **50 %** intensity; the interior glow carries the rest. If a model has no closed interior, the light falls back to pass 3's 0.3 m drop.
+- **The clip** is keyed by the light's world position, so it does not depend on three's light order. It costs one loop of up to 4 clips per point light per pixel, and returns at once when there are none (the full market normally has none).
 - **Budget.** The full market has 14 real-time lights, the lite market 4, minus the engine's reserved bandstand spots. A model's first light is its interior; its front fill is second. Ranking is by kind (section stalls, then landmarks and the tree, then deco stalls, then lamps), then first lights before second ones, then distance to the focus. So the full market lights the four section interiors and their four front fills before any landmark, and the lite market's four lights are the four section interiors. A light that misses the budget becomes a soft additive warm pool on the ground, and its stall keeps its interior glow.
 
 ### Local glows (`shading.js`)
 
 three.js evaluates every light for every pixel, so each extra light costs across the whole frame. The glows are a cheaper, diffuse-only light for the short-reach jobs:
 
-- one shared `Float32Array` uniform (`lightingGlow`, 24 glows on full, 12 on lite; 3 vec4 each), added to every built-in lit material through the `lights_pars_begin` and `lights_fragment_end` chunks, and kept by reference by `UniformsUtils.clone`, so one write updates every material;
+- one shared `Float32Array` uniform (`lightingGlow`, 24 glows on full, 12 on lite, 3 vec4 each, then 4 interior clips of 4 vec4), added to every built-in lit material through the `lights_pars_begin`, `lights_fragment_begin` (the clip) and `lights_fragment_end` chunks, and kept by reference by `UniformsUtils.clone`, so one write updates every material;
 - each glow is a segment (a point when both ends match) with a colour × intensity, a reach (with a smooth window to zero), a floor and a ceiling in world y (15 cm fades), and a side: two-sided glows wrap (bulbs), one-sided glows are plain Lambert (interiors);
-- every 15 frames the slots are filled: stall interiors first, then the bulb strings nearest the camera;
+- every 15 frames the slots are filled: stall interiors first, then the bulb strings, roof glows and ground spills nearest the camera;
 - the same chunk adds the moon rim, and `shadowmap_pars_fragment` gets the 12-tap point-light shadow.
 
 The chunk patches are global to three's `ShaderChunk` (like the fog) and are restored by `dispose()`.
@@ -144,9 +151,11 @@ The flakes are GPU points in three layers wrapped around the camera:
 
 | Layer | Box | Flakes (full / lite) | Size | Look |
 |---|---|---|---|---|
-| Near | 14 m | 3500 / 1200 | 3–5 cm | Out of focus, soft |
-| Mid | 36 m | 18000 / 5000 | 3–4.5 cm | Sharp |
-| Far | 90 m | 7000 / 1800 | 4–6.5 cm | Clumps that fade into the fog |
+| Near | 14 m | 3500 / 1200 | 1.8–3 cm | Softer, a little out of focus |
+| Mid | 36 m | 18000 / 5000 | 2–3 cm | Sharp |
+| Far | 90 m | 7000 / 1800 | 1.9–3 cm | Dust that fades into the fog |
+
+The sizes and softness are the engine's cap (`capFlakes` in `main.js`: 3 cm at most, softness 0.45 at most). Pass 3's bigger, softer near flakes read as grey discs in front of the market, so the engine capped them; settings.js now matches, so the cap changes nothing and the test page shows what the market shows.
 
 Each flake falls at its own speed (0.85 m/s mean ± 40 %) and flutters on its own. All flakes drift with a wind of (0.9, 0.35) m/s with slow gusts, integrated in scene time, so reduced motion freezes the snow. Flakes passing the four nearest stall lights catch their warm light. The CPU does no per-flake work.
 
@@ -209,5 +218,5 @@ Tools (software GL on this machine):
 - `node src/lighting/shoot-market.mjs` shoots the real market through the site's dev server with `vite.market.config.js` (live reload off).
 - `node src/lighting/diag-market.mjs [--q ...] [--places id,...]` dumps the market's placed lights, pools, glows and shadow casters to `diag.json`, and can shoot close views of places.
 - `node src/lighting/perf.mjs [--gpu --headed] [--fixed]` profiles the real market: rAF frame times, GPU time of the composer (timer queries), draw calls and the adaptive level. Run it with `--gpu --headed` on a machine with a real GPU.
-- `python3 site/src/lighting/measure.py <shot.png>` compares patch colours (counter, sign, walls, pot, ground, sky) with the Cycles reference.
+- `python3 site/src/lighting/measure.py <shot.png>` compares patch colours (counter, sign, walls, pot, roof strip, ground beside and in front, sky) with the Cycles reference, and measures the bulb row. Compare 1280×720 shots only: bloom is sized in pixels.
 - `python3 site/src/lighting/compose.py` (from the repo root, `RAW=<dir>` for the PNGs) builds the review JPEGs.

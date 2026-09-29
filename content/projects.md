@@ -14,17 +14,6 @@ notes:
   "Prost!": "Everyone nearby raises a glass."
 crowd:
   "Prost!": ["Prost!", "Zum Wohl!", "ชนแก้ว!", "Cheers!"]
-# The chalkboard menu, top to bottom. These are not the three tap handles.
-taps:
-  - name: "ProtoCol"
-    style: "House Pils · always on tap"
-    link: "[[Mac: ProtoCol URL]]"
-  - name: "Target Trial Emulation"
-    style: "Seasonal series · video lessons"
-    link: "[[Mac: YouTube playlist URL]]"
-  - name: "Transfusion Audit"
-    style: "Cellar reserve"
-    link: "[[Mac: public link, or none]]"
 ---
 
 Three things are on tap: two pieces of software and a course.
@@ -33,7 +22,9 @@ Three things are on tap: two pieces of software and a course.
 
 *House Pils · always on tap*
 
-A chatbot that helps researchers write a study protocol and work out the sample size. You tell it about the study you have in mind, and it asks for what's missing. <!-- check -->
+A chatbot that helps researchers write a study protocol and work out the sample size.
+
+You tell it about the study you have in mind, and it asks for what's missing. <!-- check --> [[Mac: confirm this is how it works. Until you do, a production build leaves this line out.]]
 
 [[Mac: link to ProtoCol, and one line on who it's for or who uses it.]]
 

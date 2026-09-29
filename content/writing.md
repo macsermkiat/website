@@ -20,10 +20,7 @@ crowd:
 
 This is where short essays on research, music and ideas will go. Nothing is off the grill yet.
 
-These are on the coals.
-
+These are on the coals. [[Mac: confirm or replace these working titles. Until you do, a production build leaves this line and the list off the page. Add a date and a link to each one as it is published.]]
 - Every clinical question is a causal question <!-- check -->
 - What a ballad teaches about time <!-- check -->
 - Sample size is a question, not a number <!-- check -->
-
-[[Mac: confirm or replace these working titles. Add a date and a link to each one as it is published.]]

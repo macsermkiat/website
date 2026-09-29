@@ -1,7 +1,7 @@
 {
   "mtg": {
-    "centroid_hz": 656.3,
-    "legato_note_to_note_timbre_jump_db": 3.79,
+    "centroid_hz": 593.6,
+    "legato_note_to_note_timbre_jump_db": 4.05,
     "source": {
       "timbre_motion_in_sustain_db": 1.82,
       "semitone_to_semitone_timbre_jump_db": 4.91,
@@ -11,12 +11,12 @@
     },
     "phrase_dynamics": {
       "phrases": 9,
-      "median_p5_p95_range_db": 17.6,
-      "median_full_range_db": 26.1
+      "median_p5_p95_range_db": 15.7,
+      "median_full_range_db": 18.7
     }
   },
   "musyngkite": {
-    "centroid_hz": 631.8,
+    "centroid_hz": 614.2,
     "legato_note_to_note_timbre_jump_db": 4.79,
     "source": {
       "timbre_motion_in_sustain_db": 1.76,
@@ -27,12 +27,12 @@
     },
     "phrase_dynamics": {
       "phrases": 9,
-      "median_p5_p95_range_db": 13.1,
-      "median_full_range_db": 17.6
+      "median_p5_p95_range_db": 13.6,
+      "median_full_range_db": 19.4
     }
   },
   "fluidr3": {
-    "centroid_hz": 731.4,
+    "centroid_hz": 728.7,
     "legato_note_to_note_timbre_jump_db": 5.5,
     "source": {
       "timbre_motion_in_sustain_db": 1.39,
@@ -43,8 +43,8 @@
     },
     "phrase_dynamics": {
       "phrases": 9,
-      "median_p5_p95_range_db": 17.2,
-      "median_full_range_db": 19.0
+      "median_p5_p95_range_db": 18.1,
+      "median_full_range_db": 20.2
     }
   }
 }

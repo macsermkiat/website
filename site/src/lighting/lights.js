@@ -105,8 +105,10 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
   const poolGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
   let shadows = lite ? 0 : shadowed;
   const blockers = [];
+  const clips = []; // interior clip boxes of unshadowed interior lights (shading.js addClip)
   const lit = new Map(); // model id -> 'lit' (shadowed interior light) | 'unshadowed'
 
+  let L0offset = null;
   order.forEach((s, i) => {
     const ud = s.obj.userData || {};
     const K = N.warm[s.lk] || N.warm.other;
@@ -128,9 +130,14 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
         const front = s.front;
         if (front && !ud.color) color.copy(frontWarm);
         if (front && K.frontAngle) {
-          // a wide spot aimed down and 0.6 m out: counter front, sign and cobbles, not the fascia
-          L = new THREE.SpotLight(color, Number(ud.intensity) || K.front, Number(ud.distance) || K.frontDistance, K.frontAngle, 0.45, 2);
-          L.target.position.copy(new THREE.Vector3(local.x, 0, local.z + 0.6).applyMatrix4(holder.matrixWorld));
+          // placed `frontLift` m above and `frontOut` m in front of the empty: from further out the pool
+          // reaches the cobbles beside the stall while the sign and counter under the eave get less
+          // (Cycles: the preview's front light hangs 1.9 m out, near eave height)
+          const lift = K.frontLift ?? 0, out = K.frontOut ?? 0;
+          if (lift || out) L0offset = new THREE.Vector3(0, lift, out).applyQuaternion(holder.getWorldQuaternion(new THREE.Quaternion()));
+          // a wide spot aimed down and `frontAim` m out: counter front, sign and cobbles, not the fascia
+          L = new THREE.SpotLight(color, Number(ud.intensity) || K.front, Number(ud.distance) || K.frontDistance, K.frontAngle, K.frontPenumbra ?? 0.45, 2);
+          L.target.position.copy(new THREE.Vector3(local.x, 0, local.z + (K.frontAim ?? 0.6)).applyMatrix4(holder.matrixWorld));
           scene.add(L.target);
         } else {
           L = new THREE.PointLight(color, Number(ud.intensity) || (front ? K.front : K.point), front && !ud.distance ? K.frontDistance : distance, 2);
@@ -160,17 +167,35 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
           }
         }
       } else if (interior && U && !ud.distance && STALLS.has(s.lk)) {
-        // No shadow: keep the light below the eaves (so it cannot reach the top of the roof) and
-        // short, so the leak through the walls stays a small pool at the foot of the stall.
+        // No shadow (the lite market): the light is clipped to the stall's interior box (shading.js),
+        // so it cannot reach the barge boards, the eave, the plank edges in the wall gaps or the
+        // ground. It keeps a short reach and a lower intensity: without the shelves' shadows the back
+        // wall would wash out, and the one-sided interior glow carries the rest of the warmth.
         L.distance = Math.min(L.distance, U.distance);
         L.intensity *= U.scale;
         L.userData.baseIntensity = L.intensity;
-        const ws = s.obj.getWorldScale(new THREE.Vector3()).y || 1;
-        L.position.y -= U.drop / ws;
         L.userData.unshadowed = true;
+        let box = null;
+        if (U.clip) {
+          try { box = interiorBox(s.holder, s.pos, U.clip); } catch (e) { console.warn('[lighting] interior clip failed', e); }
+        }
+        if (box) {
+          clips.push({ light: L, ...box });
+          L.userData.clipped = true;
+        } else {
+          // no closed stall to clip to: keep the light below the eaves, so the leak stays at its foot
+          const ws = s.obj.getWorldScale(new THREE.Vector3()).y || 1;
+          L.position.y -= U.drop / ws;
+        }
         if (!lit.has(s.id)) lit.set(s.id, 'unshadowed');
       }
       if (L.isSpotLight) L.position.set(0, 0, 0);
+      if (L0offset) {
+        // the offset is in world axes; the light is a child of the empty
+        const w = s.obj.getWorldPosition(new THREE.Vector3()).add(L0offset);
+        L.position.copy(s.obj.worldToLocal(w));
+        L0offset = null;
+      }
       lights.push(L);
     } else {
       const m = new THREE.Mesh(poolGeo, poolMat);
@@ -205,8 +230,43 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
     }
   }
 
+  // a one-sided glow at each stall's front fill, clipped below the eave: it lights what faces it
+  // above the eave line (the front of the roof, or the soffit where the lamp hangs under the eave),
+  // which the downward front-fill spot cannot reach (Cycles: the light_ marker's point light)
+  // and a ground-only glow at the front fill (the cobbles in front of and beside the stall; clipped
+  // above `ceiling` m, so the walls, the sign and the counter do not get it): the warm pool that
+  // Cycles' omnidirectional light_ marker spreads around the stall, which the front-fill spot, aimed
+  // down at the front, cannot reach without lighting the sign and the lower front wall as well
+  const E = N.glow?.eave, SP = N.glow?.spill;
+  if (E || SP) {
+    for (const [id, list] of byModel) {
+      const s = list.find((x) => x.front);
+      if (!s || !STALLS.has(s.lk)) continue;
+      const out = new THREE.Vector3(0, 0, 1).transformDirection(s.holder.matrixWorld).setY(0).normalize();
+      if (E) {
+        const a = s.pos.clone().addScaledVector(out, E.out);
+        a.y += E.up;
+        interiors.push({
+          a, color: frontWarm.clone(), intensity: E.intensity, reach: E.reach, oneSided: true,
+          floor: s.pos.y - E.below, tag: 'eave', priority: 0, id, how: 'eave',
+        });
+      }
+      if (SP) {
+        const a = s.pos.clone().addScaledVector(out, SP.out);
+        a.y += SP.up;
+        const base = s.holder.getWorldPosition(new THREE.Vector3()).y;
+        interiors.push({
+          a, color: frontWarm.clone(), intensity: SP.intensity, reach: SP.reach, oneSided: true,
+          ceiling: base + SP.ceiling, tag: 'spill', priority: 0, id, how: 'spill',
+        });
+      }
+    }
+  }
+
   return {
     lights, pools, cap, blockers,
+    /** Clip boxes for the unshadowed interior lights ({ light, center, half, cos, sin, fade, front, cut }). */
+    clips,
     /** Interior glows ({ a, color, intensity, reach, oneSided, floor }), one per stall; createLighting adds them. */
     interiors,
     /** Redraw the static warm-light shadows (after moving a model). */
@@ -331,6 +391,81 @@ export function shadowBlocker(holder, lightPos, B = {}) {
   m.userData.shell = { x0, x1, z0, z1, counter, yTop };
   holder.add(m); // in the holder's frame, so it moves with the stall (open at the top and above the counter)
   return m;
+}
+
+/**
+ * The interior of a stall as a box in its own frame, for clipping an unshadowed interior light
+ * (shading.js addClip): found by casting rays from the light at the inner faces of the side walls,
+ * the back wall, the lower front wall and the roof. The box ends `pad` past each inner face (inside
+ * the boards, so the planks' edges in the gaps stay dark) and starts `floor` m over the base. In front
+ * it has `front` m of extra room below the fascia (the counter top and the mugs stand out past the
+ * front wall). Returns null when the stall is not closed on three sides.
+ */
+export function interiorBox(holder, lightPos, C = {}) {
+  const pad = C.pad ?? 0.01;
+  holder.updateMatrixWorld(true);
+  const toWorld = holder.matrixWorld, toLocal = new THREE.Matrix4().copy(toWorld).invert();
+  const L = lightPos.clone().applyMatrix4(toLocal);
+  const q = holder.getWorldQuaternion(new THREE.Quaternion());
+  const ws = holder.getWorldScale(new THREE.Vector3()).x || 1;
+  const rc = new THREE.Raycaster();
+  const meshes = [];
+  holder.traverse((o) => { if (o.isMesh && !o.isInstancedMesh && o.visible && !o.userData.shadowOnly && !/^bulbs_/i.test(o.name)) meshes.push(o); });
+  const first = (p, dir, far = 4) => {
+    rc.set(p.clone().applyMatrix4(toWorld), dir.clone().applyQuaternion(q).normalize());
+    rc.far = far * ws;
+    const h = rc.intersectObjects(meshes, false)[0];
+    return h ? h.distance / ws : null;
+  };
+  const median = (a) => { const b = a.filter((v) => v != null).sort((x, y) => x - y); return b.length ? b[b.length >> 1] : null; };
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const hs = [0.2, 0.5, 0.8].map((d) => L.y - d);
+  const side = (dir, lat) => median(hs.flatMap((y) => [-0.3, 0, 0.3].map((t) => first(V(L.x, y, L.z).addScaledVector(lat, t), dir))));
+  const X = V(1, 0, 0), Z = V(0, 0, 1);
+  const right = side(X, Z), left = side(X.clone().negate(), Z), back = side(Z.clone().negate(), X);
+  if (right == null || left == null || back == null) return null;
+  // the lower front wall, below the counter
+  const fr = median([0.35, 0.55, 0.75].flatMap((y) => [-0.4, 0, 0.4].map((t) => first(V(L.x + t, y, L.z), Z))));
+  const zf = fr != null ? L.z + fr : L.z + 1.0;
+  // the roof's underside over the interior, as a tent: its highest point (the ridge) and the steepest
+  // drop either side of it, so the box stays under the boards everywhere (a flat top at the ridge
+  // height would take in the shingles toward the eaves)
+  const x0 = L.x - left - pad, x1 = L.x + right + pad, z0 = L.z - back - pad, z1 = zf + pad;
+  const roofAt = (z) => median([-0.4, 0, 0.4].map((t) => first(V(L.x + t, L.y, z), V(0, 1, 0), 3)));
+  const zs = Array.from({ length: 9 }, (_, i) => z0 + 0.05 + (z1 - z0 - 0.1) * (i / 8));
+  const roofs = zs.map((z) => { const d = roofAt(z); return d == null ? null : { z, y: L.y + d }; }).filter(Boolean);
+  let ridge = { z: L.z, y: L.y + 0.8 }, slope = 0;
+  if (roofs.length) {
+    ridge = roofs.reduce((a, b) => (b.y > a.y ? b : a));
+    for (const r of roofs) if (Math.abs(r.z - ridge.z) > 0.05) slope = Math.max(slope, (ridge.y - r.y) / Math.abs(r.z - ridge.z));
+  }
+  const yTop = ridge.y + pad, yBot = C.floor ?? 0.3;
+  // the fascia's lower edge: the lowest height over the counter where a ray forward stops at the front
+  // (scanning up from the lower wall: past the serving opening, the first ray that stops at the front)
+  const cutAt = (x) => {
+    let open = false;
+    for (let y = 0.5; y < L.y; y += 0.04) {
+      const d = first(V(x, y, L.z), Z);
+      const atFront = d != null && Math.abs(L.z + d - zf) < 0.25;
+      if (!atFront) open = true; else if (open) return y;
+    }
+    return L.y;
+  };
+  const cut = median([-0.6, 0, 0.6].map((t) => cutAt(L.x + t)));
+  const c = V((x0 + x1) / 2, (yBot + yTop) / 2, (z0 + z1) / 2);
+  const center = c.clone().applyMatrix4(toWorld);
+  const ax = V(1, 0, 0).applyQuaternion(q);
+  const ang = Math.atan2(-ax.z, ax.x);
+  return {
+    center,
+    half: V((x1 - x0) / 2, (yTop - yBot) / 2, (z1 - z0) / 2).multiplyScalar(ws),
+    cos: Math.cos(ang), sin: Math.sin(ang),
+    fade: (C.fade ?? 0.01) * ws,
+    front: (C.front ?? 0.3) * ws,
+    cut: (cut - 0.02 - c.y) * ws,
+    slope, ridge: (ridge.z - c.z) * ws,
+    local: { x0, x1, z0, z1, yBot, yTop, cut, slope, ridgeZ: ridge.z },
+  };
 }
 
 /** Give a warm light a static shadow (drawn once; call refreshShadows after moving things). */

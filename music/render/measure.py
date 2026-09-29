@@ -5,8 +5,12 @@ its MP3 stems) and draw the review figures.
     python3 music/render/measure.py
 
 Reports: stem durations (sample alignment), tempo (onset autocorrelation of bass + drums), key
-(chroma vs. Krumhansl-Kessler profiles), sax spectral centroid (three ways), mix peak (sample and
+(chroma vs. Krumhansl-Kessler profiles; and from the score MIDI), sax spectral centroid (three ways), mix peak (sample and
 4x true peak), integrated loudness (ITU-R BS.1770 via pyloudnorm) and loop-seam smoothness.
+
+Round 1, pass 5: also a held-note dip check on ballad-sax.mp3 and ballad-sax-b.mp3 (checks.held_note_dips):
+any held tenor note whose level falls more than 12 dB mid-note and recovers makes this script exit
+with status 1.
 """
 from __future__ import annotations
 
@@ -95,6 +99,49 @@ def key_estimate(x, comp="log"):
             if best is None or r > best[0]:
                 best = (r, f"{NAMES[k]} {mode}")
     return best[1], float(best[0]), chroma
+
+
+def key_from_midi(path, weight="duration"):
+    """Round 1, pass 5: the key read from the score itself, music/score/ballad.mid. A pitch-class
+    histogram of every pitched note (tenor, piano, bass; channel 10 drums left out), weighted by
+    note length in seconds, is matched against the Krumhansl-Kessler major and minor profiles, the
+    same profiles key_estimate() uses on audio. Also reports the last bass note (the final root).
+    Returns (key, r, runner-up key, its r, final bass pitch class, per-track keys)."""
+    import mido
+    mf = mido.MidiFile(str(path))
+    hist, per_track, last_bass = np.zeros(12), {}, None
+    for tr in mf.tracks:
+        name, tempo, t, on, h = tr.name or "?", 500000, 0.0, {}, np.zeros(12)
+        low = []
+        for msg in tr:
+            t += mido.tick2second(msg.time, mf.ticks_per_beat, tempo) if msg.time else 0.0
+            if msg.type == "set_tempo":
+                tempo = msg.tempo
+            if getattr(msg, "channel", None) == 9:
+                continue
+            if msg.type == "note_on" and msg.velocity > 0:
+                on[msg.note] = t
+            elif msg.type in ("note_off", "note_on") and msg.note in on:
+                t0 = on.pop(msg.note)
+                h[msg.note % 12] += (t - t0) if weight == "duration" else 1.0
+                low.append((t0, msg.note))
+        if h.sum() > 0:
+            per_track[name] = h
+            if "alternate" not in name.lower():     # chorus B replaces chorus A; count one of them
+                hist += h
+            if "bass" in name.lower() and low:
+                last_bass = NAMES[max(low)[1] % 12]
+    def rank(hh):
+        rs = []
+        for k in range(12):
+            for mode, prof in (("major", KK_MAJOR), ("minor", KK_MINOR)):
+                rs.append((float(np.corrcoef(hh, np.roll(prof, k))[0, 1]), f"{NAMES[k]} {mode}"))
+        rs.sort(reverse=True)
+        return rs
+    rs = rank(hist)
+    return {"key": rs[0][1], "r": round(rs[0][0], 3), "runner_up": rs[1][1], "runner_up_r": round(rs[1][0], 3),
+            "final_bass_note": last_bass,
+            "per_track": {k: rank(v)[0][1] for k, v in per_track.items()}}
 
 
 def phrase_dynamics(sax, phrases, min_span=1.5):
@@ -238,6 +285,7 @@ def main():
     # full mix, so the key is also measured on the pitched stems alone (tenor, piano, bass)
     pitched = stems["sax"][:n] + stems["piano"][:n] + stems["bass"][:n]
     key_t, kr_t, _ = key_estimate(pitched)
+    key_tp, kr_tp, _ = key_estimate(pitched, "power")
     import ballad
     ev = ballad.events()
     head = [n.midi for n in ev["tenor"] if n.beat < ballad.bar_beat(33)]
@@ -250,8 +298,13 @@ def main():
         "tempo_design_bpm": man["bpm"],
         "tempo_measured_bpm": round(t_ref, 2),
         "key_design": man.get("key"),
+        "key_from_score_midi": key_from_midi(MUSIC / "score" / "ballad.mid"),
+        "key_audio_method": "log chroma: mono mix of the stems, decimated to 22.05 kHz, 8192-point STFT (hop 4096), "
+                            "log1p(1000*|X|/max|X|) summed per pitch class over 55-2000 Hz, Pearson r against the "
+                            "Krumhansl-Kessler profiles in all 24 keys",
         "key_measured": key, "key_correlation": round(kr, 3),
         "key_measured_pitched_stems": key_t, "key_correlation_pitched_stems": round(kr_t, 3),
+        "key_measured_pitched_stems_power_chroma": key_tp, "key_correlation_pitched_stems_power_chroma": round(kr_tp, 3),
         "key_measured_power_chroma": key_p, "key_correlation_power_chroma": round(kr_p, 3),
         "tenor_head_range_midi": [min(head), max(head)],
         "tenor_head_notes_below_C4": f"{sum(m < 60 for m in head)} of {len(head)}",
@@ -281,6 +334,10 @@ def main():
                                                                                if bar < 96 and not 65 <= bar <= 80))}
     rep["sax_air"] = checks.air_band(stems["sax"][:n])
     rep["tenor_sample_intonation"] = checks.intonation(man.get("tenorBank", "musyngkite"))
+    # ---- pass 5: held-note dips (splice holes) and phrase-start rise times ----
+    rep["held_note_dips"] = {"ballad-sax.mp3": checks.held_note_dips(stems["sax"][:n], ev["tenor"])[0]}
+    rep["tenor_prepared_bank_dips"] = checks.prepared_bank_dips(man.get("tenorBank", "mtg"))
+    rep["phrase_start_rise"] = checks.phrase_start_rise(stems["sax"][:n], ev["tenor"])
     alts = []
     for alt in man.get("alternates", []):
         a0, a1 = int(round(alt["start"] * SR)), int(round(alt["end"] * SR))
@@ -295,6 +352,9 @@ def main():
                                               (np.sqrt(np.mean(stems[k][a0 + e0:a0 + e1] ** 2)) + 1e-12) + 1e-12)), 1)
                 for k, v in seg.items()}
         a_runs = checks.tenor_runs_audio(seg["sax"][:L])
+        rep["held_note_dips"][alt["stems"]["sax"]] = checks.held_note_dips(
+            seg["sax"][:L], [x for x in ev["tenor_b"] if alt["start"] <= x.t < alt["end"]],
+            offset=alt["start"], t_end=alt["start"] + L / SR)[0]
         alts.append({"name": alt["name"], "decoded_samples": {k: len(v) for k, v in seg.items()},
                      "expected_samples": a1 - a0,
                      "start_edge_residual_vs_main_db_0.1_to_0.5s": diff,
@@ -318,6 +378,15 @@ def main():
     overview_jpg({k: v[:n] for k, v in stems.items()}, man, REVIEW / "arrangement.jpg")
     (OUT / "measurements.json").write_text(json.dumps(rep, indent=2) + "\n")
     print(json.dumps(rep, indent=2))
+    # the automated gate: a held note that falls more than 12 dB mid-note and comes back fails the run
+    bad = {k: v for k, v in rep["held_note_dips"].items() if not v["pass"]}
+    if bad:
+        for k, v in bad.items():
+            print(f"FAIL held-note dips in {k}: {v['notes_over_limit']} notes over {v['limit_db']} dB, "
+                  f"deepest {v['deepest_dip_db']} dB, worst (s, midi, dB) {v['worst'][:4]}", file=sys.stderr)
+        sys.exit(1)
+    print("PASS held-note dips: " + ", ".join(f"{k} deepest {v['deepest_dip_db']} dB over {v['held_notes_checked']} held notes"
+                                            for k, v in rep["held_note_dips"].items()))
 
 
 if __name__ == "__main__":

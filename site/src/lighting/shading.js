@@ -23,7 +23,14 @@
 //    shows on near-black coats too), only on dark materials, so figures and posts in front of the
 //    stalls read as moonlit shapes instead of black cut-outs while wood walls stay dark.
 //
-// 4. Softer point-light shadows: three samples a point light's cube shadow with 5 taps; this takes
+// 4. Interior clip (lite): a point light inside a stall with no shadow would light everything
+//    around it: the gable's barge boards, the eave, the edges of the wall planks seen through their
+//    gaps, the ground. A clip box in the stall's frame (its inner walls, floor band and roof, with a
+//    little room in front below the fascia for the counter top and mugs) limits such a light to the
+//    stall's interior, the way the one-sided interior glow is limited. Each clip is keyed by its
+//    light's world position, so three's light order does not matter.
+//
+// 5. Softer point-light shadows: three samples a point light's cube shadow with 5 taps; this takes
 //    `pointShadowTaps` (12) over the same Vogel disk, so the wide kernel of the interior lights
 //    (a lamp has a size) stays smooth instead of grainy. Only fragments within a light's reach pay.
 //
@@ -32,20 +39,56 @@
 import * as THREE from 'three';
 
 const LIT = ['standard', 'physical', 'lambert', 'phong', 'toon'];
-const KEYS = ['lights_pars_begin', 'lights_fragment_end', 'lights_physical_pars_fragment', 'shadowmap_pars_fragment'];
-const HEADER = 3; // vec4s: [count, rimStrength, rimPower, 0], [rimDir, darkLo], [rimColor, darkHi]
+const KEYS = ['lights_pars_begin', 'lights_fragment_begin', 'lights_fragment_end', 'lights_physical_pars_fragment', 'shadowmap_pars_fragment'];
+const HEADER = 3; // vec4s: [glowCount, rimStrength, rimPower, clipCount], [rimDir, darkLo], [rimColor, darkHi]
+// vec4s per clip: [light world pos, fade], [box centre, cos yaw], [half size, sin yaw],
+// [front extra, front cut, roof slope, ridge z] (box frame; the roof is a tent whose ridge is the box top)
+const CLIP = 4;
 const OPEN = 1e4; // floor / ceiling of a glow with no height limit
 const f = (x) => Number(x).toFixed(4);
 
-export function installShading({ maxGlows = 16, minRoughness = 0.3, minClearcoatRoughness = 0.3, pointShadowTaps = 12 } = {}) {
+export function installShading({ maxGlows = 16, maxClips = 4, minRoughness = 0.3, minClearcoatRoughness = 0.3, pointShadowTaps = 12 } = {}) {
   const saved = Object.fromEntries(KEYS.map((k) => [k, THREE.ShaderChunk[k]]));
-  const size = HEADER + maxGlows * 3;
+  const CLIP0 = HEADER + maxGlows * 3;
+  const size = CLIP0 + Math.max(1, maxClips) * CLIP;
   const data = new Float32Array(size * 4);
   data.set([0, 0, 3, 0, 0, 1, 0, 0.07, 0, 0, 0, 0.16]); // no rim until setRim (the dark band must not be empty)
 
   THREE.ShaderChunk.lights_pars_begin = saved.lights_pars_begin + /* glsl */ `
 uniform vec4 lightingGlow[ ${size} ];
+// 1 inside the clip box of the point light at lightView (view space), 0 outside, a short fade between;
+// 1 for a light with no clip
+float lightingClip( vec3 lightView, vec3 posView ) {
+  int n = int( lightingGlow[ 0 ].w );
+  if ( n == 0 ) return 1.0;
+  mat3 toWorld = transpose( mat3( viewMatrix ) );
+  vec3 lw = toWorld * ( lightView - viewMatrix[ 3 ].xyz );
+  for ( int i = 0; i < ${Math.max(1, maxClips)}; i ++ ) {
+    if ( i >= n ) break;
+    vec4 c0 = lightingGlow[ ${CLIP0} + i * ${CLIP} ];
+    vec3 dl = lw - c0.xyz;
+    if ( dot( dl, dl ) > 1e-4 ) continue;
+    vec4 c1 = lightingGlow[ ${CLIP0} + i * ${CLIP} + 1 ];
+    vec4 c2 = lightingGlow[ ${CLIP0} + i * ${CLIP} + 2 ];
+    vec4 c3 = lightingGlow[ ${CLIP0} + i * ${CLIP} + 3 ];
+    vec3 d = toWorld * ( posView - viewMatrix[ 3 ].xyz ) - c1.xyz;
+    vec3 q = vec3( c1.w * d.x - c2.w * d.z, d.y, c2.w * d.x + c1.w * d.z ); // the stall's frame
+    float front = c2.z + ( q.y < c3.y ? c3.x : 0.0 ); // room in front below the fascia (counter, mugs)
+    float roof = c2.y - c3.z * abs( q.z - c3.w ); // under the roof's slopes, not just its ridge
+    float e = min( min( c2.x - abs( q.x ), min( c2.y + q.y, roof - q.y ) ), min( c2.z + q.z, front - q.z ) );
+    return clamp( e / c0.w, 0.0, 1.0 );
+  }
+  return 1.0;
+}
 `;
+
+  const pointInfo = 'getPointLightInfo( pointLight, geometryPosition, directLight );';
+  if (saved.lights_fragment_begin.includes(pointInfo)) {
+    THREE.ShaderChunk.lights_fragment_begin = saved.lights_fragment_begin.replace(pointInfo,
+      `${pointInfo}\n\t\tdirectLight.color *= lightingClip( pointLight.position, geometryPosition );`);
+  } else {
+    console.warn('[lighting] three changed the point-light loop; interior clips not installed');
+  }
 
   // local glows and the moon rim, added as direct diffuse light before the indirect terms
   THREE.ShaderChunk.lights_fragment_end = /* glsl */ `
@@ -126,7 +169,18 @@ uniform vec4 lightingGlow[ ${size} ];
   libUniforms.forEach((u) => (u.lightingGlow = { value: data }));
 
   const glows = [];
-  const _c = new THREE.Vector3(), _m = new THREE.Vector3();
+  const clips = [];
+  const _c = new THREE.Vector3(), _m = new THREE.Vector3(), _w = new THREE.Vector3();
+  function writeClips() {
+    const n = Math.min(clips.length, maxClips);
+    for (let i = 0; i < n; i++) {
+      const c = clips[i];
+      c.light.updateWorldMatrix(true, false);
+      c.light.getWorldPosition(_w);
+      data.set([_w.x, _w.y, _w.z, c.fade, c.center.x, c.center.y, c.center.z, c.cos, c.half.x, c.half.y, c.half.z, c.sin, c.front, c.cut, c.slope || 0, c.ridge || 0], (CLIP0 + i * CLIP) * 4);
+    }
+    data[3] = n;
+  }
 
   return {
     data,
@@ -159,10 +213,29 @@ uniform vec4 lightingGlow[ ${size} ];
       if (i >= 0) glows.splice(i, 1);
     },
     get glows() { return glows; },
+    /**
+     * Clip a point light to a box: { light, center: Vector3 (world), half: Vector3 (m, in the box's
+     * frame), cos, sin (its yaw), fade (m), front (extra room in front, m), cut (box-frame y below
+     * which that room applies), slope, ridge (the roof: box-frame z of its ridge, and how fast it drops
+     * from the box top either side of it) }. Returns the entry; removeClip(entry) takes it out again.
+     */
+    addClip(c) {
+      if (clips.length >= maxClips) { console.warn('[lighting] no clip slot left for', c.light?.name); return null; }
+      const e = { fade: 0.01, front: 0, cut: -1e4, cos: 1, sin: 0, ...c, center: c.center.clone(), half: c.half.clone() };
+      clips.push(e);
+      writeClips();
+      return e;
+    },
+    removeClip(e) {
+      const i = clips.indexOf(e);
+      if (i >= 0) clips.splice(i, 1);
+      writeClips();
+    },
+    get clips() { return clips; },
     /** dark: [lo, hi] albedo over which the rim fades out (it shows only on dark materials). */
     setRim(dir, color, strength, power = 3, dark = [0.07, 0.16]) {
       const d = new THREE.Vector3().copy(dir).normalize();
-      data.set([data[0], strength, power, 0, d.x, d.y, d.z, dark[0], color.r, color.g, color.b, dark[1]], 0);
+      data.set([data[0], strength, power, data[3], d.x, d.y, d.z, dark[0], color.r, color.g, color.b, dark[1]], 0);
     },
     setRimStrength(s) { data[1] = s; },
     /** Write the glows nearest `from` (a Vector3) into the shared uniform. */
@@ -184,6 +257,7 @@ uniform vec4 lightingGlow[ ${size} ];
         data[o + 8] = e.color.r * k; data[o + 9] = e.color.g * k; data[o + 10] = e.color.b * k; data[o + 11] = e.ceiling;
       });
       data[0] = ranked.length;
+      writeClips();
       return ranked.length;
     },
     /** Glow count off (for captures that should not see them), then back with update(). */

@@ -112,11 +112,11 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
     const span = Math.max(1, riding.top - riding.bottom);
     const up = (y - riding.bottom) / span; // 0 at the bottom, 1 at the top
     if (stage === 'rising') {
-      // ease in, then run, and ease out over the last fifth of the way up; stop at the very top (the gondola
-      // starts coming down again: the height stops growing)
+      // ease in, then run, and ease out over the last fifth of the way up; stop at the very top (or, past
+      // halfway, as soon as the gondola starts coming down again; the lowest gondola may first dip a little)
       const k = up < 0.1 ? 0.35 + up * 6.5 : up > 0.8 ? Math.max(0.12, (1 - up) * 5) : 1;
       w.boost = Math.max(TOP_BOOST, RISE_BOOST * k);
-      if (y < riding.peak - 0.02 || up > 0.985) { stage = 'top'; riding.held = 0; say(actionNote('ferris', 'ride', 'At the top. The whole market lies below you: the stalls, the bandstand, the tree and the old town round it.', {}, { done: true })); }
+      if (up > 0.985 || (up > 0.6 && y < riding.peak - 0.02)) { stage = 'top'; riding.held = 0; say(actionNote('ferris', 'ride', 'At the top. The whole market lies below you: the stalls, the bandstand, the tree and the old town round it.', {}, { done: true })); }
       riding.peak = Math.max(riding.peak, y);
     } else if (stage === 'top') {
       w.boost = TOP_BOOST;

@@ -44,6 +44,7 @@ CORE = 0.9        # subtone body level (relative to the sample)
 AIR = 0.4         # the air path: breath noise at 2.4-7 kHz that bypasses the final low-pass (0 = off).
                   # Pass 3 had 1.0; pass 4 takes it to 0.4 before Mac listens (the judges measured it drifting toward
                   # bright, and 0.4 keeps every centroid measure of the stem under 900 Hz with a margin)
+MIN_ATTACK = 0.10 # round 1, pass 5: no note that starts from silence rises faster than this (s)
 INHALE_GAP = 0.35 # an audible breath intake before any phrase that follows at least this much silence (s)
 
 
@@ -110,9 +111,10 @@ def flatten_pitch(d, midi):
     # Tune as well as flatten (round 1, pass 3): up to pass 2 the curve was centred on its own
     # median, which took out the vibrato but kept each sample's tuning, and the MusyngKite samples
     # sit a median 5 cents sharp (G3 +10). Now the pitch is pulled to the nominal pitch, with the
-    # sustained part (0.6 s to the end, the part _prepare() splices) as the reference: the
+    # sustained part (steady_window(), the part _prepare() splices) as the reference: the
     # deviations are measured from the sustained median, and that median is removed too.
-    sus = (t > 0.6 * SR) & (t < len(d) - 0.15 * SR)
+    lo_s, hi_s, _ = steady_window(d)
+    sus = (t > lo_s) & (t < hi_s)
     ref = sus if sus.sum() > 5 else ok
     c = (c - np.median(c[ref])) + np.median(c[ref])
     c = np.where(ok, c, np.median(c[ref]))
@@ -165,7 +167,7 @@ class RecordedBreaths:
 class SaxBank:
     def __init__(self, bank=DEFAULT_BANK, lo=45, hi=72):
         self.bank = bank
-        cp = CACHE / f"{bank}_tenor_v5.npz"
+        cp = CACHE / f"{bank}_tenor_v6.npz"
         if cp.exists():
             z = np.load(cp)
             self.s = {int(k): z[k] for k in z.files}
@@ -193,12 +195,21 @@ class SaxBank:
         """Normalise on the steady part, then extend the note to `seconds` by splicing pieces of
         its own steady tone (0.35-0.8 s each) in a random order. Each splice point is aligned to
         the waveform (best correlation within one pitch period) and crossfaded over 40 ms, so the
-        sustain keeps the recording's own small changes of level and colour and never cycles."""
+        sustain keeps the recording's own small changes of level and colour and never cycles.
+
+        Round 1, pass 5: the pieces come only from the steady part of the recording (steady_window):
+        from 0.6 s to where the level first falls 3 dB under its steady median. Up to pass 4 the
+        window ran to 0.15 s before the end of the file, and the MTG notes spend their last 1-1.5 s
+        dying away (-25 dB to -80 dB), so a piece taken from there cut a held note out by up to
+        40 dB and re-attacked it mid-note (bars 1-2, 9-10, 25-26 and 34). The slow downward drift
+        inside the window (1-3 dB, the player's breath running down) is levelled, so pieces from
+        its two ends join at the same level; the faster movement of the tone stays."""
         rng = np.random.default_rng(seed if seed is not None else midi * 7919)
         steady = d[int(0.5 * SR):int(1.5 * SR)]
         d = d / (np.sqrt(np.mean(steady ** 2)) + 1e-9) * 0.1
         a = int(0.9 * SR)
-        lo_s, hi_s = int(0.6 * SR), len(d) - int(0.15 * SR)
+        lo_s, hi_s, _ = steady_window(d)
+        d = level_drift(d, lo_s, hi_s)
         xf = int(0.04 * SR)
         period = int(SR / (440.0 * 2 ** ((midi - 69) / 12))) + 1
         out = [d[:a].copy()]
@@ -207,7 +218,7 @@ class SaxBank:
         fade = np.linspace(0, 1, xf, dtype=np.float32)
         last_c = a
         while total < seconds * SR:
-            L = int(rng.uniform(0.35, 0.8) * SR)
+            L = int(rng.uniform(0.35, min(0.8, 0.6 * (hi_s - lo_s) / SR)) * SR)
             for _ in range(8):
                 c = int(rng.uniform(lo_s + xf + period, hi_s - L - period))
                 if abs(c - last_c) > 0.15 * SR:
@@ -227,6 +238,40 @@ class SaxBank:
             total += L
             last_c = bc + L
         return np.concatenate(out)[: int(seconds * SR)].astype(np.float32)
+
+
+def _level_db(d, win=0.1, hop=0.01):
+    """100 ms RMS level (dB) every 10 ms; returns (sample positions of the frame centres, dB)."""
+    w, h = int(win * SR), int(hop * SR)
+    fr = np.lib.stride_tricks.sliding_window_view(d.astype(np.float64), w)[::h]
+    lv = 10 * np.log10((fr ** 2).mean(axis=1) + 1e-20)
+    return np.arange(len(lv)) * h + w // 2, lv
+
+
+def steady_window(d, start=0.6, drop_db=3.0, min_len=1.2):
+    """The steady part of a recorded note, in samples: from `start` s to where the 100 ms level first
+    falls `drop_db` under the median level of 0.5-2.0 s (the settled tone). Nothing after that point
+    is spliced, so no piece carries the note's decay. If the note decays earlier than
+    `start` + `min_len` (none of the MTG notes do), the window keeps `min_len` s."""
+    pos, lv = _level_db(d)
+    ref = float(np.median(lv[(pos > 0.5 * SR) & (pos < 2.0 * SR)]))
+    lo = int(start * SR)
+    below = np.where((pos > lo) & (lv < ref - drop_db))[0]
+    hi = int(pos[below[0]]) if len(below) else len(d) - int(0.15 * SR)
+    hi = min(max(hi, lo + int(min_len * SR)), len(d) - int(0.15 * SR))
+    return lo, hi, ref
+
+
+def level_drift(d, lo, hi):
+    """Level the slow drift of the steady window: fit a straight line to its level (dB) and take
+    it out from `lo` on, pinned at 0 dB at `lo` so the recorded attack joins unchanged. Past `hi`
+    the correction holds its last value."""
+    pos, lv = _level_db(d)
+    m = (pos >= lo) & (pos <= hi)
+    k, c = np.polyfit(pos[m], lv[m], 1)
+    t = np.clip(np.arange(len(d)), lo, hi).astype(np.float64)
+    g = 10 ** (-(k * (t - lo)) / 20)
+    return (d * g).astype(np.float32)
 
 
 def breath_groups(ph, max_len=4.5):
@@ -300,7 +345,7 @@ def render(notes, phrases, n_samples, seed=7, bank=DEFAULT_BANK):
         legato_out = n.tags.get("legato_next") is not None
         final = n.tags.get("final", False)
         f0 = 440.0 * 2 ** ((n.midi - 69) / 12)
-        att = 0.055 if legato_in else rng.uniform(0.13, 0.20) * (1.15 if n.beats >= 2 else 1.0)
+        att = 0.055 if legato_in else max(MIN_ATTACK, rng.uniform(0.13, 0.20) * (1.15 if n.beats >= 2 else 1.0))
         rel = 0.055 if legato_out else (1.6 if final else rng.uniform(0.20, 0.30))
         if not legato_out and not final:
             # a short rest is a breath: the note has to be gone well before the next phrase
@@ -423,7 +468,7 @@ def render(notes, phrases, n_samples, seed=7, bank=DEFAULT_BANK):
             L = min(rng.uniform(0.26, 0.36), gap - 0.10)
             M = max(int(L * SR), 16)
             tt = np.arange(M) / SR
-            e_in = np.sin(np.pi * 0.5 * np.clip(tt / (0.8 * L), 0, 1)) ** 2 * np.clip((L - tt) / (0.2 * L), 0, 1)
+            e_in = np.sin(np.pi * 0.5 * np.clip(tt / max(0.8 * L, 0.12), 0, 1)) ** 2 * np.clip((L - tt) / (0.2 * L), 0, 1)
             inh = filt(bp_inhale, rng.standard_normal(M).astype(np.float32)) * e_in.astype(np.float32)
             rec = breaths.pick(rng, M)
             if rec is not None:

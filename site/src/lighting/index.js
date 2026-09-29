@@ -88,7 +88,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
 
   // ---------- light size, local glows (bulb strings, stall interiors) and moon rim ----------
   const shading = installShading({
-    maxGlows: P.glows, minRoughness: N.lightSize.minRoughness, minClearcoatRoughness: N.lightSize.minClearcoatRoughness,
+    maxGlows: P.glows, maxClips: P.clips ?? 4, minRoughness: N.lightSize.minRoughness, minClearcoatRoughness: N.lightSize.minClearcoatRoughness,
     pointShadowTaps: N.warm.shadowMap?.taps ?? 5,
   });
   shading.setRim(new THREE.Vector3(...N.moon.skyDirection), new THREE.Color(N.rim.color), N.rim.strength, N.rim.power, N.rim.dark);
@@ -206,10 +206,15 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   function placeLights(spots, opts = {}) {
     const r = placeWarmLights(scene, spots, N, { lite, budget: P.lightBudget, shadowed: P.shadows ? P.shadowedLights : 0, ...opts });
     r.glows = (r.interiors || []).map((g) => shading.add(g));
+    // unshadowed interior lights (lite) are clipped to their stall's interior box
+    r.clipEntries = (r.clips || []).map((c) => shading.addClip(c)).filter(Boolean);
     const dispose = r.dispose;
-    r.dispose = () => { r.glows.forEach((g) => shading.remove(g)); dispose(); };
+    r.dispose = () => { r.glows.forEach((g) => shading.remove(g)); r.clipEntries.forEach((c) => shading.removeClip(c)); dispose(); };
     shading.update(camera.getWorldPosition(_cam));
     placed.push(r);
+    const tags = {};
+    r.glows.forEach((g) => (tags[g.tag] = (tags[g.tag] || 0) + 1));
+    console.info(`[lighting] placed ${r.lights.length} lights (${r.lights.filter((l) => l.castShadow).length} shadowed, ${r.clipEntries.length} clipped to their stall), ${r.pools.length} pools, glows ${JSON.stringify(tags)}`);
     return r;
   }
   function tune(root) {

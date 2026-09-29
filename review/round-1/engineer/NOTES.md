@@ -8,12 +8,12 @@ This pass works through the panel's list from pass 2. Everything below was measu
 
 | | Pass 2 | Pass 3 |
 |---|---|---|
-| Full market: download before it opens | 26.0 MB | **17.5 MB** (aim: 25 MB) |
-| Lite market: download before it opens | 6.8 MB | **5.5 MB** (aim: 8 MB) |
-| Full market, home view: meshes drawn | 1,127 | **451** |
+| Full market: download before it opens | 26.0 MB | **18.1 MB** (aim: 25 MB) |
+| Lite market: download before it opens | 6.8 MB | **5.8 MB** (aim: 8 MB) |
+| Full market, home view: meshes drawn | 1,127 | **472** |
 | Full market, home view: triangles | 897k | **878k** |
-| Lite market at first paint: meshes | 557 | **262** |
-| Smoke suite | 61 checks | **SMOKE_TOTAL checks** (38 are browser-free unit checks), no console errors |
+| Lite market at first paint: meshes | 557 | **271** |
+| Smoke suite | 61 checks | **121 checks** (38 are browser-free unit checks), no console errors |
 
 ## What changed
 
@@ -36,13 +36,13 @@ This pass works through the panel's list from pass 2. Everything below was measu
 - **The deco row.** Their `vendor_atlas` goods and kit wood are merged across all nine stalls into one row. Each stall's own AO-baked parts stay separate.
 - **Riders.** Gondolas and horses that are built alike are drawn as instances: one `InstancedMesh` per part, with the pose copied from the rider every frame.
   - The meshopt export orders each copy's vertices differently, so parts are matched by material, triangle count and bounds.
-  - The Riesenrad drops from 89 meshes to about 15.
+  - The Riesenrad drops from 89 meshes to 14.
 - **Ground pools.** The lighting module's 41 pools, one quad per unlit `light_`, are now one instanced draw per placement pass.
 - **The crowd.** Each lite figure's four parts (coat, body, hat, scarf) are merged into one skinned mesh with one shared material.
   - Each person's colours go into the vertex colours of their own copy of the colour attribute. Everything else is shared.
   - That is one draw per person instead of four, in the main pass and again in the moon-shadow pass.
   - The full figures (near the camera) keep their cloth normal maps and their four parts.
-- **Result:** in the home view, meshes drop from 1,127 to 451. Draw calls per frame follow the meshes, plus the shadow and post passes. Full detail is in the budgets below.
+- **Result:** in the home view, meshes drop from 1,127 to 472. Draw calls per frame follow the meshes, plus the shadow and post passes. Full detail is in the budgets below.
 
 ### 3. The GPU rule, the LOD distance and a governor (`quality.js`, `governor.js`)
 
@@ -151,9 +151,9 @@ This pass works through the panel's list from pass 2. Everything below was measu
 ## Verification
 
 - **`npm ci && npm run build` passes** in `site/`. The only message is the writer's placeholder count, 16 in 7 files, which production builds leave out.
-- **Smoke suite, final run: SMOKE_RESULT.**
-  - It ran with `node tests/smoke.mjs --dist <copy of dist>` on the final build, started at 20:59 UTC.
-  - At that time the newest lighting module file and glb on disk were from 20:16, so it ran against the vendor's latest `stall_bier`/`stall_bratwurst`/prop exports and the lighting designer's current module.
+- **Smoke suite, final run: 121/121 checks passed, no console errors.**
+  - It ran with `node tests/smoke.mjs --dist <copy of dist>` on the final build, started at 21:49 UTC.
+  - At that time the newest lighting module file and glb on disk were from 21:48, so it ran against the vendor's latest `stall_bier`/`stall_bratwurst`/prop exports and the lighting designer's current module.
   - Its phases:
     - unit checks;
     - full market (screenshots, first-load size, deferral, the second light pass, merges, LOD, the governor);
@@ -188,8 +188,8 @@ This pass works through the panel's list from pass 2. Everything below was measu
 
 | | Full market, home view | Lite market |
 |---|---|---|
-| Triangles | 878k after LOD (867k at first paint, before the rides) | 184k at first paint, about 250k after deferral |
-| Meshes | 451 after LOD and deferral (624 at first paint, full figures) | 262 at first paint, about 360 after deferral |
+| Triangles | 878k after LOD (867k at first paint, before the rides) | 184k at first paint, 282k after deferral |
+| Meshes | 472 after LOD and deferral (633 at first paint, full figures) | 271 at first paint, 376 after deferral |
 | Real-time lights | 12 + 2 band spots (10 at first paint, 2 more with the rides) | 4 + the close-up key |
 | Ground pools | 41, drawn as 2 instanced meshes | 25 → 51, drawn as 2 instanced meshes |
 | Crowd | 90 people + 4 musicians; LOD from 8–18 m by GPU class (8 m on SwiftShader) | 40 people, one draw each |
@@ -202,8 +202,8 @@ This pass works through the panel's list from pass 2. Everything below was measu
 | JS: three.js chunk | 751 KB (187 KB gzip), cached separately |
 | JS: market code | 256 KB (79 KB gzip) |
 | JS: lighting module | 48 KB (19 KB gzip) |
-| Full market before it opens (code, fonts, models) | **17.5 MB**; about 25 MB once the rides, deco stalls and LOD figures have arrived |
-| Lite market before it opens | **5.5 MB**; about 9 MB after deferral |
+| Full market before it opens (code, fonts, models) | **18.1 MB**; about 25 MB once the rides, deco stalls and LOD figures have arrived |
+| Lite market before it opens | **5.8 MB**; about 8.7 MB after deferral |
 | All `*.lite.glb` + lite textures on disk | 8.0 MB (aim 8 MB for the lite market) |
 | Audio | 4.3 MB mix on lite; on full, the mix, then 21.5 MB of stems plus the two alternate stems, only after play |
 
@@ -236,7 +236,7 @@ What to do with the laptop numbers:
   - Please take the snowflake caps into `snow.js`/`settings.js` (size ≤ 3 cm, softness ≤ 0.45 for the near layer). Then `capFlakes` in `main.js` does nothing.
   - The engine now instances your pools. A `placeLights({ instancedPools: true })` in your module would be cleaner.
   - The lite close-up key light (`createKeyLight` in `main.js`) is yours to restyle or replace.
-- **Carpenter and architect: smaller lite glbs.** All lite models together are 8.0 MB, against the 8 MB aim. The lite market opens at 5.5 MB only because it defers the rides and deco stalls. The largest lite files are:
+- **Carpenter and architect: smaller lite glbs.** All lite models together are 8.0 MB, against the 8 MB aim. The lite market opens at 5.8 MB only because it defers the rides and deco stalls. The largest lite files are:
   - `town.lite.glb` 1.4 MB;
   - `square.lite.glb` 1.0 MB;
   - `ferris.lite.glb` 0.73 MB;

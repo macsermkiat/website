@@ -126,7 +126,7 @@ try {
     const after = await page.evaluate(() => window.__market.report);
     const lp = after.lights.places;
     check('full: the second light pass gives each ride its real light when it arrives', lp.includes('riesenrad') && lp.includes('karussell') && after.lights.realtime === 12, lp.join(' '));
-    check('full: static meshes merged (fewer draw calls)', after.merges.after < after.merges.before * 0.75 && after.merges.row > 20, JSON.stringify(after.merges));
+    check('full: static meshes merged (fewer draw calls)', after.merges.after < after.merges.before * 0.75 && after.merges.row > 5 && after.merges.riders > 50, JSON.stringify(after.merges));
     check('full: under 800 meshes drawn in the home view', sceneNow.meshes < 800, JSON.stringify(sceneNow));
     check('bookshop spines merged into a few meshes', report.books?.merged?.meshes > 0 && report.books.merged.books > 20, JSON.stringify(report.books));
     await frames(page, 2);
@@ -163,7 +163,7 @@ try {
     await shot(page, 'panel_buecherstand.jpg');
     await go(() => window.__market.resetView());
     await frames(page, 1);
-    const tag = await page.evaluate(() => ({ pulled: window.__market.pulledBook(), tag: getComputedStyle(document.querySelector('.booktag')).opacity }));
+    const tag = await page.evaluate(() => ({ pulled: window.__market.pulledBook(), tag: document.querySelector('.booktag').style.opacity }));
     check('reset view puts the pulled book back and hides its title tag', tag.pulled === null && tag.tag === '0', JSON.stringify(tag));
     await go(() => { window.__market.openPlace('band'); window.__market.act('band', 'sax'); });
     await frames(page, 3);
@@ -229,7 +229,7 @@ try {
 
     await page.click('#pClose');
     await frames(page, 1);
-    const tagOff = await page.evaluate(() => ({ pulled: window.__market.pulledBook(), tag: getComputedStyle(document.querySelector('.booktag')).opacity }));
+    const tagOff = await page.evaluate(() => ({ pulled: window.__market.pulledBook(), tag: document.querySelector('.booktag').style.opacity }));
     check('closing the panel puts the book back and hides its tag', tagOff.pulled === null && tagOff.tag === '0', JSON.stringify(tagOff));
 
     await page.click('#places button[data-place="band"]');

@@ -7,6 +7,8 @@ shipped files; `python3 music/render/checks.py` runs them on the working WAVs in
   melody_on_top    how often the piano's top voice sits above the tenor, and the sax-versus-piano
                    band energy at 200-1500 Hz while the tenor plays the head
   air_band         sax energy at 3.2-6.4 kHz and 6.4-8 kHz relative to its total (the breath air)
+  held_note_dips   a held tenor note whose level falls more than 12 dB mid-note and comes back
+                   (a splice hole: the sample ran into its own decay and re-attacked); must be zero
   intonation       median offset (cents) of the sustained part of every prepared tenor sample
 """
 from __future__ import annotations
@@ -137,6 +139,89 @@ def intonation(bank):
             "worst_cents": round(float(meds[np.argmax(np.abs(meds))]), 1)}
 
 
+def held_note_dips(x, notes, offset=0.0, t_end=None, min_dur=0.6, limit_db=12.0, win=0.02, hop=0.01):
+    """Round 1, pass 5: find held notes that dip mid-note and recover, the artefact a splice from a
+    sample's decaying tail makes (the note cuts out by up to 40 dB and re-attacks). For every tenor
+    note of at least `min_dur` s, the 20 ms level is read from 0.25 s after the onset (past the
+    attack) to 0.12 s before the note ends (before the release or the legato crossfade). A dip is
+    the lowest point of that interior measured against the loudest point before it AND the loudest
+    point after it: min(before, after) - lowest. A phrase-final fade has no "after" peak, so it is
+    not a dip; a hole is. `offset` is the file's start time in the piece (for the alternate-chorus
+    file). Returns (report, dips) with dips as (time, midi, depth dB), deepest first."""
+    mono = x.mean(axis=1) if x.ndim > 1 else x
+    w, h = int(win * SR), int(hop * SR)
+    depths, dips, checked = [], [], 0
+    for n in notes:
+        if n.dur < min_dur:
+            continue
+        a, b = n.t + 0.25 - offset, n.t + n.dur - 0.12 - offset
+        if a < 0 or (t_end is not None and n.t + n.dur > t_end) or b - a < 0.15:
+            continue
+        seg = mono[int(a * SR):int(b * SR)]
+        if len(seg) < w + 2 * h:
+            continue
+        fr = np.lib.stride_tricks.sliding_window_view(seg, w)[::h]
+        lv = 20 * np.log10(np.sqrt((fr.astype(np.float64) ** 2).mean(axis=1)) + 1e-9)
+        checked += 1
+        before = np.maximum.accumulate(lv)
+        after = np.maximum.accumulate(lv[::-1])[::-1]
+        depth = np.minimum(before, after) - lv
+        i = int(np.argmax(depth))
+        depths.append(float(depth[i]))
+        if depth[i] > limit_db:
+            dips.append((round(n.t + 0.25 + i * hop, 2), int(n.midi), round(float(depth[i]), 1)))
+    dips.sort(key=lambda d: -d[2])
+    rep = {"held_notes_checked": checked, "limit_db": limit_db,
+           "notes_over_limit": len(dips),
+           "deepest_dip_db": round(max(depths), 1) if depths else None,
+           "median_dip_db": round(float(np.median(depths)), 1) if depths else None,
+           "worst": [list(d) for d in dips[:8]],
+           "pass": len(dips) == 0}
+    return rep, dips
+
+
+def phrase_start_rise(x, notes, offset=0.0, t_end=None, win=0.005):
+    """Rise time of every phrase-start tenor note in the audio: from 10% to 90% of the amplitude the
+    note reaches in its first 0.1-0.45 s (5 ms RMS, searched from 20 ms before the written onset,
+    so the breath intake before it is not counted). Returns min, median and the fastest three."""
+    mono = x.mean(axis=1) if x.ndim > 1 else x
+    w = int(win * SR)
+    rises = []
+    for n in notes:
+        if not n.tags.get("phrase_start") or n.t - offset < 0.05 or (t_end is not None and n.t >= t_end):
+            continue
+        a = int((n.t - offset - 0.02) * SR)
+        seg = mono[a:a + int(0.5 * SR)]
+        k = len(seg) // w
+        amp = np.sqrt((seg[:k * w].reshape(k, w).astype(np.float64) ** 2).mean(axis=1))
+        top = amp[int(0.12 / win):int(0.47 / win)].max()
+        i10 = int(np.argmax(amp >= 0.1 * top))
+        i90 = int(np.argmax(amp >= 0.9 * top))
+        if i90 > i10:
+            rises.append((round(n.t, 2), round((i90 - i10) * win, 3)))
+    rs = sorted(rises, key=lambda r: r[1])
+    v = [r[1] for r in rises]
+    return {"phrase_starts": len(v), "min_s": min(v) if v else None,
+            "median_s": round(float(np.median(v)), 3) if v else None, "fastest": [list(r) for r in rs[:3]]}
+
+
+def prepared_bank_dips(bank="mtg", skip=0.3):
+    """The same dip measure on the prepared (spliced, 14 s) samples themselves: for each semitone the
+    deepest fall under the louder of the levels before and after it. A splice from a decaying tail
+    shows up here before it reaches a note."""
+    import sax
+    b = sax.SaxBank(bank)
+    w, h = int(0.02 * SR), int(0.01 * SR)
+    out = {}
+    for m, d in sorted(b.s.items()):
+        fr = np.lib.stride_tricks.sliding_window_view(d[int(skip * SR):], w)[::h]
+        lv = 20 * np.log10(np.sqrt((fr.astype(np.float64) ** 2).mean(axis=1)) + 1e-9)
+        dep = np.minimum(np.maximum.accumulate(lv), np.maximum.accumulate(lv[::-1])[::-1]) - lv
+        out[m] = float(dep.max())
+    return {"semitones": len(out), "deepest_dip_db": round(max(out.values()), 1),
+            "over_12_db": sum(v > 12 for v in out.values())}
+
+
 def main():
     import soundfile as sf
     ev = ballad.events()
@@ -150,6 +235,7 @@ def main():
         a, t = piano_top_vs_tenor(ev["voicings"], ev["tenor"])
         rep["piano_top_above_tenor"] = f"{a} of {t}"
     rep["sax_air"] = air_band(sax_x)
+    rep["held_note_dips"] = held_note_dips(sax_x, ev["tenor"])[0]
     import json
     print(json.dumps(rep, indent=2))
 

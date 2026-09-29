@@ -19,6 +19,8 @@ I'm Mac, a physician at Chulalongkorn University in Bangkok who builds software 
 
 [[Mac: one or two lines on your department and what your day job involves. Leave this out if you'd rather not say.]]
 
-On the Myers-Briggs I come out as an INTJ. Outside work I mostly listen to jazz and read, and the bandstand and the bookshop say more about both. The questions I like best are about causes: what made something happen, and how you could ever tell. <!-- check -->
+On the Myers-Briggs I come out as an INTJ. Outside work I mostly listen to jazz and read, and the bandstand and the bookshop say more about both.
+
+The questions I like best are about causes: what made something happen, and how you could ever tell. <!-- check --> [[Mac: confirm this line. Until you do, a production build leaves it out.]]
 
 I like beer and wine, and I like Christmas markets, so this website is one. Each stall opens a part of it.

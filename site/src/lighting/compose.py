@@ -10,6 +10,8 @@ RAW = os.environ.get('RAW') or os.path.join(ROOT, 'review/round-1/lighting/raw')
 PASS1 = os.environ.get('PASS1')  # the pass-1 'after' PNG, for the pass-1 vs pass-2 sheet
 PASS2 = os.environ.get('PASS2')  # a folder with the pass-2 'after.png' and 'lite.png', for the pass-3 sheets
 PASS2_MARKET = os.environ.get('PASS2_MARKET')  # a folder with the pass-2 market_home*.jpg
+PASS3 = os.environ.get('PASS3')  # a folder with the pass-3 'after.png' and 'lite.png', for the pass-4 sheets
+PASS3_MARKET = os.environ.get('PASS3_MARKET')  # a folder with the pass-3 market_home*.jpg
 OUT = os.path.join(ROOT, 'review/round-1/lighting')
 REF = os.path.join(ROOT, 'review/reference/gluehwein_preview.png')
 
@@ -59,6 +61,8 @@ def crops(cells, box, scale, out):
             continue
         im = im.resize((1280, 720), Image.LANCZOS).crop(box).resize((w * scale, h * scale), Image.LANCZOS)
         sheet.paste(label(im, text, 15), (i * w * scale, 0))
+    if sheet.width > 1280:  # the review contract: images at most 1280 px wide
+        sheet = sheet.resize((1280, round(sheet.height * 1280 / sheet.width)), Image.LANCZOS)
     sheet.save(os.path.join(OUT, out), quality=92)
     print('wrote', out, sheet.size)
 
@@ -96,11 +100,25 @@ if PASS2:
 if PASS2_MARKET:
     m2 = lambda n: os.path.join(PASS2_MARKET, n + '.jpg')
     grid([(m2('market_home'), 'Pass 2, full'), ('market', 'Pass 3, full'), (m2('market_home_snow'), 'Pass 2, snow'), ('market_snow', 'Pass 3, snow')], 2, (640, 360), 'market_pass2_vs_pass3.jpg', 90)
+if PASS3:
+    p3 = lambda n: os.path.join(PASS3, n + '.png')
+    grid([(REF, 'Cycles reference'), (p3('after'), 'Pass 3 (full)'), ('after', 'Pass 4 (full)'), ('lite', 'Pass 4 (lite)')], 2, (640, 360), 'pass3_vs_pass4.jpg', 92)
+    # lite: the unshadowed interior light shone through the walls onto the barge boards, the eave, the
+    # plank edges and the ground (pass 3); pass 4 clips it to the stall's interior
+    crops([(p3('lite'), 'Pass 3 lite: leak'), ('lite', 'Pass 4 lite: clipped'), ('after', 'Pass 4 full')], (230, 20, 500, 700), 1, 'lite_leak.jpg')
+    crops([(REF, 'Cycles'), (p3('lite'), 'Pass 3 lite'), ('lite', 'Pass 4 lite')], (460, 240, 960, 480), 1, 'lite_interior.jpg')
+    # the bulb row and the lambrequin: pass 3 bloomed wider (17-21 px) and lit the lambrequin to 0.35
+    crops([(REF, 'Cycles'), (p3('after'), 'Pass 3'), ('after', 'Pass 4')], (430, 200, 1030, 330), 1, 'bulbs_garland.jpg')
+    # the roof above the bulbs and the cobbles beside the stall: dark and blue in pass 3
+    crops([(REF, 'Cycles'), (p3('after'), 'Pass 3'), ('after', 'Pass 4')], (440, 100, 1280, 680), 1, 'roof_ground.jpg')
+if PASS3_MARKET:
+    m3 = lambda n: os.path.join(PASS3_MARKET, n + '.jpg')
+    grid([(m3('market_home'), 'Pass 3, full'), ('market', 'Pass 4, full'), (m3('market_home_lite'), 'Pass 3, lite'), ('market_lite', 'Pass 4, lite')], 2, (640, 360), 'market_pass3_vs_pass4.jpg', 90)
 save('capture', 'after_capture.jpg', 'Full, ?capture=1 (environment captured from the scene)')
 grid([('sky', 'Sky, full (bloom at full resolution)'), ('sky_lite', 'Sky, lite (half-resolution bloom, own weights)')], 2, (640, 360), 'bloom_full_vs_lite.jpg', 92)
 save('before', 'before.jpg', 'Before: engine stand-in lighting')
 save('after', 'after.jpg', 'After: lighting/index.js (full)')
-save('lite', 'after_lite.jpg', 'After: lite profile (4 lights, no shadows)')
+save('lite', 'after_lite.jpg', 'After: lite profile (4 lights, no shadows, interior light clipped to the stall)')
 save('snow', 'snow_on.jpg', 'setSnow(true)')
 save('sky', 'sky_moon_stars.jpg', 'Sky: gradient, stars, clouds, haloed moon')
 save('wide', 'wide.jpg', 'Wide: fog and ground mist')

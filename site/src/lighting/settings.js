@@ -61,10 +61,12 @@ export const NIGHT = {
   // specular glint on copper (hundreds) both enter at <= clamp, so a few glint pixels cannot outshine
   // a string of bulbs. factors weight the five blur levels (tight to wide): a crisp core with a short
   // tail, so the bulbs read as dots with a soft rim, as in the Cycles preview, not as blobs.
-  bloom: { strength: 0.4, radius: 0.0, threshold: 1.6, knee: 1.2, clamp: 5, factors: [1.0, 0.3, 0.09, 0.03, 0.01] },
+  // pass 4: strength 0.4 -> 0.32 and the second level 0.3 -> 0.2: the bulbs were 17-21 px blobs (Cycles
+  // 13-16) and the left ones merged into one 143 px run (now 12-19 px; see README for what is left)
+  bloom: { strength: 0.32, radius: 0.0, threshold: 1.6, knee: 1.2, clamp: 5, factors: [1.0, 0.2, 0.07, 0.025, 0.01] },
   // the lite profile blooms at half resolution, where every level is twice as wide on screen:
   // shift the weight toward the tight levels so the moon halo and lamp glows match full
-  bloomHalf: { strength: 0.4, factors: [1.0, 0.15, 0.03, 0.006, 0.0] },
+  bloomHalf: { strength: 0.32, factors: [1.0, 0.1, 0.025, 0.005, 0.0] },
 
   // "size" of the point and spot lights for direct specular (see shading.js): a roughness floor
   lightSize: { minRoughness: 0.32, minClearcoatRoughness: 0.3 },
@@ -73,7 +75,8 @@ export const NIGHT = {
   glow: {
     // the bulb strings light what hangs near them (garland, lambrequin); 0.6 lit the fascia board
     // behind the bulbs to lightness 0.44 against 0.26 in Cycles (0.4 still gave 0.38)
-    bulbs: { intensity: 0.25, reach: 0.9, maxLength: 5, maxHeight: 1.0 },
+    // (0.25 still left the lambrequin at 0.35; pass 4: 0.18)
+    bulbs: { intensity: 0.18, reach: 0.9, maxLength: 5, maxHeight: 1.0 },
     // Every section and deco stall gets an interior glow at its light_ empty (dropped by `drop`),
     // whether or not the budget gave it a real light, so every stall front reads warm from the home
     // view. It is one-sided (only faces turned toward it are lit, so it cannot shine out through a
@@ -81,7 +84,17 @@ export const NIGHT = {
     // the walls) and above `ceiling` metres over the empty (the roof does not glow).
     // Intensity by case: `lit`, the stall's real light has a shadow (the glow stands in for the
     // light its walls bounce); `unshadowed`, a real light with no shadow; `only`, no real light.
-    interior: { lit: 9, unshadowed: 6, only: 16, reach: 2.6, drop: 0.3, floor: 0.3, ceiling: 0.15 },
+    interior: { lit: 7, unshadowed: 6, only: 16, reach: 2.6, drop: 0.3, floor: 0.3, ceiling: 0.15 },
+    // The front of the roof: a one-sided glow `out` m in front of each stall's front light_ empty and
+    // `up` m above it, clipped below `below` m under the empty. It lights what faces it above the
+    // eave line (the roof's front slope, or the soffit when the lamp hangs under the eave), which the
+    // downward front-fill spot cannot reach. Cycles lights that strip with the light_ marker's point
+    // light (lightness 0.2-0.37 there; 0.05 in pass 3).
+    eave: { intensity: 38, reach: 3.0, out: 0.6, up: 0.5, below: 0.05 },
+    // The warm pool on the cobbles around the stall front: a one-sided glow where the front fill hangs,
+    // clipped above `ceiling` m over the base, so it lights the ground only (Cycles: warm grey beside
+    // the stall, h4 l.27; pass 3: blue, h250, in the stall's moon shadow)
+    spill: { intensity: 11, reach: 8, out: 0.8, up: 0.4, ceiling: 0.2 },
   },
 
   // faint cool rim on edges that face the moon, for figures and posts in front of the stalls.
@@ -117,15 +130,22 @@ export const NIGHT = {
     // 70 %, so the leak through the walls stays at the foot of the stall and the roof does not glow
     // (at 100 % the lite back wall washed out to lightness 0.72 against 0.39 in Cycles); the interior
     // glow brings the stall's warmth back up
-    unshadowed: { distance: 3.0, scale: 0.7, drop: 0.3 },
+    // pass 4: the light is clipped to the stall's interior box (shading.js), so it no longer lights the
+    // barge boards, the eave, the plank edges in the wall gaps or the ground. `drop` is only the
+    // fallback for a model with no closed interior to clip to.
+    unshadowed: { distance: 3.2, scale: 0.5, drop: 0.3, clip: { pad: 0.01, fade: 0.01, floor: 0.3, front: 0.3 } },
     // point: inside a stall; a short reach keeps unshadowed ones from leaking far through the walls
     // front: a point under the front eave (the front fill: garland, counter front, sign, cobbles)
     // spot: stage lights high on a landmark, or any light_ empty with userData.type = 'spot'
-    // front: the front fill is a wide spot under the front eave aimed down and out (frontAngle, rad),
-    // so it lights the counter front, the sign and the cobbles but not the fascia above it
-    section: { point: 40, front: 13, frontAngle: 1.15, spot: 34, pointDistance: 4.2, frontDistance: 8, spotDistance: 8 },
+    // front: the front fill is a wide spot aimed down and out (frontAngle, rad; frontPenumbra), hung
+    // frontLift m above and frontOut m in front of the front light_ empty, aimed at the ground frontAim m
+    // out from the empty. It lights the counter, the sign and the cobbles but not the fascia above it.
+    // Pass 4: from further out and with a wide full-strength core (penumbra 0.25), its pool spills about
+    // a metre further, onto the cobbles beside the stall (warm grey there in Cycles, blue in pass 3),
+    // while the sign and the counter top, close under it, get less of it per unit of intensity.
+    section: { point: 34, front: 9, frontAngle: 1.4, frontPenumbra: 0.25, frontAim: 1.7, frontLift: 0.4, frontOut: 0.8, spot: 34, pointDistance: 4.2, frontDistance: 9, spotDistance: 8 },
     landmark: { point: 26, spot: 40, pointDistance: 10, spotDistance: 12 },
-    deco: { point: 18, front: 8, frontAngle: 1.15, spot: 20, pointDistance: 3.6, frontDistance: 6, spotDistance: 7 },
+    deco: { point: 18, front: 6, frontAngle: 1.4, frontPenumbra: 0.25, frontAim: 1.7, frontLift: 0.4, frontOut: 0.8, spot: 20, pointDistance: 3.6, frontDistance: 6, spotDistance: 7 },
     lamp: { point: 7, spot: 12, pointDistance: 10, spotDistance: 10 },
     tree: { point: 16, spot: 20, pointDistance: 10, spotDistance: 10 },
     strings: { point: 10, spot: 14, pointDistance: 12, spotDistance: 12 },
@@ -170,10 +190,12 @@ export const PROFILES = {
     lightBudget: 14,
     shadowedLights: 4, // interior lights of the section stalls nearest the view (static shadow maps)
     snowLayers: [
-      // near: big soft flakes, mid, far: fine dust
-      { count: 3500, box: 14, size: [0.03, 0.05], soft: 0.9 },
-      { count: 18000, box: 36, size: [0.03, 0.045], soft: 0.5 },
-      { count: 7000, box: 90, size: [0.04, 0.065], soft: 0.25 },
+      // near: larger soft flakes, mid, far: fine dust. At most 3 cm and softness 0.45: the engine's
+      // capFlakes (main.js) asked for that, as bigger, softer near flakes read as grey discs in front of
+      // the market; with these values its cap changes nothing, and the test page matches the market
+      { count: 3500, box: 14, size: [0.018, 0.03], soft: 0.45 },
+      { count: 18000, box: 36, size: [0.02, 0.03], soft: 0.45 },
+      { count: 7000, box: 90, size: [0.0185, 0.03], soft: 0.25 },
     ],
     clouds: true,
     grain: true,
@@ -194,9 +216,9 @@ export const PROFILES = {
     lightBudget: 4,
     shadowedLights: 0,
     snowLayers: [
-      { count: 1200, box: 14, size: [0.032, 0.052], soft: 0.9 },
-      { count: 5000, box: 36, size: [0.032, 0.048], soft: 0.5 },
-      { count: 1800, box: 90, size: [0.045, 0.07], soft: 0.25 },
+      { count: 1200, box: 14, size: [0.0185, 0.03], soft: 0.45 },
+      { count: 5000, box: 36, size: [0.02, 0.03], soft: 0.45 },
+      { count: 1800, box: 90, size: [0.0193, 0.03], soft: 0.25 },
     ],
     clouds: false,
     grain: false,
