@@ -48,7 +48,8 @@ Don't commit; the market owner commits and pushes.
 ## Tools
 
 - glTF optimisation: `gltf-transform`. The standard web step is:
-  `gltf-transform optimize in.glb out.glb --compress meshopt --texture-compress webp --texture-size 1024`
+  `node blender/lib/optimize.mjs in.glb out.glb [--texture-size 1024]`
+  This runs meshopt and WebP but keeps the named nodes. Plain `gltf-transform optimize` deletes the named empties, so don't use it.
   Draco is not available. The loader uses `MeshoptDecoder`.
 - Python 3 with numpy and scipy, and Node 22. On the cloud machine, Playwright with Chromium: launch with `executablePath: '/opt/pw-browsers/chromium'` if the version differs, and for WebGL use args `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist`. Software GL is slow, so allow long timeouts.
 - Network on the cloud machine: npm, PyPI, GitHub and raw.githubusercontent.com work, and many other hosts are blocked. Only use assets whose licence allows use on a public website (CC0, CC-BY, MIT and similar). Record every third-party asset with its source URL and licence in `CREDITS.md` under your role's heading.
@@ -81,7 +82,7 @@ Don't commit; the market owner commits and pushes.
   The lighting designer owns this and may add a baked-lightmap step later.
 - Each section stall and landmark ships a Cycles preview render as the visual target for what the browser should approach.
 
-## Budgets (after `gltf-transform optimize`)
+## Budgets (after `optimize.mjs`)
 
 | Asset | Triangles | File |
 |---|---|---|

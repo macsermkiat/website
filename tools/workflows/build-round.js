@@ -279,9 +279,15 @@ const VERDICT_SCHEMA = {
   required: ['checks', 'verdict', 'fixes'],
 }
 
+const EXTRA = args.extra || {}
+const EXTRA_CHECKS = args.extraChecks || {}
+for (const k of Object.keys(EXTRA_CHECKS)) if (ROLES[k]) ROLES[k].checks = ROLES[k].checks.concat(EXTRA_CHECKS[k])
+for (const k of Object.keys(EXTRA)) if (ROLES[k]) ROLES[k].brief = ROLES[k].brief + `\n\nROUND ${ROUND} PRIORITIES (these come first):\n` + EXTRA[k]
+
 function buildPrompt(key, pass, prev, fixes) {
   const r = ROLES[key]
   let p = `${COMMON}\n\nYour role: ${r.title} (role folder name: ${key}).\n\n${r.brief}\n\nThe judges will check:\n- ${r.checks.join('\n- ')}`
+  if (pass === 1 && args.priorRound) p += `\n\nThis is round ${ROUND}. Your work from round ${args.priorRound} is on disk. Read review/round-${args.priorRound}/${key}/NOTES.md and JUDGES.md (the Opus and Fable judges' last verdicts), and review/round-${args.priorRound}/CODEX_JUDGE.md (the Codex judge on the whole market). Fix every open point that concerns your role, as well as the round ${ROUND} priorities.`
   if (pass > 1) {
     p += `\n\nThis is pass ${pass}. Your previous pass returned:\n${JSON.stringify(prev)}\n\nThe judging panel asked for these fixes (in priority order). Make all of them, re-render the previews, and update NOTES.md:\n- ${fixes.join('\n- ')}`
   }
