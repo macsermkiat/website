@@ -33,7 +33,7 @@ def setup_device(scene=None, var="NM_DEVICE"):
 
 
 # materials that get no occlusion texture: see-through or self-lit
-AO_SKIP = ("vendor_glass", "flame", "lamp_glow", "coal_glow", "vendor_beer", "vendor_liquid")
+AO_SKIP = ("vendor_glass", "flame", "lamp_glow", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade")
 
 
 def bake_ao(name, res, samples=32, distance=0.12, floor=0.4):

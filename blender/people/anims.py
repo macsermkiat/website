@@ -462,14 +462,16 @@ def _instrument_targets():
     Rx = lambda a: Matrix.Rotation(a, 4, "X")
     Ry = lambda a: Matrix.Rotation(a, 4, "Y")
     Rz = lambda a: Matrix.Rotation(a, 4, "Z")
-    # tenor sax: mouthpiece tip at (0,-0.10,1.53); body axis local +Z, tilted by Ry(0.36)
-    tip = Vector((0, 0.275, 0.79))
+    # tenor sax: mouthpiece tip at (0,-0.10,1.53); body axis local +Z, tilted by Ry(0.36). Pass 2: the ride
+    # builder's re-proportioned tenor (instruments.py build_sax) has its mouthpiece tip at (0, 0.272, 0.896) and the
+    # key stacks centred at z 0.615 (left hand) and 0.37 (right hand); the wrists sit 4.5 and 6 cm below them
+    tip = Vector((0, 0.272, 0.896))
     Mh = Ry(0.36)
     t = Mh @ tip
     M = Matrix.Translation(Vector((0.0, -0.10, 1.53)) - t) @ Mh
     ax = (M.to_3x3() @ Vector((0, 0, 1))).normalized()
-    lh_c = M @ Vector((0, 0, 0.50))
-    rh_c = M @ Vector((0, 0, 0.27))
+    lh_c = M @ Vector((0, 0, 0.57))
+    rh_c = M @ Vector((0, 0, 0.31))
     sax = {
         "tip": Vector((0.0, -0.085, 1.535)),
         # wrists beside and behind the key stacks, fingers wrapping onto the pearls (front, -Y)

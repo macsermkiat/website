@@ -10,27 +10,38 @@
 //    from a small shared uniform array. Used for
 //      - bulb strings: each string of bulbs_ is a line light about 1 m in reach, so the garland,
 //        the lambrequin and the fascia are lit by their bulbs, as in Cycles;
-//      - bounce: a dim fill inside a shadowed stall, standing in for light bounced off the walls.
-//    A glow is a segment (a == b for a point) with a colour × intensity and a reach. They are not
-//    three.js lights, so they do not multiply the cost of every light in the scene.
+//      - stall interiors: every section and deco stall gets a one-sided glow at its light_ empty,
+//        so a stall reads warm from the home view even when the light budget gave it no real light
+//        (and, where it has one, the glow stands in for the light its walls bounce).
+//    A glow is a segment (a == b for a point) with a colour × intensity, a reach, a floor and a
+//    ceiling (world y; nothing outside that band is lit) and a side: two-sided glows (the bulbs)
+//    wrap light around a surface, one-sided ones (interiors) light only faces turned toward them,
+//    so an interior glow cannot shine out through the stall's own walls. They are not three.js
+//    lights, so they do not multiply the cost of every light in the scene.
 //
 // 3. Moon rim: a faint cool sheen on grazing edges that face the moon (added as radiance, so it
-//    shows on near-black coats too), so figures and posts in front of the stalls read as moonlit
-//    shapes instead of black cut-outs.
+//    shows on near-black coats too), only on dark materials, so figures and posts in front of the
+//    stalls read as moonlit shapes instead of black cut-outs while wood walls stay dark.
+//
+// 4. Softer point-light shadows: three samples a point light's cube shadow with 5 taps; this takes
+//    `pointShadowTaps` (12) over the same Vogel disk, so the wide kernel of the interior lights
+//    (a lamp has a size) stays smooth instead of grainy. Only fragments within a light's reach pay.
 //
 // The uniform data is one Float32Array shared by reference (UniformsUtils.clone keeps typed arrays
 // by reference), so updating it once updates every material.
 import * as THREE from 'three';
 
 const LIT = ['standard', 'physical', 'lambert', 'phong', 'toon'];
-const KEYS = ['lights_pars_begin', 'lights_fragment_end', 'lights_physical_pars_fragment'];
-const HEADER = 3; // vec4s: [count, rimStrength, rimPower, 0], [rimDir, 0], [rimColor, 0]
+const KEYS = ['lights_pars_begin', 'lights_fragment_end', 'lights_physical_pars_fragment', 'shadowmap_pars_fragment'];
+const HEADER = 3; // vec4s: [count, rimStrength, rimPower, 0], [rimDir, darkLo], [rimColor, darkHi]
+const OPEN = 1e4; // floor / ceiling of a glow with no height limit
 const f = (x) => Number(x).toFixed(4);
 
-export function installShading({ maxGlows = 16, minRoughness = 0.3, minClearcoatRoughness = 0.3 } = {}) {
+export function installShading({ maxGlows = 16, minRoughness = 0.3, minClearcoatRoughness = 0.3, pointShadowTaps = 12 } = {}) {
   const saved = Object.fromEntries(KEYS.map((k) => [k, THREE.ShaderChunk[k]]));
   const size = HEADER + maxGlows * 3;
   const data = new Float32Array(size * 4);
+  data.set([0, 0, 3, 0, 0, 1, 0, 0.07, 0, 0, 0, 0.16]); // no rim until setRim (the dark band must not be empty)
 
   THREE.ShaderChunk.lights_pars_begin = saved.lights_pars_begin + /* glsl */ `
 uniform vec4 lightingGlow[ ${size} ];
@@ -49,22 +60,30 @@ uniform vec4 lightingGlow[ ${size} ];
     if ( i >= glowCount ) break;
     vec4 ga = lightingGlow[ ${HEADER} + i * 3 ];
     vec4 gb = lightingGlow[ ${HEADER} + i * 3 + 1 ];
+    vec4 gc = lightingGlow[ ${HEADER} + i * 3 + 2 ];
     vec3 ab = gb.xyz - ga.xyz;
     float h = clamp( dot( gp - ga.xyz, ab ) / max( dot( ab, ab ), 1e-4 ), 0.0, 1.0 );
     vec3 dl = ga.xyz + ab * h - gp;
     float d2 = dot( dl, dl );
-    float r2 = ga.w * ga.w;
+    float r2 = ga.w * ga.w; // the sign of ga.w is the side flag, its square the reach
     if ( d2 >= r2 ) continue;
+    // floor and ceiling (world y), each with a 15 cm fade
+    float band = clamp( ( gp.y - gb.w ) / 0.15, 0.0, 1.0 ) * clamp( ( gc.w - gp.y ) / 0.15, 0.0, 1.0 );
     float win = 1.0 - d2 / r2;
-    // half-wrapped: a line of bulbs lights a surface from many directions at once
-    float ndl = clamp( dot( gn, dl * inversesqrt( max( d2, 1e-6 ) ) ) * 0.6 + 0.4, 0.0, 1.0 );
-    glowIrr += lightingGlow[ ${HEADER} + i * 3 + 2 ].rgb * ( win * win * ndl / ( d2 + 0.12 ) );
+    // reach > 0: half-wrapped (a line of bulbs lights a surface from many directions at once);
+    // reach < 0 (stored as -reach): one-sided Lambert, so an interior glow stops at its walls
+    float cosT = dot( gn, dl * inversesqrt( max( d2, 1e-6 ) ) );
+    float ndl = ga.w > 0.0 ? clamp( cosT * 0.6 + 0.4, 0.0, 1.0 ) : max( cosT, 0.0 );
+    glowIrr += gc.rgb * ( band * win * win * ndl / ( d2 + 0.12 ) );
   }
   // moon rim: a faint cool sheen on grazing edges that face the moon. It is added as radiance, not
   // multiplied by the albedo, the way wool and skin catch light at grazing angles, so near-black
   // coats still show their outline
   // coats: only on steep faces (figures, posts, walls), not on the ground or the roofs
+  // and only on dark materials (coats, iron posts): wood walls stay near-black on their moon side
   float rimF = pow( 1.0 - clamp( dot( gn, gv ), 0.0, 1.0 ), lightingGlow[ 0 ].z ) * ( 1.0 - gn.y * gn.y );
+  vec3 rimAlbedo = material.diffuseColor;
+  rimF *= 1.0 - smoothstep( lightingGlow[ 1 ].w, lightingGlow[ 2 ].w, max( rimAlbedo.r, max( rimAlbedo.g, rimAlbedo.b ) ) );
   totalEmissiveRadiance += lightingGlow[ 2 ].rgb * ( lightingGlow[ 0 ].y * rimF * clamp( dot( gn, lightingGlow[ 1 ].xyz ) * 0.5 + 0.5, 0.0, 1.0 ) );
   #if defined( STANDARD )
     reflectedLight.directDiffuse += glowIrr * BRDF_Lambert( material.diffuseContribution );
@@ -87,18 +106,34 @@ uniform vec4 lightingGlow[ ${size} ];
     console.warn('[lighting] three changed RE_Direct_Physical; light-size roughness floor not installed');
   }
 
+  // point-light shadows: N taps over the Vogel disk instead of 5
+  const five = /vec2 sample0 = vogelDiskSample\( 0, 5, phi \);[\s\S]*?\) \* 0\.2;/;
+  const pcfCube = saved.shadowmap_pars_fragment.indexOf('samplerCubeShadow shadowMap');
+  const tail = pcfCube >= 0 ? saved.shadowmap_pars_fragment.slice(pcfCube) : '';
+  if (pointShadowTaps > 5 && five.test(tail)) {
+    const taps = Math.round(pointShadowTaps);
+    THREE.ShaderChunk.shadowmap_pars_fragment = saved.shadowmap_pars_fragment.slice(0, pcfCube) + tail.replace(five, /* glsl */ `shadow = 0.0;
+			for ( int k = 0; k < ${taps}; k ++ ) {
+				vec2 sk = vogelDiskSample( k, ${taps}, phi );
+				shadow += texture( shadowMap, vec4( bd3D + ( tangent * sk.x + bitangent * sk.y ) * texelSize, dp ) );
+			}
+			shadow *= ${(1 / taps).toFixed(6)};`);
+  } else if (pointShadowTaps > 5) {
+    console.warn('[lighting] three changed getPointShadow; point shadows keep 5 taps');
+  }
+
   const libUniforms = LIT.map((k) => THREE.ShaderLib[k]?.uniforms).filter(Boolean);
   libUniforms.forEach((u) => (u.lightingGlow = { value: data }));
 
   const glows = [];
   const _c = new THREE.Vector3(), _m = new THREE.Vector3();
-  let rimSet = false;
 
   return {
     data,
     maxGlows,
     /**
-     * Add a glow: { a:[x,y,z] | Vector3, b?, color: Color | [r,g,b] (linear), intensity, reach, tag }.
+     * Add a glow: { a:[x,y,z] | Vector3, b?, color: Color | [r,g,b] (linear), intensity, reach, tag,
+     * oneSided?, floor?, ceiling? (world y), priority? (higher wins a slot first) }.
      * Returns the entry; remove(entry) takes it out again.
      */
     add(g) {
@@ -108,9 +143,13 @@ uniform vec4 lightingGlow[ ${size} ];
         color: g.color?.isColor ? g.color.clone() : new THREE.Color().setRGB(...(g.color || [1, 0.6, 0.3])),
         intensity: g.intensity ?? 1,
         reach: g.reach ?? 1,
+        oneSided: !!g.oneSided,
+        floor: g.floor ?? -OPEN,
+        ceiling: g.ceiling ?? OPEN,
         tag: g.tag || 'glow',
         priority: g.priority ?? 0,
         scale: 1,
+        id: g.id, how: g.how, // for diagnostics
       };
       glows.push(e);
       return e;
@@ -120,29 +159,29 @@ uniform vec4 lightingGlow[ ${size} ];
       if (i >= 0) glows.splice(i, 1);
     },
     get glows() { return glows; },
-    setRim(dir, color, strength, power = 3) {
+    /** dark: [lo, hi] albedo over which the rim fades out (it shows only on dark materials). */
+    setRim(dir, color, strength, power = 3, dark = [0.07, 0.16]) {
       const d = new THREE.Vector3().copy(dir).normalize();
-      data.set([data[0], strength, power, 0, d.x, d.y, d.z, 0, color.r, color.g, color.b, 0], 0);
-      rimSet = true;
+      data.set([data[0], strength, power, 0, d.x, d.y, d.z, dark[0], color.r, color.g, color.b, dark[1]], 0);
     },
     setRimStrength(s) { data[1] = s; },
     /** Write the glows nearest `from` (a Vector3) into the shared uniform. */
     update(from, gain = 1) {
-      if (!rimSet) data[2] = 3;
       const ranked = glows
         .filter((e) => e.intensity * e.scale > 0)
         .map((e) => {
           _m.addVectors(e.a, e.b).multiplyScalar(0.5);
-          return { e, d: _m.distanceToSquared(from) - e.priority * 400 };
+          // priority first (stall interiors before bulb strings), then distance
+          return { e, d: _m.distanceToSquared(from) - e.priority * 1e6 };
         })
         .sort((x, y) => x.d - y.d)
         .slice(0, maxGlows);
       ranked.forEach(({ e }, i) => {
         const o = (HEADER + i * 3) * 4;
         const k = e.intensity * e.scale * gain;
-        data[o] = e.a.x; data[o + 1] = e.a.y; data[o + 2] = e.a.z; data[o + 3] = e.reach;
-        data[o + 4] = e.b.x; data[o + 5] = e.b.y; data[o + 6] = e.b.z; data[o + 7] = 0;
-        data[o + 8] = e.color.r * k; data[o + 9] = e.color.g * k; data[o + 10] = e.color.b * k; data[o + 11] = 0;
+        data[o] = e.a.x; data[o + 1] = e.a.y; data[o + 2] = e.a.z; data[o + 3] = e.oneSided ? -e.reach : e.reach;
+        data[o + 4] = e.b.x; data[o + 5] = e.b.y; data[o + 6] = e.b.z; data[o + 7] = e.floor;
+        data[o + 8] = e.color.r * k; data[o + 9] = e.color.g * k; data[o + 10] = e.color.b * k; data[o + 11] = e.ceiling;
       });
       data[0] = ranked.length;
       return ranked.length;

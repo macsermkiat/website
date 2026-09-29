@@ -1,9 +1,9 @@
 """Build the organizer's figures: skinned glb + lite glb per figure, and the shared clip library.
 
-    NM_DEVICE=METAL NM_THREADS=0 NPM_CONFIG_PREFIX=~/nachtmarkt-tools/npm \
-        ~/nachtmarkt-tools/bpy-venv/bin/python blender/people/build.py [--only name,name] [--no-lite] [--no-anims]
+    /home/claude/tools/bpy-venv/bin/python blender/people/build.py [--only name,name] [--no-lite] [--no-anims] [--no-ao]
 
-Writes site/public/models/people_*.glb and *.lite.glb via blender/lib/optimize.mjs,
+Writes site/public/models/people_*.glb and *.lite.glb via blender/people/pack.mjs (the web passes of
+blender/lib/optimize.mjs plus the animation packing described there),
 site/public/models/people_anims.glb (every crowd and vendor clip on one skeleton, no mesh), and a
 report to blender/out/people/report.json.
 
@@ -34,8 +34,7 @@ import specs  # noqa: E402
 MODELS = os.path.join(REPO, "site", "public", "models")
 OUT = os.path.join(REPO, "blender", "out", "people")
 RAW = os.path.join(OUT, "raw")
-OPT = os.path.join(REPO, "blender", "lib", "optimize.mjs")
-SLIM = os.path.join(HERE, "slim_anims.mjs")
+PACK = os.path.join(HERE, "pack.mjs")
 FPS = 24
 
 
@@ -48,17 +47,21 @@ def reset():
     return scene, coll
 
 
-# Which clips each figure file carries. The four the brief checks (idle, walk, chat, drink) are in every file.
-# Crowd lite drops laugh and chat_free (the engine falls back to idle) and sit: crowd.json lists the bench
-# sitters after the lite cap, so the lite market never needs it. laugh_free and sit_free are not shipped at
-# all: crowd.json gives laughers and sitters a mug.
+# Which clips each figure file carries. The four the brief checks (idle, walk, chat, drink) are in every full file.
+# Lite files carry only what a lite figure plays: in the lite market and as the full market's distance level.
+#   crowd lite: idle, walk, chat, drink and sit (the bench sitters are far from the home camera, so they are drawn
+#     with the lite figure). The *_free and laugh clips are left out: site/src/crowd.js then plays idle (walk for
+#     walkers) and hides the mug mesh because the clip name ends in _free, so a far mug-less person stands with the
+#     right hand at the coat front instead of at the side.
+#   band lite: play and rest.  vendor lite: serve and wipe.
+# laugh_free and sit_free are not shipped at all: crowd.json gives laughers and sitters a mug.
 CLIPSETS = {
     ("crowd", False): ["idle", "walk", "chat", "drink", "laugh", "sit", "idle_free", "walk_free", "chat_free"],
-    ("crowd", True): ["idle", "walk", "chat", "drink", "idle_free", "walk_free"],
+    ("crowd", True): ["idle", "walk", "chat", "drink", "sit"],
     ("band", False): ["play", "rest", "idle", "walk", "chat", "drink"],
-    ("band", True): ["play", "rest", "idle", "walk", "chat", "drink"],
+    ("band", True): ["play", "rest"],
     ("vendor", False): ["serve", "wipe", "idle", "walk", "chat", "drink"],
-    ("vendor", True): ["serve", "wipe", "idle", "walk", "chat", "drink"],
+    ("vendor", True): ["serve", "wipe"],
 }
 # the shared library (people_anims.glb): every crowd and vendor clip on the reference skeleton
 LIBRARY = ["idle", "walk", "chat", "drink", "laugh", "sit", "idle_free", "walk_free", "chat_free", "laugh_free",
@@ -116,7 +119,8 @@ def assemble(spec, lite, coll, bake=True, name=None, ao=False, clips_wanted=None
 
 
 def trim_glb(path):
-    """Drop JSON defaults the optimiser writes (accessor "normalized": false), then re-pad the chunks."""
+    """Drop JSON defaults the optimiser writes (accessor "normalized": false, byteOffset 0, sampler
+    interpolation LINEAR) and round node transforms to 6 decimals, then re-pad the chunks."""
     import struct
     b = open(path, "rb").read()
     n = struct.unpack("<I", b[12:16])[0]
@@ -126,6 +130,21 @@ def trim_glb(path):
             del a["normalized"]
         if a.get("byteOffset") == 0:
             del a["byteOffset"]
+    for bv in j.get("bufferViews", []):
+        if bv.get("byteOffset") == 0:
+            del bv["byteOffset"]
+    for an in j.get("animations", []):
+        for sm in an.get("samplers", []):
+            if sm.get("interpolation") == "LINEAR":
+                del sm["interpolation"]
+    for nd in j.get("nodes", []):
+        for k in ("translation", "rotation", "scale"):
+            if k in nd:
+                nd[k] = [round(v, 6) + 0.0 for v in nd[k]]
+        if nd.get("scale") == [1.0, 1.0, 1.0]:
+            del nd["scale"]
+        if nd.get("translation") == [0.0, 0.0, 0.0]:
+            del nd["translation"]
     js = json.dumps(j, separators=(",", ":"), ensure_ascii=False).encode()
     js += b" " * (-len(js) % 4)
     rest = b[20 + n:]
@@ -133,10 +152,9 @@ def trim_glb(path):
     open(path, "wb").write(out)
 
 
-def export(fname, coll, lite, texture_size=None):
+def export(fname, coll, lite, texture_size=None, library=False):
     os.makedirs(RAW, exist_ok=True)
     raw = os.path.join(RAW, fname + ".glb")
-    out = os.path.join(MODELS, fname + ".glb")
     for o in bpy.context.view_layer.objects:
         o.select_set(False)
     for o in coll.all_objects:
@@ -149,16 +167,21 @@ def export(fname, coll, lite, texture_size=None):
         export_optimize_animation_size=True, export_reset_pose_bones=True, export_rest_position_armature=True,
         export_morph=False, export_cameras=False, export_lights=False, export_extras=False,
         export_image_format='AUTO', export_influence_nb=4)
-    slim = os.path.join(RAW, fname + ".slim.glb")
-    r = subprocess.run(["node", SLIM, raw, slim], capture_output=True, text=True)
-    if r.returncode != 0:
-        print(r.stdout, r.stderr)
-        raise RuntimeError("slim_anims failed")
+    return pack(fname, lite, texture_size, library)
+
+
+def pack(fname, lite, texture_size=None, library=False):
+    """Blender export (blender/out/people/raw) -> web glb in site/public/models."""
+    raw = os.path.join(RAW, fname + ".glb")
+    out = os.path.join(MODELS, fname + ".glb")
     size = texture_size or ("128" if lite else "256")
-    r = subprocess.run(["node", OPT, slim, out, "--texture-size", str(size)], capture_output=True, text=True)
+    cmd = ["node", PACK, raw, out, "--texture-size", str(size)] + (["--lite"] if lite else [])
+    cmd += ["--keep-still"] if library else ["--rest-opt"]
+    r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         print(r.stdout, r.stderr)
-        raise RuntimeError("optimize failed")
+        raise RuntimeError("pack failed")
+    print("   ", r.stdout.strip().splitlines()[-1])
     trim_glb(out)
     return out
 
@@ -176,7 +199,7 @@ def build_library(report):
         n_, fn, dur = by[cname]
         rig.bake_clip(arm, cname, fn, dur, fps=FPS, step=2 if cname.startswith("walk") else 3)
     rig.clear_pose(arm)
-    path = export("people_anims", coll, False)
+    path = export("people_anims", coll, False, library=True)
     info = glb_info(path)
     info["reference"] = LIBRARY_REF
     info["hips_rest"] = [round(v, 4) for v in (fig.J["pelvis"].x, fig.J["pelvis"].z, -fig.J["pelvis"].y)]
@@ -211,6 +234,7 @@ def main():
     ap.add_argument("--no-lite", action="store_true")
     ap.add_argument("--no-anims", action="store_true")
     ap.add_argument("--no-ao", action="store_true")
+    ap.add_argument("--repack", action="store_true", help="only re-run pack.mjs on the raw Blender exports")
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
     a = ap.parse_args(argv)
     want = [x for x in a.only.split(",") if x]
@@ -222,6 +246,12 @@ def main():
             continue
         for lite in ((False,) if a.no_lite else (False, True)):
             t0 = time.time()
+            if a.repack:
+                fname = spec["name"] + (".lite" if lite else "")
+                info = glb_info(pack(fname, lite))
+                report[fname] = dict(report.get(fname, {}), **info)
+                print(f"[people] {fname}: {info['triangles']} tris, {info['bytes'] / 1e3:.0f} kB (repacked)")
+                continue
             scene, coll = reset()
             fig, arm, body, mug, clips = assemble(spec, lite, coll, ao=not a.no_ao)
             fname = spec["name"] + (".lite" if lite else "")
@@ -232,7 +262,10 @@ def main():
             report[fname] = info
             print(f"[people] {fname}: {info['triangles']} tris, {info['bytes'] / 1e3:.0f} kB, "
                   f"{len(info['animations'])} clips, {time.time() - t0:.1f}s")
-    if not a.no_anims and not want:
+    if a.repack and not want:
+        info = glb_info(pack("people_anims", False, library=True))
+        report["people_anims"] = dict(report.get("people_anims", {}), **info)
+    elif not a.no_anims and not want:
         build_library(report)
     json.dump(report, open(rep_path, "w"), indent=1)
 

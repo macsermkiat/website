@@ -18,6 +18,7 @@ export function createActions(ctx) {
     get: (id) => byPlace[id] || null,
     pullBook: stalls.pullBook,
     featuredBooks: stalls.featuredBooks || [],
+    pulledBook: () => stalls.pulledBook?.() || null,
     rides,
     bandPositions: band.positions,
     update(dt, t, still) {

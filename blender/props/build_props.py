@@ -34,6 +34,8 @@ MODULES = [set_gluehwein, set_bier, set_wurst, set_books, set_deco]
 STALL_ASSET = {"gluehwein": "stall_gluehwein.glb", "bratwurst": "stall_bratwurst.glb",
                "bierstand": "stall_bier.glb", "buecherstand": "stall_buecher.glb"}
 REPORT = os.path.join(vlib.state.OUT_DIR, "props_report.json")
+# wide-shot camera elevation (radians) per preview stage: over the counter; level under the shelf above
+WIDE_ELEV = {"counter": 0.42, "shelf": 0.1, "shelf2": 0.22}
 
 
 def all_sets():
@@ -53,6 +55,7 @@ def args():
     ap.add_argument("--samples", type=int, default=128)
     ap.add_argument("--res", default="1920x1080")
     ap.add_argument("--render-only", default=None, help="comma list: render previews only for these sets")
+    ap.add_argument("--shots", default="wide,hero", help="section previews to render: wide, hero or both")
     a, _ = ap.parse_known_args(sys.argv[1:])
     return a
 
@@ -63,15 +66,19 @@ def build_variant(name, d, lite, ao):
     if ao:
         vstage.bake_ao(name + (".lite" if lite else ""), vlib.AO_LITE if lite else vlib.AO_FULL,
                        samples=16 if lite else 32)
-    return ps, vlib.export_set(name, lite)
+    return ps, vlib.export_set(name, lite, ps.items)
 
 
 def render_previews(name, d, ps, a, res):
     """Section sets: a wide shot and a close-up. Deco sets: one framed shot (also the contact-sheet tile)."""
     top = vstage.preview_scene(ps, d["kind"], d.get("width", 3.0))
     if d.get("section"):
-        vstage.shot(d["cam"], top, os.path.join(vlib.REVIEW, f"{name}.jpg"), a.samples, res)
-        if d.get("hero"):
+        if "wide" in a.shots:
+            # the wide shot frames the whole set (goods fill the width); "cam_fixed" keeps a hand-set camera
+            cam = d["cam"] if d.get("cam_fixed") else vstage.frame_cam(ps, lens=28, elev=WIDE_ELEV[d["kind"]],
+                                                                        margin=1.04)
+            vstage.shot(cam, top, os.path.join(vlib.REVIEW, f"{name}.jpg"), a.samples, res)
+        if d.get("hero") and "hero" in a.shots:
             vstage.shot(d["hero"], top, os.path.join(vlib.REVIEW, f"{name}_hero.jpg"), a.samples, res)
         return None
     key = name.replace("prop_deco_", "")
@@ -126,8 +133,29 @@ def main():
         from nmlib import render
         render.contact_sheet(sheet, os.path.join(vlib.REVIEW, "deco_goods_contact_sheet.jpg"), cols=3,
                              tile=(416, 234), title="Deco stall goods (vendor, round 1 pass 2)")
+    shrink_shared_textures()
     write_props_json(sets)
     write_items_json(sets, reports)
+
+
+# Full-size shared maps that do not need 2048 px: the books' normal and roughness carry cloth weave
+# and wear, which read the same at 1024; the spine lettering lives in the colour map, which stays 2048.
+# Keeps the Bücherstand (stall + props + shared textures) under its 3 MB budget.
+SHRINK = {"prop_tex_books_normal.webp": 1024, "prop_tex_books_rm.webp": 1024}
+
+
+def shrink_shared_textures():
+    from PIL import Image
+    for fn, size in SHRINK.items():
+        path = os.path.join(vlib.MODELS, fn)
+        if not os.path.exists(path):
+            continue
+        im = Image.open(path)
+        if max(im.size) <= size:
+            continue
+        before = os.path.getsize(path)
+        im.resize((size, size), Image.LANCZOS).save(path, "WEBP", quality=82, method=6)
+        print(f"[props] {fn}: {im.size[0]} -> {size} px, {before / 1e3:.0f} -> {os.path.getsize(path) / 1e3:.0f} kB")
 
 
 def write_props_json(sets):

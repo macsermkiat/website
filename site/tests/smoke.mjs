@@ -110,10 +110,28 @@ try {
     await frames(page, 3);
     const hidden = await page.evaluate(() => window.__market.hiddenPeople());
     check('Glühwein close-up: the vendor stays in view', !hidden.includes('vendor_gluehwein') && (await page.evaluate(() => window.__market.crowd().vendorsVisible)) === 4, hidden.join(' '));
-    check('Glühwein close-up: the queue at the counter steps out of the shot', hidden.length > 0, hidden.join(' '));
+    // nobody left in the picture stands on the line from the camera to the vendor's chest (checked here, not by the page)
+    const shotInfo = await page.evaluate(() => ({ cam: window.__market.camera.position.toArray(), people: window.__market.people() }));
+    const vendor = shotInfo.people.find((p) => p.name === 'vendor_gluehwein');
+    const blockers = vendor ? shotInfo.people.filter((p) => p.visible && !p.vendor).filter((p) => {
+      const a = shotInfo.cam, b = [vendor.pos[0], vendor.pos[1] + 1.25, vendor.pos[2]];
+      const d = b.map((v, i) => v - a[i]), len2 = d.reduce((x, v) => x + v * v, 0);
+      return [1.0, 1.55].some((h) => {
+        const q = [p.pos[0], p.pos[1] + h, p.pos[2]];
+        const t = d.reduce((x, v, i) => x + v * (q[i] - a[i]), 0) / len2;
+        if (t < 0.05 || t > 0.95) return false;
+        return Math.hypot(...q.map((v, i) => v - (a[i] + d[i] * t))) < 0.3;
+      });
+    }).map((p) => p.name) : ['no vendor'];
+    check('Glühwein close-up: nobody in the picture stands between the camera and the vendor', blockers.length === 0, `blocking: ${blockers.join(' ')}; stepped aside: ${hidden.join(' ') || 'none needed'}`);
     await shot(page, 'panel_gluehwein.jpg');
     await go(() => { window.__market.openPlace('books'); window.__market.act('books', 'book'); });
     await frames(page, 3);
+    // Mac's five spines are in clear view: nobody visible stands on the line from the camera to any of them
+    const five = await page.evaluate(() => window.__market.featuredBooks().map((n) => ({ n, who: window.__market.blockers(n) })));
+    check('Bücherstand view: all five of Mac\'s spines in clear view (the bookseller stands aside)', five.length === 5 && five.every((b) => !b.who.length), JSON.stringify(five));
+    const out = await page.evaluate(() => window.__market.pulledBook());
+    check('the pulled book stands out of the shelf when the picture is taken', out === five[0]?.n, `${out} vs ${five[0]?.n}`);
     await shot(page, 'panel_buecherstand.jpg');
     await go(() => { window.__market.openPlace('band'); window.__market.act('band', 'sax'); });
     await frames(page, 3);
@@ -142,6 +160,7 @@ try {
     await page.click('#places button[data-place="bier"]');
     await page.click('#pActions [data-action="pint"]');
     check('pull a pint (starts)', /Pouring/.test(await note(page)));
+    await page.evaluate(() => window.__market.advance(3)); // run the 2.3 s pour without waiting on slow frames
     check('pull a pint (finishes)', await waitNote(page, /pulled tonight: 1/), await note(page));
     await page.click('#pActions [data-action="prost"]');
 
@@ -157,6 +176,7 @@ try {
     // each of Mac's books sits on its own spine: aim at the second one and click it in 3D
     const spines = await page.evaluate(() => window.__market.featuredBooks());
     check('five named spines for the five books', spines.length === 5, spines.join(' '));
+    await page.evaluate(() => window.__market.advance(4)); // finish the flight to the bookshop
     await frames(page, 2);
     const aim = await page.evaluate((name) => {
       const m = window.__market, c = m.screenPoint(name);
@@ -249,10 +269,14 @@ try {
 
   if (run('lite')) {
     log('lite market, auto-detected');
-    let bytes = 0;
-    const { ctx, page } = await openPage(`${BASE}?snow=0`, { before: (pg) => pg.on('response', async (r) => { const n = Number(r.headers()['content-length']); if (n) bytes += n; else try { bytes += (await r.body()).length; } catch { /* aborted */ } }) });
+    const { ctx, page } = await openPage(`${BASE}?snow=0`);
     await waitReady(page);
-    const atReady = bytes;
+    // everything requested before the market opened (the page marks 'market-ready' just before its first frame)
+    const atReady = await page.evaluate(() => {
+      const t = performance.getEntriesByName('market-ready')[0]?.startTime ?? Infinity;
+      const doc = performance.getEntriesByType('navigation')[0];
+      return (doc?.encodedBodySize || 0) + performance.getEntriesByType('resource').filter((r) => r.startTime < t).reduce((a, r) => a + (r.encodedBodySize || r.decodedBodySize || 0), 0);
+    });
     const report = await page.evaluate(() => window.__market.report);
     log(`lite: ${(atReady / 1e6).toFixed(2)} MB downloaded when the market opens`);
     check('lite: under 8.5 MB (code, fonts and models) before the market opens', atReady < 8.5e6, `${(atReady / 1e6).toFixed(2)} MB`);
@@ -310,7 +334,7 @@ try {
 
   if (run('missing')) {
     log('every model missing and layout.json ignored: the BUILD.md layout with labelled stand-ins');
-    const { ctx, page } = await openPage(`${BASE}?quality=lite&snow=0&missing=all&layout=builtin`, { viewport: { width: 960, height: 640 } });
+    const { ctx, page } = await openPage(`${BASE}?quality=lite&snow=0&missing=all&layout=builtin`, { viewport: { width: 960, height: 640 }, reducedMotion: 'reduce' });
     await waitReady(page);
     const report = await page.evaluate(() => window.__market.report);
     check('missing glbs: every place is a stand-in', report.models.every((m) => m.source === 'standin'), JSON.stringify(report.models.filter((m) => m.source !== 'standin')));
@@ -318,7 +342,8 @@ try {
     await page.click('#places button[data-place="glueh"]');
     await page.click('#pActions [data-action="pour"]');
     check('stand-ins keep the actions working', /poured tonight: 1/.test(await note(page)), await note(page));
-    await frames(page, 2);
+    await page.click('#reset');
+    await frames(page, 3);
     await shot(page, 'missing_models_standins.jpg', '#stage');
     await ctx.close();
     const { ctx: c2, page: p2 } = await openPage(`${BASE}?quality=lite&snow=0&missing=stall_bier,ferris`, { viewport: { width: 960, height: 640 } });
@@ -333,6 +358,10 @@ try {
     log('recorded stems on the full market');
     const { ctx, page } = await openPage(`${BASE}?quality=full&snow=0`, { viewport: { width: 800, height: 520 } });
     await waitReady(page);
+    // This phase is about sound: hold the picture the whole time. On SwiftShader a full-market frame blocks
+    // the main thread for tens of seconds, and the page would not answer. advance() still runs the clock.
+    await page.evaluate(() => window.__market.freeze(true));
+    await page.evaluate(() => window.__market.settled());
     const mode = (await state(page, 'audio')).mode;
     if (mode !== 'stems') log('no audio manifest yet; the generative band plays instead');
     await page.evaluate(() => window.__market.togglePlay()); // full quality: no click (see the shots phase)
@@ -341,17 +370,14 @@ try {
     check('play starts at once', /Pause/.test(await page.textContent('#play')), first);
     if (mode === 'stems') {
       check('the mix bridges the wait for the stems', first === 'mix' || first === 'stems', first);
-      // hold the picture while the stems decode: on SwiftShader every frame blocks the main thread for seconds
-      await page.evaluate(() => window.__market.freeze(true));
       const ok = await page.waitForFunction(() => window.__market.audio.phase === 'stems', null, { timeout: 300000 }).then(() => true, () => false);
-      await page.evaluate(() => window.__market.freeze(false));
       check('the stems take over from the mix', ok, (await state(page, 'audio')).phase);
       await page.evaluate(() => window.__market.act('band', 'sax'));
-      await frames(page, 20);
+      await page.evaluate(() => window.__market.advance(1.5)); // the analysers feed the levels on each step
       const lv = (await state(page, 'audio')).levels;
       check('stem levels reach the stage', Object.values(lv).some((v) => v > 0.01), JSON.stringify(lv));
     }
-    await page.evaluate(() => window.__market.togglePlay()); // full quality: no click (see the shots phase)
+    await page.evaluate(() => window.__market.togglePlay());
     check('the band stops (full)', (await state(page, 'audio')).phase === 'idle');
     await ctx.close();
   }

@@ -49,7 +49,7 @@ def lump(m, M, r, region, col, mat, subd=1, rough=0.35, squash=0.7, seed=0.0):
     m.add(verts, faces, uvs, M, col, mat, False)
 
 
-def chain(m, a, b, link=0.03, r=0.0028, mat="grill_iron", col=WHITE):
+def chain(m, a, b, link=0.042, r=0.0028, mat="grill_iron", col=WHITE):
     a, b = Vector(a), Vector(b)
     d = b - a
     L = d.length
@@ -65,7 +65,7 @@ def chain(m, a, b, link=0.03, r=0.0028, mat="grill_iron", col=WHITE):
         xx, yy = (x, y) if i % 2 == 0 else (y, -x)
         B = Matrix((xx, z, yy)).transposed().to_4x4()      # torus in its XY plane -> link along z
         M = Matrix.Translation(c) @ B @ Matrix.Diagonal((0.55, 1.0, 1.0, 1.0))
-        m.torus(link * 0.5, r, 6, 3, "iron", M, col, mat)
+        m.torus(link * 0.5, r, 5, 3, "iron", M, col, mat)
 
 
 def grill(s):
@@ -87,7 +87,7 @@ def grill(s):
     # a bed of grey ash under the lumps, then the charcoal: mostly black and ashen, glowing in the cracks
     coal.lathe([(0.0, 0.05), (0.17, 0.05), (0.185, 0.062), (0.0, 0.066)], seg(20, 8), vlib.Reg([0.0, 0.0, 1.0, 1.0]),
                None, C("6a6560"), "coal_glow")
-    k = 40 if not vlib.lite() else 10
+    k = 34 if not vlib.lite() else 10
     for i in range(k):
         rr = 0.165 * math.sqrt(rng.random())
         a = rng.uniform(0, TWO_PI)
@@ -128,10 +128,10 @@ def grill(s):
 
 
 def mustard_pot(m, M, col=C("8a9aa8"), fill=C("c8961a"), label=None):
-    n = seg(18, 10)
+    n = seg(14, 8)
     m.lathe([(0.0, 0.0), (0.045, 0.0), (0.05, 0.02), (0.052, 0.08), (0.047, 0.1), (0.048, 0.106),
              (0.043, 0.104), (0.043, 0.09)], n, "bisque", M, col, "glaze")
-    m.torus(0.051, 0.003, n, 5, "ceramic", M @ T(0, 0, 0.05), C("1d3a78"), "glaze")
+    m.torus(0.051, 0.003, n, 4, "ceramic", M @ T(0, 0, 0.05), C("1d3a78"), "glaze")
     m.disc(0.043, n, "sw_wet", M @ T(0, 0, 0.09), fill, "liquid")
 
 
@@ -175,7 +175,7 @@ def counter():
         for x in (-0.075, 0.075):
             L = rng.uniform(0.13, 0.145)
             node = s.node(f"act_sausage_{i}", (x + rng.uniform(-0.01, 0.01), y + rng.uniform(-0.01, 0.01),
-                                               gz - hook_z + 0.003 + 0.0125), parent="act_grill_swing")
+                                               gz + 0.003 + 0.0125), parent="act_grill_swing")
             G.sausage(node, T(0, 0, 0, rz=rng.uniform(-0.12, 0.12)), L=L, r=0.0125, bend=rng.uniform(0.004, 0.012),
                       dark=i % 3 == 1, seed=i * 1.7)
             s.item(f"act_sausage_{i}", "Bratwurst on the grill", "sausage")
@@ -207,7 +207,7 @@ def counter():
     for x, a in ((0.33, 0.3), (0.45, -0.4)):
         m.box((0.012, 0.004, 0.16), T(x + 0.02, 0.12, 0.1, rx=0.3, rz=a), vlib.RW("wood"), C("c8a070"))
     # stack of nested paper trays and one served Bratwurst
-    for k in range(7 if not vlib.lite() else 2):
+    for k in range(5 if not vlib.lite() else 2):
         G.paper_tray(m, T(0.86, 0.1, k * 0.0055, rz=rng.uniform(-0.05, 0.05)), 0.22, 0.1, 0.03)
     served(s, 0.62, -0.13, 0.25)
     # squeeze bottles, a napkin dispenser and the price sign
@@ -222,6 +222,6 @@ def counter():
 
 SETS = {
     "prop_wurst_counter": dict(fn=counter, slot="slot_counter", stall="bratwurst", kind="counter", section=True,
-                               seed=41, cam=((0.12, -1.95, 0.66), (0.12, 0.0, 0.2), 25),
+                               seed=41, cam=((0.2, -2.05, 0.68), (0.2, 0.0, 0.2), 25),
                                hero=((-0.72, -0.78, 0.52), (-0.86, 0.0, 0.2), 36)),
 }

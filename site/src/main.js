@@ -124,7 +124,7 @@ async function boot() {
   const rig = createCameraRig({ camera, dom: renderer.domElement, home, motion });
   let panel;
   const actions = createActions({
-    market, scene, lite, motion, audio, rig,
+    market, scene, lite, motion, audio, rig, camera, overlay,
     books: bookPicks(),
     sfx: (n) => audio.sfx(n),
     say: (html) => panel.say(html),
@@ -322,7 +322,8 @@ async function boot() {
   // a frame-time meter for measuring on real hardware (?perf): median and 95th percentile, draw calls, triangles
   const perf = params.has('perf') ? createPerfMeter({ stage, renderer, lite }) : null;
 
-  // first frame, then reveal
+  // first frame, then reveal (the mark lets tests and ?perf count what was fetched before the market opened)
+  performance.mark?.('market-ready');
   frame();
   bar.style.width = '100%';
   $('loading').classList.add('done');
@@ -377,10 +378,12 @@ async function boot() {
     get audio() { return { playing: audio.playing, mode: audio.mode, phase: audio.phase, levels: { ...audio.levels } }; },
     crowd: () => crowd.stats(),
     hiddenPeople: () => crowd.hiddenIds(),
+    people: () => crowd.people(),
     sceneStats: () => sceneStats(scene),
     /** Resolves when the after-first-frame work is done (LOD figures, deferred models). */
     settled: () => Promise.all([lodReady, deferredReady]).then(([lod, deferred]) => ({ lod, deferred })),
     featuredBooks: () => actions.featuredBooks.map((n) => n.name),
+    pulledBook: () => actions.pulledBook()?.name || null,
     bookAt: (x, y) => picking.bookAt(x, y),
     /** Client point over the middle of a scene object (tests aim clicks with it). */
     screenPoint(name) {
@@ -391,6 +394,27 @@ async function boot() {
       const p = (box.isEmpty() ? o.getWorldPosition(new THREE.Vector3()) : box.getCenter(new THREE.Vector3())).project(camera);
       const r = renderer.domElement.getBoundingClientRect();
       return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height };
+    },
+    /** People (visible ones) on the line from the camera to the middle of a scene object: tests check the view is clear. */
+    blockers(name) {
+      const o = scene.getObjectByName(name);
+      const people = scene.getObjectByName('crowd');
+      if (!o || !people) return [];
+      const box = new THREE.Box3();
+      o.traverse((m) => { if (m.isMesh) { m.geometry.computeBoundingBox(); box.union(m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld)); } });
+      const to = box.isEmpty() ? o.getWorldPosition(new THREE.Vector3()) : box.getCenter(new THREE.Vector3());
+      const from = camera.getWorldPosition(new THREE.Vector3());
+      const dist = from.distanceTo(to);
+      const ray = new THREE.Raycaster(from, to.clone().sub(from).normalize(), 0, dist - 0.02);
+      const shown = (x) => { for (; x; x = x.parent) if (!x.visible) return false; return true; };
+      const who = new Set();
+      for (const h of ray.intersectObject(people, true)) {
+        if (!shown(h.object)) continue;
+        let g = h.object;
+        while (g.parent && g.parent !== people) g = g.parent;
+        who.add(g.name);
+      }
+      return [...who];
     },
     perf: () => perf?.stats() || null,
     camera, scene, renderer,

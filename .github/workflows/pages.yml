@@ -35,11 +35,15 @@ jobs:
       # The Pages base path ("/website" for this repository; "" with a custom domain) becomes Vite's base
       - id: pages
         uses: actions/configure-pages@v5
-      # Release gate: set the repository variable STRICT_CONTENT to 1 (Settings > Secrets and variables >
-      # Actions > Variables) and the build fails while any [[Mac: ...]] placeholder is left in content/*.md.
+      # Notes for Mac ([[Mac: ...]] in content/*.md) never ship: the build leaves out every paragraph and list
+      # item that holds one. Repository variables (Settings > Secrets and variables > Actions > Variables):
+      #   STRICT_CONTENT=1    fail the build while any note is left (a release gate)
+      #   CONTENT_NOTES=show  publish the notes as marked gaps (only for a private preview; off unless set)
+      # GITHUB_REPOSITORY (set by Actions) points the footer's "All credits" link at this repository.
       - run: npm run build
         env:
           STRICT_CONTENT: ${{ vars.STRICT_CONTENT || '0' }}
+          CONTENT_NOTES: ${{ vars.CONTENT_NOTES || 'hide' }}
           PAGES_BASE: ${{ steps.pages.outputs.base_path }}/
       - uses: actions/upload-pages-artifact@v3
         with:

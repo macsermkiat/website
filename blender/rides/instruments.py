@@ -347,7 +347,8 @@ def build_bass(lite):
     if lite:
         back, front = back[1:], front[::2]
     rings = [plate(s, y) for s, y in back] + [plate(s, y) for s, y in front]
-    wd.loft(rings, closed=True, cap_start=True, cap_end=True, smooth=True, grain=2, tint=VARN)
+    # finer grain than the kit's plank scale: a spruce top has a line every few millimetres
+    wd.loft(rings, closed=True, cap_start=True, cap_end=True, smooth=True, grain=2, tint=VARN, uv_scale=0.35)
     # purfling line and the edge overhang of the top
     if not lite:
         eb.loft([plate(1.012, -0.098), plate(1.012, -0.104)], closed=True, smooth=True)
@@ -507,12 +508,14 @@ def build_bass(lite):
 def cymbal(part, c, R, rot, lite, tint=None):
     prof = [(0.001, 0.028), (0.018, 0.028), (0.03, 0.024), (0.05, 0.014), (0.07, 0.009),
             (R * 0.55, 0.005), (R * 0.85, 0.001), (R, -0.003)]
-    part.lathe(prof, seg=12 if lite else 24, M=Matrix.Translation(c) @ Euler(rot).to_matrix().to_4x4(), tint=tint)
+    if lite:
+        prof = [prof[0], prof[2], prof[4], prof[6], prof[7]]
+    part.lathe(prof, seg=10 if lite else 24, M=Matrix.Translation(c) @ Euler(rot).to_matrix().to_4x4(), tint=tint)
 
 
 def drum(g, c, r, h, M_axis, lite, shell_tint, lugs=8, heads=(True, True)):
     """Drum with shell, two heads, hoops and lugs. M_axis turns local Z into the drum axis."""
-    seg = 14 if lite else 26
+    seg = 10 if lite else 26
     M = Matrix.Translation(c) @ M_axis
     g["wood"].lathe([(r, -h / 2), (r, h / 2)], seg=seg, M=M, tint=shell_tint)
     if heads[0]:
@@ -521,8 +524,8 @@ def drum(g, c, r, h, M_axis, lite, shell_tint, lugs=8, heads=(True, True)):
         g["drumhead"].lathe([(r + 0.002, -h / 2 + 0.004), (r - 0.004, -h / 2 - 0.004), (0.001, -h / 2 - 0.004)], seg=seg, M=M,
                             tint=(0.9, 0.88, 0.84))
     for z in (h / 2, -h / 2):
-        g["chrome"].lathe([(r + 0.002, z - 0.012), (r + 0.01, z - 0.008), (r + 0.01, z + 0.008), (r + 0.002, z + 0.012)],
-                          seg=seg, M=M)
+        hoop = [(r + 0.002, z - 0.012), (r + 0.01, z - 0.008), (r + 0.01, z + 0.008), (r + 0.002, z + 0.012)]
+        g["chrome"].lathe(hoop[1:3] if lite else hoop, seg=seg, M=M)
     if not lite or lugs <= 8:
         for k in range(lugs if not lite else lugs // 2):
             a = TAU * (k + 0.5) / lugs
@@ -679,7 +682,7 @@ def preview_one(key):
         render.add_light("env_warm", 'POINT', (-1.2, -1.5 * f, 1.8), 60, size=0.4)
         render.add_light("env_rim", 'AREA', (-1.0, 1.8, 2.2), 70, color=(0.6, 0.7, 1.0), size=1.5,
                          rot=(math.radians(-60), 0, math.radians(200)))
-        cams = {"sax": ((1.55, -1.60, 1.38), (-0.14, -0.40, 1.16), 42),
+        cams = {"sax": ((1.45, -1.75, 1.40), (-0.13, -0.40, 1.14), 40),
                 "piano": ((1.25, 1.35, 1.55), (0.0, -0.55, 0.85), 34),
                 "bass": ((-1.0, -3.3, 1.25), (-0.1, -0.3, 1.0), 34),
                 "drums": ((0.9, -2.6, 1.7), (-0.05, -0.55, 0.6), 36)}

@@ -1,9 +1,10 @@
 // Actions at the four section stalls: pour a mug, pull a pint, Prost, turn the sausages,
 // a sausage in a bun, and pull a book. They work on the act_ nodes of the real glbs and of the stand-ins.
 import * as THREE from 'three';
-import { act, acts, counterLocal, toLocal, worldOf, longAxis, findNode } from './util.js';
+import { act, acts, counterLocal, toLocal, worldOf, longAxis, findNode, createWorldTag } from './util.js';
 import { createEmitter } from './effects.js';
 import { viewFor } from '../engine/market.js';
+import inventory from 'virtual:market-inventory';
 import { actionHint, actionNote, toastLines, crowdLine } from '../content.js';
 
 const MUG = new THREE.MeshStandardMaterial({ name: 'action_mug', color: 0xa3162c, roughness: 0.35 });
@@ -31,6 +32,7 @@ function newMug() {
 
 export function createStallActions(ctx) {
   const { market, anim, say, sfx, crowdSay, scene, lite } = ctx;
+  const bookTag = createWorldTag(ctx.overlay, 'booktag');
   const P = market.places;
   const counts = { mugs: 0, pints: 0, wurst: 0 };
   const emitters = [];
@@ -175,9 +177,9 @@ export function createStallActions(ctx) {
 
   // ---------- Bücherstand ----------
   // Mac's books (reading.md) are on named spines, so clicking a spine gives that book. The vendor printed the
-  // five titles on real spines in the middle of the lower shelf (book-spines.json says which node is which);
-  // a book with no printed spine gets a free spine near the middle of the view, wearing a red paper band.
-  // Every other spine is the bookseller's stock.
+  // five titles on real spines in the middle of the lower shelf and names every book (bookInfo); a book of
+  // Mac's with no printed spine gets a free spine near the middle of the view, wearing a red paper band.
+  // Every other spine is the bookseller's stock, and says which book it is.
   const booksPlace = P.books;
   const bookNodes = acts(booksPlace, 'act_book_');
   const picks = ctx.books;
@@ -190,8 +192,10 @@ export function createStallActions(ctx) {
   const featured = spineFor.filter(Boolean);
   const where = banded.length ? 'His picks wear a red paper band.' : 'His five stand together in the middle of the lower shelf.';
   const bookBase = new Map();
+  const bookQ = new Map();
   const busy = new Set();
   let bookIdx = 0;
+  let pulled = null; // the book standing out of the shelf: { n, set, left }
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   function pullBook(node) {
     // the button lets the bookseller choose: Mac's books in turn
@@ -204,21 +208,45 @@ export function createStallActions(ctx) {
       const fallback = `<b>${esc(b[0])}</b>${b[1] ? ' · ' + esc(b[1]) : ''}${b[2] ? '<br>' + esc(b[2]) : ''}`;
       say(`${actionNote('books', 'book', fallback, { title: b[0], author: b[1], note: b[2] })}<br><em>Click another spine to keep browsing.</em>`);
     } else {
-      say(actionNote('books', 'other', `A secondhand copy from the bookseller’s stock, not one of Mac’s. <em>${where}</em>`));
+      const b = n && bookInfo(n);
+      const what = b ? `<b>${esc(b.title)}</b>${b.author ? ' · ' + esc(b.author) : ''}. ` : '';
+      say(actionNote('books', 'other', `${what}A secondhand copy from the bookseller’s stock, not one of Mac’s. <em>${where}</em>`, b ? { title: b.title, author: b.author } : {}));
     }
     if (!booksPlace || !n || busy.has(n)) return;
+    if (pulled?.n === n) { pulled.left = BOOK_HOLD; return; }
+    if (pulled) putBack();
     if (!bookBase.has(n)) bookBase.set(n, n.position.clone());
     const p0 = bookBase.get(n);
     // out toward the front of the stall, in the book's own parent frame
     const holderQ = booksPlace.holder.getWorldQuaternion(new THREE.Quaternion());
-    const worldOut = new THREE.Vector3(0, 0.04, 0.24).applyQuaternion(holderQ);
+    // half out and up, its top tipped toward the customer, the way a bookseller shows a book: from the front
+    // a straight pull alone barely changes the picture
+    const worldOut = new THREE.Vector3(0, 0.075, 0.17).applyQuaternion(holderQ);
     const parentQ = n.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
     const parentScale = n.parent.getWorldScale(new THREE.Vector3());
     const out = worldOut.applyQuaternion(parentQ).divide(parentScale);
+    const tipAxis = new THREE.Vector3(1, 0, 0).applyQuaternion(holderQ).applyQuaternion(parentQ).normalize();
+    if (!bookQ.has(n)) bookQ.set(n, n.quaternion.clone());
+    const q0 = bookQ.get(n);
+    const tip = new THREE.Quaternion();
     busy.add(n);
     booksPlace.merge?.lift(n); // out of the merged shelf mesh while it moves
-    const set = (k) => n.position.copy(p0).addScaledVector(out, k);
-    anim.add(0.45, set, () => setTimeout(() => anim.add(0.45, (k) => set(1 - k), () => { booksPlace.merge?.settle(n); busy.delete(n); }), 2600));
+    const set = (k) => {
+      n.position.copy(p0).addScaledVector(out, k);
+      n.quaternion.copy(q0).premultiply(tip.setFromAxisAngle(tipAxis, 0.3 * k));
+    };
+    // The book stays out while it is being read: until the next book is pulled, or BOOK_HOLD seconds of market
+    // time (so a paused or slow frame never puts it back before it has been seen; reduced motion keeps it too).
+    anim.add(0.45, set, () => { pulled = { n, set, left: BOOK_HOLD }; });
+    // a paper tag with its title above the book while it stands out
+    const title = i >= 0 ? picks[i][0] : bookInfo(n)?.title;
+    if (title) bookTag.show(title, n);
+  }
+  function putBack() {
+    const { n, set } = pulled;
+    pulled = null;
+    bookTag.hide();
+    anim.add(0.45, (k) => set(1 - k), () => { booksPlace.merge?.settle(n); busy.delete(n); });
   }
 
   return {
@@ -230,7 +258,11 @@ export function createStallActions(ctx) {
     /** The spine for each of Mac's books, in reading.md order (for tests and the curious). */
     featuredBooks: featured,
     bookOf: (node) => (pickOf.has(node) ? picks[pickOf.get(node)][0] : null),
+    /** The book standing out of the shelf, if any (for tests). */
+    pulledBook: () => pulled?.n || null,
     update(dt, t, still) {
+      if (pulled && (pulled.left -= dt) <= 0) putBack();
+      if (ctx.camera) bookTag.update(ctx.camera);
       grillFlare *= Math.exp(-dt * 1.2);
       if (smoke) smoke.base = 0.28 + grillFlare * 0.1;
       for (const m of grillMats) m.emissiveIntensity = m.userData.baseEmissive * (1 + (still ? 0 : Math.sin(t * 13) * 0.08 + Math.sin(t * 7.1) * 0.06) + grillFlare * 1.2);
@@ -245,27 +277,25 @@ export function createStallActions(ctx) {
   };
 }
 
-// Which act_book_ node shows which printed title: the vendor's node extras { title } when present, else the
-// map tools/book-spines.mjs reads from the vendor's glbs (keyed by prop file, full and lite).
-const spineFiles = import.meta.glob('../book-spines.json', { eager: true, import: 'default' });
-const SPINES = spineFiles['../book-spines.json'] || null;
+// What each act_ book is: the vendor's node extras { title, author } (GLTFLoader puts them in userData), else
+// the vendor's items.json, keyed by node name (the lite glbs carry no extras, but their books have the same names).
 const norm = (t) => String(t || '').toLowerCase().normalize('NFC').replace(/[^\p{L}\p{N}]+/gu, '');
+export function bookInfo(n) {
+  const u = n.userData || {};
+  if (u.title) return { title: String(u.title), author: u.author ? String(u.author) : '' };
+  const it = inventory.items?.[n.name];
+  return it?.title ? { title: String(it.title), author: it.author ? String(it.author) : '' } : null;
+}
 
 /** Map spine node -> index into `picks` for spines whose printed title is one of Mac's books. */
 function titledSpines(nodes, picks) {
   const out = new Map();
   const wanted = picks.map((b) => norm(b[0]));
   for (const n of nodes) {
-    let key = n.userData?.title || null;
-    if (!key) {
-      let o = n.parent;
-      while (o && !o.userData?.propFile) o = o.parent;
-      const file = o?.userData.propFile?.replace(/\.(glb|gltf)$/i, '');
-      key = file ? SPINES?.sets?.[file]?.[n.name] || null : null;
-    }
-    if (!key) continue;
-    const t = norm(SPINES?.titles?.[key] || key);
-    const i = wanted.findIndex((w) => w && t && (w === t || (w.length > 5 && t.includes(w)) || (t.length > 5 && w.includes(t))));
+    const t = norm(bookInfo(n)?.title);
+    if (!t) continue;
+    // "The Feynman Lectures on Physics, Vol. II" is still the Feynman lectures
+    const i = wanted.findIndex((w) => w && (w === t || (w.length > 5 && t.includes(w)) || (t.length > 5 && w.includes(t))));
     if (i >= 0) out.set(n, i);
   }
   return out;
@@ -305,6 +335,8 @@ function chooseSpines(place, nodes, count) {
   chosen.sort((a, b) => (Math.abs(a.p.y - b.p.y) > 0.15 ? b.p.y - a.p.y : a.p.dot(right) - b.p.dot(right)));
   return chosen.map((c) => c.n);
 }
+
+const BOOK_HOLD = 9; // seconds a pulled book stands out before the bookseller puts it back
 
 const BAND = new THREE.MeshStandardMaterial({ name: 'action_book_band', color: 0xb3342a, roughness: 0.72 });
 /** A paper band round the lower part of a book (like a bookshop's belly band), as a child of its pivot. */

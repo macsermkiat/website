@@ -27,6 +27,7 @@
 //   ?lite=1       lite profile            ?snow=1   snow on
 //   ?mode=before  the engine's stand-in lighting (site/src/lighting-fallback.js) for comparison
 //   ?shot=1       hide the HUD (screenshots)   ?glb=<url>  another model   ?view=wide  wider camera
+//   ?cam=x,y,z,tx,ty,tz  any camera        ?set=path:value,...  override settings.js values
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
@@ -62,6 +63,9 @@ const wide = view === 'wide';
 camera.position.set(...(wide ? [-7.5, 3.2, 12] : view === 'sky' ? [6, 1.4, 6] : [-3.4, 1.9, 5.6]));
 const target = new THREE.Vector3(...(wide ? [0.1, 1.6, 0] : view === 'sky' ? [4.7, 3.6, -3.8] : [0.1, 1.45, 0]));
 if (view === 'sky') camera.fov = 60;
+// ?cam=x,y,z,tx,ty,tz any camera (close-ups for checking artifacts)
+const cam = (q.get('cam') || '').split(',').map(Number);
+if (cam.length === 6 && cam.every(Number.isFinite)) { camera.position.set(cam[0], cam[1], cam[2]); target.set(cam[3], cam[4], cam[5]); }
 camera.lookAt(target);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.copy(target);

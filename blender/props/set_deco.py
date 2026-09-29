@@ -48,7 +48,8 @@ def hang(m, x, drop, col=C("b0282a"), r=0.0018):
     top = (x, ROD_Y, ROD_Z - 0.008)
     bot = (x + rng.uniform(-0.004, 0.004), ROD_Y, ROD_Z - drop)
     m.tube([top, bot], r, 4, "sw_satin", None, col)
-    m.torus(0.009, r, 8, 4, "sw_satin", T(x, ROD_Y, ROD_Z, rx=math.pi / 2), col)
+    if not vlib.lite():
+        m.torus(0.009, r, 6, 3, "sw_satin", T(x, ROD_Y, ROD_Z, rx=math.pi / 2), col)
     return Vector(bot)
 
 
@@ -102,7 +103,7 @@ def lebkuchen():
 
 # ------------------------------------------------------------------ Gebrannte Mandeln
 def almond_heap(m, M, r, h, col=WHITE):
-    k = seg(12, 6)
+    k = seg(10, 6)
     prof = [(r, 0.0), (r * 0.85, h * 0.55), (r * 0.35, h * 0.95), (0.0, h * 1.02)]
     m.lathe(prof, k, "almonds", M, col, "glaze", v_by="z")
 
@@ -116,7 +117,7 @@ def mandeln():
     m.lathe([(0.2, 0.0), (0.21, 0.01), (0.21, 0.1), (0.2, 0.11)], n, vlib.RW("iron"), Mk, WHITE)
     m.lathe([(0.0, 0.1), (0.12, 0.1), (0.19, 0.14), (0.225, 0.22), (0.232, 0.232), (0.222, 0.23), (0.182, 0.15),
              (0.11, 0.115), (0.0, 0.112)], n, vlib.RW("copper"), Mk, WHITE)
-    almond_heap(m, Mk @ T(0, 0, 0.13), 0.17, 0.05, C("c07850"))
+    almond_heap(m, Mk @ T(0, 0, 0.12), 0.18, 0.085, C("f4e4d4"))
     m.box((0.36, 0.03, 0.01), Mk @ T(0, 0, 0.3, rz=0.6), "steel", WHITE)
     m.cyl(0.008, 0.008, 0.3, 8, "steel", Mk @ T(0, 0, 0.12), WHITE)
     m.cyl(0.02, 0.02, 0.02, 10, "brass", Mk @ T(0, 0, 0.42), WHITE)
@@ -128,13 +129,13 @@ def mandeln():
     for k in range(10 if not vlib.lite() else 5):
         cx, cy = -0.24 + (k % 5) * 0.12, -0.05 + (k // 5) * 0.1
         Mc = Mr @ T(cx, cy, 0.0, rz=rng.uniform(0, 6))
-        m.lathe([(0.004, 0.0), (0.042, 0.2), (0.044, 0.205)], seg(12, 6), "cone_paper", Mc, jit(WHITE, 0.04), "atlas")
-        m.lathe([(0.0405, 0.2), (0.004, 0.02)], seg(12, 6), "paper", Mc, C("e8e0d0"))
-        almond_heap(m, Mc @ T(0, 0, 0.19), 0.04, 0.035, jit(C("c07850"), 0.1))
+        m.lathe([(0.004, 0.0), (0.042, 0.2), (0.044, 0.205)], seg(10, 5), "cone_paper", Mc, jit(WHITE, 0.04), "atlas")
+        m.lathe([(0.0405, 0.2), (0.004, 0.02)], seg(10, 5), "paper", Mc, C("e8e0d0"))
+        almond_heap(m, Mc @ T(0, 0, 0.19), 0.042, 0.045, jit(C("f4e0d0"), 0.08))
     # little bags and a scoop, a bowl of loose almonds
     G.bowl(m, T(0.72, 0.0, 0), r=0.12, h=0.05)
-    almond_heap(m, T(0.72, 0.0, 0.02), 0.1, 0.05, C("b86840"))
-    m.lathe([(0.0, 0.0), (0.04, 0.0), (0.045, 0.03), (0.0, 0.035)], seg(12, 5), "steel", T(0.95, -0.1, 0, rx=0.3), WHITE)
+    almond_heap(m, T(0.72, 0.0, 0.012), 0.105, 0.075, C("f0dcc8"))
+    m.lathe([(0.0, 0.0), (0.04, 0.0), (0.045, 0.03), (0.0, 0.035)], seg(12, 5), "steel", T(0.95, -0.1, 0.0125, rx=0.3), WHITE)
     for k in range(3):
         m.box((0.07, 0.04, 0.12), T(0.98, 0.08 - k * 0.06, 0.06, rz=0.1 * k), "cone_paper", WHITE)
     s.finish()
@@ -212,7 +213,7 @@ def kerzen():
 # ------------------------------------------------------------------ Holzspielzeug
 def nutcracker(m, M, coat=C("a8181c"), trousers=C("f2ead8"), hat=C("141414"), s=1.0):
     S = M @ Matrix.Diagonal((s, s, s, 1))
-    n = seg(8, 5)
+    n = seg(7, 5)
     m.box((0.1, 0.07, 0.02), S @ T(0, 0, 0.01), vlib.RW("wood"), C("2a6a3a"))
     for sx in (-1, 1):
         m.cyl(0.017, 0.017, 0.03, n, "sw_gloss", S @ T(sx * 0.022, 0.0, 0.02), C("141414"), "glaze")
@@ -249,12 +250,12 @@ def train(m, M):
                       C(["d8b048", "c8a070", "b0282a"][j + k - 1]), "atlas")
         for sx in (-1, 1) if not vlib.lite() or k == 0 else ():
             for sy in (-1, 1):
-                m.cyl(0.015, 0.015, 0.008, seg(8, 5), "sw_satin", Mw @ T(sx * 0.035, sy * 0.034, 0.015, rx=math.pi / 2),
+                m.cyl(0.015, 0.015, 0.008, seg(6, 5), "sw_satin", Mw @ T(sx * 0.035, sy * 0.034, 0.015, rx=math.pi / 2),
                       C("d8b048") if k == 0 else C("f2ead8"), "glaze")
 
 
 def top(m, M, col):
-    n = seg(10, 6)
+    n = seg(8, 6)
     m.lathe([(0.0, 0.0), (0.02, 0.02), (0.035, 0.035), (0.033, 0.045), (0.006, 0.05), (0.006, 0.08), (0.0, 0.082)],
             n, "sw_gloss", M, col, "glaze")
     if not vlib.lite():
@@ -281,7 +282,7 @@ def pyramid(s, x, y):
             rot.cyl(0.009, 0.007, 0.05, 6, "sw_gloss", T(0.055 * math.cos(a), 0.055 * math.sin(a), z + 0.008),
                     C(CANDLE_COLS[k]), "glaze")
             if not vlib.lite():
-                rot.sphere(0.008, 6, 4, "sw_gloss", T(0.055 * math.cos(a), 0.055 * math.sin(a), z + 0.064),
+                rot.sphere(0.008, 5, 3, "sw_gloss", T(0.055 * math.cos(a), 0.055 * math.sin(a), z + 0.064),
                            C("f0c8a0"), "glaze")
     nv = 8 if not vlib.lite() else 4
     for k in range(nv):
@@ -295,12 +296,13 @@ def spielzeug():
     m = s.static
     nutcracker(m, T(-0.95, 0.05, 0), C("a8181c"), C("f2ead8"), s=1.0)
     nutcracker(m, T(-0.8, 0.1, 0, rz=0.2), C("1f3a78"), C("141414"), C("a8181c"), s=0.85)
-    nutcracker(m, T(-0.66, 0.02, 0, rz=-0.15), C("2a6a3a"), C("f2ead8"), s=0.7)
+    if not vlib.lite():
+        nutcracker(m, T(-0.66, 0.02, 0, rz=-0.15), C("2a6a3a"), C("f2ead8"), s=0.7)
     train(m, T(-0.45, -0.12, 0))
-    for k, x in enumerate((0.05, 0.14, 0.23)):
+    for k, x in enumerate((0.05, 0.14, 0.23) if not vlib.lite() else (0.09, 0.19)):
         top(m, T(x, -0.12, 0), C(["b0282a", "2a4a8a", "d8b048"][k]))
     # a tower of painted blocks
-    for k in range(6):
+    for k in range(6 if not vlib.lite() else 3):
         m.box((0.04, 0.04, 0.04), T(0.12 + (k % 3) * 0.045 - (k // 3) * 0.02, 0.1, 0.02 + (k // 3) * 0.04,
                                     rz=rng.uniform(-0.2, 0.2)), vlib.RW("wood"), C(CANDLE_COLS[k]))
     pyramid(s, 0.55, 0.05)
@@ -324,7 +326,7 @@ BAUBLE_COLS = ["a8161d", "d8b048", "1d3a78", "e8e4dc", "1f5a3a", "8a2a6a", "c0c4
 
 
 def bauble(m, M, r, col, shiny=True, loop=True):
-    n, rings = seg(8, 6), seg(5, 4)
+    n, rings = seg(8, 6), seg(4, 3)
     m.sphere(r, n, rings, "sw_metal_polish" if shiny else "sw_satin", M @ T(0, 0, -r), col, "glaze" if not shiny else "atlas")
     m.cyl(r * 0.28, r * 0.25, r * 0.28, 6, "sw_metal", M @ T(0, 0, -0.004), C("d8c080"), caps=False)
     if loop and not vlib.lite():
@@ -377,7 +379,7 @@ def schmuck():
 # ------------------------------------------------------------------ Käse
 def cheese_wheel(m, M, r, h, cut=0.0, rind=C("ffffff"), wax=None):
     """A wheel; with cut (radians) a wedge is missing at the front showing the paste."""
-    n = seg(28, 12)
+    n = seg(28, 10)
     arc = TWO_PI - cut
     a0 = -math.pi / 2 + cut / 2
     region = "cheese_rind" if wax is None else "sw_gloss"
@@ -431,7 +433,7 @@ def kaese():
 
 # ------------------------------------------------------------------ Crêpes
 def griddle(m, M, with_crepe=True):
-    n = seg(32, 14)
+    n = seg(32, 10)
     m.box((0.44, 0.44, 0.1), M @ T(0, 0, 0.05), "steel", WHITE)
     m.cyl(0.2, 0.2, 0.012, n, vlib.RW("iron"), M @ T(0, 0, 0.1), C("7a7a7a"), cap_region="iron")
     m.torus(0.2, 0.004, n, 4, "iron", M @ T(0, 0, 0.112), C("5a5a5a"))

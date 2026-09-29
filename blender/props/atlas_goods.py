@@ -121,18 +121,41 @@ def g_stave(w, h, seed):
 
 
 def g_barrel_head(w, h, seed):
-    """Cask head: end grain of three boards with a branded mark (a fictional house brewery)."""
-    t = va.g_wood_end(w, h, seed)
+    """Cask head: three oak boards seen end-on (tight end-grain arcs, each board with its own heart
+    far off-centre), dark joint lines between them, grey weathering, darker oiled rim where the
+    chime holds it, and a fire-branded mark of a fictional house brewery. No drawn cracks."""
+    t = Tex(w, h, hexc("7e5a38"), 0.72)
     yy, xx = np.mgrid[0:h, 0:w].astype(float)
-    for x in (w * 0.36, w * 0.66):
-        t.paint(smooth(1.4, 0.2, np.abs(xx - x)), hexc("2a1c10"), 0.8, height=-0.5)
-    rows = [("Brauerei", "fraktur", h * 0.13, None, (w / 2, h * 0.36), "mm"),
-            ("Laternengasse", "fraktur", h * 0.13, None, (w / 2, h * 0.52), "mm"),
-            ("30 L", "fellsc", h * 0.12, None, (w / 2, h * 0.7), "mm")]
+    seams = (0.0, w * 0.36, w * 0.66, float(w))
+    rings = np.zeros((h, w))
+    for i in range(3):
+        x0, x1 = seams[i], seams[i + 1]
+        inb = (xx >= x0) & (xx < x1)
+        cx = (x0 + x1) / 2 + (w * 0.9 if i % 2 else -w * 0.9)       # heart far to one side: gentle arcs
+        cy = h * (0.2 + 0.3 * i)
+        r = np.hypot(xx - cx, (yy - cy) * 0.6) + fbm(h, w, 25, seed + i) * 5
+        rg = np.abs(np.sin(r / (1.6 + 0.3 * i) * math.pi)) ** 5
+        rings = np.where(inb, rg, rings)
+        t.col = np.where(inb[..., None], mix(t.col, np.array(hexc(["86603c", "74522f", "7c5836"][i])), 0.6), t.col)
+    t.col = mix(t.col, np.array(hexc("4e3420")), rings * 0.45)
+    pores = smooth(0.72, 0.9, noise(h, w, 1.2, seed + 7))
+    t.col = mix(t.col, np.array(hexc("3e2a18")), pores * 0.25)
+    t.col = mix(t.col, np.array(hexc("8a8274")), smooth(0.5, 0.85, fbm(h, w, 40, seed + 5)) * 0.3)   # weathering
+    for x in seams[1:3]:
+        t.paint(smooth(1.6, 0.3, np.abs(xx - x + fbm(h, w, 30, seed + 11) * 1.5)), hexc("20140a"), 0.85, height=-0.6)
+    r0 = np.hypot(xx - w / 2, yy - h / 2)
+    t.paint(smooth(w * 0.4, w * 0.5, r0) * 0.55, hexc("3a2616"), 0.6)        # oiled, handled rim
+    rows = [("Brauerei", "fraktur", h * 0.12, None, (w / 2, h * 0.37), "mm"),
+            ("Laternengasse", "fraktur", h * 0.12, None, (w / 2, h * 0.52), "mm"),
+            ("30 L", "fellsc", h * 0.11, None, (w / 2, h * 0.68), "mm")]
     m = text_mask(w, h, rows)
-    t.paint(m * 0.85, hexc("2a160a"), 0.8, height=-0.3)
-    r = np.hypot(xx - w / 2, yy - h / 2)
-    t.paint(smooth(1.5, 0, np.abs(r - w * 0.4)) * 0.8, hexc("2a160a"), 0.8, height=-0.3)
+    burn = ndimage.gaussian_filter(m, 1.2)
+    t.paint(burn * 0.5, hexc("3a2412"), 0.75)                                 # scorched halo of the brand
+    t.paint(m * 0.9, hexc("1e1008"), 0.8, height=-0.35)
+    t.paint(smooth(1.4, 0, np.abs(r0 - w * 0.38)) * 0.85, hexc("1e1008"), 0.8, height=-0.3)
+    t.height += -rings * 0.35 + pores * 0.15
+    t.rough = t.rough + rings * 0.08
+    t.col = np.clip(t.col, 0, 1)
     return t
 
 

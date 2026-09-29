@@ -12,7 +12,7 @@ over a whole turn (1 degree steps):
   3. wheel steel vs the static frame: the wheel sweeps a solid of revolution about the axle, so
      static points (except the axle it turns on) must not share an (R, y) cell with wheel points.
 
-    ~/nachtmarkt-tools/bpy-venv/bin/python blender/rides/check_clash.py [--lite-only | --full-only]
+    /home/claude/tools/bpy-venv/bin/python blender/rides/check_clash.py [--lite-only | --full-only]
 
 Exit status 0 when all three checks are clear for every variant built.
 """

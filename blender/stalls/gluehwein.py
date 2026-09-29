@@ -108,14 +108,16 @@ def build(lite):
 
     # ---------------------------------------------------------- sign on the lambrequin
     sign_c = Vector((0, yO - 0.075, zt - 0.07))
+    # cream board, red Fraktur, gold frame: reads under the hemisphere light alone (a red board
+    # with gold letters went dark in three.js); lite and full both drop the letter bevel
     cp.sign(P, P, "Glühwein", state.font("fraktur_bold"), sign_c, 1.55, 0.44, depth=0.035,
-            board_band="red", text_band="gold", frame_band="gold", board_shape="arch",
-            text_size=0.34, text_depth=0.014, text_dy=-0.035, max_fill=0.84)
+            board_band="cream", text_band="red", frame_band="gold", board_shape="arch",
+            text_size=0.34, text_depth=0.014, text_dy=-0.035, max_fill=0.84, text_bevel=0.0, resolution=1)
 
     # ---------------------------------------------------------- garland, lights, bulbs
     anchors = [(-1.6, yF - 0.08, 2.2), (-0.55, yF - 0.08, 2.2), (0.55, yF - 0.08, 2.2), (1.6, yF - 0.08, 2.2)]
     for a, b in zip(anchors[:-1], anchors[1:]):
-        cp.fir_garland(h.fir, h.beads, a, b, sag=0.16, radius=0.045)
+        cp.fir_garland(h.fir, h.beads, a, b, sag=0.16, radius=0.045, tufts_per_m=None if lite else 38)
     h.eave_bulbs(sides=False)
     # a string on the tie beam under the lambrequin
     cp.bulb_string(h.bulbs, h.wire, [(-W / 2, yO - 0.05, zt - 0.3), (0, yO - 0.05, zt - 0.3),

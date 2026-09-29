@@ -23,6 +23,15 @@ function floatGeometry(src, names) {
   return g;
 }
 
+const texKey = (t) => (t ? `${t.source?.uuid || t.uuid}:${t.offset.x},${t.offset.y},${t.repeat.x},${t.repeat.y},${t.rotation},${t.channel ?? 0}` : '-');
+/** Materials that draw the same get the same key (their names may differ). */
+function materialLook(m) {
+  const c = (x) => (x?.isColor ? x.getHexString() : '-');
+  return [m.type, c(m.color), c(m.emissive), m.emissiveIntensity, m.roughness, m.metalness, m.opacity, m.transparent, m.alphaTest, m.side, m.vertexColors, m.flatShading,
+    texKey(m.map), texKey(m.normalMap), texKey(m.roughnessMap), texKey(m.metalnessMap), texKey(m.aoMap), texKey(m.emissiveMap), texKey(m.alphaMap),
+    m.normalScale ? `${m.normalScale.x},${m.normalScale.y}` : '-', m.aoMapIntensity ?? '-', m.envMapIntensity ?? '-'].join('|');
+}
+
 /**
  * Merge the act_ meshes whose pivot name matches `re` under `root`, one merged mesh per (parent, material).
  * Returns { groups, lift(node), settle(node), count } or null when there is nothing worth merging.
@@ -34,13 +43,15 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
   root.traverse((o) => { if (re.test(o.name || '') && !/_mesh(\.\d+)?$/i.test(o.name)) pivots.push(o); });
   if (pivots.length < minCount) return null;
 
-  // group by the set the pivot belongs to (its parent) and by material
+  // group by the set the pivot belongs to (its parent) and by what the material looks like: the vendor gives
+  // every book its own cover material (book_cover_<n>) so it can be found by name, but they all sample one
+  // texture, so they draw the same and can share one merged mesh
   const buckets = new Map();
   const owner = new Map(); // mesh -> { bucket, start, count }
   for (const pivot of pivots) {
     pivot.traverse((m) => {
       if (!m.isMesh || m.isSkinnedMesh || Array.isArray(m.material) || m.morphTargetInfluences) return;
-      const key = `${pivot.parent.uuid}|${m.material.uuid}`;
+      const key = `${pivot.parent.uuid}|${materialLook(m.material)}`;
       if (!buckets.has(key)) buckets.set(key, { parent: pivot.parent, material: m.material, items: [] });
       buckets.get(key).items.push({ pivot, mesh: m });
     });

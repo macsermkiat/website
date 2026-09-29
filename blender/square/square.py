@@ -9,7 +9,7 @@ rendered black); the tree benches stand 6.6 m from the fir; the string-light pol
 (blender/square/check_clash.py tests it); lamps, poles, benches, bins, bollards and kerbs carry
 per-vertex occlusion through a ramp stored in the ground's AO image; light_ empties are ranked by name.
 
-Run:  NM_DEVICE=METAL NM_THREADS=0 ~/nachtmarkt-tools/bpy-venv/bin/python blender/square/square.py
+Run:  /home/claude/tools/bpy-venv/bin/python blender/square/square.py
       (full + AO bake; build the town first so its houses shade the sidewalk)
       LITE=1 (same command) for square.lite.glb (reuses the ground AO, bakes its own part occlusion)
 """

@@ -8,6 +8,8 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 RAW = os.environ.get('RAW') or os.path.join(ROOT, 'review/round-1/lighting/raw')
 PASS1 = os.environ.get('PASS1')  # the pass-1 'after' PNG, for the pass-1 vs pass-2 sheet
+PASS2 = os.environ.get('PASS2')  # a folder with the pass-2 'after.png' and 'lite.png', for the pass-3 sheets
+PASS2_MARKET = os.environ.get('PASS2_MARKET')  # a folder with the pass-2 market_home*.jpg
 OUT = os.path.join(ROOT, 'review/round-1/lighting')
 REF = os.path.join(ROOT, 'review/reference/gluehwein_preview.png')
 
@@ -80,6 +82,20 @@ if PASS1:
     grid([(REF, 'Cycles reference'), (PASS1, 'Pass 1'), ('after', 'Pass 2 (full)'), ('lite', 'Pass 2 (lite)')], 2, (640, 360), 'pass1_vs_pass2.jpg', 92)
     crops([(REF, 'Cycles'), (PASS1, 'Pass 1'), ('after', 'Pass 2'), ('lite', 'Pass 2 lite')], (620, 350, 800, 470), 2, 'pot_closeup.jpg')
     crops([(REF, 'Cycles'), (PASS1, 'Pass 1'), ('after', 'Pass 2')], (430, 200, 1030, 330), 1, 'bulbs_garland.jpg')
+if PASS2:
+    p2 = lambda n: os.path.join(PASS2, n + '.png')
+    grid([(REF, 'Cycles reference'), (p2('after'), 'Pass 2 (full)'), ('after', 'Pass 3 (full)'), ('lite', 'Pass 3 (lite)')], 2, (640, 360), 'pass2_vs_pass3.jpg', 92)
+    # the ground left of the stall: dashed streaks and the pale strip at the wall base (pass 2) against pass 3
+    crops([(REF, 'Cycles'), (p2('after'), 'Pass 2: streaks, strip'), ('after', 'Pass 3')], (0, 540, 480, 720), 1, 'ground_artifacts.jpg')
+    # the counter top on lite: rows of dots (pass 2, no MSAA) against pass 3 (2x MSAA)
+    crops([(p2('lite'), 'Pass 2 lite: dots'), ('lite', 'Pass 3 lite')], (460, 425, 700, 485), 3, 'lite_counter.jpg')
+    # the fascia and bulbs: pass 2 lit the board behind the bulbs to lightness 0.44 (Cycles 0.26)
+    crops([(REF, 'Cycles'), (p2('after'), 'Pass 2'), ('after', 'Pass 3')], (430, 200, 1030, 330), 1, 'bulbs_garland.jpg')
+    # the moon-side wall: near-black in Cycles; pass 2's rim lit it blue
+    crops([(REF, 'Cycles'), (p2('after'), 'Pass 2'), ('after', 'Pass 3')], (300, 300, 480, 620), 1, 'left_wall.jpg')
+if PASS2_MARKET:
+    m2 = lambda n: os.path.join(PASS2_MARKET, n + '.jpg')
+    grid([(m2('market_home'), 'Pass 2, full'), ('market', 'Pass 3, full'), (m2('market_home_snow'), 'Pass 2, snow'), ('market_snow', 'Pass 3, snow')], 2, (640, 360), 'market_pass2_vs_pass3.jpg', 90)
 save('capture', 'after_capture.jpg', 'Full, ?capture=1 (environment captured from the scene)')
 grid([('sky', 'Sky, full (bloom at full resolution)'), ('sky_lite', 'Sky, lite (half-resolution bloom, own weights)')], 2, (640, 360), 'bloom_full_vs_lite.jpg', 92)
 save('before', 'before.jpg', 'Before: engine stand-in lighting')

@@ -78,7 +78,7 @@ function parseOrganizer(json) {
   const people = [];
   const person = (m, extra) => ({
     model: m.model ? rel(m.model) : null, variant: m.variant, clip: m.clip || null, idleClip: m.idle_clip || null,
-    phase: Number(m.phase) || 0, colors: m.colors || null, mug: !!m.mug, kind: m.kind || extra.kind, id: m.id || null, ...extra,
+    phase: Number(m.phase) || 0, colors: m.colors || null, mug: !!m.mug, kind: m.kind || extra.kind, id: m.id || null, stall: m.stall || null, ...extra,
   });
   const v3 = (a) => (a.length >= 3 ? new THREE.Vector3(a[0], a[1], a[2]) : new THREE.Vector3(a[0], 0, a[1]));
   const skip = new Set(['version', 'about', 'clips', 'variants', 'lite', 'musicians', 'count']);
@@ -155,6 +155,21 @@ function fallbackCrowd(avoid) {
   return { variants: [], people };
 }
 
+// Where a vendor stands is the organizer's, but the site needs the panel view clear in a few stalls. The
+// bookseller stood right in front of Mac's five books (the middle of the lower shelf), so in the Bücherstand
+// view his head hid them. He steps this far (metres) sideways along the counter, to his right: the
+// customer's left, beside the open book. Positive is his right hand.
+export const VENDOR_STEP = { buecherstand: 0.62 };
+
+function stepVendors(people) {
+  for (const p of people) {
+    const d = p.kind === 'vendor' && VENDOR_STEP[p.stall];
+    if (!d) continue;
+    const ry = p.ry || 0; // the vendor faces +Z turned by ry; his right hand is -X turned by ry
+    p.pos = p.pos.clone().add(new THREE.Vector3(-Math.cos(ry), 0, Math.sin(ry)).multiplyScalar(d));
+  }
+}
+
 export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, phrases }) {
   const isOrganizer = RAW && RAW.version && ['vendors', 'queues', 'walkers', 'groups'].some((k) => Array.isArray(RAW[k]));
   const data = RAW ? (isOrganizer ? parseOrganizer(RAW) : parseCrowd(RAW)) : null;
@@ -162,6 +177,7 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
   if (RAW && !(data && data.people.length)) warn('crowd.json has no people the engine can read; using the prototype crowd.');
   const cap = lite ? plan.cap || 40 : 90;
   const people = plan.people.slice(0, cap);
+  stepVendors(people);
 
   // person models, if the organizer has shipped them: each person names a file, or an index into variants
   const byFile = new Map();
@@ -370,8 +386,10 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
       for (const p of crowd) { if (!p.g.visible) hidden++; if (p.levels.length > 1 && p.lvl === p.levels[1]) far++; }
       return { people: crowd.length, hidden, lite: far, vendorsVisible: vendors.filter((v) => v.g.visible).length };
     },
-    /** For tests: the people standing between the camera and a vendor that the camera looks at. */
+    /** For tests: the people stepped out of the current shot. */
     hiddenIds: () => crowd.filter((p) => !p.g.visible).map((p) => p.g.name),
+    /** For tests: everyone's name, feet position, visibility and whether they are a vendor. */
+    people: () => crowd.map((p) => ({ name: p.g.name, pos: p.g.position.toArray(), visible: p.g.visible, vendor: p.vendor, stall: p.plan.stall || null })),
     speak,
     /** Up to five standing people near `center` say `text`, one after another, and raise their mugs if they have one. */
     say(text, center, radius) {

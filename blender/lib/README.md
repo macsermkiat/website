@@ -42,11 +42,11 @@ turns the one light, neutral wood into pine, honey, oak, dark, grey or soot boar
 |---|---|---|
 | `wood` | kit, 1 m tile, 1024 px | spruce: growth rings with hard latewood, fibre, resin pores, knots with ring deflection, cracks, dents, silvering |
 | `oak` | kit, 1 m tile, 1024 px | ring-porous oak for counter tops: pore bands, ray flecks, cross-grain scratches, a few mug rings; `hut.OAK_TINT` holds multipliers |
-| `paint` | kit atlas, 8 bands | chipped paint over wood. Bands (`geo.PAINT_BANDS`): `red gold blue white green cream black rauten`. `gold` is metallic. `rauten` is the Bavarian blue-and-white lozenge pattern |
+| `paint` | kit atlas, 8 bands | chipped paint over wood. Bands (`geo.PAINT_BANDS`): `red gold blue white green cream black rauten`. `gold` is half metallic (0.5), like bronze-powder paint, so it still reads under warm lights without a bright environment map. `rauten` is the Bavarian blue-and-white lozenge pattern |
 | `iron` | kit, 0.5 m tile, 512 px | forged iron, mid-grey: hammer dents, scattered rust blooms and runs, soot, pitting |
 | `snow bulb_warm bulb_cold wire glass fir brass copper ember ash ornament_red ornament_gold fabric_* lamp_glass` | simple | flat PBR values (still multiplied by `COLOR_0`) |
 
-Metal is 0 wherever a kit's metal is a constant 0 (wood, oak); only gold paint and iron are metallic.
+Metal is 0 wherever a kit's metal is a constant 0 (wood, oak); only gold paint (0.5) and iron are metallic.
 `mats.KIT_VERSION` is stamped next to the cached bakes, and any script that calls `mats.ensure_kit()`
 rebakes the kit when the version changes. **After a version bump, re-export every asset that uses a
 kit material**, because the glb files embed (or, for the deco kit, reference) copies of the kit maps.
@@ -88,10 +88,10 @@ Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shad
 ### `carpentry` (all sizes in metres, front = -Y)
 - Walls: `plank_wall(part, a, b, z0, top, axis, at, pw, th, gap, lean, tint, band, bevel, skip)`, where `top` may be a function (gables). Also `lap_siding(...)` (overlapping horizontal boards), `floor_boards(...)` and `nails(part, pts, normal)`.
 - Roofs: `Slope(eave, along, down, length, a0, a1)` describes one roof plane (right-handed basis, `point(a, s, n)`), and `gable_slopes(W, D, eave_z, ridge_z, ov_eave, ov_gable, ridge_axis)` returns the two planes of a gable. Covering and trim: `roof_deck`, `shingles(part, slope, sw, sh, st, expo, tint)`, `board_roof`, `barge_boards` and `fascia`.
-- `snow_cap(part, slope, thick=0.05, lip=0.05, cover=0.9, ridge_clear=0.24, patch_scale=1.1)`: thin snow with a lip curling over the eave. A wind-scoured band under the ridge (wandering lower edge) and a few melted patches (`cover` = exact fraction of the slope under snow) let the top courses and some shingles show; the snow edge sinks into the roof instead of ending in a wall. Lite: no patches, coarser grid. Put it in a Part named `snow_<n>` (material `snow`).
+- `snow_cap(part, slope, thick=0.05, lip=0.05, cover=1.0, ridge_clear=0.24, courses=None, butt_gap=0.024, base=0.03)`: thin snow with a lip curling over the eave and a wind-scoured band under the ridge (its lower edge wanders, so the top courses and the ridge show). Pass `courses=(expo, first_butt)` for a shingle roof: the snow then lies in one strip per course and sinks below each butt, so every shingle row shows as a dark line through the snow. `cover < 1` adds melted patches (off by default). The snow edge sinks into the roof instead of ending in a wall. Lite: one coarse blanket. Put it in a Part named `snow_<n>` (material `snow`). `Hut.build_snow()` passes the right values for shingle and board roofs.
 - `valance(part, x0, x1, y, z_top, h, drop, n, style, holes, band, M=None)`: a carved eave board. Styles: `scallop point wave step straight`. Holes: `star circle heart`. Pass `M` to run it along a rake.
 - `sign(board, letters, text, font, center, w, h, board_band, text_band, frame_band, board_shape, text_size, resolution, text_bevel)`: a painted board (`rect arch banner oval`) with raised letters facing -Y.
-- `bulb_string(bulbs, wire, anchors, sag, spacing, bulb_r, seg=None, rings=None)`: fairy bulbs on a sagging wire (bulb detail 7x5 by default, 5x3 in lite). Use a Part named `bulbs_<n>` with material `bulb_warm` or `bulb_cold`.
+- `bulb_string(bulbs, wire, anchors, sag, spacing, bulb_r, seg=None, rings=None)`: fairy bulbs on a sagging wire (bulb detail 7x5 by default; lite caps it at 5x3 even when the caller asks for more). Use a Part named `bulbs_<n>` with material `bulb_warm` or `bulb_cold`.
 - `fir_garland(fir, beads, a, b, sag, radius)`: fir rope with baubles. `beads` is `{"ornament_red": Part, "ornament_gold": Part}`.
 
 ### `bake`
@@ -125,6 +125,8 @@ Playwright `index.mjs` if Playwright is not installed next to the script. On mac
 `blender/stalls/hut.py` is a parametric market hut (carcass, oak counter at exactly 1.05 m with a
 worn front edge from `hut.counter_wear`, shelves, roof, bulbs, snow, markers). `blender/stalls/pipeline.py` runs full build → AO → export → lite
 build → AO → export → Cycles preview. The four section stalls and `deco.py` show how to use them.
+`Hut(..., lap_segs=N)` gives lap-siding boards N vertex columns across the stall width (full
+build only), so a `shade` function such as the Bratwurst soot plume can vary along a board.
 
 ## Fonts
 

@@ -73,9 +73,51 @@ function frontMatter(src) {
   return { data: lower, body: src.slice(m[0].length) };
 }
 
-// Notes for Mac to fill in ("[[Mac: ...]]") show as a marked gap; "[check]" style markers as a small tag.
-// "<!-- check -->" comments stay invisible.
+// Notes for Mac to fill in ("[[Mac: ...]]") and "[check]" markers.
+//   'show' (npm run dev, or CONTENT_NOTES=show): a note shows as a marked gap, a check marker as a small tag.
+//   'hide' (every production build by default): a note never reaches the page. The paragraph or list item
+//          that holds it is left out, a lead-in line ending in ":" whose list is now empty goes too, and a
+//          front-matter value holding a note becomes empty. Check markers are dropped.
+// "<!-- check -->" comments stay invisible either way. STRICT_CONTENT=1 fails the build while notes remain.
+let NOTES_MODE = 'show';
+export function setNotesMode(mode) {
+  NOTES_MODE = mode === 'hide' ? 'hide' : 'show';
+}
+const NOTE_RE = /\[\[[\s\S]+?\]\]/;
+const CHECK_RE = /\[(?:check|verify|todo|mac to check)(?::\s*([^\]]*))?\]/gi;
+
+/** Leave every [[...]] note out of the markdown: its paragraph or list item goes, and an orphaned lead-in. */
+export function stripNotes(md) {
+  const blocks = md.split(/\n{2,}/);
+  const kept = [];
+  for (const block of blocks) {
+    if (!NOTE_RE.test(block)) { kept.push(block); continue; }
+    const lines = block.split('\n');
+    const isList = lines.every((l) => !l.trim() || /^\s*([-*+]|\d+[.)])\s+/.test(l) || /^\s{2,}\S/.test(l));
+    if (!isList) continue; // a paragraph (or heading) holding a note is left out whole
+    // a list: drop only the items holding a note (an item runs until the next marker line)
+    const items = [];
+    for (const l of lines) {
+      if (/^\s*([-*+]|\d+[.)])\s+/.test(l) || !items.length) items.push([l]);
+      else items[items.length - 1].push(l);
+    }
+    const rest = items.filter((it) => !NOTE_RE.test(it.join('\n'))).map((it) => it.join('\n'));
+    if (rest.length) kept.push(rest.join('\n'));
+    else if (kept.length && /:\s*(<!--[\s\S]*?-->)?\s*$/.test(kept[kept.length - 1])) kept.pop(); // "What I'm listening to:" with nothing under it
+  }
+  return kept.join('\n\n').replace(CHECK_RE, '').replace(/[ \t]*<!--[\s\S]*?-->/g, '');
+}
+
+/** Front matter with every note-bearing value emptied (strings) or left out (list entries). */
+function stripMetaNotes(v) {
+  if (typeof v === 'string') return NOTE_RE.test(v) ? '' : v.replace(CHECK_RE, '').trim();
+  if (Array.isArray(v)) return v.filter((x) => !(typeof x === 'string' && NOTE_RE.test(x))).map(stripMetaNotes);
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, stripMetaNotes(x)]));
+  return v;
+}
+
 function markChecks(md) {
+  if (NOTES_MODE === 'hide') return stripNotes(md);
   return md
     .replace(/\[\[([\s\S]+?)\]\]/g, (_, note) => `<span class="formac">${note.replace(/</g, '&lt;').trim()}</span>`)
     .replace(/\[(?:check|verify|todo|mac to check)(?::\s*([^\]]*))?\]/gi, (_, note) =>
@@ -85,8 +127,9 @@ function markChecks(md) {
 const str = (v) => (typeof v === 'string' ? v : '');
 
 function sectionFromMarkdown(id, src, file) {
-  const { data, body } = frontMatter(src);
-  let md = body.trim();
+  const fm = frontMatter(src);
+  const data = NOTES_MODE === 'hide' ? stripMetaNotes(fm.data) : fm.data;
+  let md = fm.body.trim();
   let title = data.title || '';
   // A leading "# Title" becomes the panel title.
   const h1 = /^#\s+(.+)\r?\n+/.exec(md);
@@ -94,8 +137,9 @@ function sectionFromMarkdown(id, src, file) {
     if (!title) title = h1[1].trim();
     md = md.slice(h1[0].length);
   }
-  const html = marked.parse(markChecks(md), { async: false });
-  const items = [...md.matchAll(/^\s*[-*]\s+(.+)$/gm)].map((m) => m[1].trim());
+  const shown = markChecks(md);
+  const html = marked.parse(shown, { async: false });
+  const items = [...(NOTES_MODE === 'hide' ? shown : md).matchAll(/^\s*[-*]\s+(.+)$/gm)].map((m) => m[1].trim());
   return {
     id,
     name: str(data.name) || str(data.stall) || str(data.place) || '',
@@ -208,6 +252,8 @@ export function buildInventory() {
   return {
     models,
     props: models.includes('props.json') ? readJson(path.join(PUBLIC, 'models', 'props.json')) : null,
+    // the vendor's names for its act_ nodes (books carry title and author); keyed by node name
+    items: models.includes('items.json') ? readJson(path.join(PUBLIC, 'models', 'items.json'))?.items || null : null,
     audio,
     samples: fs.existsSync(SAMPLES),
   };
@@ -221,7 +267,14 @@ const LICENCES = [
   [/CC BY 3\.0/g, 'https://creativecommons.org/licenses/by/3.0/'],
   [/CC0(?: 1\.0)?/g, 'https://creativecommons.org/publicdomain/zero/1.0/'],
 ];
-const CREDITS_URL = 'https://github.com/macsermkiat/website/blob/main/CREDITS.md';
+// The repository's CREDITS.md. In CI, GITHUB_REPOSITORY names the repository, so a rename (which the Pages
+// base path now follows) keeps the link working; blob/HEAD follows the default branch. Local builds use Mac's repo.
+export function creditsUrl(env = process.env) {
+  const server = (env.GITHUB_SERVER_URL || 'https://github.com').replace(/\/+$/, '');
+  const repo = /^[\w.-]+\/[\w.-]+$/.test(env.GITHUB_REPOSITORY || '') ? env.GITHUB_REPOSITORY : 'macsermkiat/website';
+  return `${server}/${repo}/blob/HEAD/CREDITS.md`;
+}
+const CREDITS_URL = creditsUrl();
 function linkLicences(text) {
   let out = esc(text);
   const marks = [];
@@ -280,11 +333,13 @@ export default function marketPlugin() {
     name: 'nachtmarkt-market',
     configResolved(cfg) {
       isBuild = cfg.command === 'build';
+      // A production build never shows the notes for Mac unless asked (CONTENT_NOTES=show, for a private preview).
+      setNotesMode(isBuild && process.env.CONTENT_NOTES !== 'show' ? 'hide' : 'show');
     },
     buildStart() {
       if (!isBuild) return;
-      // The writer's [[Mac: ...]] placeholders show as amber notes on the site. Say how many are left, and
-      // stop the build when STRICT_CONTENT=1 (for the day the site goes public).
+      // The writer's [[Mac: ...]] placeholders. A build leaves them out (see NOTES_MODE); say how many are
+      // left, and stop the build when STRICT_CONTENT=1.
       const left = [];
       for (const f of listFiles(CONTENT_DIR).filter((f) => f.endsWith('.md'))) {
         const n = (fs.readFileSync(path.join(CONTENT_DIR, f), 'utf8').match(/\[\[[\s\S]+?\]\]/g) || []).length;
@@ -292,8 +347,8 @@ export default function marketPlugin() {
       }
       if (!left.length) return;
       const msg = `content placeholders still to fill: ${left.join(', ')}`;
-      if (process.env.STRICT_CONTENT === '1') this.error(msg);
-      else this.warn(msg);
+      if (process.env.STRICT_CONTENT === '1') this.error(`${msg} (STRICT_CONTENT=1 stops the build)`);
+      else this.warn(`${msg} (${NOTES_MODE === 'hide' ? 'left out of this build: their paragraphs and list items do not ship' : 'shown as notes, CONTENT_NOTES=show'})`);
     },
     resolveId(id) {
       if (id === V_CONTENT || id === V_INV) return '\0' + id;

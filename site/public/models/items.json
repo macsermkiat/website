@@ -88,6 +88,27 @@
    "kind": "glass",
    "glass": "Maßkrug"
   },
+  "act_glass_13": {
+   "set": "prop_bier_shelf",
+   "stall": "bierstand",
+   "name": "Clean Willibecher, upside down",
+   "kind": "glass",
+   "glass": "Willibecher"
+  },
+  "act_glass_14": {
+   "set": "prop_bier_shelf",
+   "stall": "bierstand",
+   "name": "Clean Willibecher, upside down",
+   "kind": "glass",
+   "glass": "Willibecher"
+  },
+  "act_glass_15": {
+   "set": "prop_bier_shelf",
+   "stall": "bierstand",
+   "name": "Clean Willibecher, upside down",
+   "kind": "glass",
+   "glass": "Willibecher"
+  },
   "act_book_200": {
    "set": "prop_books_counter",
    "stall": "buecherstand",

@@ -5,8 +5,8 @@
 //   lighting.setSnow(true);                // flakes fade in, fog thickens, stars go behind cloud
 //
 // Also returned (optional for the engine): placeLights(spots, opts), tune(root), captureEnvironment(pos),
-// captureProbes(), fitShadow(center, radius), stats(), settings, profile, and the parts (sky,
-// moonLight, hemi, bloom, grade, shading).
+// refreshEnvironment(), captureProbes(), fitShadow(center, radius), stats(), settings, profile, and the
+// parts (sky, moonLight, hemi, bloom, grade, shading).
 // See README.md in this folder for the settings and the reasoning behind them.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -48,7 +48,7 @@ const damp = (a, b, rate, dt) => a + (b - a) * (1 - Math.exp(-rate * dt));
  * @param {THREE.Camera} ctx.camera
  * @param {boolean} [ctx.lite] the lite market: fewer lights, no shadows, cheaper post
  * @param {object} [ctx.options] { shadowCenter:[x,y,z], shadowRadius, envCapturePosition:[x,y,z], envCapture,
- *   envRefresh, probes, adaptive, profile:{...overrides}, adoptEngineLights (legacy, off) }
+ *   probes, adaptive, profile:{...overrides}, adoptEngineLights (legacy, off) }
  */
 export function createLighting({ scene, renderer, camera, lite = false, options = {} }) {
   const N = NIGHT;
@@ -56,6 +56,19 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   const added = [];
   const add = (o) => { scene.add(o); added.push(o); return o; };
   const disposers = [];
+  const _cam = new THREE.Vector3();
+  // the renderer state this module changes, put back by dispose()
+  const was = {
+    toneMapping: renderer.toneMapping,
+    exposure: renderer.toneMappingExposure,
+    outputColorSpace: renderer.outputColorSpace,
+    shadows: renderer.shadowMap.enabled,
+    shadowType: renderer.shadowMap.type,
+    background: scene.background,
+    environment: scene.environment,
+    environmentIntensity: scene.environmentIntensity,
+    fog: scene.fog,
+  };
 
   // ---------- colour management and tone mapping ----------
   // The scene renders linear HDR into a half-float target; GradePass does AgX + look + sRGB.
@@ -73,9 +86,12 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   scene.background = fogBase.color.clone();
   recompile(scene);
 
-  // ---------- light size, local glows (bulb strings, bounce) and moon rim ----------
-  const shading = installShading({ maxGlows: P.glows, minRoughness: N.lightSize.minRoughness, minClearcoatRoughness: N.lightSize.minClearcoatRoughness });
-  shading.setRim(new THREE.Vector3(...N.moon.skyDirection), new THREE.Color(N.rim.color), N.rim.strength, N.rim.power);
+  // ---------- light size, local glows (bulb strings, stall interiors) and moon rim ----------
+  const shading = installShading({
+    maxGlows: P.glows, minRoughness: N.lightSize.minRoughness, minClearcoatRoughness: N.lightSize.minClearcoatRoughness,
+    pointShadowTaps: N.warm.shadowMap?.taps ?? 5,
+  });
+  shading.setRim(new THREE.Vector3(...N.moon.skyDirection), new THREE.Color(N.rim.color), N.rim.strength, N.rim.power, N.rim.dark);
 
   // ---------- sky ----------
   const sky = createSky(N, { clouds: P.clouds });
@@ -114,26 +130,31 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   fitShadow();
 
   // ---------- environment for reflections ----------
-  // The synthetic night first; on full, the real market is captured on frame 3 and then refreshed
-  // every N.env.refresh seconds a face per frame. Local probes (frame 3) give copper, glass and glaze
-  // near the view their own reflections of the lit stall around them.
+  // The synthetic night first; on full, the real market is captured once on frame 3. There is no
+  // periodic refresh (the market is static apart from the rides and the crowd): the capture is
+  // repeated, one cube face per frame, only once the snow has settled after a toggle, or when the
+  // engine calls refreshEnvironment() after changing the lights. Local probes (frame 3) give copper,
+  // glass and glaze near the view their own reflections of the lit stall around them.
   const synthRT = syntheticEnvironment(renderer, sky, { size: P.envSize });
   scene.environment = synthRT.texture;
   scene.environmentIntensity = N.env.intensity;
   const envCapture = options.envCapture ?? P.envCapture;
-  const envRefresh = envCapture && (options.envRefresh ?? P.envRefresh) && N.env.refresh > 0;
   const envPos = new THREE.Vector3(...(options.envCapturePosition || [0, 1.6, 2]));
   let updater = null;
   const hideInCapture = [];
-  let captureAt = envCapture ? 3 : -1; // frame on which to capture the real scene
-  let nextRefresh = Infinity, wall = 0;
+  let refreshAt = Infinity, wall = 0; // wall-clock time of a pending re-capture
   function captureEnvironment(position = envPos) {
     updater ||= createEnvUpdater(renderer, scene, { size: P.envSize, hide: hideInCapture });
     envPos.copy(position);
     const rt = updater.captureNow(position);
     scene.environment = rt.texture;
     scene.environmentIntensity = N.env.captureIntensity;
-    nextRefresh = wall + N.env.refresh;
+  }
+  /** Re-capture the market's reflections, spread over six frames (full only; call after changing the lights). */
+  function refreshEnvironment(delay = 0) {
+    if (!envCapture) return false;
+    refreshAt = wall + Math.max(0, delay);
+    return true;
   }
   const probes = [];
   const probeCount = options.probes ?? P.probes;
@@ -184,7 +205,10 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   const placed = [];
   function placeLights(spots, opts = {}) {
     const r = placeWarmLights(scene, spots, N, { lite, budget: P.lightBudget, shadowed: P.shadows ? P.shadowedLights : 0, ...opts });
-    r.glows = (r.bounces || []).map((b) => shading.add(b));
+    r.glows = (r.interiors || []).map((g) => shading.add(g));
+    const dispose = r.dispose;
+    r.dispose = () => { r.glows.forEach((g) => shading.remove(g)); dispose(); };
+    shading.update(camera.getWorldPosition(_cam));
     placed.push(r);
     return r;
   }
@@ -194,6 +218,32 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     r.windows.forEach((m) => emissives.windows.add(m));
     addBulbGlows(root);
     return r;
+  }
+
+  // ---------- moon shadow casters ----------
+  // Once the static interior shadows are drawn, meshes of the placed models (stalls, props, the town)
+  // smaller than P.minMoonCaster stop casting the moon's shadow: at 5.5 cm a texel their shadow is a
+  // blur of a few texels, and each is a draw call in every moon-shadow pass. The crowd and anything
+  // not from the layout keep theirs (a figure's head must not lose its shadow).
+  const trimmed = [];
+  function trimMoonCasters(root = scene) {
+    const min = P.minMoonCaster || 0;
+    if (!P.shadows || !min) return 0;
+    const ws = new THREE.Vector3();
+    let n = 0;
+    for (const h of root === scene ? scene.children : [root]) {
+      if (!h.userData?.entry) continue;
+      h.traverse((o) => {
+        if (!o.isMesh || !o.castShadow || o.isInstancedMesh || o.isSkinnedMesh || !o.geometry) return;
+        if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+        o.getWorldScale(ws);
+        if (o.geometry.boundingSphere.radius * Math.max(ws.x, ws.y, ws.z) >= min) return;
+        o.castShadow = false;
+        trimmed.push(o);
+        n++;
+      });
+    }
+    return n;
   }
 
   // ---------- snow ----------
@@ -297,7 +347,6 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   const snowFog = new THREE.Color(N.snow.fogColor);
 
   let lastWall = null;
-  const _cam = new THREE.Vector3();
   function update(dt = 0.016, t = 0) {
     frame++;
     const rawDt = Math.max(dt || 0, 0);
@@ -343,6 +392,8 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     windOffset.addScaledVector(wind, st);
     snow.uniforms.uFall.value = N.snow.fall;
     if (k > 0 && frame % 30 === 1) feedSnowLights();
+    // the weather has settled after a toggle: re-capture the reflections once (full only)
+    if (snowSettling && snowMix === snowTarget) { snowSettling = false; refreshEnvironment(N.env.settle); }
     snow.update({ t, windOffset, fog: scene.fog, opacity: k });
 
     if (P.shadows && moonShadowEvery > 1 && frame % moonShadowEvery === 0) moonLight.shadow.needsUpdate = true;
@@ -351,16 +402,16 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     if (frame % 15 === 1) shading.update(camera.getWorldPosition(_cam));
 
     if (frame === 3) {
-      if (captureAt === 3) {
+      if (envCapture) {
         try { captureEnvironment(); } catch (e) { console.warn('[lighting] environment capture failed', e); }
       }
       if (probeCount > 0) captureProbes();
-    } else if (frame === captureAt) {
-      updater ? updater.start(envPos) : captureEnvironment();
     }
-    if (envRefresh && updater && !updater.busy && wall >= nextRefresh) {
-      updater.start(envPos);
-      nextRefresh = wall + N.env.refresh;
+    // after the first frames have drawn the static interior shadows
+    if (frame === 5) trimMoonCasters();
+    if (wall >= refreshAt && frame > 3) {
+      refreshAt = Infinity;
+      if (updater) { if (!updater.busy) updater.start(envPos); } else captureEnvironment();
     }
     if (updater?.busy) updater.step();
   }
@@ -376,15 +427,17 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     snow.setWarmLights(near);
   }
 
+  let snowSettling = false;
   function setSnow(on) {
     const next = on ? 1 : 0;
     if (next === snowTarget) return;
     snowTarget = next;
-    // re-capture reflections once the weather has settled (~2.5 s; full market only)
-    if (envCapture && frame > 3) nextRefresh = wall + 2.5;
+    // re-capture the reflections once the weather has settled (full market only; see update)
+    snowSettling = envCapture;
   }
 
   function dispose() {
+    trimmed.forEach((o) => (o.castShadow = true));
     added.forEach((o) => o.removeFromParent());
     placed.forEach((r) => r.dispose());
     snow.dispose();
@@ -393,7 +446,6 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     synthRT.dispose();
     updater?.dispose();
     probes.forEach((p) => p.dispose());
-    scene.environment = null;
     shading.restore();
     bloom.dispose();
     grade.dispose();
@@ -401,8 +453,18 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     target.dispose();
     if (globalThis.__lighting === api) delete globalThis.__lighting;
     fogPatch.restore();
-    scene.fog = null;
     disposers.forEach((f) => f());
+    // put the renderer and scene back as they were
+    renderer.toneMapping = was.toneMapping;
+    renderer.toneMappingExposure = was.exposure;
+    renderer.outputColorSpace = was.outputColorSpace;
+    renderer.shadowMap.enabled = was.shadows;
+    renderer.shadowMap.type = was.shadowType;
+    renderer.shadowMap.needsUpdate = true;
+    scene.fog = was.fog;
+    scene.background = was.background;
+    scene.environment = was.environment;
+    scene.environmentIntensity = was.environmentIntensity;
   }
 
   const api = {
@@ -414,7 +476,9 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     placeLights,
     tune,
     captureEnvironment,
+    refreshEnvironment,
     captureProbes,
+    trimMoonCasters,
     fitShadow,
     stats,
     quality,

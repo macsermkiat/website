@@ -20,7 +20,7 @@ import numpy as np
 
 from . import state
 
-KIT_VERSION = "v10"  # v10: iron rust in smaller, browner blooms; v9: oak with more figure and contrast; v8: metal of constant-valued kits bakes to 0 (was the roughness); new wood/iron/oak
+KIT_VERSION = "v11"  # v11: gold paint half metallic (was 1.0, went black in three.js); v10: iron rust in smaller, browner blooms; v9: oak with more figure and contrast; v8: metal of constant-valued kits bakes to 0 (was the roughness); new wood/iron/oak
 KIT_RES = {"wood": 1024, "oak": 1024, "paint": 1024, "iron": 512}
 _mats = {}
 
@@ -249,7 +249,7 @@ def _oak_graph(nb):
 
 PAINT_COLORS = [  # (linear rgb, roughness, metallic), same order as geo.PAINT_BANDS
     ((0.26, 0.010, 0.014), 0.40, 0.0),   # red
-    ((0.80, 0.55, 0.20), 0.30, 1.0),     # gold leaf
+    ((0.80, 0.55, 0.20), 0.36, 0.5),     # gold paint (bronze-powder paint, half metallic: reads under warm lights without an env map)
     ((0.025, 0.16, 0.50), 0.42, 0.0),    # Bavarian blue
     ((0.74, 0.72, 0.67), 0.48, 0.0),     # white
     ((0.018, 0.085, 0.045), 0.42, 0.0),  # fir green
@@ -548,8 +548,130 @@ def simple_material(key, name=None):
     return m
 
 
+# ============================================================ kit variants
+# A variant reuses a kit's (shared) textures with a different glTF factor, so it costs no
+# texture bytes. metal: metallicFactor multiplied into the kit's metal channel (the exporter
+# writes it as pbrMetallicRoughness.metallicFactor).
+KIT_VARIANTS = {
+    "iron_matte": ("iron", dict(metal=0.4)),   # sooty sheet iron that stays readable without an env map
+}
+
+
+def kit_variant_material(key):
+    base, opts = KIT_VARIANTS[key]
+    m = kit_material(base, name=key)
+    nt = m.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    if "metal" in opts:
+        link = bsdf.inputs["Metallic"].links[0]
+        src = link.from_socket
+        nt.links.remove(link)
+        mul = nt.nodes.new("ShaderNodeMath")
+        mul.operation = 'MULTIPLY'
+        nt.links.new(src, mul.inputs[0])
+        mul.inputs[1].default_value = opts["metal"]
+        nt.links.new(mul.outputs[0], bsdf.inputs["Metallic"])
+    m["nm_kit"] = base
+    return m
+
+
+# ============================================================ small dedicated pattern textures
+# Generated with numpy (no bake), written to blender/out/kit/<key>.png and embedded in the glb
+# of the stall that uses them. Each is a tiling texture mapped in metres like the kit tiles
+# (see geo.TILE for the metres one repeat covers).
+PATTERN_VERSION = "p1"
+
+
+def _rauten_pixels(res=256, n=4):
+    """Bavarian Rauten: n big blue and n white lozenges across one repeat, two flat colours
+    with a faint cloth/paint mottle. Large on purpose: they must survive mipmapping at lane
+    distance (64 px per lozenge at 256 px)."""
+    y, x = np.mgrid[0:res, 0:res].astype(np.float32) + 0.5
+    u, v = x / res * n, y / res * n
+    chk = (np.floor(u + v) + np.floor(u - v)) % 2.0
+    blue = np.array([0.012, 0.26, 0.68], np.float32)       # light Bavarian blue (sRGB ~ 30,140,215)
+    white = np.array([0.83, 0.84, 0.80], np.float32)
+    rng = np.random.default_rng(7)
+    mott = rng.normal(0, 1, (res // 8, res // 8)).astype(np.float32)
+    mott = np.kron(mott, np.ones((8, 8), np.float32))
+    mott = (mott + np.roll(mott, 4, 0) + np.roll(mott, 4, 1) + np.roll(np.roll(mott, 4, 0), 4, 1)) / 4
+    col = np.where(chk[..., None] > 0.5, blue, white) * (1.0 + 0.035 * mott[..., None])
+    return np.clip(col, 0, 1)
+
+
+PATTERNS = {
+    # key: (pixel generator, roughness, emissive factor or None)
+    # rauten: a faint warm emissive copy of the pattern stands in for the eave bulbs' light on
+    # the pennants hanging right beside them (the engine's bulbs glow but light nothing), so the
+    # blue and white read at night under the hemisphere light alone; exported as
+    # emissiveTexture = the pattern, emissiveFactor = the colour below
+    "rauten": (_rauten_pixels, 0.62, (0.26, 0.21, 0.15)),
+}
+
+
+def pattern_path(key):
+    return os.path.join(state.KIT_DIR, f"{key}_pattern.png")
+
+
+def pattern_material(key):
+    gen, rough, emit = PATTERNS[key]
+    path = pattern_path(key)
+    stamp = path + ".version"
+    fresh = os.path.exists(path) and os.path.exists(stamp) and open(stamp).read().strip() == PATTERN_VERSION
+    if not fresh:
+        os.makedirs(state.KIT_DIR, exist_ok=True)
+        rgb = gen()
+        res = rgb.shape[0]
+        img = bpy.data.images.new(f"{key}_pattern_tmp", res, res)
+        img.colorspace_settings.name = "sRGB"
+        lin = np.where(rgb <= 0.0031308, rgb * 12.92, 1.055 * np.power(rgb, 1 / 2.4) - 0.055)  # store sRGB
+        px = np.ones((res, res, 4), np.float32)
+        px[..., :3] = lin[::-1]
+        img.pixels.foreach_set(px.ravel())
+        img.filepath_raw = path
+        img.file_format = 'PNG'
+        img.save()
+        bpy.data.images.remove(img)
+        with open(stamp, "w") as f:
+            f.write(PATTERN_VERSION)
+    m, nt, bsdf, L = _node_mat(key)
+    N = nt.nodes
+    name = f"{key}_pattern"
+    img = bpy.data.images.get(name)
+    if img is None:
+        img = bpy.data.images.load(path)
+        img.name = name
+        img.colorspace_settings.name = "sRGB"
+    uv = N.new("ShaderNodeUVMap")
+    uv.uv_map = "UVMap"
+    tc = N.new("ShaderNodeTexImage")
+    tc.image = img
+    L.new(uv.outputs[0], tc.inputs[0])
+    _vcol_multiply(nt, L, tc.outputs["Color"], bsdf)
+    bsdf.inputs["Roughness"].default_value = rough
+    bsdf.inputs["Metallic"].default_value = 0.0
+    if emit:
+        mul = N.new("ShaderNodeMix")
+        mul.data_type = 'RGBA'
+        mul.blend_type = 'MULTIPLY'
+        mul.inputs[0].default_value = 1.0
+        L.new(tc.outputs["Color"], mul.inputs[6])
+        mul.inputs[7].default_value = (*emit, 1)
+        L.new(mul.outputs[2], bsdf.inputs["Emission Color"])
+        bsdf.inputs["Emission Strength"].default_value = 1.0
+    return m
+
+
 def get(key):
-    """Material for a key (created once per build). Kit keys are textured, others simple."""
+    """Material for a key (created once per build): kit keys and kit variants are textured
+    with the shared kit maps, pattern keys with their own small texture, others simple."""
     if key not in _mats:
-        _mats[key] = kit_material(key) if key in GRAPHS else simple_material(key)
+        if key in GRAPHS:
+            _mats[key] = kit_material(key)
+        elif key in KIT_VARIANTS:
+            _mats[key] = kit_variant_material(key)
+        elif key in PATTERNS:
+            _mats[key] = pattern_material(key)
+        else:
+            _mats[key] = simple_material(key)
     return _mats[key]

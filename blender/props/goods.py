@@ -118,10 +118,10 @@ BOTTLE_KINDS = {
 }
 
 
-def bottle(m, M, label="label_wine", glass=C("1e3a22"), kind="bordeaux", foil=C("8a1a1a"), liquid=None):
+def bottle(m, M, label="label_wine", glass=C("1e3a22"), kind="bordeaux", foil=C("8a1a1a"), liquid=None, n=None):
     """A bottle standing on its base (origin), label facing -Y, foil capsule over the neck."""
     M = M or Matrix()
-    n = seg(12, 6)
+    n = seg(n or 12, 6)
     prof, lab, arc, sy = BOTTLE_KINDS[kind]
     if sy != 1.0:
         M = M @ Matrix.Diagonal((1.0, sy, 1.0, 1.0))
@@ -142,19 +142,19 @@ def bottle(m, M, label="label_wine", glass=C("1e3a22"), kind="bordeaux", foil=C(
     m.lathe(band, n, label, M, WHITE, "atlas", v_by="z", arc=TWO_PI * arc, u0=-math.pi / 2 - math.pi * arc)
     # foil capsule over the neck
     top = prof[-1][1]
-    m.lathe([(0.0158, top - 0.05), (0.016, top - 0.004), (0.012, top + 0.001), (0.0, top + 0.002)], seg(12, 6),
+    m.lathe([(0.0158, top - 0.05), (0.016, top - 0.004), (0.012, top + 0.001), (0.0, top + 0.002)], seg(8, 6),
             "sw_metal", M, foil, "atlas")
 
 
 def wine_glass(m, M, wine=None, glass_col=C("f2f6f4")):
     """A stemmed wine glass (19 cm), optionally with a pour of wine. Origin at the foot."""
     M = M or Matrix()
-    n = seg(14, 7)
-    outer = [(0.0, 0.0), (0.034, 0.0), (0.035, 0.002), (0.008, 0.005), (0.0035, 0.012), (0.0035, 0.085),
+    n = seg(12, 7)
+    outer = [(0.0, 0.0), (0.035, 0.0015), (0.008, 0.005), (0.0035, 0.012), (0.0035, 0.085),
              (0.012, 0.097), (0.034, 0.122), (0.041, 0.152), (0.037, 0.19)]
     inner = [(0.0362, 0.19), (0.0398, 0.152), (0.0328, 0.123), (0.011, 0.1), (0.0, 0.097)]
     if lite():
-        outer = [outer[i] for i in (0, 1, 3, 4, 5, 7, 8, 9)]
+        outer = [outer[i] for i in (0, 1, 2, 3, 4, 6, 7, 8)]
         inner = [inner[i] for i in (0, 1, 3, 4)]
     m.lathe(outer + inner, n, "sw_vgloss", M, glass_col, "glass")
     if wine:
@@ -165,7 +165,7 @@ def wine_glass(m, M, wine=None, glass_col=C("f2f6f4")):
 
 def jar(m, M, label, content_col, content_region="almonds", h=0.12, r=0.038, lid=C("b89a5a")):
     M = M or Matrix()
-    n = seg(10, 5)
+    n = seg(9, 5)
     m.lathe([(0.0, 0.0), (r - 0.004, 0.0), (r, 0.006), (r, h - 0.012), (r - 0.006, h - 0.004), (r - 0.006, h)],
             n, "sw_vgloss", M, C("e8f0ec"), "glass")
     # contents fill most of the jar
@@ -206,7 +206,7 @@ def board(m, M, w, d, t=0.02, col=C("c89e70")):
 
 def orange(m, M, r=0.036):
     M = M or Matrix()
-    m.sphere(r, seg(12, 8), seg(8, 5), "peel", M @ T(0, 0, r * 0.92), jit(WHITE, 0.08), "atlas", scale=(1, 1, 0.92))
+    m.sphere(r, seg(10, 8), seg(7, 5), "peel", M @ T(0, 0, r * 0.92), jit(WHITE, 0.08), "atlas", scale=(1, 1, 0.92))
     m.cyl(0.004, 0.003, 0.006, 5, "sw_matte", M @ T(0, 0, r * 1.8), C("3a4a1a"), caps=False)
 
 
@@ -244,11 +244,11 @@ def twine(m, pts, r=0.0022):
 
 
 # ------------------------------------------------------------------ beer glasses
-def willi(m, M, glass_col=C("eef4f0")):
+def willi(m, M, glass_col=C("eef4f0"), n=None):
     """0.5 l Willi-Becher, 20.5 cm: 2.5 mm walls, a rounded rim and a thick base. Returns
     (inner profile, rim z, outer rim radius)."""
     M = M or Matrix()
-    n = seg(14, 7)
+    n = seg(n or 14, 7)
     outer = [(0.0, 0.0), (0.029, 0.0), (0.031, 0.004), (0.031, 0.02), (0.036, 0.12), (0.038, 0.15),
              (0.0355, 0.19), (0.0365, 0.2025)]
     rim = [(0.0362, 0.2048), (0.0348, 0.2058), (0.0336, 0.2045)]
@@ -261,11 +261,11 @@ def willi(m, M, glass_col=C("eef4f0")):
     return inner, 0.2058, 0.0365
 
 
-def mass(m, M, glass_col=C("eef4f0")):
+def mass(m, M, glass_col=C("eef4f0"), n=None):
     """1 l Maßkrug, 21 cm: thick dimpled glass (4.5 mm walls, 2 cm base) with a handle.
     Returns (inner profile, rim z, outer rim radius)."""
     M = M or Matrix()
-    n = seg(14, 7)
+    n = seg(n or 14, 7)
     outer = [(0.0, 0.0), (0.05, 0.0), (0.054, 0.006), (0.054, 0.03), (0.052, 0.2), (0.053, 0.207)]
     rim = [(0.0528, 0.2095), (0.0505, 0.2108), (0.0484, 0.2095)]
     inner = [(0.0484, 0.207), (0.0475, 0.2), (0.0492, 0.036), (0.043, 0.022), (0.0, 0.02)]
@@ -332,9 +332,9 @@ def barrel(m, M, L=0.36, r_end=0.12, r_belly=0.14, staves=16, lying=True, hoop_c
     sw = TWO_PI * r_belly / n
     for j in range(n):
         a0 = TWO_PI * j / n
-        m.lathe(prof, 1, stave.window(sw, L), Mb, jit(WHITE, 0.1), "atlas", smooth=True,
+        m.lathe(prof, 1, stave.window(sw, L), Mb, jit(C("c8b4a0"), 0.12), "atlas", smooth=True,
                 arc=TWO_PI / n * 0.975, u0=a0)
-    hn = n * 2 if not lite() else n
+    hn = n
     for z in ((-L / 2 + 0.03, -L / 2 + 0.08, L / 2 - 0.08, L / 2 - 0.03) if not lite() else (-L / 2 + 0.04, L / 2 - 0.04)):
         t = (z + L / 2) / L
         r = r_end + (r_belly - r_end) * math.sin(math.pi * t) + 0.0025
@@ -343,7 +343,7 @@ def barrel(m, M, L=0.36, r_end=0.12, r_belly=0.14, staves=16, lying=True, hoop_c
     for z in (-L / 2 + 0.012, L / 2 - 0.012):
         front = z > 0
         m.disc(r_end - 0.004, n, "barrel_head" if front else "wood_end", Mb @ T(0, 0, z, rx=0 if front else math.pi,
-               rz=math.pi / 2), WHITE if front else C("b89068"), "atlas")
+               rz=math.pi / 2), C("c4b0a0") if front else C("a08060"), "atlas")
         # stave ends protrude a little beyond the heads (the chime)
         m.lathe([(r_end - 0.006, z), (r_end, z + (0.012 if front else -0.012))], n, stave, Mb, C("9a8a78"))
     if tap:
@@ -377,7 +377,7 @@ def sausage(m, M, L=0.2, r=0.013, bend=0.02, dark=False, seed=0.0):
 def roll(m, M, L=0.12, W=0.07, H=0.045):
     """Brötchen: a squashed ellipsoid, top planar-mapped to the roll texture."""
     M = M or Matrix()
-    n, rings = seg(14, 8), seg(8, 5)
+    n, rings = seg(12, 8), seg(6, 4)
     verts, faces, uvs = [], [], []
     reg = vlib.R("roll")
     prof = []
@@ -416,7 +416,7 @@ def paper_tray(m, M, L=0.2, W=0.1, H=0.03, col=C("f3efe6")):
     if not lite():
         rim = [(L / 2 * 0.985 * math.cos(TWO_PI * j / n), W / 2 * 0.985 * math.sin(TWO_PI * j / n), H + 0.0005)
                for j in range(n + 1)]
-        m.tube(rim, 0.0022, 4, "paper", M, C("cfc3aa"))
+        m.tube(rim, 0.0022, 3, "paper", M, C("cfc3aa"))
 
 
 def spline(ctrl, n_per=4):

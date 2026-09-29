@@ -2,7 +2,7 @@
 numpy textures, AO baking, glb export + web optimisation, and night preview renders.
 
 Used by blender/square/*.py and blender/town/*.py. Run scripts with
-~/nachtmarkt-tools/bpy-venv/bin/python <script>.py (on the Mac; /home/claude/tools/... on the cloud machine).
+/home/claude/tools/bpy-venv/bin/python <script>.py (cloud machine; see docs/BUILD.md "Where things run").
 Every Cycles render and bake honours NM_DEVICE (CPU, or METAL/CUDA/OPTIX/HIP/ONEAPI for the GPU) and
 NM_THREADS (0 = all cores), as blender/lib/nmlib/render.py does.
 """

@@ -47,7 +47,10 @@ def plank_wall(part, a, b, z0, top, axis='x', at=0.0, pw=0.14, th=0.024, gap=0.0
 
 def lap_siding(part, a, b, z0, z1, axis='x', at=0.0, outward=-1, bh=0.15, lap=0.025,
                th=0.02, tint=None, var=0.1, segs=1, bevel=None):
-    """Horizontal overlapping boards (Stuelpschalung) from z0 to z1, lower board edges kick out."""
+    """Horizontal overlapping boards (Stuelpschalung) from z0 to z1, lower board edges kick out.
+    Lite: boards 1.6x taller (fewer boxes, same look at phone distance)."""
+    if state.lite():
+        bh *= 1.6
     z = z0
     while z < z1 - 0.02:
         h = min(bh * R().uniform(0.92, 1.08), z1 - z + lap)
@@ -171,9 +174,14 @@ def shingles(part, sl, sw=0.19, sh=0.30, st=0.016, expo=0.14, lift=0.012, tint="
 
 
 def board_roof(part, sl, bw=0.2, th=0.024, batten=0.05, tint=None, var=0.12):
-    """Boards running down the slope with cover battens over the joints."""
+    """Boards running down the slope with cover battens over the joints. Lite: boards 1.8x wider.
+    Returns the battens as a list of (a, half_width, top) (position along the eave, half width
+    and height of the batten top above the slope plane), for snow_cap(ridges=...)."""
+    if state.lite():
+        bw *= 1.8
     B = sl.basis()
     a = sl.a0
+    battens = []
     while a < sl.a1 - 1e-3:
         w = min(bw * R().uniform(0.85, 1.15), sl.a1 - a)
         p = sl.point(a + w / 2, sl.L / 2, th / 2 + 0.003)
@@ -181,7 +189,9 @@ def board_roof(part, sl, bw=0.2, th=0.024, batten=0.05, tint=None, var=0.12):
         if a + w < sl.a1 - 0.02:
             p = sl.point(a + w, sl.L / 2, th + 0.012)
             part.mbox(Matrix.Translation(p) @ B, (batten, sl.L + 0.03, 0.02), grain=1, tint=tint, var=var)
+            battens.append((a + w, batten / 2, th + 0.022))
         a += w
+    return battens
 
 
 def barge_boards(part, sl, h=0.18, th=0.03, tint=None, drop=0.04):
@@ -198,13 +208,25 @@ def fascia(part, sl, h=0.14, th=0.028, tint=None, band=None):
     part.mbox(M, (sl.a1 - sl.a0 + 0.04, th, h), grain=0, tint=tint, band=band)
 
 
-def snow_cap(part, sl, thick=0.05, lip=0.05, nx=None, ns=None, edge_in=0.07, seed=0.0, cover=0.93,
-             ridge_clear=0.24, patch_scale=1.4, base=0.03):
+def snow_cap(part, sl, thick=0.05, lip=0.05, nx=None, ns=None, edge_in=0.07, seed=0.0, cover=1.0,
+             ridge_clear=0.24, patch_scale=1.4, base=0.03, courses=None, butt_gap=0.024, ridges=None,
+             ridge_cover=0.012, ridge_soft=0.05):
     """Thin snow on a slope with a soft lip curling over the eave.
 
-    cover:       fraction of the slope (below the ridge band) under snow; the rest is a few
-                 melted strips, long along the courses and short down the slope, so single
-                 shingle rows show through. Lite builds skip the patches.
+    courses:     (expo, first_butt) of the shingle courses under the snow (hut passes these for
+                 shingle roofs). The snow then lies in one strip per course, each strip sinking
+                 below the next course's butt, so every shingle row shows as a dark line through
+                 the snow (the way thin snow sits on a real shingle roof). Full detail only;
+                 lite builds use one coarse blanket.
+    butt_gap:    width (m, down the slope) of the bare line at each butt.
+    cover:       fraction of the slope (below the ridge band) under snow; below 1 adds a few
+                 melted strips, long along the courses. Default 1.0 (no melt patches).
+    ridges:      battens under the snow, [(a, half_width, top), ...] as board_roof returns them.
+                 The snow drapes over each one as a continuous soft ridge running down the slope
+                 (at least `ridge_cover` of snow over the batten top, easing back to the normal
+                 depth over `ridge_soft` metres on each side), so a board roof reads as battens
+                 under snow instead of battens poking through it. The grid gets extra columns
+                 at every batten so the ridge is smooth and runs the full length.
     ridge_clear: mean depth (metres, down from the ridge) of the wind-scoured bare band; its
                  lower edge wanders, so the top shingle courses and the ridge show;
     patch_scale: frequency of the bare patches (per metre).
@@ -215,27 +237,76 @@ def snow_cap(part, sl, thick=0.05, lip=0.05, nx=None, ns=None, edge_in=0.07, see
     lite = state.lite()
     a0, a1 = sl.a0 + edge_in, sl.a1 - edge_in
     s0, s1 = -lip, sl.L - 0.03
-    nx = nx or (12 if lite else max(20, int((a1 - a0) / 0.15)))
-    ns = ns or (7 if lite else max(16, int((s1 - s0) / 0.07)))
+    nx = nx or (12 if lite else max(18, int((a1 - a0) / 0.16)))
+    cols = [a0 + (a1 - a0) * i / nx for i in range(nx + 1)]
+    if ridges:
+        # columns at each batten (its flanks and crest) replace the uniform ones; gaps wider than
+        # 0.16 m get a filler column
+        keys = [a0, a1]
+        for (ra, hw, _top) in ridges:
+            keys += [ra + o for o in (-hw - ridge_soft * 0.8, 0.0, hw + ridge_soft * 0.8) if a0 < ra + o < a1]
+        keys = sorted(keys)
+        cols = [keys[0]]
+        for c in keys[1:]:
+            gap = c - cols[-1]
+            if gap < 0.012:
+                continue
+            k = int(gap / 0.16)
+            cols += [cols[-1] + gap * (j + 1) / (k + 1) for j in range(k)]
+            cols.append(c)
+        cols[-1] = a1
+    nx = len(cols) - 1
+
+    def ridge_top(a):
+        """(weight 0..1, required height) of the snow over the nearest batten at a."""
+        best = (0.0, 0.0)
+        for (ra, hw, top) in ridges or ():
+            d = abs(a - ra) - hw
+            w = 1.0 if d <= 0 else max(0.0, 1.0 - d / ridge_soft)
+            w = w * w * (3 - 2 * w)
+            if w > best[0]:
+                best = (w, top + ridge_cover)
+        return best
     bm = bmesh.new()
+
+    # rows down the slope: (s, edge, joined_to_next). edge 0 = the strip's sunk border.
+    rows = []
+    if courses and not lite:
+        expo, first = courses
+        butts = [first + r * expo for r in range(1, 400) if first + r * expo < s1 - 0.02]
+        starts = [s0] + [b + butt_gap * 0.35 for b in butts]
+        ends = [b - butt_gap * 0.65 for b in butts] + [s1]
+        for k, (sa, sb) in enumerate(zip(starts, ends)):
+            if sb - sa < 0.03:
+                continue
+            strip = [(sa, 0.0 if k else 1.0), (sa + 0.012 if k else sa + (sb - sa) * 0.3, 1.0),
+                     (sb - 0.01, 1.0), (sb, 0.0)]
+            if k == 0:              # the eave strip carries the lip: a few more rows
+                strip = [(s0, 1.0), (s0 / 2, 1.0), (0.0, 1.0), (sb * 0.5, 1.0), (sb - 0.01, 1.0), (sb, 0.0)]
+            strip = sorted(set(strip))
+            for i, (s, e) in enumerate(strip):
+                rows.append((s, e, i < len(strip) - 1, k))
+    else:
+        ns = ns or (7 if lite else max(12 if ridges else 16, int((s1 - s0) / (0.1 if ridges else 0.07))))
+        rows = [(s0 + (s1 - s0) * j / ns, 1.0, j < ns, -1) for j in range(ns + 1)]
 
     def density(a, s):
         """Melt noise; the patches are where it falls below a threshold."""
         q = Vector((a * patch_scale + seed * 1.7, s * patch_scale * 3.0, seed * 2.3 + 5.0))
         return noise.noise(q) + 0.3 * noise.noise(q * 2.3)
 
-    # threshold = the (1 - cover) quantile of the noise over the grid, so `cover` is exact
-    samples = sorted(density(a0 + (a1 - a0) * i / nx, s0 + (s1 - s0) * j / ns)
-                     for j in range(ns + 1) for i in range(nx + 1))
-    thr = -9.0 if lite else samples[int((1.0 - cover) * (len(samples) - 1))]
+    if cover < 1.0 and not lite:
+        # threshold = the (1 - cover) quantile of the noise over the grid, so `cover` is exact
+        samples = sorted(density(cols[i], r[0]) for r in rows for i in range(nx + 1))
+        thr = samples[int((1.0 - cover) * (len(samples) - 1))]
+    else:
+        thr = -9.0
     grid, dens = [], []
-    for j in range(ns + 1):
+    for (s, edge_s, _, strip_id) in rows:
         row, drow = [], []
-        t = j / ns
-        s = s0 + (s1 - s0) * t
         for i in range(nx + 1):
-            u = i / nx
-            a = a0 + (a1 - a0) * u
+            a = cols[i]
+            u = min(1.0, max(0.0, (a - a0) / (a1 - a0)))
             edge = min(u, 1 - u) * (a1 - a0)
             fall = min(1.0, edge / 0.10) ** 0.6
             p3 = Vector((a * 3.1 + seed, s * 3.1, seed * 0.7))
@@ -245,17 +316,27 @@ def snow_cap(part, sl, thick=0.05, lip=0.05, nx=None, ns=None, edge_in=0.07, see
             ridge = min(1.0, max(0.0, (sl.L - rc - s) / 0.12))
             k = max(0.0, min(1.0, (density(a, s) - thr) / 0.12)) * ridge
             k = k * k * (3 - 2 * k)
-            h = thick * fall * max(0.25, lump) * k
+            ke = k * edge_s
+            if strip_id >= 0:               # each course holds a little more or less snow
+                lump *= 0.8 + 0.35 * noise.noise(Vector((strip_id * 1.37 + seed, a * 0.9, 4.2)))
+            h = thick * fall * max(0.25, lump) * ke
             if s < 0:                       # the lip curls down past the eave
                 kk = -s / lip
                 pos = sl.point(a, s * 0.55, (h + base) * (1 - kk) - kk * kk * thick * 1.1 * k - (1 - k) * 0.03)
             else:
-                pos = sl.point(a, s, base * k + h - (1 - k) * 0.012)
+                n = base * ke + h - (1 - ke) * 0.012
+                if ridges and ke > 0.0:     # drape over the batten: a soft ridge down the slope
+                    rw, rtop = ridge_top(a)
+                    target = (rtop + 0.4 * h) * ke + n * (1 - ke)
+                    n += rw * max(0.0, target - n)
+                pos = sl.point(a, s, n)
             row.append(bm.verts.new(pos))
-            drow.append(k)
+            drow.append(ke)
         grid.append(row)
         dens.append(drow)
-    for j in range(ns):
+    for j in range(len(rows) - 1):
+        if not rows[j][2]:
+            continue
         for i in range(nx):
             if max(dens[j][i], dens[j][i + 1], dens[j + 1][i + 1], dens[j + 1][i]) <= 0.0:
                 continue
@@ -365,9 +446,11 @@ def sign(board, letters, text, font, center, w, h, depth=0.03, text_depth=0.012,
 
 def bulb_string(bulbs, wire, anchors, sag=0.06, spacing=0.2, bulb_r=0.028, drop=0.05, seg=None, rings=None):
     """Fairy bulbs hanging from a sagging wire through `anchors`. bulbs: Part('bulb_warm').
-    seg/rings: sphere detail of each bulb (default 7x5, lite 5x3)."""
-    seg = seg or (5 if state.lite() else 7)
-    rings = rings or (3 if state.lite() else 5)
+    seg/rings: sphere detail of each bulb (default 7x5; lite caps it at 5x3)."""
+    seg = seg or 7
+    rings = rings or 5
+    if state.lite():                    # lite caps the detail, whatever the caller asked for
+        seg, rings = min(seg, 5), min(rings, 3)
     for a, b in zip(anchors[:-1], anchors[1:]):
         a, b = Vector(a), Vector(b)
         L = (b - a).length

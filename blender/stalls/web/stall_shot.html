@@ -20,6 +20,11 @@
 //   ?ao=0             strip every aoMap (A/B check)    ?snow=1  snow on (snow_ caps shown)
 //   ?cam=x,y,z,tx,ty,tz,lens   camera in BLENDER coordinates (Z up, front -Y), lens in mm
 //   ?kind=section|deco  light kind for placeLights     ?shot=1  hide the info line
+//   ?props=prop_wurst_counter@slot_counter,prop_x@slot_shelf_1   vendor props attached at their slots
+//   ?signspot=1   the proposed sign light: a small unshadowed warm spot 0.9 m in front of and 0.45 m
+//                 above slot_sign, aimed at it (see the carpenter's NOTES.md, request to lighting)
+//   ?home=x,y,z,tx,ty,tz,fov   camera in THREE world coordinates with a vertical fov, with the stall
+//                 placed by ?place=x,z,rotY (layout.json); used for the home-view check
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
@@ -61,6 +66,28 @@ const gltf = await loader.loadAsync(`/site/public/models/${name}${lite ? '.lite'
 const stall = gltf.scene;
 stall.userData.kind = kind;
 scene.add(stall);
+if (q.get('place')) {
+  const [px, pz, ry] = q.get('place').split(',').map(Number);
+  stall.position.set(px, 0, pz);
+  stall.rotation.y = ry;
+  stall.updateMatrixWorld(true);
+}
+if (q.get('home')) {
+  const h = q.get('home').split(',').map(Number);
+  camera.fov = h[6] || 42;
+  camera.position.set(h[0], h[1], h[2]);
+  camera.lookAt(h[3], h[4], h[5]);
+  camera.updateProjectionMatrix();
+  target.set(h[3], h[4], h[5]);
+}
+let propTris = 0;
+for (const spec of (q.get('props') || '').split(',').filter(Boolean)) {
+  const [pn, slot] = spec.split('@');
+  const pg = await loader.loadAsync(`/site/public/models/${pn}${lite ? '.lite' : ''}.glb`);
+  const at = stall.getObjectByName(slot || 'slot_counter');
+  if (!at) { console.error('no slot', slot); continue; }
+  at.add(pg.scene);
+}
 let aoMaps = 0, meshes = 0;
 stall.traverse((o) => {
   if (!o.isMesh) return;
@@ -83,6 +110,18 @@ const lighting = createLighting({
 const spots = [];
 stall.traverse((o) => { if (/^light_/.test(o.name)) spots.push({ obj: o, kind, id: name }); });
 lighting.placeLights?.(spots, { focus: target, shadowed: lite ? 0 : 2 });
+if (q.get('signspot') === '1') {
+  const sign = stall.getObjectByName('slot_sign');
+  if (sign) {
+    // 0.9 m out in front of the sign (model +Z) and 0.45 m up, aimed back at slot_sign
+    const p = sign.getWorldPosition(new THREE.Vector3());
+    const out = new THREE.Vector3(0, 0, 1).applyQuaternion(stall.getWorldQuaternion(new THREE.Quaternion()));
+    const L = new THREE.SpotLight(new THREE.Color(1.0, 0.72, 0.42), Number(q.get('signI') || 7), 3.2, 0.62, 0.7, 2);
+    L.position.copy(p).addScaledVector(out, 0.9).add(new THREE.Vector3(0, 0.45, 0));
+    L.target.position.copy(p);
+    scene.add(L, L.target);
+  }
+}
 if (snow) lighting.setSnow(true);
 window.lighting = lighting;
 

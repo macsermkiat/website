@@ -1,6 +1,8 @@
 // three.js screenshots of the carpenter's stalls under the site's lighting (Playwright + SwiftShader).
 //   node blender/stalls/web/shoot.mjs [--out review/round-1/carpenter/web] [--only stall_bier,...]
-//        [--ao both|on|off] [--lite] [--w 1280 --h 720]
+//        [--ao both|on|off] [--lite] [--w 1280 --h 720] [--props prop_a@slot_counter,prop_b@slot_shelf_1]
+//        [--signspot] [--home] [--tag name] [--cam x,y,z,tx,ty,tz,lens]
+//   --home   frame the stall from layout.json's home camera, the stall placed where layout.json puts it
 // Starts its own Vite server (blender/stalls/web/vite.config.mjs) on port 4395.
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -22,11 +24,18 @@ const lite = args.includes('--lite');
 // the Cycles preview cameras (Blender coordinates) of each stall script
 const CAMS = {
   stall_gluehwein: '-4.3,-7.4,2.1,0.1,-0.6,2.15,30',
-  stall_bratwurst: '-4.4,-6.9,2.0,0.0,-0.5,1.95,30',
+  stall_bratwurst: '-4.4,-6.9,2.35,0.0,-0.5,1.9,30',
   stall_bier: '-4.6,-7.4,2.1,0.1,-0.5,2.05,29',
   stall_buecher: '-4.5,-6.9,2.0,0.0,-0.4,1.8,30',
 };
 const only = opt('--only', Object.keys(CAMS).join(',')).split(',');
+const props = opt('--props', '');
+const signspot = args.includes('--signspot');
+const home = args.includes('--home');
+const tag = opt('--tag', '');
+import { readFileSync } from 'node:fs';
+const layout = JSON.parse(readFileSync(path.join(REPO, 'site/src/layout.json'), 'utf8'));
+const placeOf = (name) => layout.places.find((p) => p.asset === `${name}.glb`);
 mkdirSync(OUT, { recursive: true });
 
 const vite = path.join(REPO, 'site/node_modules/vite/bin/vite.js');
@@ -54,11 +63,17 @@ try {
       page.setDefaultTimeout(600000);
       page.on('console', (m) => { if (m.type() === 'error') console.log(`  [${name}] ${m.text().slice(0, 300)}`); });
       page.on('pageerror', (e) => console.log(`  [${name}] pageerror: ${e.message}`));
-      const qs = `?shot=1&glb=${name}&cam=${cam}${ao === 'off' ? '&ao=0' : ''}${lite ? '&lite=1' : ''}`;
+      let qs = `?shot=1&glb=${name}&cam=${cam}${ao === 'off' ? '&ao=0' : ''}${lite ? '&lite=1' : ''}`;
+      if (props) qs += `&props=${props}`;
+      if (signspot) qs += '&signspot=1';
+      if (home) {
+        const pl = placeOf(name), c = layout.camera.home;
+        qs += `&place=${pl.pos[0]},${pl.pos[1]},${pl.rotY}&home=${[...c.pos, ...c.target, c.fov].join(',')}`;
+      }
       await page.goto(`http://localhost:4395/blender/stalls/web/stall_shot.html${qs}`, { waitUntil: 'load' });
       await page.waitForFunction(() => window.__ready === true, null, { timeout: 600000 });
       await page.waitForTimeout(1000);
-      const file = path.join(OUT, `${name}${lite ? '.lite' : ''}_three${ao === 'off' ? '_noao' : ''}.png`);
+      const file = path.join(OUT, `${name}${lite ? '.lite' : ''}_three${tag ? '_' + tag : ''}${ao === 'off' ? '_noao' : ''}.png`);
       await page.screenshot({ path: file });
       const inf = await page.evaluate(() => window.__info);
       console.log(`${path.relative(REPO, file)} ${((Date.now() - t0) / 1000).toFixed(0)} s ${JSON.stringify(inf)}`);

@@ -6,8 +6,8 @@ prop_bier_counter -> slot_counter of stall_bier: chrome tap tower with three tap
                      coasters, pretzels, a bar towel.
 prop_bier_back    -> slot_shelf_1 of stall_bier: three oak casks on cradles, a chalkboard price board,
                      a stoneware stein and a stack of coasters.
-prop_bier_shelf   -> slot_shelf_2 of stall_bier: clean Maßkrüge upside down (act_glass_10..12), a stein,
-                     folded tea towels.
+prop_bier_shelf   -> slot_shelf_2 of stall_bier: clean Maßkrüge (act_glass_10..12) and Willibecher
+                     (act_glass_13..15) upside down on towels, two stoneware steins, folded tea towels.
 The stall and its props share a 60k triangle budget; the stall is 45k, so these three stay near 11k.
 """
 import math
@@ -160,10 +160,18 @@ def shelf():
     for k, x in enumerate((-0.86, -0.7, -0.54)):
         idx = 10 + k
         g = s.node(f"act_glass_{idx}", (x, 0.01 + (k % 2) * 0.03, 0.012), rot=(math.pi, 0, rng.uniform(0, TWO_PI)))
-        G.mass(g, T(0, 0, -0.2108))
+        G.mass(g, T(0, 0, -0.2108), n=10)
         s.item(f"act_glass_{idx}", "Clean Maßkrug, upside down", "glass", glass="Maßkrug")
-    # a stein, two folded tea towels, a bottle opener on a string
-    stein(s.static, T(0.1, 0.02, 0, rz=0.6), C("6a5a48"))
+    # clean half-litre Willibecher upside down on a second towel
+    m.box((0.36, 0.18, 0.01), T(-0.2, 0.02, 0.005), "towel", WHITE, faces={"pz": "towel"}, skip=("nz",))
+    for k, x in enumerate((-0.3, -0.2, -0.1)):
+        idx = 13 + k
+        g = s.node(f"act_glass_{idx}", (x, 0.02 + (k % 2) * 0.04, 0.01), rot=(math.pi, 0, 0))
+        G.willi(g, T(0, 0, -0.2058), n=10)
+        s.item(f"act_glass_{idx}", "Clean Willibecher, upside down", "glass", glass="Willibecher")
+    # a row of stoneware steins with pewter lids, two folded tea towels
+    for k, (x, col) in enumerate(((0.1, C("6a5a48")), (0.24, C("8a7a64")))):
+        stein(s.static, T(x, 0.02 + (k % 2) * 0.03, 0, rz=0.6 + k * 0.7), col)
     for k in range(2):
         m.box((0.26, 0.18, 0.03), T(0.6, 0.02, 0.015 + k * 0.03, rz=0.05 - k * 0.1), "towel", WHITE,
               faces={"pz": "towel", "ny": "towel"}, skip=("nz",))

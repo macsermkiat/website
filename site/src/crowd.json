@@ -37,31 +37,28 @@
     "walk",
     "chat",
     "drink",
-    "idle_free",
-    "walk_free"
+    "sit"
    ],
    "band": [
     "play",
-    "rest",
-    "idle",
-    "walk",
-    "chat",
-    "drink"
+    "rest"
    ],
    "vendor": [
     "serve",
-    "wipe",
-    "idle",
-    "walk",
-    "chat",
-    "drink"
+    "wipe"
    ]
   },
   "notes": {
    "walk": "in place, one 1.2 s cycle, about 1.0 m/s for adults (0.8 m/s for children)",
    "sit": "origin on the ground under the hips; seat top at 0.475 m (the square's benches); feet forward (+Z)",
    "mug": "the mug is the node 'mug', skinned to the bone 'mug'; clips without it scale that bone to 0",
-   "lite": "lite files carry fewer clips; nobody in the first lite.cap entries needs a missing one except laugh and chat_free, which fall back to idle"
+   "lite": "lite files carry only what a lite figure plays (the lite market, and far people in the full market). Missing crowd clips fall back as site/src/crowd.js does: idle_free, chat_free and laugh play idle, walk_free plays walk, and the mug mesh stays hidden for *_free clips",
+   "fallback": {
+    "idle_free": "idle",
+    "chat_free": "idle",
+    "laugh": "idle",
+    "walk_free": "walk"
+   }
   }
  },
  "variants": [

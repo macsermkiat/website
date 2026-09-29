@@ -10,7 +10,7 @@ Footprints are each placed asset's bounding box (read from its glb in site/publi
 `gltf-transform inspect`), in the asset's own frame, grown by a margin.
 
 Run after square.py and tree.py:
-  ~/nachtmarkt-tools/bpy-venv/bin/python blender/square/check_clash.py
+  /home/claude/tools/bpy-venv/bin/python blender/square/check_clash.py
 Exits 1 and lists the offenders when anything clashes.
 """
 import math

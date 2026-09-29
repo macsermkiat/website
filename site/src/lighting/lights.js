@@ -1,10 +1,15 @@
 // Warm real-time lights at light_ empties, within a budget, plus the emissive tuning of bulbs_ and
 // window_warm materials. The engine calls placeLights() with the spots it found; lights that miss the
-// budget become a soft warm pool on the ground so a stall never goes dark.
+// budget become a soft warm pool on the ground, and every section and deco stall also gets an
+// interior glow (shading.js), so a stall never goes dark.
 import * as THREE from 'three';
 import { kelvinRGB } from './settings.js';
 
-const PRIORITY = { section: 0, landmark: 0, tree: 1, deco: 2, lamp: 3, strings: 3, ground: 3, other: 3 };
+// Section stalls first: the 4-light lite market lights exactly the four section interiors, and the
+// full market lights their interiors and front fills before any landmark (the bandstand has its
+// bulbs and the engine's two reserved spots; the rides have their bulbs).
+const PRIORITY = { section: 0, landmark: 1, tree: 1, deco: 2, lamp: 3, strings: 3, ground: 3, other: 3 };
+const STALLS = new Set(['section', 'deco']);
 
 let poolTex = null;
 function poolTexture() {
@@ -55,23 +60,42 @@ function lampType(spot, kind, local) {
   return 'point';
 }
 
+/** A spot's position in its model's frame; a point more than 0.9 m in front of the model is a front fill. */
+function localOf(s, inv) {
+  const holder = holderOf(s.obj);
+  holder.updateMatrixWorld(true);
+  return { holder, local: s.pos.clone().applyMatrix4(inv.copy(holder.matrixWorld).invert()) };
+}
+
 /**
  * spots: [{ obj, kind, id }] (the engine's shape). Adds lights as children of the empties.
- * Returns { lights, pools, cap, dispose() }.
+ * Returns { lights, pools, cap, interiors, dispose() }; `interiors` are the stall-interior glows
+ * (shading.js specs) that createLighting adds.
  */
 export function placeWarmLights(scene, spots, N, { lite = false, budget, focus = new THREE.Vector3(), reserved = 0, shadowed = 0 } = {}) {
   const cap = Math.max(0, (budget ?? (lite ? 4 : 14)) - reserved);
   const warm = warmColor(N);
   const frontWarm = warmColor(N, true);
   const U = N.warm.unshadowed;
-  const bounces = [];
-  const ranked = spots
-    .map((s) => ({ ...s, pos: s.obj.getWorldPosition(new THREE.Vector3()), lk: lampKind(s) }))
-    .sort((a, b) => (PRIORITY[a.lk] ?? 3) - (PRIORITY[b.lk] ?? 3) || a.pos.distanceTo(focus) - b.pos.distanceTo(focus));
-  // one light per model until every model has one, then second lights
-  const firsts = [], seconds = [], seen = new Set();
-  for (const s of ranked) (seen.has(s.id) ? seconds : firsts).push(s), seen.add(s.id);
-  const order = [...firsts, ...seconds];
+  const inv = new THREE.Matrix4();
+  const all = spots.map((s) => {
+    const e = { ...s, pos: s.obj.getWorldPosition(new THREE.Vector3()), lk: lampKind(s) };
+    Object.assign(e, localOf(e, inv));
+    const K = N.warm[e.lk] || N.warm.other;
+    e.front = e.local.z > 0.9 && !!K.front;
+    return e;
+  });
+  // A model's first light is its interior (what makes a stall read warm), its front fill second.
+  // Order: priority, then first lights before second ones, then distance to the focus. So on the full
+  // market every section stall gets its interior and its front fill before any landmark is lit.
+  const byModel = new Map();
+  for (const s of all) (byModel.get(s.id) || byModel.set(s.id, []).get(s.id)).push(s);
+  for (const list of byModel.values()) {
+    list.sort((a, b) => (a.front - b.front) || a.pos.distanceTo(focus) - b.pos.distanceTo(focus));
+    list.forEach((s, i) => (s.rank = Math.min(i, 1)));
+  }
+  const order = all.sort((a, b) => (PRIORITY[a.lk] ?? 3) - (PRIORITY[b.lk] ?? 3) || a.rank - b.rank
+    || a.pos.distanceTo(focus) - b.pos.distanceTo(focus));
 
   const lights = [], pools = [];
   const poolMat = new THREE.MeshBasicMaterial({
@@ -79,16 +103,15 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
     blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: true,
   });
   const poolGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-  const inv = new THREE.Matrix4();
   let shadows = lite ? 0 : shadowed;
+  const blockers = [];
+  const lit = new Map(); // model id -> 'lit' (shadowed interior light) | 'unshadowed'
 
   order.forEach((s, i) => {
     const ud = s.obj.userData || {};
     const K = N.warm[s.lk] || N.warm.other;
     if (i < cap) {
-      const holder = holderOf(s.obj);
-      holder.updateMatrixWorld(true);
-      const local = s.pos.clone().applyMatrix4(inv.copy(holder.matrixWorld).invert());
+      const { holder, local } = s;
       const type = lampType(s, s.lk, local);
       const color = ud.color ? new THREE.Color(ud.color) : warm.clone();
       let distance = Number(ud.distance) || (type === 'spot' ? K.spotDistance : K.pointDistance);
@@ -102,7 +125,7 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
         scene.add(L.target);
       } else {
         // a point outside the model's front (under the eave) is the front fill: softer, longer reach
-        const front = local.z > 0.9 && K.front;
+        const front = s.front;
         if (front && !ud.color) color.copy(frontWarm);
         if (front && K.frontAngle) {
           // a wide spot aimed down and 0.6 m out: counter front, sign and cobbles, not the fascia
@@ -123,13 +146,20 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
       // short-reach glow at the same spot (see shading.js), not from a see-through shadow.
       const interior = type === 'point' && !L.userData.front;
       s.obj.add(L);
-      if (shadows > 0 && (interior || ud.shadow)) {
+      // static shadows go to stall interiors (the budget's shadowed slots), or to a light_ asking for one
+      if (shadows > 0 && ((interior && STALLS.has(s.lk)) || ud.shadow)) {
         shadows--;
         staticShadow(L, N, type === 'point');
-        if (interior && N.warm.bounce) {
-          bounces.push({ a: s.pos.clone(), color: color.clone(), intensity: N.warm.bounce.intensity * (L.intensity / (K.point || 40)), reach: N.warm.bounce.reach, tag: 'bounce', priority: 1 });
+        if (interior) {
+          lit.set(s.id, 'lit');
+          if (N.warm.blocker) {
+            try {
+              const b = shadowBlocker(holder, s.pos, N.warm.blocker);
+              if (b) blockers.push(b);
+            } catch (e) { console.warn('[lighting] shadow blocker failed', e); }
+          }
         }
-      } else if (interior && U && !ud.distance && (s.lk === 'section' || s.lk === 'deco')) {
+      } else if (interior && U && !ud.distance && STALLS.has(s.lk)) {
         // No shadow: keep the light below the eaves (so it cannot reach the top of the roof) and
         // short, so the leak through the walls stays a small pool at the foot of the stall.
         L.distance = Math.min(L.distance, U.distance);
@@ -138,6 +168,7 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
         const ws = s.obj.getWorldScale(new THREE.Vector3()).y || 1;
         L.position.y -= U.drop / ws;
         L.userData.unshadowed = true;
+        if (!lit.has(s.id)) lit.set(s.id, 'unshadowed');
       }
       if (L.isSpotLight) L.position.set(0, 0, 0);
       lights.push(L);
@@ -154,15 +185,36 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
     }
   });
 
+  // an interior glow for every section and deco stall (see settings.js glow.interior)
+  const G = N.glow?.interior;
+  const interiors = [];
+  if (G) {
+    for (const [id, list] of byModel) {
+      const s = list.find((x) => !x.front) || list[0];
+      if (!STALLS.has(s.lk)) continue;
+      const how = lit.get(id) || 'only';
+      const base = s.holder.getWorldPosition(new THREE.Vector3()).y;
+      const a = s.pos.clone();
+      a.y -= G.drop;
+      interiors.push({
+        a, color: warm.clone(), intensity: G[how], reach: G.reach, oneSided: true,
+        // clipped below the floor band (no halo on the ground around the walls) and just above the
+        // empty (the shingles' lower edges face down toward it; the roof must not glow)
+        floor: base + G.floor, ceiling: s.pos.y + G.ceiling, tag: 'interior', priority: 1, id, how,
+      });
+    }
+  }
+
   return {
-    lights, pools, cap,
-    /** Dim bounce-light glows for the shadowed interiors ({ a, color, intensity, reach }); createLighting adds them. */
-    bounces,
+    lights, pools, cap, blockers,
+    /** Interior glows ({ a, color, intensity, reach, oneSided, floor }), one per stall; createLighting adds them. */
+    interiors,
     /** Redraw the static warm-light shadows (after moving a model). */
     refreshShadows() { lights.forEach((l) => { if (l.castShadow) l.shadow.needsUpdate = true; }); },
     dispose() {
       lights.forEach((l) => { l.target?.removeFromParent(); l.removeFromParent(); l.dispose?.(); });
       pools.forEach((p) => p.removeFromParent());
+      blockers.forEach((b) => { b.removeFromParent(); b.geometry.dispose(); });
       poolGeo.dispose();
       poolMat.dispose();
     },
@@ -176,15 +228,121 @@ export function warmColor(N, front = false) {
   return new THREE.Color().setRGB(...kelvinRGB(N.warm.kelvin), THREE.SRGBColorSpace);
 }
 
+// A blocker renders nothing on screen (no colour, no depth) and nothing into the moon's shadow map
+// (its depth material puts every vertex outside the clip volume); it only fills point-light shadows.
+let blockerMats = null;
+function blockerMaterials() {
+  if (blockerMats) return blockerMats;
+  const main = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false, side: THREE.DoubleSide, fog: false });
+  main.name = 'lighting_shadow_blocker';
+  const none = new THREE.ShaderMaterial({
+    vertexShader: 'void main() { gl_Position = vec4( 2.0, 2.0, 2.0, 1.0 ); }',
+    fragmentShader: 'void main() { gl_FragColor = vec4( 0.0 ); discard; }',
+  });
+  blockerMats = { main, none };
+  return blockerMats;
+}
+
+/**
+ * A shadow-only shell around a stall's interior light: a floor just above the stall's base, and
+ * planes just outside the side walls, the back wall and the lower front wall (up to the counter).
+ * The walls are found by casting rays at the stall from outside, so the shell sits outside every
+ * board and never shadows the interior. It closes the hairline gaps between wall planks and the
+ * slot under the walls, which a 512² cube shadow otherwise lets through as sharp streaks and a pale
+ * strip on the ground around the stall. Only the point light's shadow sees it.
+ */
+export function shadowBlocker(holder, lightPos, B = {}) {
+  const pad = B.pad ?? 0.012;
+  holder.updateMatrixWorld(true);
+  const toWorld = holder.matrixWorld, toLocal = new THREE.Matrix4().copy(toWorld).invert();
+  const Lw = lightPos.clone(), L = Lw.clone().applyMatrix4(toLocal);
+  const q = holder.getWorldQuaternion(new THREE.Quaternion());
+  const ws = holder.getWorldScale(new THREE.Vector3()).x || 1;
+  const box = new THREE.Box3().setFromObject(holder);
+  const far = box.getSize(new THREE.Vector3()).length() / ws + 1;
+  const base = 0; // the model's origin is its footprint at ground level
+  const rc = new THREE.Raycaster();
+  const meshes = [];
+  holder.traverse((o) => { if (o.isMesh && !o.isInstancedMesh && o.visible && !/^bulbs_/i.test(o.name)) meshes.push(o); });
+  const hit = (oLocal, dLocal) => {
+    rc.set(oLocal.clone().applyMatrix4(toWorld), dLocal.clone().applyQuaternion(q).normalize());
+    rc.far = far * ws * 2;
+    const h = rc.intersectObjects(meshes, false)[0];
+    return h ? h.distance / ws : null;
+  };
+  const top = Math.max(L.y - base, 0.6);
+  const heights = (lo, hi) => [0.3, 0.55, 0.8].map((f) => base + lo + (hi - lo) * f);
+  // outermost surface along each direction, sampled on a grid of the wall
+  const outer = (dir, lateral, hs) => {
+    let best = null;
+    for (const y of hs) for (const t of [-0.35, 0, 0.35]) {
+      const p = new THREE.Vector3(L.x, y, L.z).addScaledVector(lateral, t);
+      const d = hit(p.clone().addScaledVector(dir, far), dir.clone().negate());
+      if (d == null) continue;
+      const along = far - d; // distance of that surface from p, along dir
+      if (along > 0.05 && (best == null || along > best)) best = along;
+    }
+    return best;
+  };
+  const X = new THREE.Vector3(1, 0, 0), Z = new THREE.Vector3(0, 0, 1);
+  const wallH = heights(0.1, Math.min(top, 1.6));
+  const right = outer(X, Z, wallH), left = outer(X.clone().negate(), Z, wallH);
+  const back = outer(Z.clone().negate(), X, wallH);
+  const front = outer(Z, X, heights(0.1, 0.8));
+  if (left == null || right == null || back == null) return null; // not a closed stall: no shell
+  const x0 = L.x - left - pad, x1 = L.x + right + pad, z0 = L.z - back - pad;
+  const z1 = front != null ? L.z + front + pad : L.z + 0.5;
+  // the counter: the lowest first surface below the light just inside the front, over a few spots
+  // across it (a pot or a mug on the counter must not raise the front plane into the opening)
+  let counter = null;
+  if (front != null) {
+    for (const t of [-0.8, -0.5, -0.2, 0.2, 0.5, 0.8]) {
+      const x = L.x + t * (x1 - x0) * 0.5;
+      const d = hit(new THREE.Vector3(x, L.y - 0.05, z1 - 0.2), new THREE.Vector3(0, -1, 0));
+      if (d == null) continue;
+      const y = L.y - 0.05 - d;
+      if (y > base + 0.4 && (counter == null || y < counter)) counter = y;
+    }
+  }
+  const yTop = base + top + 0.2, yFloor = base + (B.floor ?? 0.05);
+  const quads = [];
+  const quad = (a, b, c, d) => quads.push(a, b, c, a, c, d);
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  quad(V(x0, yFloor, z0), V(x1, yFloor, z0), V(x1, yFloor, z1), V(x0, yFloor, z1)); // floor
+  quad(V(x0, yFloor, z0), V(x0, yTop, z0), V(x0, yTop, z1), V(x0, yFloor, z1)); // left
+  quad(V(x1, yFloor, z0), V(x1, yTop, z0), V(x1, yTop, z1), V(x1, yFloor, z1)); // right
+  quad(V(x0, yFloor, z0), V(x1, yFloor, z0), V(x1, yTop, z0), V(x0, yTop, z0)); // back
+  if (counter != null && counter > base + 0.4) {
+    const yc = counter - 0.03;
+    quad(V(x0, yFloor, z1), V(x1, yFloor, z1), V(x1, yc, z1), V(x0, yc, z1)); // lower front
+  }
+  const g = new THREE.BufferGeometry().setFromPoints(quads.flatMap((v) => [v]));
+  g.computeVertexNormals();
+  const M = blockerMaterials();
+  const m = new THREE.Mesh(g, M.main);
+  m.name = 'lighting_shadow_blocker';
+  m.castShadow = true;
+  m.receiveShadow = false;
+  m.customDepthMaterial = M.none; // not in the moon's (or any spot light's) shadow
+  m.raycast = () => {};
+  m.renderOrder = -10;
+  m.frustumCulled = false;
+  m.userData.shadowOnly = true;
+  m.userData.shell = { x0, x1, z0, z1, counter, yTop };
+  holder.add(m); // in the holder's frame, so it moves with the stall (open at the top and above the counter)
+  return m;
+}
+
 /** Give a warm light a static shadow (drawn once; call refreshShadows after moving things). */
 function staticShadow(L, N, point) {
+  const S = N.warm.shadowMap || { size: 512, radius: 2.5, bias: -0.002, normalBias: 0.02 };
   L.castShadow = true;
-  L.shadow.mapSize.set(point ? 512 : 1024, point ? 512 : 1024);
-  L.shadow.bias = -0.002;
-  L.shadow.normalBias = 0.02;
-  L.shadow.radius = 2.5;
+  L.shadow.mapSize.set(point ? S.size : S.size * 2, point ? S.size : S.size * 2);
+  L.shadow.bias = S.bias;
+  L.shadow.normalBias = S.normalBias;
+  L.shadow.radius = point ? S.radius : 2.5;
   L.shadow.intensity = point ? N.warm.interiorShadow : 1;
-  L.shadow.camera.near = 0.05;
+  L.shadow.camera.near = S.near ?? 0.15;
   L.shadow.autoUpdate = false;
   L.shadow.needsUpdate = true;
 }

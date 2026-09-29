@@ -1,76 +1,78 @@
-# Carpenter: round 1 notes
+# Carpenter: round 1 notes (pass 2)
 
-## What was built
+Pass 2 was built and judged on the cloud machine (CPU, 2 threads). All kit textures, glb files and previews in this folder were regenerated in this pass from the current scripts. Nothing here comes from the earlier Mac run.
 
-**Shared library `blender/lib/`** (API documented in `blender/lib/README.md`)
-- `nmlib/geo.py`: `Part`, a builder that collects many primitives into one mesh with one material. The primitives are chamfered boxes, slabs, cylinders, spheres, lathes, lofts, tubes, tori, extruded 2D shapes with cut-outs, and 3D text. Each primitive gets its own tiling UV window and a tint in `COLOR_0`, and a per-vertex `shade(p)` hook adds grime and soot.
-- `nmlib/mats.py`: three **tiling kit textures** baked once from Blender procedurals. The noise is sampled on a 4D torus, so every tile is seamless. `wood` has rings, knots with ring deflection, fibre, cracks, dents and silvering. `paint` is an atlas of 8 chipped-paint bands, with gold leaf and Bavarian Rauten among them. `iron` is forged iron with rust and soot. Each kit ships base colour, roughness/metal and normal maps, plus simple materials (`bulb_warm`, `snow`, `glass`, `fir`, …).
-- `nmlib/carpentry.py`: plank walls, lap siding, floors, the `Slope` roof frame, shingles, board roofs, bargeboards, fascia, snow caps, carved valances (scallop / point / wave / step, with star, heart or circle holes), signs, bulb strings and fir garlands.
-- `nmlib/bake.py`: AO bake into a second UV map, wired as the glTF occlusion texture (`texCoord: 1`).
-- `nmlib/export.py` (named empties, `stall_markers`, `export_glb`), `nmlib/render.py` (night preview scene, contact sheet), `glb_tools.py` (report, contract check, texture externalisation) and `optimize.mjs` (the web step, see "Contract issues").
-- Five OFL fonts are bundled in `blender/lib/fonts/` for the signs (credited in CREDITS.md).
+## What changed in pass 2 (judge fixes)
 
-**Stalls `blender/stalls/`**
-- `hut.py` is a parametric hut: carcass, the 1.05 m counter, shelves, roof, bulbs, snow and markers. `pipeline.py` runs full build → AO → optimise, then the lite build, then the preview.
-- `gluehwein.py` replaces the old worked example; the old script is in git history and its render is still in `review/reference/`. It is a tall front-gabled hut, 4.6 m to the gold star finial. It has red bargeboards with a carved scalloped edge, a scalloped lambrequin with star cut-outs across the 0.5 m front overhang, and a red star board in the gable lit from inside. The posts, rails and counter lip are red and gold, with gold stars under the counter and a fir garland with baubles. The arched sign reads "Glühwein" in gold Fraktur.
-- `bratwurst.py` is low, broad and sooty. It has dark lap siding blackened above the grill by a soot plume shader and a board-and-batten roof. A riveted iron chimney hood hangs over a charcoal grill set into the left of the counter, with the stovepipe and rain cap going up through the roof. A firewood stack sits under a lean-to on the right. "Bratwurst" is on a black board standing on the roof, with two gooseneck lamps.
-- `bier.py` is a wide Bavarian bar in light spruce board-and-batten with blue-and-white Rauten pennants along the eaves and rakes. The posts are ringed blue and white like a maypole and carry knee braces. The bar front is **four half-barrels built from separate staves with iron hoops**. The crest sign reads "Bier vom Fass", with Rauten flags on poles and gooseneck lamps.
-- `buecher.py` is an antiquarian bookshop in bottle-green painted boards with cream trim. It has **two tall glazed display cabinets** (glass doors with glazing bars, inner shelves, brass knobs) on either side of the counter. A **small canted bay window** with a copper hood and corbels sits on the left wall, and an iron wall lantern hangs at the right corner. The hand-painted swallow-tail sign reads "Bücher" in IM Fell italic, with gold flourishes, and hangs on chains.
-- `deco.py` holds the nine deco variants: Lebkuchen, Gebrannte Mandeln, Kerzen, Holzspielzeug, Christbaumschmuck, Käse, Crêpes, Heiße Maroni and Kartoffelpuffer. They come from one hut with different width, wall type, wall tint, trim colour, valance style and cut-outs, sign style (fascia or roof crest) and font, roof cover, awning flap and stovepipe. None of them has goods.
+| Judge fix | What I did | How to check |
+|---|---|---|
+| Wood metal = roughness (kit bake bug) | `mats.bake_kit` clears the old link before it bakes a constant. The kits were rebaked at `KIT_VERSION = "v11"`. | `deco_kit_wood_rm.webp` and `deco_kit_oak_rm.webp`: B mean is 1/255 (WebP chroma noise, max 18). Before, the mean was 170. |
+| AO atlas black and streaky in three.js | `bake.bake_ao` drops tiny islands (rivets, letters) onto a light patch, fills empty texels from the nearest island so no black bleeds through mipmaps, and remaps AO to `[0.32, 1]`. | The embedded AO mean is 0.52–0.56 in every stall (was 0.28). See the `*_threejs.jpg` shots: no dark streaks. |
+| Iron kit flat grey | New iron graph: mid-grey forged iron with hammer dents, small rust blooms and runs, soot and pitting, plus a real normal map. | `deco_kit_iron_color.webp` RGB std is about 7.5/255 (was 1). Normal std is 6. |
+| Signs illegible | Deco signs are bigger boards with text at 0.8 of the board height and a 14 mm raised depth. The Bratwurst sign spotlights in the preview are wide and soft. Gold paint is now half metallic (0.5), so gold letters and stars no longer go black in three.js. | `deco_contact_sheet.jpg`; `stall_gluehwein_threejs.jpg` (gold stars now read) |
+| Bratwurst not sooty, grill a black box | Lap boards get vertex columns (`Hut(lap_segs=8)`) so the soot plume, eave soot and soot runs actually reach the siding. The ember bed is raised under the grate. Heat staining (burnt, straw, bronze, blue) is on the firebox. The hood and stovepipe have riveted seams and soot. | `stall_bratwurst_preview.jpg`, `stall_bratwurst_threejs.jpg` (coals glow between the bars) |
+| Wood realism at counter distance | The spruce tile has more contrast (colour std 18/255, was 8) with hard latewood, resin pores and fibre. A new `oak` tile for counter tops has pore bands, ray flecks, scratches and mug rings. Counters carry a vertex wear grid (`hut.counter_wear`) that darkens the front edge where hands rest. | The counters in every preview |
+| Snow caps are white blobs | New `snow_cap(courses=...)`: on shingle roofs the snow lies in one strip per course and sinks below every butt, so each shingle row shows as a dark line. There is a bare, wandering band under the ridge. On board roofs the snow is thin enough for the cover battens to show. No more melt-hole patches. | All previews |
+| Deco lite files at 35–51 % | In lite, bulb detail is capped at 5x3 even when a caller asks for more (that was the leak), lap boards are 1.6x taller and roof boards 1.8x wider. | Deco lite is now 27–35 % (table below). |
+| three.js check under the site lighting | `node blender/stalls/web/shoot.mjs --ao on` loads each glb with `site/src/lighting` (SwiftShader). | `stall_*_threejs.jpg` (snow off, the site default) |
+| Bücher third light (Codex) | The vendor's `prop_books_counter` no longer has `light_lamp`. The assembled stand has `light_0` and `light_1` only. | node listing |
+| Download budget (Codex) | **Section stalls now share the kit textures** with the deco stalls (`deco_kit_*.webp`, by relative URI) instead of embedding their own copies. Section AO is baked at 768 px (lite 384) so the exporter never packs it into a kit map. | See "Budgets": the 13 stalls went from 10.3 MB to 8.6 MB desktop and from 3.4 MB to 2.3 MB lite. |
 
-**Previews** (in this folder): `stall_*_preview.jpg` are Cycles renders, 1280x720, 48 samples, OIDN, 2 threads, a 3/4 front view at night. `deco_contact_sheet.jpg` has all nine deco stalls. The previews are rendered **with the same tiling textures that ship in the glb files**, not with the procedurals. The mugs, pot, sausages, rolls, glasses and books in the section previews are **render-only stand-ins** so the counters don't look bare; they are not in the glb files, because the vendor owns goods.
+## What was built (unchanged scope)
 
-## Triangles and file sizes (after `blender/lib/optimize.mjs`)
+- `blender/lib/` is the shared helper library: `nmlib.geo.Part` (the primitive builder), `mats` (baked tiling kits `wood oak paint iron` and simple materials), `carpentry` (walls, roofs, shingles, snow, valances, signs, bulb strings, garlands), `bake` (AO), `export` (named empties, glb export through `optimize.mjs`), `render` (night previews, contact sheet), and `glb_tools.py` (report, check, texture externalisation). The API is documented in `blender/lib/README.md`. The stall scripts use only this API.
+- The four section stalls in `blender/stalls/`, built on the parametric `hut.py`:
+  - **Glühwein**: tall front-gabled hut, red-and-gold painted trim, scalloped valance with star cut-outs, star board in the gable, gold star finial, fir garland. The sign "Glühwein" is in Fraktur.
+  - **Bratwurst**: low and sooty, with dark lap siding blackened above the grill. A riveted iron chimney hood hangs over a charcoal grill set into the counter, and a stovepipe with a rain cap rises through the board-and-batten roof. There is a firewood lean-to and a black "Bratwurst" board on the roof.
+  - **Bierstand**: Bavarian bar with blue-and-white Rauten pennants along the eaves, maypole-striped posts, and a counter front of four stave-built half barrels with iron hoops. The crest sign reads "Bier vom Fass".
+  - **Bücherstand**: bottle-green antiquarian hut with two glazed display cabinets, a canted bay window with a copper hood, an iron lantern and a hand-painted swallow-tail sign "Bücher".
+- `deco.py` builds the nine deco stalls: Lebkuchen, Gebrannte Mandeln, Kerzen, Holzspielzeug, Christbaumschmuck, Käse, Crêpes, Heiße Maroni and Kartoffelpuffer. Each has its sign, slots, one light, bulbs and snow, and none has goods.
+- Previews: `stall_*_preview.jpg` are Cycles renders (1280x720, 48 samples, OIDN, 3/4 front view at night). `deco_contact_sheet.jpg` shows the nine deco stalls (840x600 tiles, 48 samples). `stall_*_threejs.jpg` are the same glb files in three.js under the site lighting.
+- The mugs, pot, sausages, rolls, beer glasses and books in the Cycles previews are **render-only stand-ins**. They are not in the glb files. The vendor supplies goods at `slot_counter`, `slot_shelf_1`, `slot_shelf_2` (and `slot_cabinet_l`/`slot_cabinet_r` on the Bücherstand). The three.js shots show the bare glbs, so their counters are empty.
 
-| File | Triangles | Size | Lite triangles | Lite size |
-|---|---|---|---|---|
-| stall_gluehwein | 38,649 | 1.46 MB | 10,985 | 0.39 MB |
-| stall_bratwurst | 26,713 | 1.21 MB | 10,037 | 0.43 MB |
-| stall_bier | 44,973 | 1.59 MB | 12,749 | 0.42 MB |
-| stall_buecher | 31,895 | 1.44 MB | 9,745 | 0.41 MB |
-| deco_lebkuchen | 14,627 | 0.46 MB | 5,161 | 0.17 MB |
-| deco_mandeln | 19,030 | 0.56 MB | 7,878 | 0.20 MB |
-| deco_kerzen | 15,503 | 0.47 MB | 6,923 | 0.20 MB |
-| deco_spielzeug | 19,040 | 0.56 MB | 7,972 | 0.21 MB |
-| deco_schmuck | 18,471 | 0.58 MB | 7,573 | 0.20 MB |
-| deco_kaese | 11,785 | 0.37 MB | 5,033 | 0.16 MB |
-| deco_crepes | 14,905 | 0.45 MB | 6,185 | 0.18 MB |
-| deco_maroni | 13,444 | 0.45 MB | 6,868 | 0.20 MB |
-| deco_puffer | 16,197 | 0.53 MB | 6,273 | 0.18 MB |
-| shared deco kit textures `deco_kit_*.webp` | | 0.14 MB | | 0.05 MB (`*.lite.webp`) |
+## Triangles and file sizes (after `blender/lib/optimize.mjs`, measured on the files in `site/public/models`)
 
-- Section stalls are 27–45k triangles and at most 1.6 MB, which leaves 15–33k triangles and at least 1.4 MB of the 60k / 3 MB budget for the vendor's props. Deco stalls are at most 19k triangles and at most 0.6 MB each, plus 0.14 MB of kit textures shared by all nine.
-- The lite versions have 512 px textures, no bevels, one shingle strip per course and fewer segments. Section lite files are 28–38 % of the full triangle count. Deco lite files are 35–51 %: their full versions are already lean, and the sign text and snow caps have a fixed floor.
-- Desktop first-load share for the 13 stalls is about 5.7 MB for the section stalls plus 4.6 MB for the deco stalls (kit textures included). Lite is about 3.4 MB in total.
-- Every file passes `python3 blender/lib/glb_tools.py check` (slot_counter, slot_shelf_1, slot_shelf_2, slot_vendor, slot_sign, slot_front, light_*, bulbs_*, snow_*, cam_view, cam_target, and material `bulb_warm`), and `gltf-transform validate` reports no errors. `slot_counter` sits at y = 1.050 in every file: the counter boards' top face is exactly 1.05 m.
-- Sign text in the models: Glühwein, Bratwurst, Bier vom Fass, Bücher, Lebkuchen, Gebrannte Mandeln, Kerzen, Holzspielzeug, Christbaumschmuck, Käse, Crêpes, Heiße Maroni, Kartoffelpuffer.
+| File | Triangles | Size | Lite triangles | Lite size | Lite / full |
+|---|---|---|---|---|---|
+| stall_gluehwein | 41,129 | 0.99 MB | 8,462 | 0.21 MB | 21 % |
+| stall_bratwurst | 41,727 | 1.00 MB | 8,021 | 0.24 MB | 19 % |
+| stall_bier | 44,871 | 1.07 MB | 10,181 | 0.25 MB | 23 % |
+| stall_buecher | 34,841 | 0.94 MB | 6,609 | 0.19 MB | 19 % |
+| deco_lebkuchen | 14,837 | 0.46 MB | 4,274 | 0.13 MB | 29 % |
+| deco_mandeln | 17,433 | 0.49 MB | 4,941 | 0.13 MB | 28 % |
+| deco_kerzen | 15,463 | 0.47 MB | 4,334 | 0.13 MB | 28 % |
+| deco_spielzeug | 17,374 | 0.50 MB | 5,329 | 0.15 MB | 31 % |
+| deco_schmuck | 17,311 | 0.50 MB | 4,603 | 0.13 MB | 27 % |
+| deco_kaese | 12,366 | 0.41 MB | 4,054 | 0.13 MB | 33 % |
+| deco_crepes | 14,621 | 0.45 MB | 3,987 | 0.12 MB | 27 % |
+| deco_maroni | 13,492 | 0.42 MB | 4,709 | 0.14 MB | 35 % |
+| deco_puffer | 16,324 | 0.48 MB | 4,807 | 0.14 MB | 29 % |
+| shared kit `deco_kit_*.webp` (used by all 13 stalls) | | 0.44 MB | | 0.18 MB (`*.lite.webp`) | |
 
-Rebuild: `/home/claude/tools/bpy-venv/bin/python blender/stalls/<stall>.py` (add `--no-render`, `--no-lite`, `--samples N`), and `.../deco.py [--only kaese,crepes]`. Each section stall takes about 20 s to build, AO-bake and export both LODs, plus the render (3–5 min at the current load). Kit textures bake once, in about 2 min, into `blender/out/kit/`. The bpy module sometimes segfaults at interpreter exit after all files are written. This is harmless.
+- **Budgets.** With the vendor's current props, the assembled section stalls come to Glühwein 58.8k triangles / 1.36 MB, Bratwurst 53.6k / 1.15 MB, Bier 57.5k / 1.20 MB and Bücher 39.9k / 1.19 MB, all within the 60k / 3 MB budget. Glühwein is close to the triangle limit. Every deco stall is under 20k triangles and 1 MB.
+- **First-load share for my 13 stalls:** 8.6 MB desktop (4.0 section + 4.2 deco + 0.44 kit) and 2.3 MB lite (0.9 + 1.2 + 0.18).
+- **Contract checks.** `glb_tools.check_stall` passes on every file: `slot_counter`, `slot_shelf_1`, `slot_shelf_2`, `slot_vendor`, `slot_sign`, `slot_front`, `light_*`, `bulbs_*`, `snow_*`, `cam_view`, `cam_target`, and material `bulb_warm`. There are 2 `light_` empties per section stall and 1 per deco stall. `slot_counter` is at y = 1.050 in every file, and the counter boards' top face is exactly 1.05 m. `gltf-transform validate` reports no errors.
+- **Sign text:** Glühwein, Bratwurst, Bier vom Fass, Bücher, Lebkuchen, Gebrannte Mandeln, Kerzen, Holzspielzeug, Christbaumschmuck, Käse, Crêpes, Heiße Maroni, Kartoffelpuffer.
 
-## Contract issues and notes for other roles
+## Rebuild
 
-1. **Do not use `gltf-transform optimize` on assets with empties.** The CLI prunes empty leaf nodes even with `--prune false`, so every `slot_*`, `light_*` and `cam_*` empty disappears. I tested this. Its palette and join steps also merge and rename materials such as `bulb_warm`. `node blender/lib/optimize.mjs in.glb out.glb --texture-size 1024` runs the same passes (dedup, weld, prune keeping leaves, WebP, resize, meshopt) without that damage. The market owner may want to put it into docs/BUILD.md as the standard step.
-2. **COLOR_0 is intentional.** Kit materials multiply base colour by the vertex colour (plank tints, grime, soot), as the glTF spec defines. GLTFLoader enables `vertexColors` automatically, so the engineer should not strip it.
-3. **Occlusion is on TEXCOORD_1** (`occlusionTexture.texCoord = 1`). three.js r151+ handles this through `texture.channel`.
-4. **Deco textures are external:** `deco_*.glb` reference `deco_kit_*.webp` (lite: `deco_kit_*.lite.webp`) by relative URI in the same folder. With `THREE.Cache.enabled = true` they download once. Keep these files next to the glbs. The full-size iron roughness map is packed with each variant's AO, so it stays embedded (a few kB).
-5. Extra named nodes: `grill_coals` (emissive `ember` mesh the engine may pulse) and `smoke_origin` on the Bratwurst stand; `slot_cabinet_l` and `slot_cabinet_r` (bottom cabinet shelves) on the Bücherstand.
-6. Footprints and heights (origin at the footprint centre, front −Y):
-   - Glühwein: 3.4 × 2.5 m, roof overhang 0.5 m at the front, 4.6 m tall.
-   - Bratwurst: 3.9 × 2.5 m, plus a 0.8 m lean-to on the +X side; stovepipe 4.45 m.
-   - Bier: 4.2 × 2.6 m, with pennants reaching 0.9 m past the walls; crest 4.3 m.
-   - Bücher: 3.7 × 2.5 m, plus a 0.35 m bay on the −X side; 3.9 m tall.
-   - Deco: 2.6–3.4 × 2.2 m.
-   The prototype stalls were 4 × 2.8 m, so the layout spacing still holds.
-7. The section stalls use two `light_` empties each (interior, and front/counter) and the deco stalls use one. Gooseneck sign lamps and the Bücher lantern are emissive (`bulb_warm` / `lamp_glass`), not lights.
+`/home/claude/tools/bpy-venv/bin/python blender/stalls/<stall>.py [--no-render] [--no-lite] [--samples N] [--res WxH]`, and `.../deco.py [--only kaese,crepes]`. With the machine shared (load 13–20), a stall takes about 1–2 min to build, AO-bake and export both LODs, and 5–6 min to render. The kit rebake after a version bump takes about 5 min. bpy segfaults at exit after writing everything; this is harmless.
+
+## Notes for other roles and the market owner
+
+1. **Kit version bump (v11).** Gold paint is now metallic 0.5 (was 1.0), and wood and oak metal is 0. **Ride builder:** carousel, Ferris wheel, bandstand and instruments use kit `paint`, and their glb files embed the old maps. Please re-export them (`mats.ensure_kit()` rebakes automatically).
+2. **Shared kit textures.** All 13 stall glbs now reference `deco_kit_*.webp` (lite: `deco_kit_*.lite.webp`) in the same folder. Keep those files next to the glbs. The site's loader already has `THREE.Cache.enabled` and shares image sources.
+3. **Lighting designer: signs at night.** In three.js the section signs are lit only by the hemisphere and the two `light_` empties inside the stall, so the Glühwein and Bratwurst boards stay dark (see the `*_threejs.jpg` shots). Every stall has a `slot_sign` empty 5 cm in front of its sign face. A small, unshadowed, short-range warm spot at `slot_sign`, aimed back at the sign (the gooseneck lamps in the models are where it would come from), would make all 13 signs legible.
+4. **Market owner:** please replace the `gltf-transform optimize` line in docs/BUILD.md with `node blender/lib/optimize.mjs in.glb out.glb --texture-size 1024`. The CLI step deletes every `slot_`/`light_`/`cam_` empty and renames `bulb_warm`. `.gitignore` already lists `__pycache__/`, but `blender/props/__pycache__/*.pyc` files are tracked in git and should be removed from the index.
+5. COLOR_0 (plank tints, soot, wear) is intentional. Occlusion is on TEXCOORD_1. Extra nodes: `grill_coals` (emissive ember mesh) and `smoke_origin` on the Bratwurst stall; `slot_cabinet_l` and `slot_cabinet_r` on the Bücherstand.
+6. Footprints are unchanged: Glühwein 3.4 x 2.5 m; Bratwurst 3.9 x 2.5 m plus a 0.8 m lean-to on +X; Bier 4.2 x 2.6 m; Bücher 3.7 x 2.5 m plus a 0.35 m bay on -X; deco stalls 2.6–3.4 x 2.2 m.
 
 ## Open issues and what I would improve next
 
-- **Wood close-ups:** the wood tile is a little smooth at counter distance. Next I would add stronger fibre and pore detail, a second wood tile (oak for counters), and worn, darkened counter edges from a per-stall edge-wear mask.
-- **Bevel cost:** chamfers are real geometry, 44 triangles per plank. A baked edge-normal trim sheet could give the same highlight for 12 triangles.
-- **The Bratwurst grill reads as a black box** in the render, because the coals sit under the grate. It needs a brighter ember bed, ash and heat staining.
-- **Snow caps are separate meshes that cover the shingles completely.** The shingle detail shows only with snow off. A thinner, patchier cap would let some shingle rows show.
-- **Bratwurst sign in the preview:** the render-only spotlights for its gooseneck lamps are too narrow, so the black board is lit in two hot circles. The word reads, but the lighting is uneven. The lamps themselves are just emissive bulbs in the glb.
-- Running the stall scripts leaves `__pycache__/` folders in `blender/`. I deleted them, but `.gitignore` could list `__pycache__/`.
-- **Deco stalls look bare in their previews** (no goods, by design). Their fascia signs are small at contact-sheet size.
-- **Not yet checked in the browser.** I validated the files with the glTF validator but have not loaded them in the engineer's three.js scene. The lighting designer should check that the `COLOR_0` tints and the paint colours hold up under the real-time lights.
-- **Glühwein text cost:** the Fraktur letters with bevel are about 2k triangles. `sign(..., text_bevel=0, resolution=1)` would cut that if the vendor needs the room.
+- **Sign lighting in the browser** depends on the lighting designer (note 3). In Cycles the signs read, but in three.js the Glühwein and Bratwurst boards are dim.
+- **Rauten pennants in three.js:** at 1024 px the lozenges on the Bier pennants mip down to pale blue-white at preview distance. A dedicated 2-colour pennant texture, or bigger lozenges, would keep the pattern.
+- **Glühwein plus props is at 58.8k of 60k triangles.** The bevelled Fraktur text (about 2k triangles) or the shingle bevels are the first things to cut if the vendor needs room.
+- **Bratwurst ember bed** is visible between the grate bars in three.js (emissive plus bloom). In the Cycles preview the sausage stand-ins cover most of it. The vendor's `prop_wurst_counter` also has a grill and coals, so the two grills need to be reconciled: either the vendor's sits on mine, or I drop my grate.
+- **Deco signs** now read at contact-sheet size, except Holzspielzeug (blue on white under dim light). It would read better on a darker board.
+- **Bevel cost:** chamfers are real geometry. A baked edge-normal trim sheet could halve the wall triangles.
+- The snow strips are regular on very straight roofs. A few slipped or drifted patches at the eaves would help.

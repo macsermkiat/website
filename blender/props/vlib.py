@@ -561,8 +561,9 @@ def material(key):
         if not lite():
             b.inputs["Transmission Weight"].default_value = 0.65
     elif key == "liquid":
+        # a little roughness so a wide surface (the kettle) does not mirror the copper walls and read as empty
         _vcol_mult(m.node_tree, (1.0, 1.0, 1.0), b)
-        b.inputs["Roughness"].default_value = 0.04
+        b.inputs["Roughness"].default_value = 0.14
         b.inputs["IOR"].default_value = 1.34
     elif key == "coal_glow":
         nt = m.node_tree
@@ -721,11 +722,90 @@ TEX_FULL, TEX_LITE = 2048, 512                # the contract: lite textures are 
 AO_FULL, AO_LITE = 512, 256                   # per-set AO atlas (occlusion texture, TEXCOORD_1)
 
 
-def export_set(name, lite_mode):
+def export_set(name, lite_mode, items=None):
     from nmlib import export as nexport
     out = name + (".lite" if lite_mode else "")
-    return nexport.export_glb(out, texture_size=TEX_LITE if lite_mode else TEX_FULL,
-                              externalize=(lambda n: n.startswith(SHARED_TEX), tex_uri(lite_mode)))
+    rep = nexport.export_glb(out, texture_size=TEX_LITE if lite_mode else TEX_FULL,
+                             externalize=(lambda n: n.startswith(SHARED_TEX), tex_uri(lite_mode)))
+    path = os.path.join(MODELS, out + ".glb")
+    mats = split_book_materials(path)
+    if mats:
+        rep["materials"] = mats
+    if items:
+        add_node_extras(path, items)
+    return rep
+
+
+EXTRA_KEYS = ("name", "kind", "title", "author", "cover_material")
+
+
+def add_node_extras(path, items):
+    """Write each clickable act_ node's display data into its glTF node extras (three.js userData), so a
+    clicked node identifies itself without items.json: {name, kind[, title, author, cover_material]}."""
+    import glb_tools
+    js, binchunk = glb_tools.read_glb(path)
+    n = 0
+    for nd in js.get("nodes", []):
+        it = items.get(nd.get("name", ""))
+        if not it:
+            continue
+        ex = {k: it[k] for k in EXTRA_KEYS if k in it}
+        if nd.get("extras") != ex:
+            nd["extras"] = ex
+            n += 1
+    if n:
+        glb_tools.write_glb(path, js, binchunk)
+    return n
+
+
+def split_book_materials(path):
+    """The web optimiser's dedup() merges the identical book_cover_<n> materials into one, so every
+    book ends up on book_cover_0. Give each act_book_<n> back its own copy named book_cover_<n>
+    (a few hundred bytes of JSON; the textures stay shared). Returns the new material list."""
+    import copy
+    import re
+    import glb_tools
+    js, binchunk = glb_tools.read_glb(path)
+    nodes, meshes, mats = js.get("nodes", []), js.get("meshes", []), js.get("materials", [])
+    if not any(m.get("name", "").startswith("book_cover_") for m in mats):
+        return None
+    by_name = {m.get("name"): i for i, m in enumerate(mats)}
+    mesh_users = {}
+    for nd in nodes:
+        if "mesh" in nd:
+            mesh_users[nd["mesh"]] = mesh_users.get(nd["mesh"], 0) + 1
+    changed = False
+    for nd in nodes:
+        mt = re.match(r"^act_book_(\d+)$", nd.get("name", ""))
+        if not mt:
+            continue
+        want = f"book_cover_{mt.group(1)}"
+        for ci in nd.get("children", []):
+            ch = nodes[ci]
+            if "mesh" not in ch:
+                continue
+            mi = ch["mesh"]
+            prims = meshes[mi]["primitives"]
+            if not any(mats[p["material"]].get("name", "").startswith("book_cover_") and
+                       mats[p["material"]].get("name") != want for p in prims if "material" in p):
+                continue
+            if mesh_users.get(mi, 1) > 1:              # shared mesh: give this node its own copy
+                meshes.append(copy.deepcopy(meshes[mi]))
+                mesh_users[mi] -= 1
+                mi = ch["mesh"] = len(meshes) - 1
+                prims = meshes[mi]["primitives"]
+            for p in prims:
+                src = mats[p.get("material", 0)] if "material" in p else None
+                if not src or not src.get("name", "").startswith("book_cover_"):
+                    continue
+                if want not in by_name:
+                    mats.append(dict(copy.deepcopy(src), name=want))
+                    by_name[want] = len(mats) - 1
+                p["material"] = by_name[want]
+                changed = True
+    if changed:
+        glb_tools.write_glb(path, js, binchunk)
+    return [m.get("name") for m in mats]
 
 
 def pivot_report(ps):

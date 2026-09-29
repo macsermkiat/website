@@ -1,8 +1,8 @@
 """Night preview renders of the architect's assets, assembled from the raw glbs + layout.json.
 
-Usage: NM_DEVICE=METAL NM_THREADS=0 ~/nachtmarkt-tools/bpy-venv/bin/python blender/square/preview.py <shot> [samples] [out.jpg]
+Usage: /home/claude/tools/bpy-venv/bin/python blender/square/preview.py <shot> [samples] [out.jpg]
 shots: home | street | tree | cobbles | church | roofs
-Renders at 1920x1080 (RES_X overrides), keeps the PNG in blender/square/out/renders/ and writes a
+Renders at 1280x720 and 48 samples (RES_X and argv[2] override; iterate at RES_X=960 and 32), keeps the PNG in blender/square/out/renders/ and writes a
 1280 px review JPEG.  Stalls and landmarks are plain stand-ins at the real assets' sizes (other roles
 build the real ones).
 """
@@ -14,13 +14,13 @@ import architect_common as C
 import architect_plan as P
 
 shot = sys.argv[1] if len(sys.argv) > 1 else "home"
-samples = int(sys.argv[2]) if len(sys.argv) > 2 else 128
+samples = int(sys.argv[2]) if len(sys.argv) > 2 else 48
 out = sys.argv[3] if len(sys.argv) > 3 else os.path.join(C.REPO, "review", "round-1", "architect", f"{shot}.jpg")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 random.seed(1)
 
 scene = C.reset()
-C.setup_cycles(samples, (int(os.environ.get("RES_X", 1920)), int(os.environ.get("RES_X", 1920)) * 9 // 16))
+C.setup_cycles(samples, (int(os.environ.get("RES_X", 1280)), int(os.environ.get("RES_X", 1280)) * 9 // 16))
 C.night_world(1.0)
 stand = C.collection("StandIns")
 
@@ -140,13 +140,14 @@ elif shot == "church":
     C.camera((-7.5, 28.0, 1.7), (9, 56, 19), lens=19)
     C.compositor_fog_glare(near=40, far=180, fog_amount=0.3)
 elif shot == "tree":
-    C.camera((tp.x - 1.5, tp.y - 13.8, 1.8), (tp.x, tp.y, 6.6), lens=18)
+    # from the open lane behind the Bierstand, beside the bandstand (clear of the stand-ins and poles)
+    C.camera((tp.x + 2.0, tp.y - 10.0, 1.7), (tp.x, tp.y, 7.0), lens=17)
     C.compositor_fog_glare(near=40, far=180, fog_amount=0.35)
 elif shot == "roofs":
     # from the top of the Ferris wheel over the ring's roofs (where the wedge gaps used to show)
     fw = next(p for p in layout["places"] if p["id"] == "riesenrad")
     fp = C.three_to_blender(*fw["pos"])
-    C.camera((fp.x, fp.y, 25.0), (30.0, 52.0, 8.0), lens=24)
+    C.camera((fp.x, fp.y - 1.6, 27.5), (30.0, 52.0, 8.0), lens=24)      # just above and in front of the top gondola
     C.compositor_fog_glare(near=50, far=220, fog_amount=0.3)
 elif shot == "cobbles":
     t0, t1 = math.radians(286), math.radians(300)

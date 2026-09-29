@@ -36,9 +36,23 @@ def is_hidden_for_ao(o):
     return o.name.startswith(("snow_", "bulbs_"))
 
 
+def kit_uri(lite):
+    """URI of a shared kit texture next to the glb files (deco_kit_*.webp / *.lite.webp)."""
+    return lambda name: "deco_" + name + (".lite" if lite else "") + ".webp"
+
+
+def shared_kit(lite):
+    """externalize= value that moves every kit_* texture out of the glb into the shared files."""
+    return (lambda n: n.startswith("kit_"), kit_uri(lite))
+
+
 def build_and_export(name, build, seed, lite, texture_size=None, externalize=None, ao_res=None):
-    """ao_res defaults to 1024 (full) / 512 (lite). When it equals the kit texture size the
-    glTF exporter packs AO into the roughness/metal image (ORM), otherwise they stay separate."""
+    """ao_res defaults to 768 (full) / 384 (lite). When it equals a kit texture's size the
+    glTF exporter packs AO into that roughness/metal image (ORM), which makes the image unique
+    to this asset; the defaults avoid every kit size so all kit maps stay shareable.
+    externalize: None, "kit" (shared kit files, see shared_kit) or an explicit pair."""
+    if externalize == "kit":
+        externalize = shared_kit(lite)
     state.reset(seed, lite_mode=lite)
     mats.ensure_kit()
     t0 = time.time()
@@ -49,13 +63,13 @@ def build_and_export(name, build, seed, lite, texture_size=None, externalize=Non
         if o.type == 'MESH':
             print(f"     {o.name:30s} {export.triangles([o]):7d}")
     out = name + (".lite" if lite else "")
-    bake.bake_ao(objs, out, res=ao_res or (512 if lite else 1024), samples=12 if lite else 20,
+    bake.bake_ao(objs, out, res=ao_res or (384 if lite else 768), samples=12 if lite else 20,
                  hide=[o for o in objs if is_hidden_for_ao(o)])
     rep = export.export_glb(out, texture_size or (512 if lite else 1024), externalize=externalize)
     return objs, rep
 
 
-def run(name, build, preview=None, seed=1, externalize=None):
+def run(name, build, preview=None, seed=1, externalize="kit"):
     a = args()
     reports = {}
     rep_path = os.path.join(state.OUT_DIR, f"{name}_report.json")

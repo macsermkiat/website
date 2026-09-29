@@ -132,11 +132,17 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
 
 const _v = new THREE.Vector3();
 /** Where the camera goes for a place: its cam_view/cam_target, or a view worked out from its position. */
+// Per-place camera nudges on top of the architect's cam_view: `dolly` keeps that fraction of the distance to
+// cam_target. The Bücherstand is about its books, so its view comes in closer to the shelves.
+export const VIEW_NUDGE = { books: { dolly: 0.8 } };
+
 export function viewFor(place) {
   const n = place.nodes;
   if (n.camView) {
     const pos = n.camView.getWorldPosition(new THREE.Vector3());
     const target = n.camTarget ? n.camTarget.getWorldPosition(new THREE.Vector3()) : place.center.clone();
+    const nudge = VIEW_NUDGE[place.id];
+    if (nudge?.dolly) pos.lerpVectors(target, pos, nudge.dolly);
     return { pos, target };
   }
   const c = place.center.clone();

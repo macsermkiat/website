@@ -1,6 +1,6 @@
 """Cycles previews of the organizer's figures (render-only scene; nothing here is exported).
 
-    NM_DEVICE=METAL NM_THREADS=0 ~/nachtmarkt-tools/bpy-venv/bin/python blender/people/preview.py lineup|band|group|bench|test [--samples N] [--res WxH]
+    [NM_DEVICE=CPU NM_THREADS=2] /home/claude/tools/bpy-venv/bin/python blender/people/preview.py lineup|band|group|bench|test [--samples N] [--res WxH]
 """
 import argparse
 import math
@@ -219,10 +219,11 @@ def stack_strips(pngs, labels, out_jpg, gap, width=1280):
     band = 34
     sheet = Image.new("RGB", (W, sum(im.height for im in ims) + band * len(ims)), (12, 13, 20))
     d = ImageDraw.Draw(sheet)
-    try:
-        font = ImageFont.truetype(os.path.join(REPO, "blender", "lib", "fonts", "AlegreyaSC-ExtraBold.ttf"), 22)
-    except Exception:
-        font = ImageFont.load_default()
+    def font_of(size):
+        try:
+            return ImageFont.truetype(os.path.join(REPO, "blender", "lib", "fonts", "AlegreyaSC-ExtraBold.ttf"), size)
+        except Exception:
+            return ImageFont.load_default()
     y = 0
     for im, names in zip(ims, labels):
         sheet.paste(im, (0, y))
@@ -232,8 +233,15 @@ def stack_strips(pngs, labels, out_jpg, gap, width=1280):
         for i, nm in enumerate(names):
             x = (i - (n - 1) / 2) * gap
             px = W / 2 + x / half * W / 2
+            # shrink long names (vendor_gluehwein) to fit the spacing between figures
+            room = gap / half * W / 2 * 0.94
+            size = 22
+            font = font_of(size)
+            while size > 11 and d.textlength(nm, font=font) > room:
+                size -= 1
+                font = font_of(size)
             tw = d.textlength(nm, font=font)
-            d.text((px - tw / 2, y + im.height + 5), nm, fill=(235, 215, 170), font=font)
+            d.text((px - tw / 2, y + im.height + 5 + (22 - size) // 2), nm, fill=(235, 215, 170), font=font)
         y += im.height + band
     if sheet.width > width:
         sheet = sheet.resize((width, round(sheet.height * width / sheet.width)), Image.LANCZOS)
@@ -390,18 +398,19 @@ def main():
         camera(env_c, v[:3], v[3:6], v[6] if len(v) > 6 else 40)
         render(scene, a.out or os.path.join(REVIEW, "bench_sit.jpg"), a.samples, res)
     elif what == "group":
-        # the same spacing as crowd.json groups (radius 0.72 m, 0.1 m wider than pass 1, so chat hands clear coats)
-        grp = [("people_woman_coat", (0.66, 0.06), "chat", 1.2), ("people_man_coat", (-0.62, 0.18), "drink", 2.2),
-               ("people_man_parka", (0.06, 0.86), "laugh", 1.3), ("people_woman_older", (-0.06, -0.66), "idle", 2.5)]
+        # crowd.json spacing (GROUP_RADIUS 0.72 m, x 0.9 to 1.12): an open ring toward the camera so every face
+        # shows, the chat gestures clear of the neighbours' coats
+        grp = [("people_woman_older", (-0.76, 0.22), "idle", 2.5), ("people_man_parka", (-0.06, 0.8), "laugh", 1.3),
+               ("people_man_coat", (0.74, 0.3), "drink", 2.2), ("people_woman_coat", (0.42, -0.62), "chat", 1.2)]
         for i, (nm, (x, y), clip, t) in enumerate(grp):
-            yaw = math.atan2(-x, -y) + math.pi / 2 + math.pi   # face the centre
-            d = Vector((0, 0, 0)) - Vector((x, y, 0))
+            d = Vector((0, 0.05, 0)) - Vector((x, y, 0))
             yaw = math.atan2(d.y, d.x) + math.pi / 2
             place(specs.BY_NAME[nm], coll, (x, y, 0), yaw, clip, t, name=f"g{i}")
-        place(specs.BY_NAME["people_child_girl"], coll, (1.45, -0.55, 0), 2.6, "idle_free", 0.5, name="g5")
+        place(specs.BY_NAME["people_child_girl"], coll, (-1.25, -0.75, 0), -0.5, "idle_free", 0.5, name="g5")
         market_lights(env_c)
         bokeh_strings(env_c, y=7.0)
-        camera(env_c, (2.0, -4.9, 1.75), (0.3, 0.05, 0.95), 42)
+        v = [float(x) for x in a.cam.split(",")] if a.cam else [0.35, -4.7, 1.7, -0.1, 0.1, 0.95, 40]
+        camera(env_c, v[:3], v[3:6], v[6] if len(v) > 6 else 40)
         render(scene, a.out or os.path.join(REVIEW, "group_chat.jpg"), a.samples, res)
 
 

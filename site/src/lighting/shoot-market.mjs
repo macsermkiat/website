@@ -29,11 +29,11 @@ try {
     const t0 = Date.now();
     const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, reducedMotion: 'no-preference' });
     const page = await ctx.newPage();
-    page.setDefaultTimeout(600000);
+    page.setDefaultTimeout(2400000);
     page.on('console', (m) => { const t = m.text(); if (m.type() === 'error' || /lighting|Lighting/.test(t)) console.log(`  [${name}] ${m.type()}: ${t.slice(0, 300)}`); });
     page.on('pageerror', (e) => console.log(`  [${name}] pageerror: ${e.message}`));
     await page.goto(`http://localhost:${PORT}/website/?${qs}`, { waitUntil: 'load' });
-    await page.waitForFunction(() => document.documentElement.dataset.ready === 'true' || /could not/.test(document.getElementById('loadingText')?.textContent || ''), null, { timeout: 600000 });
+    await page.waitForFunction(() => document.documentElement.dataset.ready === 'true' || /could not/.test(document.getElementById('loadingText')?.textContent || ''), null, { timeout: 2400000 });
     await page.waitForTimeout(+opt('--settle', 8000));
     // software GL draws the full market slowly: wait for a few real frames so the capture is current
     await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n >= 2 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }));
@@ -41,7 +41,10 @@ try {
     await page.waitForTimeout(3000);
     const rep = await page.evaluate(() => ({ lighting: window.__market?.report?.lighting, lights: window.__market?.report?.lights, warnings: window.__market?.report?.warnings }));
     const file = path.join(OUT, `${name}.png`);
-    await page.screenshot({ path: file, timeout: 900000 });
+    // hold the last drawn frame, so the screenshot does not wait for another 20 s software-GL frame
+    await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n >= 2 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }));
+    await page.evaluate(() => window.__market?.freeze?.(true));
+    await page.screenshot({ path: file, timeout: 2400000 });
     console.log(`${name}: ${file} (${((Date.now() - t0) / 1000).toFixed(0)} s) ${JSON.stringify(rep).slice(0, 400)}`);
     await ctx.close();
   }

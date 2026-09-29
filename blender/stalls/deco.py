@@ -35,7 +35,7 @@ VARIANTS = {
                    valance=("wave", "circle"), sign="fascia", board=("oval", "cream", "black"),
                    font="fell_italic", roof="shingles", roof_tint="walnut"),
     "spielzeug": dict(text="Holzspielzeug", W=3.2, wall="batten", wall_tint="pine", trim="blue", accent="red",
-                      valance=("step", None), sign="crest", board=("rect", "white", "blue"),
+                      valance=("step", None), sign="crest", board=("rect", "blue", "cream"),
                       font="alegreya_sc", roof="shingles", roof_tint="shingle", awning="blue"),
     "schmuck": dict(text="Christbaumschmuck", W=3.4, wall="vertical", wall_tint="oak", trim="green",
                     accent="gold", valance=("scallop", "star"), sign="crest", board=("arch", "cream", "green"),
@@ -54,6 +54,11 @@ VARIANTS = {
                    font="alegreya_sc", roof="shingles", roof_tint="shingle", stove=True),
 }
 D, EAVE, RIDGE = 2.2, 2.62, 3.4
+# AO atlas size of the full deco builds. It must differ from every kit texture size (1024, and
+# 512 for iron): when the AO image has the same size as a kit roughness/metal map, the glTF
+# exporter packs AO into that map (ORM) and the glb embeds its own copy instead of sharing
+# deco_kit_iron_rm.webp. Lite: 256 (the lite kit maps are 512).
+DECO_AO = 448
 SEEDS = {k: 100 + i * 7 for i, k in enumerate(VARIANTS)}
 
 
@@ -127,12 +132,12 @@ def build_variant(key, lite):
     if v["sign"] == "crest":
         ys = -0.35
         z_roof = RIDGE - abs(ys) * math.tan(h.pitch) + 0.05
-        sw = min(W + 0.1, 0.5 + 0.2 * len(v["text"]))
-        sh = 0.52 if shape != "banner" else 0.56
+        sw = min(W + 0.1, 0.6 + 0.26 * len(v["text"]))
+        sh = 0.56 if shape != "banner" else 0.6
         sign_c = Vector((0, ys, z_roof + sh / 2 + 0.12))
         cp.sign(P, P, v["text"], fnt, sign_c, sw, sh, depth=0.045, board_band=board_band, text_band=text_band,
                 frame_band=accent if accent not in (board_band, text_band) else None, board_shape=shape,
-                text_size=0.34, max_fill=0.86 if shape != "banner" else 0.74, text_depth=0.012, resolution=1,
+                text_size=sh * 0.8, max_fill=0.9 if shape != "banner" else 0.76, text_depth=0.014, resolution=1,
                 text_bevel=0.0, text_dy=-0.03 if shape == "arch" else 0.0)
         lamp_x = (-sw * 0.3, sw * 0.3)
         h.sign_lamps(lamp_x, ys - 0.03, sign_c.z + sh / 2 + 0.06, reach=0.3)
@@ -143,14 +148,14 @@ def build_variant(key, lite):
             b = Vector((x, ys + 0.42, RIDGE - abs(ys + 0.42) * math.tan(h.pitch) + 0.06))
             h.iron.slab(a, b, 0.022, 0.012, up=(1, 0, 0))
     else:  # fascia sign: hung on the front of the valance at the eave, two small lamps above it
-        sw = min(W - 0.3, 0.7 + 0.24 * len(v["text"]))
-        sh = 0.46
+        sw = min(W - 0.2, 0.8 + 0.3 * len(v["text"]))
+        sh = 0.54
         e = sl.point(0, 0)
         sign_c = Vector((0, e.y - 0.035, ez - 0.02))
         cp.sign(P, P, v["text"], fnt, sign_c, sw, sh, depth=0.032, board_band=board_band, text_band=text_band,
                 frame_band=accent if shape == "rect" and accent not in (board_band, text_band) else None,
-                board_shape=shape, text_size=0.34, max_fill=0.84 if shape != "banner" else 0.72,
-                text_depth=0.01, resolution=1, text_bevel=0.0)
+                board_shape=shape, text_size=sh * 0.82, max_fill=0.86 if shape != "banner" else 0.74,
+                text_depth=0.014, resolution=1, text_bevel=0.0)
         lamp_x = (-sw * 0.28, sw * 0.28)
         h.sign_lamps(lamp_x, sign_c.y + 0.01, sign_c.z + sh / 2 + 0.03, reach=0.22)
         lamp_spots.extend([((x, sign_c.y - 0.25, sign_c.z + sh / 2 + 0.16), (x * 0.4, sign_c.y, sign_c.z))
@@ -166,10 +171,6 @@ def build_variant(key, lite):
     h.interior_bulbs(xs=(-0.6, 0.6), z=2.3)
     h.markers(sign_pos=tuple(sign_c + Vector((0, -0.05, 0))), lights=[(0, -0.2, 2.3)], cam_dist=3.2, cam_h=1.7)
     return h.finish()
-
-
-def kit_uri(lite):
-    return lambda name: "deco_" + name + (".lite" if lite else "") + ".webp"
 
 
 def main():
@@ -188,8 +189,8 @@ def main():
             if (lite and a.no_lite) or (not lite and a.no_full):
                 continue
             objs, rep = pipeline.build_and_export(
-                name, build, SEEDS[key], lite, ao_res=256 if lite else 512,
-                externalize=(lambda n: n.startswith("kit_"), kit_uri(lite)))
+                name, build, SEEDS[key], lite, ao_res=256 if lite else DECO_AO,
+                externalize="kit")
             reports[name + (".lite" if lite else "")] = rep
         if not a.no_render and not a.no_full:
             render.night_scene(ground_size=24)
@@ -199,7 +200,7 @@ def main():
                 render.add_light("env_signlamp", 'SPOT', p, 60, size=0.1, spot_size=math.radians(110),
                                  spot_blend=1.0, target=t)
             render.add_light("env_neighbour", 'POINT', (-4.2, -1.4, 2.6), 120, size=0.6)
-            render.camera((-3.1, -5.4, 1.9), (0.05, -0.45, 2.25), lens=28)
+            render.camera((-3.0, -5.2, 2.15), (0.1, -0.5, 2.2), lens=30)
             png = os.path.join(state.OUT_DIR, "renders", f"{name}.png")
             render.render(png, samples=a.samples, res=(840, 600))
             renders.append((png, VARIANTS[key]["text"]))

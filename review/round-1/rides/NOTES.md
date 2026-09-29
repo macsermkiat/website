@@ -1,117 +1,104 @@
-# Ride builder: round 1 notes
+# Ride builder: round 1 notes (pass 2)
 
-## What was built
+## What changed in pass 2
 
-All scripts are in `blender/rides/`. They use the carpenter's `nmlib` for the wood and paint kits, AO baking and export. The web step is `blender/lib/optimize.mjs`, which keeps empties and material names intact.
+Everything was rebuilt, re-exported and re-rendered on the cloud machine from the current scripts. The pass-2 edits made on the Mac were checked, finished and kept. Each fix below is matched to the judges' notes in `JUDGES.md` and `../CODEX_JUDGE.md`.
 
-- `rcommon.py` holds the shared pieces:
-  - **`rsteel`**, a new tiling kit texture of painted steel: orange-peel paint and roller marks, grime along each member, rust bleeding round chips, and chips down to red-oxide primer. It is a 0.5 m tile at 512 px, tinted by `COLOR_0` like the other kits. It is added at import time without editing any carpenter file.
-  - Simple materials for the instruments and trim (chrome, mirror, enamel, gilt, ebony, ivory, bronze, lacquered brass, drum head, felt, leather, black metal, paper, strings).
-  - Rod, sweep and pipe helpers.
-  - Pivot and parenting helpers that bake a mesh's offset so its origin sits on the node pivot.
-  - The full → AO → optimise → lite → Cycles preview pipeline.
-- `ferris.py` builds **ferris.glb**, the Riesenrad, 26 m tall:
-  - The wheel has twin rims, each an outer and an inner ring joined by a zig-zag truss. Each side has 16 main spokes and 32 crossing tension rods to a hub drum with flanges, bolt heads and a gilt 16-point sunburst.
-  - The two rims are tied at each gondola axle with X-braces.
-  - It stands on two lattice A-frames (four box-truss legs with lacing) on timber cribbing, with cross ties and back stays.
-  - At the base are a plank boarding deck with steps and red rails, an arched "Riesenrad" Fraktur sign on gilt-capped posts, and a "Kasse" ticket booth with a green pyramid roof.
-  - There are about 850 bulbs on the rims, the spokes (the star you see from the square), the hub, the sign and the booth.
-  - The 16 enclosed octagonal gondolas come in four colours. Each has an ogee roof with a gilt finial, a hanger yoke, cream window posts with glass, gilt bands, a door with a handle, gilt stars, a plank floor, two facing benches, a ceiling lamp and eight eave bulbs.
-- `carousel.py` builds **carousel.glb**, the Karussell, 12.6 m across the rail. It is a two-tier galloper:
-  - A radial plank platform with a painted skirt and brass nosing.
-  - 12 lofted horses in the jumper pose on brass barley-twist poles, six outer and six inner, in six coats: white, dapple grey, cream, chestnut, black and palomino. Each horse has a carved mane and tail (gilt on some), ears, eyes, a saddle cloth with gilt edging, saddle, cantle and pommel, stirrups, bridle, reins and a jewelled breast collar.
-  - Two green chariot benches.
-  - A centre column with arched mirrors and painted panels between gilt pilasters, plus sweeps and a boarded ceiling.
-  - A 16-panel red rounding board with oval mirrors in gilt frames, "Karussell" in gilt Fraktur on the front and back panels, gilt stars and scrolls, shell cresting, a scalloped valance, pilasters and two rows of bulbs.
-  - A red-and-cream striped canopy with fabric droop, a scalloped fabric edge and bulbs on gilt ribs. The second tier is a mirrored drum with its own striped roof, a gilt finial and a red pennant.
-  - Static parts: a plank step ring, a stone kerb and a green iron rail with scroll loops, an entrance and two gate lamps.
-- `bandstand.py` builds **bandstand.glb**, the Musikpavillon. It is an octagon 7.4 m across:
-  - The plinth is painted, with white diamond lattice panels. The plank deck sits at 0.95 m, with five front steps and iron hand rails.
-  - Eight cast-iron columns with flared capitals and gilt rings carry cream fretwork spandrels with round cut-outs. Iron railings with ring motifs run on seven sides.
-  - Above them are a red frieze, a scalloped valance with round holes and a gilt lyre over the steps.
-  - The ceiling is boarded and radial. The bell roof has red and cream stripes, gilt hip ribs with bulbs and a louvred lantern with a gilt finial and a lyre vane.
-  - Fir garlands with baubles and red bows hang across the three front bays.
-- `instruments.py` builds four glbs, each with a root node `instr_<name>`:
-  - **instr_sax**: a tenor sax as held by a standing player. It is one continuous conical tube for body, bow and bell, with a rolled bell rim. It has about 16 key cups with pads, left- and right-hand stacks with pearl touches, palm keys, key rods on posts, low C/E♭ and low B/B♭ cups with wire guards, and a thumb rest, thumb hook and strap ring. The neck has an octave key, cork, ebonite mouthpiece, ligature and reed. The `act_sax` pivot is at the strap ring.
-  - **instr_piano**: an upright piano in walnut with the full 88 keys (52 white, 36 black in the right pattern), an open fallboard, and moulded panels on the upper and lower fronts. The music desk holds sheet music, and two brass candle sconces hold lit candles (the flames use the `bulb_warm` material). It also has turned legs on toe blocks, three brass pedals and a bench with a red cushion.
-  - **instr_bass**: a double bass in playing position. The body is lofted with an arched top and purfling. It has two f-holes (an S slot with round eyes), a maple bridge with heart and kidney cut-outs, an ebony tailpiece with a tail gut, four strings (tailpiece → bridge → nut → pegbox), an ebony fingerboard, an ivory nut, a pegbox with a scroll, brass machines, and an endpin. The `act_bass` pivot is at the endpin. A black floor stand beside it holds the French bow (stick, frog, hair) in its bow cup.
-  - **instr_drums**: a small jazz kit:
-    - an 18" kick with wooden hoops, spurs, pedal and beater, and a red front head with a gilt star;
-    - a 14" snare on a stand, a 12" rack tom on the kick and a 14" floor tom on legs;
-    - shells in the wood kit tinted mahogany, with chrome hoops, lugs and tension rods;
-    - a 14" hi-hat with pedal and a 20" ride on a boom, both lathed in bronze;
-    - a throne, and a pair of wire brushes resting on the snare (`act_brush_l` and `act_brush_r` pivot at the handle ends).
+**Riesenrad (blocking fixes)**
+- **Gondolas swing clear of the wheel steel.** The inner ties, mid ties and X-braces that ran between the rims inside each gondola's swing are gone. The rims are now tied only by the gondola axles themselves and by a tie ring at r = 7.4 m, with X-braces between the two spoke planes. That ring is 3.8 m from the nearest axle, and a gondola swings out to 3.0 m. `blender/rides/check_clash.py` samples every mesh edge every 4 cm and turns the wheel through 360° in 1° steps. It checks three cases: wheel steel against each gondola turning on its axle, gondolas carried round against the static frame, deck, sign and booth, and the wheel's solid of revolution against the static frame. The result is **CLEAR for both full and lite** (303k wheel points and 196k static points on full).
+- **Back-stay rods** no longer cross the wheel. They run from the ground beams at |y| = 1.9 m up to the A-frame legs, and the clash test above checks them.
+- **The main spokes now meet the inner ring midway between the gondolas**, not at the gondola axles. This change is new in this pass. The engine ride showed a spoke running straight down past the front window of the top gondola, filling the middle of the view (see "Engine check" below). The crossing tension rods now run from each spoke's hub end to the neighbouring spokes. From the square the wheel looks the same. The clash test passes after the change.
+- **The ride sees out.** The glass band now runs from 0.52 m to 1.52 m above the cabin floor, up to a thin header under the roof. The door's upper half is glazed as part of that band, and the window posts are slimmer (about 5 cm). `gondola_seat_0` puts a rider leaning at the front pane: the eye is 1.32 m above the floor, 0.20 m below the window head and 0.20 m back from the glass, on the line to the market. From that eye the glass covers +45° to −76° of pitch and ±63° round the pane centre. So the engine's 42° camera sees glass and the market at every point of the ride, including the −41° look down to the market centre from the top. No pitch clamp is needed. It would still help, because the 12 s shot shows the next pane darkening at a grazing angle.
+- **Hub:** the sunburst is now a stepped gilt 16-ray star with a raised 8-point star. It has 3 bulbs along each ray (1 in lite), a ring of 24 bulbs outside it, and a gilt domed axle cap ringed with 12 bulbs. The hub drum is dark iron, so it no longer reads as a red disc.
+- **New `light_2`** in front of the hub (0, −3.2, 14.7 in Blender). In the engine's cam_view the cream steel read almost black against the sky. This empty lets the engine or lighting designer put a warm wash on the wheel face, the same as the Cycles preview's hub glow.
+- The hub was raised to 14.70 m, so the lowest gondola clears the boarding deck by 9 cm. The deck's side rails now stop either side of the gondola's path. A two-step boarding stair leads up to the gondola floor.
 
-**Previews** in this folder are Cycles renders at 1280x720, 48 samples, 2 threads and OIDN:
-- `ferris_preview.jpg`, `carousel_preview.jpg` and `bandstand_preview.jpg` are one night render each.
-- `bandstand_stage.jpg` is a close view of the stage with the four instruments at their slots (40 samples).
-- `instruments_contact_sheet.jpg` has four close-ups (960x540, 32 samples).
+**Karussell**
+- **Mirrors:** the rounding-board mirrors are bevelled, and they use a warm, slightly rough silvered material (`mirror`: base colour 0.97/0.84/0.64, roughness 0.16). They now show the bulbs' glow instead of black ovals, in both Cycles and the engine (see `engine_lite_view_carousel.jpg`).
+- **Name:** "Karussell" in gilt Fraktur sits on a dark green cartouche with a gilt frame, on four sides. It reads from the rail in the engine view.
+- **Horses:** these are the second-pass horses with carved muscle (shoulder, forearm, quarters, chest). Each has an open mouth with a dark mouth and teeth, a dropped jaw, knee and hock bulges, and a cut saddle cloth with a scalloped gilt-corded edge instead of the ellipsoid. Horses k and k+6 share a coat and are built in their own frame, so their meshes come out identical. A sculpted master horse is still the next step (see open issues).
 
-Snow caps are hidden in the previews so the roofs show. The market light strings in the Ferris preview are render-only. The sax in the bandstand renders stands on a render-only stand, because no player is holding it.
+**Instruments**
+- **instr_sax** has tenor proportions: a 0.64 m straight body, the bell rim at 54% of the body height, a 15 cm bell with a short flare, and the tenor's neck hump. Each key cup has a chimney, a leather pad edge, a cup wall and a flattened dome lying on the body. Hinge rods run on posts along the body. There are low C/E♭ guards, low B/B♭ cups on the bell tube, palm keys, and a thumb rest, thumb hook and strap ring.
+- **instr_bass** f-holes are now italic f's. Each has an S stem that swells into wings, with a round upper and lower eye and two nicks at the waist, laid on the arch of the top. Also new in this pass, the body grain is 3× finer: the top read as coarse planks before.
+- **instr_piano.lite** keeps its candle flames as `bulbs_piano` with `bulb_warm`.
+- **Lite trims:** instr_bass.lite is 34% of full (it was 62%). instr_drums.lite is now 34% (it was 49%), with 10-sided shells, one-band hoops and five-point cymbal profiles.
+
+**Other**
+- `blender/rides/rcommon.py` defaults are back to the cloud contract: 1280x720 and 48 samples. The docstring and `check_clash.py` point at `/home/claude/tools/bpy-venv/bin/python`.
+- The architect has already changed `layout.json` to `ferris.glb` and `carousel.glb`. Nothing more is needed there.
+
+## Engine check (new this pass)
+
+The page was built with Vite into a scratch folder and served with `vite preview`. I drove it in headless Chromium on SwiftShader through `window.__market`: `openPlace`, `act('ferris'|'carousel', 'ride')` and `advance(1 / 8 / 12)`. The screenshots use the lite market at 1280x720. The site's own panel covers the right third of the frame.
+
+| File | What it shows |
+|---|---|
+| `engine_lite_ride_ferris_1s.jpg`, `_8s.jpg`, `_12s.jpg` | The Riesenrad ride from `gondola_seat_0`. At 1 s the camera is still easing up from the ground. At 8 s and 12 s the whole square is visible below through the front glass: the bandstand, stalls, strings and town. The gondola's own body is not in view. At 12 s the next pane darkens the right edge at a grazing angle. |
+| `engine_lite_ride_carousel_1s.jpg`, `_4s.jpg`, `_8s.jpg` | The carousel ride from `horse_seat_2`: the neighbouring horses, the poles and the market turning past. |
+| `engine_lite_view_ferris.jpg`, `_carousel.jpg`, `_band.jpg`, `engine_lite_band_sax.jpg` | The cam_view flights, and the band view with the sax featured. |
+| `engine_full_view_ferris.jpg`, `_carousel.jpg`, `_band.jpg` | The same cam_view flights on the full market. The wheel reads as a lattice of lit bulbs, but its steel is still dark: the engine does not light `light_2` yet (see requests). |
+
+Before the spoke change, the 12 s shot had a steel spoke running down the middle of the view. After the change it is gone, and the seat render `ferris_seat.jpg` shows the same thing.
+
+The engine finds every node: `rot_wheel`, `gondola_0..15`, `gondola_seat_0`, `rot_platform`, `horse_0..11`, `horse_seat_2`, the four `slot_*`, and the four `instr_*` placed by `engine/instruments.js`. It reports no warnings.
+
+## Previews (Cycles; 2 threads, OIDN)
+
+- `ferris_preview.jpg`, `carousel_preview.jpg` and `bandstand_preview.jpg`: one night render each at 1280x720, 48 samples.
+- `bandstand_stage.jpg` (1280x720, 48 samples): the stage close up, with the four instruments at their slots. The sax is on a render-only stand because no player is holding it.
+- `ferris_turned.jpg` (960x540, 32 samples): the wheel turned 90°, with the gondolas hanging upright and clear between the rims.
+- `ferris_seat.jpg` (960x540, 24 samples): the view from `gondola_seat_0` at the top of the wheel, with the engine's camera (42° vertical, looking at the market centre). The market in this render is render-only stand-in boxes and light strings.
+- `instr_*_preview.jpg` (960x540, 32 samples) and `instruments_contact_sheet.jpg`.
+
+Snow caps are hidden in the renders so the roofs show. The light strings in the Ferris preview are render-only.
 
 ## Node contract
 
-All nodes follow the prefixes in docs/BUILD.md. Front faces -Y in Blender, which is +Z in three.js. Every origin is on the ground at the footprint centre.
+These are unchanged from pass 1, except for the new `light_2` on the Riesenrad. Front faces −Y in Blender (+Z in three.js), and every origin is on the ground at the footprint centre.
 
 | File | Nodes |
 |---|---|
-| ferris | `rot_wheel` at the axle, 14.55 m up. It spins about three.js local Z, and the engine's name hint gives `z`. It has 16 child empties `gondola_0..15`, each **at its hanging point** on the gondola axle, 11.2 m from the hub. `gondola_0` hangs at the bottom, level with the deck. Each gondola's meshes are children with the pivot as origin. `gondola_seat_0` sits inside `gondola_0` at a seated eye height. Also `bulbs_wheel`, `bulbs_g0..15`, `bulbs_base`, `snow_g0..15`, `snow_base`, `light_0` (deck), `light_1` (booth), `cam_view` and `cam_target`. |
-| carousel | `rot_platform` at the origin, spinning about three.js Y. It carries everything that turns: the platform, poles, column, rounding board, canopy and upper tier, plus `bulbs_carousel`, `snow_canopy` and 12 empties `horse_0..11`. Each horse is its own node at mid-travel, 1.30 m, with its pole staying on the platform, so the engine's ±0.2 m bob slides the horse along the pole. `horse_seat_2` is inside `horse_2` at rider eye height. Also `bulbs_gate`, `light_0/1`, `cam_view` and `cam_target`. |
-| bandstand | `slot_sax`, `slot_piano`, `slot_bass` and `slot_drums` sit on the deck at z = 0.95. Also `light_0/1` (stage wash under the front eave), `bulbs_bandstand`, `snow_roof`, `cam_view` and `cam_target`. |
-| instr_* | Root `instr_<name>` at the player's floor position. The player faces -Y (three.js +Z). Also `act_sax`, `act_bass`, `act_brush_l` and `act_brush_r`. |
+| ferris | `rot_wheel` at the axle, 14.70 m up. It spins about three.js local Z. Under it are `gondola_0..15`, each at its hanging point on the gondola axle, 11.2 m from the hub, with the pivot as the origin of the gondola's meshes. `gondola_seat_0` is inside `gondola_0`. Also `bulbs_wheel`, `bulbs_g0..15`, `bulbs_base`, `snow_*`, `light_0` (deck), `light_1` (booth), `light_2` (wheel face), `cam_view` and `cam_target`. |
+| carousel | `rot_platform` carries the platform, poles, column, rounding board, canopy, `bulbs_carousel`, `snow_canopy` and `horse_0..11`. Each horse sits at mid-travel (1.30 m) and slides along its pole. `horse_seat_2` is in `horse_2`. Also `bulbs_gate`, `light_0/1`, `cam_view` and `cam_target`. |
+| bandstand | `slot_sax`, `slot_piano`, `slot_bass` and `slot_drums` on the deck at 0.95 m. Also `light_0/1` (stage wash), `bulbs_bandstand`, `snow_roof`, `cam_view` and `cam_target`. |
+| instr_* | Root `instr_<name>` at the player's floor spot. The player faces −Y (+Z in three.js). Also `act_sax`, `act_bass`, `act_brush_l` and `act_brush_r`. `engine/instruments.js` places them at the slots. |
 
-**Slots and instruments:** place each `instr_<name>.glb` with the matching `slot_<name>`'s world transform (position and yaw). The slot's local three.js +Z is the way the player faces, which is the same convention as an asset's front. The organizer's musicians can use the same transform.
-
-| Slot | Blender xy on the deck | Facing |
-|---|---|---|
-| sax | (0.9, -1.0) | toward the audience, slightly inward |
-| piano | (-2.05, 0.35) | toward the left side, with the upright's back to the railing and the pianist in profile to the square |
-| bass | (-0.55, 1.35) | front |
-| drums | (1.45, 1.35) | front-left |
-
-These are close to the engineer's `DEFAULT_PLAYERS` in `site/src/actions/band.js`.
-
-`gltf-transform validate` reports no errors for any of the 14 files. The warnings are the same as the carpenter's: runtime-generated tangents, empty marker nodes, and the unvalidated meshopt extension.
+`gltf-transform validate` reports no errors for any of the 14 files. The lite files keep every named node and the `bulb_warm` material.
 
 ## Triangles and file sizes (after `blender/lib/optimize.mjs`)
 
-| File | Triangles | Size | Lite triangles | Lite size | Budget |
-|---|---|---|---|---|---|
-| ferris | 63,511 | 1.66 MB | 22,917 | 0.69 MB | 80k / 3 MB |
-| carousel | 78,678 | 1.65 MB | 27,288 | 0.65 MB | 80k / 3 MB |
-| bandstand | 30,690 | 1.17 MB | 10,446 | 0.41 MB | |
-| instr_sax | 4,358 | 0.05 MB | 1,028 | 0.02 MB | |
-| instr_piano | 3,536 | 0.16 MB | 1,244 | 0.06 MB | |
-| instr_bass | 2,810 | 0.13 MB | 1,734 | 0.07 MB | |
-| instr_drums | 6,664 | 0.16 MB | 3,028 | 0.08 MB | |
-| **bandstand + instruments** | **48,058** | **1.67 MB** | **17,480** | **0.64 MB** | 50k / 2 MB |
+| File | Triangles | Size | Lite triangles | Lite size | Lite share | Budget |
+|---|---|---|---|---|---|---|
+| ferris | 67,723 | 1.80 MB | 23,127 | 0.73 MB | 34% | 80k / 3 MB |
+| carousel | 79,004 | 1.48 MB | 28,764 | 0.61 MB | 36% | 80k / 3 MB |
+| bandstand | 29,730 | 1.12 MB | 10,374 | 0.39 MB | 35% | |
+| instr_sax | 6,346 | 0.06 MB | 1,556 | 0.02 MB | 25% | |
+| instr_piano | 3,616 | 0.16 MB | 1,524 | 0.07 MB | 42% | |
+| instr_bass | 2,910 | 0.14 MB | 984 | 0.06 MB | 34% | |
+| instr_drums | 6,136 | 0.17 MB | 2,092 | 0.08 MB | 34% | |
+| **bandstand + instruments** | **48,738** | **1.65 MB** | **16,530** | **0.62 MB** | 34% | 50k / 2 MB |
 
-- Lite versions use 512 px textures (256 px for the instruments), no bevels, fewer segments, octahedron bulbs and simpler horses and gondolas. They have 34–36 % of the full triangles for the three landmarks and 36 % for the bandstand with instruments.
-- Desktop first-load share for the rides is about 5.0 MB (lite about 2.0 MB).
-- Rebuild commands, one at a time (the build and AO bake take about 1.5 min for the wheel):
-  - `/home/claude/tools/bpy-venv/bin/python blender/rides/<ferris|carousel|bandstand>.py`
+- Desktop first-load share for the rides is about 4.9 MB, and about 2.0 MB for lite.
+- The carousel is 1k triangles under its budget. Any new carousel detail has to be paid for elsewhere, and the master-horse idea below would free about 15k.
+- Rebuild one script at a time. Each takes 3–6 minutes on the shared machine.
+  - `/home/claude/tools/bpy-venv/bin/python blender/rides/<ferris|carousel|bandstand>.py [--no-render]`
   - `.../instruments.py [--only sax,drums]`
-  - Flags: `--no-render`, `--no-lite`, `--samples N`, `--res WxH`, and `--cam x,y,z,tx,ty,tz,lens` for a debug camera.
-  - Build the instruments before the bandstand preview (the bandstand preview builds them from the same code).
-  - bpy sometimes segfaults at interpreter exit after all files are written. This is harmless, and the carpenter reports the same.
+  - `.../check_clash.py`. It exits 0 when the wheel is clear.
+  - `--preview-only` renders without the bake and export. `NM_POSE=seat|turned` sets the extra Ferris poses. The other flags are `--res`, `--samples`, `--cam x,y,z,tx,ty,tz,lens` and `--preview-name`.
+  - bpy can segfault at exit after writing everything. This is harmless.
 
-## Contract notes for other roles
+## Requests to other roles
 
-1. **File names:** the task names the files `ferris.glb` and `carousel.glb`, but `site/src/layout.json` (architect) lists `riesenrad.glb` and `karussell.glb`. The engine falls back to its key search (`ferris`, `carousel`) and finds my files, with a "not found" note. The architect could change the two `asset` fields to match.
-2. **Ride seats:** `rides.js` currently picks the seat from bounding boxes. The engineer can switch it to `gondola_seat_0` and `horse_seat_2`, which are in place.
-3. **Carousel direction:** the horses and chariots face **clockwise travel seen from above**, which is the engine's default `rot_platform` speed (−0.32). If the speed is made positive, the horses ride backwards.
-4. **Instruments are not placed by the engine yet.** `band.js` looks for `act_<player>` in the bandstand model. My slots are `slot_*` as the brief asks. The sax is modelled in the held pose, so it floats until the organizer's sax player stands at the slot, and the engine may want to hide it when no player is shown.
-5. `rsteel` kit images are cached in `blender/out/kit/kit_rsteel_*` and rebake automatically if the carpenter bumps `KIT_VERSION`. No carpenter file was changed. A few extra material names ship: `rsteel`, `enamel`, `gilt`, `mirror`, `chrome`, `saxbrass`, `bronze`, `drumhead`, `ebony`, `ivory`, `felt`, `leather`, `blackmetal`, `paper`, `strings`, `hole` and `canvas`. The lighting designer may want to tune mirror and chrome reflections against the environment map.
+1. **Engineer (`actions/rides.js`):** the seat now sees out from the bottom to the top of the wheel without help. A pitch clamp of about −35° on the ride look (the target stays the market) would still keep more of the view on the pane centre near the top.
+2. **Lighting designer:** please put a warm light at the Riesenrad's `light_2` in the full market, and a ground pool in lite. In the engine's cam_view the wheel's cream steel reads nearly black; only the bulbs show. The carousel's inside (the horses under the canopy) is also very dark from the ride seat in lite. A light under the canopy, attached to the platform, would help. I can add a `light_` empty there if the engine will move it with `rot_platform`. The `glass` material on the gondolas goes dark at grazing angles, which could be toned down.
+3. **Organizer:** the sax is modelled in the held pose at `slot_sax`, so it floats when no player stands there. `instruments.sax_on_stand` could be exported as `instr_sax_stand` for a "band on a break" state if you want one.
 
 ## Open issues and what I would improve next
 
-- **Not yet checked in the browser.** I validated the files and checked the node hierarchy (16 gondolas under `rot_wheel`, 12 horses under `rot_platform`, both seats in place). I have not watched the spin and bob in the engineer's scene.
-- **Mirrors** on the rounding board read as dark ovals in Cycles, because they reflect the night sky. In three.js they depend on the environment map. Next I would try a warm, slightly rough mirror, or bevelled mirror facets that catch the bulbs.
-- **The Ferris hub sunburst** reads as a red disc from the square. It needs its own light, or bulbs on the star rays.
-- **Horse carving** is lofted and smooth: there is no muscle definition, open mouth or carved teeth, and the manes are rows of locks. The next pass would be a sculpted master horse shared by the 12 nodes with per-horse paint, which would also free about 15k triangles.
-- **The saddle cloth** is an ellipsoid round the barrel, so its lower edge is soft rather than a cut fabric edge.
-- **The Riesenrad booth** is a simple plank box. The deck has no queue rails or ticket window detail, and there are no people.
-- **Gondola interiors** have benches and a lamp only; there are no cushions or door hinges.
-- **The fir garland tufts** on the bandstand read a little like holly leaves up close; they come from the carpenter's `fir_garland`.
-- **Brushes** lie on the snare. If the organizer wants the drummer holding them, the `act_brush_*` nodes can be re-parented to the hands.
-- **The sax on its stand** in the bandstand renders is render-only. A real `instr_sax_stand` variant could be exported if the band should look "on a break".
+- **Horses:** they are still lofted rather than sculpted. A single sculpted master with per-horse paint would give real carving and free about 15k triangles.
+- **Riesenrad base:** the booth is still a plank box with a pyramid roof. There are no queue rails, ticket window grille or posters.
+- **Gondola interiors:** they have benches, a lamp and door hinges, but no cushions.
+- **Piano case:** the walnut grain is at the kit's plank scale and reads coarse up close. The bass got the finer scale this pass.
+- **Bandstand garland:** the carpenter's `fir_garland` tufts read a little like holly up close.
+- **The ride shots were taken on the lite market only.** Software GL takes about a minute a frame on the full market, so only the three cam_view flights were shot there.

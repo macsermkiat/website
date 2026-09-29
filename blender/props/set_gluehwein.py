@@ -53,8 +53,8 @@ def copper_kettle(s, x, y):
     pot.torus(0.206, 0.009, n, seg(6, 4), "copper", T(0, 0, z0 + 0.35), C("e8d0c0"))
     pot.lathe([(0.198, z0 + 0.35), (0.19, z0 + 0.26)], n, "copper", None, C("9a6a58"), "atlas")
     # Glühwein surface with a few floating orange slices, star anise and a cinnamon stick
-    liquid_z = z0 + 0.262
-    pot.disc(0.19, n, "sw_wet", T(0, 0, liquid_z), C("3a0508"), "liquid")
+    liquid_z = z0 + 0.315
+    pot.disc(0.19, n, "sw_wet", T(0, 0, liquid_z), C("4a0610"), "liquid")
     for k, (dx, dy, a) in enumerate(((-0.07, -0.05, 0.3), (0.06, 0.06, 1.2), (0.09, -0.07, 2.2))):
         G.orange_slice(pot, T(dx, dy, liquid_z - 0.002, rx=0.05, rz=a), r=0.032, t=0.004)
     G.star_anise(pot, T(0.0, -0.02, liquid_z - 0.001, rz=0.4))
@@ -168,7 +168,7 @@ def shelf():
     for k, (lab, gcol, kind, foil, liq, name) in enumerate(SHELF_BOTTLES):
         idx = 12 + k
         node = s.node(f"act_bottle_{idx}", (x, 0.02 + rng.uniform(-0.03, 0.03), 0), rot=(0, 0, rng.uniform(-0.25, 0.25)))
-        G.bottle(node, None, lab, gcol, kind, foil, liq)
+        G.bottle(node, None, lab, gcol, kind, foil, liq, n=10)
         s.item(f"act_bottle_{idx}", name, "bottle", where="Glühwein shelf")
         x += 0.1
     # spice jars in a row
@@ -191,11 +191,11 @@ def shelf():
         for k in range(4 if not lite() else 2):
             a = TWO_PI * k / 4
             rr = 0.011
-            G.cinnamon_stick(m, T(0.5, by + rr * math.cos(a), 0.018 + rr * math.sin(a), rz=math.pi / 2 + 0.05 * b),
+            G.cinnamon_stick(m, T(0.5, by + rr * math.cos(a), 0.0222 + rr * math.sin(a), rz=math.pi / 2 + 0.05 * b),
                              L=0.14, r=0.0065)
         if not lite():
             n = 8
-            G.twine(m, [(0.5, by + 0.019 * math.cos(TWO_PI * j / n), 0.018 + 0.019 * math.sin(TWO_PI * j / n))
+            G.twine(m, [(0.5, by + 0.019 * math.cos(TWO_PI * j / n), 0.0222 + 0.019 * math.sin(TWO_PI * j / n))
                         for j in range(n + 1)])
     # a small bowl of star anise
     G.bowl(m, T(0.7, 0.0, 0), r=0.07, h=0.035, seg_n=14)
@@ -251,6 +251,14 @@ def wine():
         node = s.node(f"act_bottle_{i}", loc, rot=(0, 0, rng.uniform(-0.15, 0.15)))
         G.bottle(node, None, lab, glass, kind, cap)
         s.item(f"act_bottle_{i}", name, "bottle", where="wine shelf")
+    # an open wine crate packed with straw between the rack and the wine box, a few corks on the straw
+    G.crate(m, T(0.08, 0.03, 0), 0.3, 0.2, 0.1, C("b08a5c"))
+    m.box((0.27, 0.17, 0.004), T(0.08, 0.03, 0.084), vlib.RW("straw"), C("e8d098"), faces={"pz": vlib.RW("straw")},
+          skip=("nz",))
+    if not lite():
+        for k in range(6):
+            m.box((0.012, 0.004, 0.08), T(0.08 + rng.uniform(-0.1, 0.1), 0.03 + rng.uniform(-0.06, 0.06), 0.09,
+                                             rx=rng.uniform(1.2, 1.9), rz=rng.uniform(0, 3)), "straw", C("e0c890"))
     # three wine glasses on a small tray: a red, a white and a clean one
     G.board(m, T(1.0, 0.0, 0), 0.34, 0.2, 0.012, C("6a4228"))
     for k, (dx, dy, wcol, nm) in enumerate(((-0.1, -0.03, C("4a0612"), "Glass of Spätburgunder"),
@@ -271,8 +279,8 @@ def wine():
 
 SETS = {
     "prop_gluehwein_counter": dict(fn=counter, slot="slot_counter", stall="gluehwein", kind="counter", section=True,
-                                   seed=21, cam=((-0.2, -1.6, 0.5), (-0.12, 0.0, 0.17), 25),
-                                   hero=((0.5, -0.8, 0.38), (0.52, 0.0, 0.15), 40)),
+                                   seed=21, cam=((-0.08, -1.75, 0.52), (-0.04, 0.0, 0.2), 25),
+                                   hero=((0.3, -1.0, 0.62), (0.5, 0.0, 0.24), 27)),
     "prop_gluehwein_shelf": dict(fn=shelf, slot="slot_shelf_1", stall="gluehwein", kind="shelf", section=True, seed=22,
                                  cam=((0.0, -1.75, 0.22), (0.0, 0.0, 0.13), 32),
                                  hero=((-0.55, -0.75, 0.2), (-0.55, 0.0, 0.12), 40)),

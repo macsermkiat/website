@@ -218,3 +218,40 @@ def contact_sheet(items, out_jpg, cols=3, tile=(420, 236), pad=6, title=None):
         sheet.paste(im, (x, y))
         d.text((x + 4, y + tile[1] + 2), label, fill=(235, 215, 170), font=f)
     sheet.save(out_jpg, quality=88)
+
+
+def import_glb(path, at="slot_counter", offset=(0, 0, 0)):
+    """Import a shipped market glb (e.g. the vendor's props) into the render-only Env collection,
+    placed at the named empty `at` of the current build (or at a location tuple).
+    Web glbs are meshopt-compressed, so the file is decoded first with blender/lib/decode.mjs.
+    Returns the imported objects, or [] when the file is missing (the preview then goes without)."""
+    import subprocess
+    if not os.path.exists(path):
+        print(f"[nmlib] import_glb: {path} missing, skipped")
+        return []
+    tmp = os.path.join(state.OUT_DIR, "tmp")
+    os.makedirs(tmp, exist_ok=True)
+    plain = os.path.join(tmp, "decoded_" + os.path.basename(path))
+    r = subprocess.run(["node", os.path.join(state.LIB_DIR, "decode.mjs"), path, plain],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        print(r.stdout, r.stderr)
+        return []
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=plain)
+    new = [o for o in bpy.data.objects if o not in before]
+    env = state.env_collection()
+    for o in new:
+        for c in list(o.users_collection):
+            c.objects.unlink(o)
+        env.objects.link(o)
+    if isinstance(at, str):
+        loc = bpy.data.objects[at].matrix_world.translation.copy()
+    else:
+        loc = Vector(at)
+    loc += Vector(offset)
+    for o in new:
+        if o.parent is None:
+            o.location = o.location + loc
+    print(f"[nmlib] imported {os.path.basename(path)}: {len(new)} objects at {tuple(round(v, 3) for v in loc)}")
+    return new

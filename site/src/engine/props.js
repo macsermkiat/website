@@ -59,7 +59,7 @@ export async function placeProps(placed, { lite, manager, warn, elsewhere = [] }
       obj.rotation.y += it.rotation;
       obj.scale.multiplyScalar(it.scale);
       obj.name = obj.name || `prop_${file}`;
-      obj.userData.propFile = file; // e.g. the bookshop's spine titles are keyed by file (tools/book-spines.mjs)
+      obj.userData.propFile = file; // which file a set came from (for debugging and tests)
       slot.add(obj);
       n++;
     } catch (e) {

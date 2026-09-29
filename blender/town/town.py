@@ -11,7 +11,7 @@ ring houses, and every material except the windows and bulbs has ambient occlusi
 occlusion slot: walls, roofs and stonework share a baked 2048 lightmap atlas; timbers, frames,
 shutters, signs, ironwork and snow carry per-vertex occlusion through a ramp in the same image.
 
-Run:  NM_DEVICE=METAL NM_THREADS=0 ~/nachtmarkt-tools/bpy-venv/bin/python blender/town/town.py
+Run:  /home/claude/tools/bpy-venv/bin/python blender/town/town.py
       LITE=1 (same command) for town.lite.glb
 """
 import os, sys, math, random
@@ -120,8 +120,9 @@ def window(x, zb, ww, wh, yf, lit_p, h, surround=None, shutters=None, mullion=Tr
     if surround:
         s = G[surround]
         sw, sd = 0.14, 0.035
-        s.wall_beam((x - ww / 2 - fw - sw / 2, zb - 0.02), (x - ww / 2 - fw - sw / 2, zb + wh + fw), sw, sd, yf)
-        s.wall_beam((x + ww / 2 + fw + sw / 2, zb - 0.02), (x + ww / 2 + fw + sw / 2, zb + wh + fw), sw, sd, yf)
+        if not LITE:      # the lite town keeps the lintel and sill only (a phone can't see the jambs)
+            s.wall_beam((x - ww / 2 - fw - sw / 2, zb - 0.02), (x - ww / 2 - fw - sw / 2, zb + wh + fw), sw, sd, yf)
+            s.wall_beam((x + ww / 2 + fw + sw / 2, zb - 0.02), (x + ww / 2 + fw + sw / 2, zb + wh + fw), sw, sd, yf)
         s.wall_beam((x - ww / 2 - fw - sw, zb + wh + fw + 0.09), (x + ww / 2 + fw + sw, zb + wh + fw + 0.09), 0.2, sd + 0.02, yf)
         s.box((x, yf - 0.07, zb - fw - 0.05), (ww + 2 * fw + 2 * sw + 0.08, 0.14, 0.09), skip_back=True)
     else:

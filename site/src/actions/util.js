@@ -69,3 +69,34 @@ export function longAxis(node) {
   const s = box.getSize(new THREE.Vector3());
   return s.x >= s.y && s.x >= s.z ? new THREE.Vector3(1, 0, 0) : s.y >= s.z ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
 }
+
+/**
+ * A small paper tag in the overlay, pinned above a point in the scene (the title of a pulled book).
+ * show(text, node) pins it above the node's bounding box; hide() takes it away; update(camera) follows the node.
+ */
+export function createWorldTag(overlay, className = 'tag') {
+  if (!overlay) return { show() {}, hide() {}, update() {} };
+  const d = document.createElement('div');
+  d.className = className;
+  d.setAttribute('aria-hidden', 'true'); // the panel note says the same in words
+  d.style.opacity = '0';
+  overlay.appendChild(d);
+  let node = null;
+  const box = new THREE.Box3(), p = new THREE.Vector3();
+  return {
+    show(text, n) { node = n; d.textContent = text; },
+    hide() { node = null; d.style.opacity = '0'; },
+    update(camera) {
+      if (!node) return;
+      box.setFromObject(node);
+      if (box.isEmpty()) return;
+      box.getCenter(p);
+      p.y = box.max.y + 0.03;
+      p.project(camera);
+      const vis = p.z < 1 && Math.abs(p.x) < 1 && Math.abs(p.y) < 1;
+      d.style.opacity = vis ? '1' : '0';
+      d.style.left = ((p.x + 1) / 2) * overlay.clientWidth + 'px';
+      d.style.top = ((1 - p.y) / 2) * overlay.clientHeight + 'px';
+    },
+  };
+}

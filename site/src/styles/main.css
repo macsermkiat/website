@@ -27,6 +27,9 @@ h1 span { color: var(--gold); }
 .overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .bubble { position: absolute; transform: translate(-50%, -100%); background: rgba(250, 244, 232, .94); color: #1d1824; font-size: 14px; font-weight: 500; padding: 4px 10px; border-radius: 10px; white-space: nowrap; transition: opacity .3s; }
 .bubble::after { content: ""; position: absolute; left: 50%; bottom: -6px; margin-left: -5px; border: 6px solid transparent; border-top-color: rgba(250, 244, 232, .94); border-bottom: 0; }
+.booktag { position: absolute; transform: translate(-50%, calc(-100% - 10px)); background: #f3e9d2; color: #3a2a1c; font-size: 13px; font-style: italic; font-weight: 500; padding: 2px 9px 3px; border-radius: 2px; border-left: 3px solid #b3342a; box-shadow: 0 2px 8px rgba(0, 0, 0, .45); white-space: nowrap; pointer-events: none; transition: opacity .3s; }
+.booktag::after { content: ""; position: absolute; left: 50%; top: 100%; width: 1px; height: 10px; background: rgba(243, 233, 210, .8); }
+@media (prefers-reduced-motion: reduce) { .booktag { transition: none; } }
 .tip { position: absolute; background: var(--gold); color: var(--gold-ink); font-weight: 700; font-size: 15px; padding: 6px 14px; border-radius: 999px; transform: translate(-50%, -150%); white-space: nowrap; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 16px; background: radial-gradient(ellipse at 50% 70%, #1a1420 0%, #05070f 70%); transition: opacity .6s; z-index: 2; }
 .loading.done { opacity: 0; pointer-events: none; }

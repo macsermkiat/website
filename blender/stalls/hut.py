@@ -70,7 +70,7 @@ class Hut:
                  counter_depth=0.6, counter_over=0.22, shelves=(1.38, 1.78), shade=None,
                  plank_w=0.14, bulbs_sides=False, bulb_spacing=0.2, front_posts=None,
                  header_h=0.16, open_top=OPEN_TOP, wall_band=None, plank_bevel=None,
-                 shingle_size=(0.19, 0.14), bulb_detail=(None, None)):
+                 shingle_size=(0.19, 0.14), bulb_detail=(None, None), lap_segs=1):
         self.key = key
         self.W, self.D, self.eave, self.ridge = W, D, eave, ridge
         self.ridge_axis = ridge_axis
@@ -88,6 +88,7 @@ class Hut:
         self.wall_band = wall_band
         self.plank_bevel = plank_bevel
         self.shingle_size = shingle_size
+        self.lap_segs = lap_segs                # vertex columns per lap board (soot/grime detail)
         self.bulb_detail = bulb_detail          # (seg, rings) of the eave bulbs; None = library default
         self.x0, self.x1 = -W / 2, W / 2
         self.yF, self.yB = -D / 2, D / 2
@@ -173,19 +174,25 @@ class Hut:
         """Plank width; lite builds use wider boards (fewer boxes, same look at phone distance)."""
         return self.plank_w * (1.7 if state.lite() else 1.0)
 
+    def _lsegs(self, length):
+        if self.lap_segs <= 1 or state.lite():
+            return 1
+        return max(1, int(round(self.lap_segs * length / self.W)))
+
     def _wall(self, axis, a, b, at, top, outward, z0=0.1):
         if self.wall == "lap":
             zmax = max(top(a), top((a + b) / 2), top(b))
             if axis == 'x' and self.ridge_axis == 'y' or axis == 'y' and self.ridge_axis == 'x':
                 # gable wall: lap boards up to eave, vertical boards in the gable triangle
                 cp.lap_siding(self.wood, a, b, z0, min(zmax, self.eave - 0.05), axis=axis, at=at,
-                              outward=outward, tint=self.wall_tint, var=0.12, bevel=self.plank_bevel)
+                              outward=outward, tint=self.wall_tint, var=0.12, bevel=self.plank_bevel,
+                              segs=self._lsegs(b - a))
                 if zmax > self.eave:
                     cp.plank_wall(self.wood, a, b, self.eave - 0.08, top, axis=axis, at=at,
                                   pw=self.pw, tint=self.wall_tint, var=0.12, bevel=self.plank_bevel)
             else:
                 cp.lap_siding(self.wood, a, b, z0, zmax, axis=axis, at=at, outward=outward,
-                              tint=self.wall_tint, var=0.12, bevel=self.plank_bevel)
+                              tint=self.wall_tint, var=0.12, bevel=self.plank_bevel, segs=self._lsegs(b - a))
             # inner lining so gaps never show daylight
             self._lining(axis, a, b, at - outward * 0.03, top, z0)
         else:
@@ -271,8 +278,11 @@ class Hut:
         self.shelf_y = yb - depth / 2
 
     def build_roof(self, cover=None, deck=True, barge=True, ridge_cap=True, fascia_band=None,
-                   barge_band=None):
+                   barge_band=None, fascia_part=None):
+        """fascia_part: a Part for the fascia boards instead of paint/frame (e.g. a pattern)."""
         cover = cover or self.roof
+        self.roof = cover
+        self.battens = []
         for sl in self.slopes:
             if deck:
                 cp.roof_deck(self.wood, sl, tint=self.inner_tint)
@@ -280,7 +290,7 @@ class Hut:
                 cp.shingles(self.roofp, sl, tint=self.roof_tint, sw=self.shingle_size[0],
                             expo=self.shingle_size[1], sh=self.shingle_size[1] * 2.1)
             elif cover == "boards":
-                cp.board_roof(self.roofp, sl, tint=self.roof_tint)
+                self.battens.append(cp.board_roof(self.roofp, sl, tint=self.roof_tint))
             if barge:
                 if barge_band:
                     B = sl.basis()
@@ -290,7 +300,10 @@ class Hut:
                                         band=barge_band)
                 else:
                     cp.barge_boards(self.frame, sl, tint=self.frame_tint)
-            cp.fascia(self.paint if fascia_band else self.frame, sl, band=fascia_band, tint=self.frame_tint)
+            if fascia_part is not None:
+                cp.fascia(fascia_part, sl)
+            else:
+                cp.fascia(self.paint if fascia_band else self.frame, sl, band=fascia_band, tint=self.frame_tint)
         if ridge_cap:
             L = (self.W if self.ridge_axis == 'x' else self.D) + 2 * self.ov_gable + 0.06
             for sl in self.slopes:
@@ -302,7 +315,15 @@ class Hut:
         """Thin, patchy snow caps (snow_<n>); kw go to carpentry.snow_cap (cover, thick, ...)."""
         for i, sl in enumerate(self.slopes):
             p = Part(f"snow_{start + i}", "snow", var=0.02)
-            cp.snow_cap(p, sl, seed=i * 3.7 + start + len(self.key) * 1.3, **kw)
+            opts = {}
+            if self.roof == "shingles":      # one strip per course; every shingle row shows
+                opts = dict(courses=(self.shingle_size[1], -0.03), thick=0.024, base=0.034)
+            elif self.roof == "boards":      # the snow drapes over the cover battens as soft ridges
+                opts = dict(thick=0.022, base=0.036)
+                if i < len(getattr(self, "battens", [])):
+                    opts.update(ridges=self.battens[i], ridge_cover=0.006, ridge_soft=0.07)
+            opts.update(kw)
+            cp.snow_cap(p, sl, seed=i * 3.7 + start + len(self.key) * 1.3, **opts)
             self.snow.append(p)
 
     def eave_bulbs(self, sides=None, sag=0.05, extra_anchors=None):

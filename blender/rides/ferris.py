@@ -52,6 +52,10 @@ def gondola_angle(i):
     return -math.pi / 2 + TAU * i / N
 
 
+def spoke_angle(i):
+    return gondola_angle(i) + math.pi / N
+
+
 # ------------------------------------------------------------------ wheel (rotating)
 def build_wheel(lite, wheel):
     st = Part("wheel_steel", "rsteel", tint=CREAM, bevel=0.0, var=0.05)
@@ -76,15 +80,16 @@ def build_wheel(lite, wheel):
                 rod(st, P(RI, a0, y), P(RO, a1, y), 0.034, seg=rs)
             else:
                 rod(st, P(RO, a0, y), P(RI, a1, y), 0.034, seg=rs)
-        # spokes: radial main spokes to each gondola axle, crossing tension rods between
+        # spokes: radial main spokes to the inner ring MIDWAY between the gondolas (so a rider
+        # looking out of a gondola at the top does not have a spoke running down past the
+        # window), and tension rods crossing from each spoke's hub end to the neighbouring spokes
         yf = math.copysign(YR + 0.62, y)
         for i in range(N):
-            a = gondola_angle(i)
-            rod(st, P(1.05, a, yf), P(RI, a, y), 0.06, seg=rs)
-            am = a + math.pi / N
+            sa = spoke_angle(i)
+            rod(st, P(1.05, sa, yf), P(RI, sa, y), 0.06, seg=rs)
             if not lite or i % 2 == 0:
-                rod(st, P(1.05, a + 0.22, yf), P(RI, am, y), 0.026, seg=4)
-                rod(st, P(1.05, a + TAU / N - 0.22, yf), P(RI, am, y), 0.026, seg=4)
+                rod(st, P(1.05, sa + 0.10, yf), P(RI, spoke_angle(i + 1), y), 0.026, seg=4)
+                rod(st, P(1.05, sa - 0.10, yf), P(RI, spoke_angle(i - 1), y), 0.026, seg=4)
         # bulbs: outer rail and along each main spoke (the star seen from the market)
         nb = 36 if lite else 96
         for k in range(nb):
@@ -92,7 +97,7 @@ def build_wheel(lite, wheel):
             rc.bulb(bulbs, P(RO + 0.17, a, y), 0.05)
         per = 4 if lite else 13
         for i in range(N):
-            a = gondola_angle(i)
+            a = spoke_angle(i)
             for j in range(per):
                 r = 1.8 + (RI - 2.3) * j / (per - 1)
                 t = (r - 1.05) / (RI - 1.05)
@@ -106,14 +111,14 @@ def build_wheel(lite, wheel):
     ty = spoke_y(RT)
     for i in range(N):
         a = gondola_angle(i)
-        a2 = gondola_angle(i + 1)
         rod(st, P(RO, a, -YR - 0.05), P(RO, a, YR + 0.05), 0.075, seg=rs + 2)
-        rod(st, P(RT, a, -ty), P(RT, a, ty), 0.05, seg=rs)
+        s1, s2 = spoke_angle(i), spoke_angle(i + 1)      # the tie ring joins the spokes
+        rod(st, P(RT, s1, -ty), P(RT, s1, ty), 0.05, seg=rs)
         for s in (-1, 1):
-            rod(st, P(RT, a, s * ty), P(RT, a2, s * ty), 0.04, seg=rs)
+            rod(st, P(RT, s1, s * ty), P(RT, s2, s * ty), 0.04, seg=rs)
         if not lite or i % 2 == 0:
-            rod(st, P(RT, a, -ty), P(RT, a2, ty), 0.028, seg=4)
-            rod(st, P(RT, a, ty), P(RT, a2, -ty), 0.028, seg=4)
+            rod(st, P(RT, s1, -ty), P(RT, s2, ty), 0.028, seg=4)
+            rod(st, P(RT, s1, ty), P(RT, s2, -ty), 0.028, seg=4)
         # gilt bearing collars where each gondola hangs
         for s in (() if lite else (-1, 1)):
             gilt.cyl(P(RO, a, s * (YR - 0.12)), 0.1, 0.1, 0.06, seg=10, rot=rot_x)
@@ -450,17 +455,22 @@ def build(lite):
         g = node(f"gondola_{i}", tuple(P(RO, a, 0)), parent=wheel)
         build_gondola(i, g, lite)
         if i == 0:
-            # a rider leaning to the front pane, 1.18 m above the floor and 0.37 m below the window
-            # head, placed 0.35 m back from the pane's centre along the line to the market (18.5 deg
-            # off the front axis for this layout), so the corner posts stay outside a 42 deg view
+            # a rider leaning to the front pane: eye 1.32 m above the floor and 0.20 m below the
+            # window head, 0.20 m back from the pane on the line to the market (18.5 deg off the
+            # front axis for this layout). From there the glass covers +45 deg to -76 deg of pitch
+            # and +-63 deg round the pane centre, so the engine's 42 deg camera sees only glass and
+            # the market from the bottom of the wheel to the top (-41 deg to the market centre).
             m = market_in_local()
             d = Vector((m.x, m.y, 0)).normalized()
             face = Vector((0, -0.775 * GS, 0))
-            eye = face - d * 0.35
-            node("gondola_seat_0", tuple(P(RO, a, 0) + Vector((eye.x, eye.y, -1.30))), parent=g)
+            eye = face - d * 0.20
+            node("gondola_seat_0", tuple(P(RO, a, 0) + Vector((eye.x, eye.y, -1.15))), parent=g)
     build_frame(lite)
     node("light_0", (0, -3.4, 3.2))
     node("light_1", (-4.1, -5.2, 2.6))
+    # a warm wash on the wheel face from in front of the hub (the Cycles preview's hub glow):
+    # without it the cream steel reads black against the night sky in the browser
+    node("light_2", (0, -3.2, HUB))
     node("cam_target", (0, 0, 11.0))
     export_cam = node("cam_view", (9.0, -31.0, 4.5))
     d = Vector((0, 0, 11.0)) - Vector((9.0, -31.0, 4.5))

@@ -8,7 +8,7 @@ fence and fence snow share a baked lightmap atlas, and the needle fronds, snow c
 stars and garland carry per-vertex occlusion (dark inside the crown, open at the tips) through a ramp
 kept in the same image (see architect_common.vertex_ao_to_ramp).
 
-Run: NM_DEVICE=METAL NM_THREADS=0 ~/nachtmarkt-tools/bpy-venv/bin/python blender/square/tree.py
+Run: /home/claude/tools/bpy-venv/bin/python blender/square/tree.py
      (LITE=1 for the lite model)
 """
 import os, sys, math, random

@@ -54,8 +54,13 @@ def half_barrel(staves, hoops, cx, cy, lite):
                     tseg=4, rot=(0, 0, math.pi), arc=math.pi)
 
 
+# Rauten pattern UV offset: one lozenge centred at the top middle of every pennant
+RAUTEN_UV = (0.125, 0.0)
+
+
 def pennants(P, a, b, z, n, lite, drop=0.3, width=0.2):
-    """Triangular Rauten pennants hung from a line a->b (points at the fascia bottom)."""
+    """Triangular Rauten pennants hung from a line a->b (points at the fascia bottom). P is the
+    'rauten' pattern Part: three to four big lozenges per pennant that survive mipmapping."""
     a, b = Vector(a), Vector(b)
     d = (b - a).normalized()
     nrm = d.cross(Vector((0, 0, 1))).normalized()
@@ -63,9 +68,11 @@ def pennants(P, a, b, z, n, lite, drop=0.3, width=0.2):
         p = a.lerp(b, (i + 0.5) / n)
         sw = state.rng.uniform(-0.06, 0.06)
         basis = Matrix((d, Vector((0, 0, 1)), -nrm)).transposed().to_4x4()
-        M = Matrix.Translation((p.x, p.y, z)) @ basis @ Euler((sw, 0, 0)).to_matrix().to_4x4()
+        # hung with the tips pulled a little in under the eave: the faces look slightly up, so
+        # the sky fill and the bulbs above reach them
+        M = Matrix.Translation((p.x, p.y, z)) @ basis @ Euler((sw - 0.22, 0, 0)).to_matrix().to_4x4()
         tri = [(-width / 2, 0), (0, -drop), (width / 2, 0)]
-        P.shape(tri, depth=0.01, M=M, band="rauten")
+        P.shape(tri, depth=0.012, M=M, uv_off=RAUTEN_UV)
 
 
 def build(lite):
@@ -77,7 +84,8 @@ def build(lite):
     h.build_carcass()
     h.build_counter(brackets=0)
     h.build_shelves()
-    h.build_roof(cover="shingles", fascia_band="rauten")
+    RA = h.part("rauten", "rauten", var=0.03)      # dedicated two-colour lozenge texture
+    h.build_roof(cover="shingles", fascia_part=RA)
     h.build_snow()
     P = h.paint
 
@@ -105,7 +113,7 @@ def build(lite):
     fz = sl.point(0, 0, -0.03).z - 0.07
     ye = sl.point(0, 0).y - 0.03
     n = int((sl.a1 - sl.a0) / 0.23)
-    pennants(P, (sl.a0 + 0.02, ye, 0), (sl.a1 - 0.02, ye, 0), fz, n, lite)
+    pennants(RA, (sl.a0 + 0.02, ye, 0), (sl.a1 - 0.02, ye, 0), fz, n, lite)
     # along the gable rakes (short run near the front eave on each side)
     Mr = Euler((0, 0, math.pi / 2)).to_matrix().to_4x4() @ Euler((math.pi / 2, 0, 0)).to_matrix().to_4x4()
     for sgn in (-1, 1):
@@ -114,8 +122,8 @@ def build(lite):
         p1 = sl.point(a, sl.L * 0.55, -0.1) + Vector((sgn * 0.035, 0, 0))
         for i in range(5):
             p = p0.lerp(p1, (i + 0.5) / 5)
-            P.shape([(-0.08, 0), (0, -0.22), (0.08, 0)], depth=0.01, M=Matrix.Translation(p) @ Mr,
-                    band="rauten")
+            RA.shape([(-0.09, 0), (0, -0.24), (0.09, 0)], depth=0.012, M=Matrix.Translation(p) @ Mr,
+                     uv_off=RAUTEN_UV)
 
     # ------------------------------------------------------------ crest sign on the front slope
     ys = -0.42
@@ -126,7 +134,7 @@ def build(lite):
             max_fill=0.84, text_depth=0.012, text_dy=-0.05)
     h.sign_lamps((-0.7, 0.7), ys - 0.03, sign_c.z + 0.28)
     # Rauten strip under the sign and two small flags on poles
-    P.box((0, ys - 0.03, sign_c.z - 0.3), (2.5, 0.03, 0.09), band="rauten", grain=0)
+    RA.box((0, ys - 0.03, sign_c.z - 0.3), (2.5, 0.03, 0.1), grain=0, uv_off=RAUTEN_UV)
     for x in (-1.1, 1.1):
         h.iron.box((x, ys + 0.03, z_roof + 0.06), (0.03, 0.03, 0.26), bevel=0)
         a = Vector((x, ys + 0.04, sign_c.z + 0.1))
@@ -139,7 +147,7 @@ def build(lite):
         M = Matrix.Translation((x, ys + 0.1, sign_c.z + 0.66)) @ Euler((math.pi / 2, 0, 0)).to_matrix().to_4x4()
         if x < 0:
             flag = [(0, 0), (0, -0.2), (-0.42, -0.08)]
-        P.shape(flag, depth=0.008, M=M, band="rauten")
+        RA.shape(flag, depth=0.01, M=M, uv_off=RAUTEN_UV)
 
     # ------------------------------------------------------------ wreath of fir with bulbs in the opening
     cp.fir_garland(h.fir, h.beads, (-W / 2 + 0.1, yF - 0.07, 2.2), (W / 2 - 0.1, yF - 0.07, 2.2), sag=0.1,

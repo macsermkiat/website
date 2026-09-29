@@ -13,9 +13,9 @@ Builds on the carpenter's nmlib (blender/lib/nmlib). Adds:
   * a build -> AO -> export pipeline for full and lite, and the Cycles preview step.
 
 Run the landmark scripts with the team's bpy:
-    ~/nachtmarkt-tools/bpy-venv/bin/python blender/rides/ferris.py [--no-render] [--no-lite]
-    (renders honour NM_DEVICE=METAL|CPU and NM_THREADS; previews default to 1920x1080, 128
-    samples, with a 1280 px JPEG in review/round-1/rides/)
+    /home/claude/tools/bpy-venv/bin/python blender/rides/ferris.py [--no-render] [--no-lite]
+    (renders honour NM_DEVICE and NM_THREADS; previews default to 1280x720, 48 samples, with a
+    1280 px JPEG in review/round-1/rides/; iterate with --res 960x540 --samples 32)
 """
 import argparse
 import json
@@ -226,8 +226,8 @@ def args():
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--no-lite", action="store_true")
     ap.add_argument("--no-full", action="store_true")
-    ap.add_argument("--samples", type=int, default=128)
-    ap.add_argument("--res", default="1920x1080")
+    ap.add_argument("--samples", type=int, default=48)
+    ap.add_argument("--res", default="1280x720")
     ap.add_argument("--preview-only", action="store_true",
                     help="build the full model and render the preview, without AO bake or export")
     ap.add_argument("--only", default=None)

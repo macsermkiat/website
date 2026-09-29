@@ -323,7 +323,7 @@ SETS = {
     "prop_books_shelf_1": dict(fn=lambda: shelf_set("prop_books_shelf_1", "slot_shelf_1", 0, NAMED),
                                slot="slot_shelf_1", stall="buecherstand", kind="shelf", section=True, seed=51,
                                width=2.1, cam=((0.0, -1.35, 0.2), (0.0, 0.0, 0.14), 32),
-                               hero=((-0.12, -0.62, 0.17), (-0.12, 0.0, 0.14), 40)),
+                               hero=((0.03, -0.72, 0.17), (0.03, 0.0, 0.14), 36)),
     "prop_books_shelf_2": dict(fn=lambda: shelf_set("prop_books_shelf_2", "slot_shelf_2", 100, ()),
                                slot="slot_shelf_2", stall="buecherstand", kind="shelf2", section=True, seed=52,
                                width=2.1, cam=((0.35, -1.1, 0.25), (0.1, 0.0, 0.14), 32)),

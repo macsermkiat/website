@@ -44,8 +44,10 @@ GROUP_RADIUS = 0.72     # m from a group's centre; 0.62 in pass 1 let chat hands
 CLIPS_FULL = {"crowd": ["idle", "walk", "chat", "drink", "laugh", "sit", "idle_free", "walk_free", "chat_free"],
               "band": ["play", "rest", "idle", "walk", "chat", "drink"],
               "vendor": ["serve", "wipe", "idle", "walk", "chat", "drink"]}
-CLIPS_LITE = {"crowd": ["idle", "walk", "chat", "drink", "idle_free", "walk_free"],
-              "band": CLIPS_FULL["band"], "vendor": CLIPS_FULL["vendor"]}
+CLIPS_LITE = {"crowd": ["idle", "walk", "chat", "drink", "sit"], "band": ["play", "rest"], "vendor": ["serve", "wipe"]}
+# what site/src/crowd.js plays when a lite figure lacks the clip: idle for standers, walk for walkers (mug hidden
+# for *_free clips); every other clip must be in the lite file, because the full market draws far people lite too
+LITE_FALLBACK = {"idle_free": "idle", "chat_free": "idle", "laugh": "idle", "walk_free": "walk"}
 LITE_CAP = 40
 # vendors who sell no drinks serve without the mug (specs.py serve_mug=False)
 SERVE_MUG = {"gluehwein": True, "bierstand": True, "bratwurst": False, "buecherstand": False}
@@ -281,8 +283,10 @@ def main():
                 "walk": "in place, one 1.2 s cycle, about 1.0 m/s for adults (0.8 m/s for children)",
                 "sit": "origin on the ground under the hips; seat top at 0.475 m (the square's benches); feet forward (+Z)",
                 "mug": "the mug is the node 'mug', skinned to the bone 'mug'; clips without it scale that bone to 0",
-                "lite": "lite files carry fewer clips; nobody in the first lite.cap entries needs a missing one except "
-                        "laugh and chat_free, which fall back to idle",
+                "lite": "lite files carry only what a lite figure plays (the lite market, and far people in the full "
+                        "market). Missing crowd clips fall back as site/src/crowd.js does: idle_free, chat_free and "
+                        "laugh play idle, walk_free plays walk, and the mug mesh stays hidden for *_free clips",
+                "fallback": LITE_FALLBACK,
             },
         },
         "variants": [v + ".glb" for v in VARIANTS],
@@ -587,8 +591,8 @@ def main():
             problems.append(f"{m.get('id', m['model'])}: mug {m['mug']} does not match clip {m['clip']}")
         if m["clip"] not in CLIPS_FULL[role]:
             problems.append(f"{m['model']}: clip {m['clip']} is not in the figure file")
-        if i < LITE_CAP and m["clip"] not in CLIPS_LITE[role] and m["clip"] not in ("laugh", "chat_free"):
-            problems.append(f"lite person {i} ({m['model']}) needs {m['clip']}, which lite files lack")
+        if m["clip"] not in CLIPS_LITE[role] and m["clip"] not in LITE_FALLBACK:
+            problems.append(f"person {i} ({m['model']}) needs {m['clip']}, which the lite file (far level) lacks")
     if len(order) != count:
         problems.append(f"order has {len(order)} people, count {count}")
     data["count"] = {"people": count, "musicians": 4}

@@ -7,7 +7,8 @@ FAIL (exit 1):
 - required act_ nodes: >= 8 mugs, taps 0..2 pivoting at their base, glasses with foam, the grill and its
   swing, sausages riding the swing, books, 8-12 wine bottles, wine glasses, rolls
 - no prop set adds a light_ empty (the stalls already carry their 2 or 1)
-- every act_book_<n> has a book_cover_<n> material; act_ names are unique across all sets
+- every act_book_<n> has a book_cover_<n> material and its title and author in its node extras;
+  act_ names are unique across all sets
 - items.json names every act_ node of every set, and books carry title and author
 - every set fits a 0.5 m deep counter or shelf, stands on the slot (z >= 0) and stays under the
   1.15 m front opening; clickable goods have their origin at their base
@@ -33,7 +34,7 @@ SECTION_SETS = ["prop_gluehwein_counter", "prop_gluehwein_shelf", "prop_gluehwei
                 "prop_bier_back", "prop_bier_shelf", "prop_wurst_counter", "prop_books_shelf_1", "prop_books_shelf_2",
                 "prop_books_counter"]
 DECO_KEYS = ["lebkuchen", "mandeln", "kerzen", "spielzeug", "schmuck", "kaese", "crepes", "maroni", "puffer"]
-NO_AO = ("vendor_glass", "flame", "lamp_glow", "coal_glow", "vendor_beer", "vendor_liquid")
+NO_AO = ("vendor_glass", "flame", "lamp_glow", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade")
 BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served)_\d+$")
 HEADROOM, SECTION_TRIS, SECTION_MB, DECO_TRIS = 2000, 60000, 3.0, 20000
 
@@ -94,9 +95,12 @@ def check_nodes(name, js, nodes):
         if len(on_grate) < 8:
             fail(f"{name}: only {len(on_grate)} sausages are children of act_grill_swing")
     mats = set(m.get("name") for m in js.get("materials", []))
+    extras = {nd.get("name"): nd.get("extras") or {} for nd in js.get("nodes", [])}
     for b in acts(nodes, "act_book_"):
         if f"book_cover_{b.rsplit('_', 1)[1]}" not in mats:
             fail(f"{name}: {b} has no book_cover material")
+        if not (extras[b].get("title") and extras[b].get("author")):
+            fail(f"{name}: {b} carries no title/author in its node extras")
 
 
 def check_ao(name, js):
