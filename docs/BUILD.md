@@ -35,20 +35,26 @@ Only write inside the paths your role owns. You may read anything.
 | `review/round-N/<role>/` | everyone: your preview images (JPEG, 1280 px wide at most) |
 | `docs/BUILD.md`, `docs/adr/`, `CONTEXT.md` | market owner |
 
-Do not commit. The market owner commits and pushes each round.
+On the cloud machine, don't commit; the market owner commits. On the Mac, the Blender roles commit their own paths to the round branch as described above.
 
-## Tools on this machine
+## Where things run
 
-- Blender: `/home/claude/tools/bpy-venv/bin/python your_script.py`. This is bpy 4.2 LTS, headless, with Cycles on CPU. `blender/stalls/gluehwein.py` is a worked example of planks, shingles, procedural wood, baking to textures, glb export and a preview render.
-- glTF optimisation: `gltf-transform` (global). The standard web step is:
+- **Blender work (architect, carpenter, vendor, ride builder, organizer) runs on Mac's MacBook Air (Apple M3, 24 GB) from round 1 pass 2 on.** A Cycles preview renders there in about 7 s on the Metal GPU, against about 3.5 min on the cloud machine. The repo clone is `/Users/admin/Project_Chatbot_research/website`.
+  - Blender: `~/nachtmarkt-tools/bpy-venv/bin/python your_script.py` (bpy 4.2 LTS, headless, with Pillow).
+  - gltf-transform: `NPM_CONFIG_PREFIX=~/nachtmarkt-tools/npm`.
+  - Every render must honour two environment variables: `NM_DEVICE` (CPU, or METAL for the GPU) and `NM_THREADS` (0 means all cores). `blender/lib/nmlib/render.py` shows how. On the Mac, run with `NM_DEVICE=METAL NM_THREADS=0`.
+  - With the GPU, previews can use 128 samples at 1920x1080. Keep a 1280 px JPEG for review.
+  - bpy on macOS segfaults at interpreter exit (code 139) after writing everything. Treat that as success if the outputs exist.
+- **Site, lighting, music and writing run on the cloud machine** (4 CPUs, no GPU). The repo is `/home/claude/website`. Blender there is `/home/claude/tools/bpy-venv/bin/python`.
+- Both machines exchange work through git on the `build/round-N` branch. Pull before starting, and commit only your own paths with a message naming your role.
+
+## Tools on both machines
+
+- glTF optimisation: `gltf-transform`. The standard web step is:
   `gltf-transform optimize in.glb out.glb --compress meshopt --texture-compress webp --texture-size 1024`
   Draco is not available. The loader uses `MeshoptDecoder`.
-- Python 3 with numpy and scipy. Node 22. Playwright with Chromium: launch with `executablePath: '/opt/pw-browsers/chromium'` if the version differs, and for WebGL use args `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist`. Software GL is slow, so allow long timeouts.
-- The machine has 4 CPUs shared by the whole team:
-  - Set Cycles to 2 threads (`scene.render.threads_mode='FIXED'; scene.render.threads=2`).
-  - Render previews at 1280x720 or less with 32–64 samples and the denoiser.
-  - Never run more than one render at a time yourself.
-- Network: npm, PyPI, GitHub and raw.githubusercontent.com work. Many other hosts are blocked, so test before relying on one. Only use assets whose licence allows use on a public website (CC0, CC-BY, MIT and similar). Record every third-party asset with its source URL and licence in `CREDITS.md` under your role's heading.
+- Python 3 with numpy and scipy, and Node 22. On the cloud machine, Playwright with Chromium: launch with `executablePath: '/opt/pw-browsers/chromium'` if the version differs, and for WebGL use args `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist`. Software GL is slow, so allow long timeouts.
+- Network on the cloud machine: npm, PyPI, GitHub and raw.githubusercontent.com work, and many other hosts are blocked. Only use assets whose licence allows use on a public website (CC0, CC-BY, MIT and similar). Record every third-party asset with its source URL and licence in `CREDITS.md` under your role's heading.
 
 ## Scene conventions
 

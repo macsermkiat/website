@@ -38,8 +38,8 @@ VARIANTS = {
                       valance=("step", None), sign="crest", board=("rect", "white", "blue"),
                       font="alegreya_sc", roof="shingles", roof_tint="shingle", awning="blue"),
     "schmuck": dict(text="Christbaumschmuck", W=3.4, wall="vertical", wall_tint="oak", trim="green",
-                    accent="gold", valance=("scallop", "star"), sign="crest", board=("arch", "green", "gold"),
-                    font="fraktur", roof="shingles", roof_tint="dark"),
+                    accent="gold", valance=("scallop", "star"), sign="crest", board=("arch", "cream", "green"),
+                    font="alegreya_sc", roof="shingles", roof_tint="dark"),
     "kaese": dict(text="Käse", W=2.8, wall="lap", wall_tint="honey", trim="cream", accent="black",
                   valance=("point", "circle"), sign="fascia", board=("banner", "cream", "black"),
                   font="fraktur_bold", roof="boards", roof_tint="oak"),
@@ -51,7 +51,7 @@ VARIANTS = {
                    font="alegreya_sc", roof="boards", roof_tint="dark", stove=True),
     "puffer": dict(text="Kartoffelpuffer", W=3.2, wall="lap", wall_tint="oak", trim="red", accent="cream",
                    valance=("scallop", None), sign="crest", board=("banner", "cream", "red"),
-                   font="fraktur_bold", roof="shingles", roof_tint="shingle", stove=True),
+                   font="alegreya_sc", roof="shingles", roof_tint="shingle", stove=True),
 }
 D, EAVE, RIDGE = 2.2, 2.62, 3.4
 SEEDS = {k: 100 + i * 7 for i, k in enumerate(VARIANTS)}
@@ -120,33 +120,40 @@ def build_variant(key, lite):
             ang = a * 2 * math.pi / 3
             h.iron.box((x + 0.06 * math.cos(ang), y + 0.06 * math.sin(ang), top + 0.04), (0.01, 0.01, 0.12), bevel=0)
         h.iron.cyl((x, y, zr + 0.06), 0.14, 0.09, 0.07, seg=12)
-    # sign
+    # sign: big, high-contrast letters so the word reads from the lane
     shape, board_band, text_band = v["board"]
     fnt = state.font(v["font"])
     if v["sign"] == "crest":
         ys = -0.35
         z_roof = RIDGE - abs(ys) * math.tan(h.pitch) + 0.05
-        sw = min(W - 0.3, 0.3 + 0.16 * len(v["text"]))
-        sh = 0.4
+        sw = min(W + 0.1, 0.5 + 0.2 * len(v["text"]))
+        sh = 0.52 if shape != "banner" else 0.56
         sign_c = Vector((0, ys, z_roof + sh / 2 + 0.12))
-        cp.sign(P, P, v["text"], fnt, sign_c, sw, sh, depth=0.04, board_band=board_band, text_band=text_band,
-                frame_band=accent if accent != board_band else None, board_shape=shape, text_size=0.24,
-                max_fill=0.84, text_depth=0.01, resolution=1, text_bevel=0.0)
-        h.sign_lamps((-sw / 4, sw / 4), ys - 0.03, sign_c.z + sh / 2 + 0.06, reach=0.28)
-        lamp_spots.extend([(x, ys - 0.31, sign_c.z + sh / 2 + 0.2) for x in (-sw / 4, sw / 4)])
-        for x in (-sw / 2 + 0.15, sw / 2 - 0.15):
+        cp.sign(P, P, v["text"], fnt, sign_c, sw, sh, depth=0.045, board_band=board_band, text_band=text_band,
+                frame_band=accent if accent not in (board_band, text_band) else None, board_shape=shape,
+                text_size=0.34, max_fill=0.86 if shape != "banner" else 0.74, text_depth=0.012, resolution=1,
+                text_bevel=0.0, text_dy=-0.03 if shape == "arch" else 0.0)
+        lamp_x = (-sw * 0.3, sw * 0.3)
+        h.sign_lamps(lamp_x, ys - 0.03, sign_c.z + sh / 2 + 0.06, reach=0.3)
+        lamp_spots.extend([((x, ys - 0.33, sign_c.z + sh / 2 + 0.2), (x * 0.4, ys, sign_c.z)) for x in lamp_x])
+        for x in (-sw / 2 + 0.2, sw / 2 - 0.2):
             h.iron.box((x, ys + 0.03, z_roof + 0.05), (0.028, 0.028, 0.2), bevel=0)
             a = Vector((x, ys + 0.04, sign_c.z + 0.08))
             b = Vector((x, ys + 0.42, RIDGE - abs(ys + 0.42) * math.tan(h.pitch) + 0.06))
             h.iron.slab(a, b, 0.022, 0.012, up=(1, 0, 0))
-    else:  # fascia sign: mounted on the front of the valance at the eave, bulbs either side
-        sw = min(W - 0.5, 0.5 + 0.19 * len(v["text"]))
-        sh = 0.36
+    else:  # fascia sign: hung on the front of the valance at the eave, two small lamps above it
+        sw = min(W - 0.3, 0.7 + 0.24 * len(v["text"]))
+        sh = 0.46
         e = sl.point(0, 0)
-        sign_c = Vector((0, e.y - 0.03, ez - 0.06))
-        cp.sign(P, P, v["text"], fnt, sign_c, sw, sh, depth=0.03, board_band=board_band, text_band=text_band,
-                frame_band=accent if shape == "rect" else None, board_shape=shape, text_size=0.25,
-                max_fill=0.82, text_depth=0.008, resolution=1, text_bevel=0.0)
+        sign_c = Vector((0, e.y - 0.035, ez - 0.02))
+        cp.sign(P, P, v["text"], fnt, sign_c, sw, sh, depth=0.032, board_band=board_band, text_band=text_band,
+                frame_band=accent if shape == "rect" and accent not in (board_band, text_band) else None,
+                board_shape=shape, text_size=0.34, max_fill=0.84 if shape != "banner" else 0.72,
+                text_depth=0.01, resolution=1, text_bevel=0.0)
+        lamp_x = (-sw * 0.28, sw * 0.28)
+        h.sign_lamps(lamp_x, sign_c.y + 0.01, sign_c.z + sh / 2 + 0.03, reach=0.22)
+        lamp_spots.extend([((x, sign_c.y - 0.25, sign_c.z + sh / 2 + 0.16), (x * 0.4, sign_c.y, sign_c.z))
+                           for x in lamp_x])
     if v["sign"] == "crest" or v.get("awning"):
         h.eave_bulbs(sides=False)
     else:
@@ -187,17 +194,18 @@ def main():
             render.night_scene(ground_size=24)
             render.lights_at_markers(energy=120)
             render.add_light("env_fill", 'AREA', (0, 0.1, 2.35), 90, size=1.8)
-            for p in lamp_spots:
-                render.add_light("env_signlamp", 'SPOT', p, 22, size=0.05, rot=(math.radians(62), 0, 0))
+            for p, t in lamp_spots:
+                render.add_light("env_signlamp", 'SPOT', p, 24, size=0.1, spot_size=math.radians(110),
+                                 spot_blend=1.0, target=t)
             render.add_light("env_neighbour", 'POINT', (-4.2, -1.4, 2.6), 120, size=0.6)
-            render.camera((-3.3, -5.6, 1.9), (0.0, -0.4, 1.95), lens=28)
+            render.camera((-2.9, -5.0, 1.85), (0.05, -0.45, 2.05), lens=28)
             png = os.path.join(state.OUT_DIR, "renders", f"{name}.png")
-            render.render(png, samples=min(a.samples, 32), res=(640, 360))
+            render.render(png, samples=min(a.samples, 32), res=(840, 600))
             renders.append((png, VARIANTS[key]["text"]))
     if renders and not only:
         os.makedirs(pipeline.REVIEW, exist_ok=True)
         render.contact_sheet(renders, os.path.join(pipeline.REVIEW, "deco_contact_sheet.jpg"), cols=3,
-                             tile=(420, 236), title="Deco stall kit: nine variants, shared kit textures")
+                             tile=(420, 300), title="Deco stall kit: nine variants, shared kit textures")
     import json
     with open(os.path.join(state.OUT_DIR, "deco_report.json"), "w") as f:
         json.dump(reports, f, indent=1)

@@ -349,7 +349,10 @@ def roof_tiles(n=1024, tile_w_m=2.16, tile_h_m=2.10, cols=12, rows=14, seed=71, 
 
 # ------------------------------------------------------------------ sandstone ashlar
 
-def sandstone(n=1024, tile_m=3.0, seed=81, red=True):
+def sandstone(n=1024, tile_m=2.4, seed=81, red=True):
+    """Ashlar masonry: courses of varied height (some thin 'Binder' courses), blocks of varied length,
+    fine tooled faces, soft arrises, thin lime joints and rain streaks.  Block colour varies only a
+    little so the wall reads as one stone at a distance, not as a regular brick grid."""
     px = n / tile_m
     r = rng(seed)
     yy, xx = np.mgrid[0:n, 0:n].astype(float)
@@ -357,7 +360,8 @@ def sandstone(n=1024, tile_m=3.0, seed=81, red=True):
     course_h = []
     tot = 0
     while tot < tile_m:
-        c = r.uniform(0.28, 0.42); course_h.append(c); tot += c
+        c = r.uniform(0.22, 0.36) if r.random() > 0.18 else r.uniform(0.14, 0.19)
+        course_h.append(c); tot += c
     course_h = np.array(course_h) * tile_m / tot
     ce = np.concatenate([[0], np.cumsum(course_h)])
     row = np.clip(np.searchsorted(ce, Y, side="right") - 1, 0, len(course_h) - 1)
@@ -365,32 +369,37 @@ def sandstone(n=1024, tile_m=3.0, seed=81, red=True):
     for j in range(len(course_h)):
         lens = []; t = 0
         while t < tile_m:
-            l = r.uniform(0.45, 0.95); lens.append(l); t += l
+            l = r.uniform(0.3, 0.85) if course_h[j] > 0.2 else r.uniform(0.5, 1.1)
+            lens.append(l); t += l
         lens = np.array(lens) * tile_m / t
         e = np.concatenate([[0], np.cumsum(lens)]); off = r.uniform(0, tile_m)
         m = row == j
         u = (X[m] + off) % tile_m
         ids[m] = j * 100 + np.searchsorted(e, u, side="right") - 1
     edges = id_edges(ids)
-    edges = ndimage.binary_dilation(edges, iterations=2)
+    edges = ndimage.binary_dilation(edges, iterations=1)
     d = wrap_edt(edges) / px
-    prof = smoothstep(0, 0.015, d)
-    tex = pnoise(n, 40, 4, 0.55, seed + 3)
-    bed = stretched_noise(n, 3, 40, 3, seed + 4)      # bedding layers
+    prof = smoothstep(0, 0.02, d) ** 0.7                     # soft, slightly worn arrises
+    tex = pnoise(n, 60, 4, 0.55, seed + 3)
+    fine = pnoise(n, 180, 2, 0.5, seed + 9)
+    bed = stretched_noise(n, 2, 50, 3, seed + 4)              # bedding layers in the stone
+    tool = np.sin(X * 2 * np.pi / 0.012 + 3 * tex) * 0.5 + 0.5  # fine vertical tooling
     t = hash01(ids, 5)
     if red:
-        pal = [(0.50, 0.28, 0.20), (0.56, 0.34, 0.24), (0.45, 0.25, 0.19), (0.60, 0.42, 0.31), (0.52, 0.38, 0.30)]
+        pal = [(0.52, 0.30, 0.22), (0.55, 0.33, 0.24), (0.49, 0.28, 0.21), (0.57, 0.38, 0.28), (0.53, 0.35, 0.27)]
     else:
-        pal = [(0.58, 0.50, 0.38), (0.62, 0.55, 0.42), (0.52, 0.45, 0.35), (0.66, 0.58, 0.46)]
-    col = palette_pick(t, pal) * (0.85 + 0.25 * hash01(ids, 6))[..., None]
-    col *= (0.85 + 0.2 * tex + 0.1 * (bed - 0.5))[..., None]
+        pal = [(0.60, 0.52, 0.40), (0.62, 0.55, 0.42), (0.57, 0.49, 0.38), (0.64, 0.57, 0.45)]
+    col = palette_pick(t, pal) * (0.93 + 0.1 * hash01(ids, 6))[..., None]
+    col *= (0.86 + 0.18 * tex + 0.08 * (bed - 0.5) + 0.05 * (fine - 0.5))[..., None]
+    # rain streaks and soot: long vertical runs that ignore the joints (periodic in both axes)
+    streak = stretched_noise(n, 22, 2, 3, seed + 11)
     grime = pnoise(n, 3, 4, 0.55, seed + 7)
-    col *= (0.75 + 0.3 * grime)[..., None]
-    mortar = np.array([0.55, 0.52, 0.47]) * 0.8
+    col *= (0.72 + 0.22 * grime + 0.14 * (streak - 0.5))[..., None]
+    mortar = np.array([0.62, 0.58, 0.52]) * (0.8 if red else 0.9)
     jm = 1 - prof
-    col = col * (1 - jm[..., None]) + mortar * jm[..., None]
-    h = prof * (0.8 + 0.2 * tex) + 0.1 * bed
-    rough = np.clip(0.8 + 0.1 * tex, 0.5, 0.95)
+    col = col * (1 - jm[..., None]) + mortar * jm[..., None] * (0.8 + 0.3 * tex)[..., None]
+    h = prof * (0.85 + 0.1 * tex + 0.03 * tool) + 0.06 * bed + 0.03 * fine
+    rough = np.clip(0.78 + 0.1 * tex + 0.06 * (1 - prof), 0.5, 0.97)
     return dict(color=np.clip(col, 0, 1), rough=rough, height=h)
 
 

@@ -104,7 +104,14 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
         // a point outside the model's front (under the eave) is the front fill: softer, longer reach
         const front = local.z > 0.9 && K.front;
         if (front && !ud.color) color.copy(frontWarm);
-        L = new THREE.PointLight(color, Number(ud.intensity) || (front ? K.front : K.point), front && !ud.distance ? K.frontDistance : distance, 2);
+        if (front && K.frontAngle) {
+          // a wide spot aimed down and 0.6 m out: counter front, sign and cobbles, not the fascia
+          L = new THREE.SpotLight(color, Number(ud.intensity) || K.front, Number(ud.distance) || K.frontDistance, K.frontAngle, 0.45, 2);
+          L.target.position.copy(new THREE.Vector3(local.x, 0, local.z + 0.6).applyMatrix4(holder.matrixWorld));
+          scene.add(L.target);
+        } else {
+          L = new THREE.PointLight(color, Number(ud.intensity) || (front ? K.front : K.point), front && !ud.distance ? K.frontDistance : distance, 2);
+        }
         if (front) L.userData.front = true;
       }
       L.name = `lighting_${s.obj.name}`;
@@ -132,7 +139,7 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
         L.position.y -= U.drop / ws;
         L.userData.unshadowed = true;
       }
-      if (type === 'spot') L.position.set(0, 0, 0);
+      if (L.isSpotLight) L.position.set(0, 0, 0);
       lights.push(L);
     } else {
       const m = new THREE.Mesh(poolGeo, poolMat);

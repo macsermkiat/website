@@ -72,11 +72,15 @@ def layout_places():
     return out
 
 
-# string-light poles (three.js [x, z]) and spans, from the prototype, extended for the wider market
+# string-light poles (three.js [x, z]) and spans, from the prototype, extended for the wider market.
+# Round 2: the back-row poles 16 and 17 stand clear of the tree (6.5 m+ from its axis at [6.5, -15])
+# and the spans behind it are re-routed so no wire or bulb passes through the fir
+# (see blender/square/check_clash.py, which tests every wire and bulb vertex against the fir's needles).
+TREE_THREE = (6.5, -15.0)
 POLES_THREE = [[-15, 4], [-7.5, 6.5], [0, 7.5], [7.5, 6.5], [15, 4], [-10.5, -6.5], [10.5, -6.5],
                [-3.5, -9.5], [3.5, -9.5], [-17.5, -3], [-17.5, 5], [-17.5, 13], [17.5, -3], [17.5, 5],
-               [17.5, 13], [-7, -18], [1, -18], [10, -18]]
+               [17.5, 13], [-7, -18], [0, -20], [12.2, -19.6]]
 SPANS = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [4, 6], [5, 7], [7, 8], [8, 6], [1, 7], [3, 8], [2, 7],
          [2, 8], [1, 5], [3, 6], [9, 10], [10, 11], [12, 13], [13, 14], [9, 12], [11, 1], [14, 3],
-         [10, 13], [5, 9], [6, 12], [15, 16], [16, 17], [15, 7], [17, 8], [15, 5], [17, 6]]
+         [10, 13], [5, 9], [6, 12], [15, 16], [16, 17], [15, 7], [16, 7], [15, 5], [17, 6]]
 POLE_H = 6.4

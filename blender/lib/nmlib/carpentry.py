@@ -198,17 +198,26 @@ def fascia(part, sl, h=0.14, th=0.028, tint=None, band=None):
     part.mbox(M, (sl.a1 - sl.a0 + 0.04, th, h), grain=0, tint=tint, band=band)
 
 
-def snow_cap(part, sl, thick=0.075, lip=0.06, nx=None, ns=None, edge_in=0.07, seed=0.0):
-    """Lumpy snow blanket on a slope with a rounded lip hanging over the eave."""
+def snow_cap(part, sl, thick=0.05, lip=0.05, nx=None, ns=None, edge_in=0.07, seed=0.0, cover=0.72,
+             ridge_clear=0.2, patch_scale=1.7, base=0.03):
+    """Thin, patchy snow on a slope with a soft lip curling over the eave.
+
+    cover:       roughly the fraction of the slope under snow (the rest shows shingles);
+    ridge_clear: metres below the ridge that the wind has scoured bare;
+    patch_scale: frequency of the bare patches (per metre).
+    Where the snow runs out its edge sinks below the roof surface, so the boundary cuts
+    through the shingles like real thin snow instead of ending in a vertical wall.
+    Faces with no snow at all are dropped (they cost nothing)."""
     import bmesh
-    nx = nx or (10 if state.lite() else 30)
-    ns = ns or (5 if state.lite() else 12)
+    nx = nx or (12 if state.lite() else 34)
+    ns = ns or (6 if state.lite() else 14)
     bm = bmesh.new()
     a0, a1 = sl.a0 + edge_in, sl.a1 - edge_in
     s0, s1 = -lip, sl.L - 0.03
-    grid = []
+    thr = 1.0 - cover
+    grid, dens = [], []
     for j in range(ns + 1):
-        row = []
+        row, drow = [], []
         t = j / ns
         s = s0 + (s1 - s0) * t
         for i in range(nx + 1):
@@ -218,17 +227,29 @@ def snow_cap(part, sl, thick=0.075, lip=0.06, nx=None, ns=None, edge_in=0.07, se
             fall = min(1.0, edge / 0.10) ** 0.6
             p3 = Vector((a * 3.1 + seed, s * 3.1, seed * 0.7))
             lump = 0.75 + 0.45 * noise.noise(p3) + 0.15 * noise.noise(p3 * 3.3)
-            h = thick * fall * max(0.2, lump)
+            q = Vector((a * patch_scale + seed * 1.7, s * patch_scale * 1.4, seed * 2.3 + 5.0))
+            d = 0.5 + 0.55 * noise.noise(q) + 0.25 * noise.noise(q * 2.7)
+            ridge = min(1.0, max(0.0, (sl.L - ridge_clear - s) / 0.25))   # scoured band under the ridge
+            d = d * ridge
+            k = max(0.0, min(1.0, (d - thr) / 0.18))
+            k = k * k * (3 - 2 * k)
+            h = thick * fall * max(0.25, lump) * k
             if s < 0:                       # the lip curls down past the eave
-                k = -s / lip
-                pos = sl.point(a, s * 0.55, h * (1 - k) - k * k * thick * 1.1)
+                kk = -s / lip
+                pos = sl.point(a, s * 0.55, (h + base) * (1 - kk) - kk * kk * thick * 1.1 * k - (1 - k) * 0.03)
             else:
-                pos = sl.point(a, s, h * min(1.0, (s1 - s) / 0.06 + 0.25) + 0.028)
+                pos = sl.point(a, s, base * k + h - (1 - k) * 0.012)
             row.append(bm.verts.new(pos))
+            drow.append(k)
         grid.append(row)
+        dens.append(drow)
     for j in range(ns):
         for i in range(nx):
+            if max(dens[j][i], dens[j][i + 1], dens[j + 1][i + 1], dens[j + 1][i]) <= 0.0:
+                continue
             bm.faces.new((grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]))
+    loose = [v for v in bm.verts if not v.link_faces]
+    bmesh.ops.delete(bm, geom=loose, context='VERTS')
     part.from_bmesh(bm, grain=0, smooth=True)
 
 
@@ -332,14 +353,14 @@ def sign(board, letters, text, font, center, w, h, depth=0.03, text_depth=0.012,
 
 def bulb_string(bulbs, wire, anchors, sag=0.06, spacing=0.2, bulb_r=0.028, drop=0.05, seg=None):
     """Fairy bulbs hanging from a sagging wire through `anchors`. bulbs: Part('bulb_warm')."""
-    seg = seg or (6 if state.lite() else 8)
-    rings = 4 if state.lite() else 6
+    seg = seg or (5 if state.lite() else 8)
+    rings = 3 if state.lite() else 6
     for a, b in zip(anchors[:-1], anchors[1:]):
         a, b = Vector(a), Vector(b)
         L = (b - a).length
         n = max(1, round(L / spacing))
-        pts = catenary(a, b, sag, max(4, n * 3))
-        wire.tube(pts, 0.004, tseg=4 if state.lite() else 5)
+        pts = catenary(a, b, sag, max(3, n) if state.lite() else max(4, n * 3))
+        wire.tube(pts, 0.004, tseg=3 if state.lite() else 5)
         for i in range(n):
             t = (i + 0.5) / n
             p = a.lerp(b, t) - Vector((0, 0, sag * 4 * t * (1 - t)))

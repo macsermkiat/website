@@ -27,7 +27,7 @@ BAND_LEN = 1.0             # metres along the board per U unit
 BAND_PAD = 6 / 1024        # UV padding inside a band against bleeding
 
 # Tiling textures: metres covered by one texture repeat.
-TILE = {"wood": 1.0, "iron": 0.5}
+TILE = {"wood": 1.0, "oak": 1.0, "iron": 0.5}
 
 # Named tints (linear multipliers of the light neutral kit wood).
 TINTS = {
@@ -69,6 +69,7 @@ class Part:
         self.default_bevel = bevel
         self.V, self.F, self.UV, self.C, self.S = [], [], [], [], []
         self.curve_simplify = 6.0      # degrees; outline points of text/shapes closer than this merge
+        self.lite_flat_text = True     # lite: letters are a single front face (no depth)
 
     # ------------------------------------------------------------------ emit
     def _emit(self, bm, M, grain=None, tint=None, band=None, var=None, smooth=None,
@@ -164,10 +165,15 @@ class Part:
         for v in bm.verts:
             v.co = Vector((v.co.x * size[0], v.co.y * size[1], v.co.z * size[2]))
         g = grain if grain is not None else max(range(3), key=lambda i: size[i])
-        if segs > 1:
-            edges = [e for e in bm.edges
-                     if abs((e.verts[0].co - e.verts[1].co)[g]) > 1e-6]
-            bmesh.ops.subdivide_edges(bm, edges=edges, cuts=segs - 1, use_grid_fill=True)
+        # segs: int = pieces along the grain, or (nx, ny, nz) pieces along each local axis
+        # (extra vertices for vertex shading such as the counter-edge wear)
+        per_axis = tuple(segs) if isinstance(segs, (tuple, list)) else \
+            tuple(segs if i == g else 1 for i in range(3))
+        for ax, n in enumerate(per_axis):
+            if n > 1:
+                edges = [e for e in bm.edges if abs((e.verts[0].co - e.verts[1].co)[ax]) > 1e-6 and
+                         all(abs((e.verts[0].co - e.verts[1].co)[k]) < 1e-6 for k in range(3) if k != ax)]
+                bmesh.ops.subdivide_edges(bm, edges=edges, cuts=n - 1, use_grid_fill=True)
         b = self.default_bevel if bevel is None else bevel
         if b is None:
             b = 0.004 if self.kind != "flat" else 0.0
@@ -336,11 +342,18 @@ class Part:
         cu.align_y = 'CENTER'
         cu.resolution_u = max(1, resolution - (1 if state.lite() else 0))
         b = 0.0012 if bevel is None else bevel
+        flat = False
         if state.lite():
             b = 0.0
+            flat = self.lite_flat_text
+            if flat:                    # lite: one front face per glyph, no sides or back
+                cu.extrude = 0.0
+                cu.fill_mode = 'FRONT'
         if b:
             cu.bevel_depth = b
             cu.bevel_resolution = 0
+        if flat:
+            M = (M or Matrix()) @ Matrix.Translation((0, 0, depth / 2))
         dims = self._emit_curve(cu, M, grain, max_width=max_width, **kw)
         return dims
 
@@ -362,7 +375,8 @@ class Part:
                 v.co.y *= s
             w, h = w * s, h * s
         # thin out the outline (fonts carry many near-colinear points) and merge the flat fill
-        bmesh.ops.dissolve_limit(bm, angle_limit=math.radians(self.curve_simplify), verts=list(bm.verts),
+        simp = self.curve_simplify * (2.0 if state.lite() else 1.0)
+        bmesh.ops.dissolve_limit(bm, angle_limit=math.radians(simp), verts=list(bm.verts),
                                  edges=list(bm.edges), use_dissolve_boundaries=False)
         bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4],
                               quad_method='BEAUTY', ngon_method='BEAUTY')

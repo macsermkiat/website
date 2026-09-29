@@ -147,24 +147,26 @@ const isBulbish = (o, m) => /^bulbs_/i.test(o.name) || /^bulb_/i.test(m?.name ||
  * from a tiny palette texture) counts when it might hold a metal. Large meshes (walls, roofs) keep
  * the global environment: a probe captured inside a stall would paint its outside warm.
  */
-export function probeTargets(holder, { maxRadius = 1.8 } = {}) {
+export function probeTargets(holder, { maxRadius = 1.8, maxMetalRadius = 4 } = {}) {
   const out = [];
   const sphere = new THREE.Sphere();
   const ws = new THREE.Vector3();
   holder.traverse((o) => {
     if (!o.isMesh || o.isInstancedMesh || !o.geometry) return;
     const mats = Array.isArray(o.material) ? o.material : [o.material];
+    let metal = false;
     const hit = mats.some((m) => {
       if (!m || !m.isMeshStandardMaterial || isBulbish(o, m)) return false;
       const smallMap = (t) => !t || ((t.image?.width || 999) <= 128);
-      const metal = m.metalness >= 0.5 && smallMap(m.metalnessMap);
+      metal ||= m.metalness >= 0.5 && smallMap(m.metalnessMap);
       return metal || m.clearcoat > 0 || m.transmission > 0 || (m.transparent && m.opacity < 0.9 && m.roughness < 0.3);
     });
     if (!hit) return;
     if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
     sphere.copy(o.geometry.boundingSphere);
     o.getWorldScale(ws);
-    if (sphere.radius * Math.max(ws.x, ws.y, ws.z) > maxRadius) return;
+    // metal has no diffuse, so a large metal mesh (wires, hinges and the pot merged) only gains
+    if (sphere.radius * Math.max(ws.x, ws.y, ws.z) > (metal ? maxMetalRadius : maxRadius)) return;
     out.push(o);
   });
   return out;

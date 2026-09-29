@@ -21,6 +21,9 @@ from nmlib.geo import Part  # noqa: E402
 
 COUNTER_TOP = 1.05
 OPEN_TOP = 2.2
+# counter tints are multipliers of the oak kit (which is already oak-brown)
+OAK_TINT = {"oak": (1.0, 1.0, 1.0), "honey": (1.08, 1.0, 0.86), "pine": (1.12, 1.08, 0.95),
+            "dark": (0.62, 0.56, 0.52), "walnut": (0.55, 0.45, 0.40), "soot": (0.40, 0.37, 0.35)}
 
 
 def grime(z_clean=0.45, strength=0.35):
@@ -28,6 +31,35 @@ def grime(z_clean=0.45, strength=0.35):
     def f(p):
         t = min(1.0, max(0.0, p.z / z_clean))
         return 1.0 - strength * (1 - t) ** 1.6
+    return f
+
+
+def _smooth(e0, e1, x):
+    t = min(1.0, max(0.0, (x - e0) / (e1 - e0)))
+    return t * t * (3 - 2 * t)
+
+
+def counter_wear(y_front, x0, x1, top=COUNTER_TOP, strength=0.5, band=0.10, seed=0.0):
+    """Shade function (edge-wear mask) for a counter: hands and sleeves darken a band along the
+    front edge of the top and the upper part of the front lip, most where people are served
+    (the middle) and in a few blotches; the ends stay cleaner. Works on per-vertex colour, so
+    the counter boards carry a vertex grid (see Hut.build_counter)."""
+    from mathutils import noise as mnoise
+    L = max(x1 - x0, 1e-3)
+
+    def f(p):
+        if p.z < top - 0.11:
+            return 1.0
+        dy = p.y - y_front                           # 0 at the front edge, grows inward
+        edge = 1.0 - _smooth(0.0, band, max(dy, 0.0))
+        if dy < 0.0:                                 # front lip face: upper part worn
+            edge = _smooth(top - 0.10, top - 0.01, p.z)
+        u = (p.x - x0) / L
+        use = 0.35 + 0.65 * math.sin(math.pi * min(1.0, max(0.0, u))) ** 0.7
+        blot = 0.75 + 0.5 * mnoise.noise(Vector((p.x * 3.7 + seed, p.y * 9.0, seed * 0.3)))
+        d = strength * edge * use * max(0.3, blot)
+        d = min(d, 0.62)
+        return (1.0 - d * 0.92, 1.0 - d, 1.0 - d * 1.08)
     return f
 
 
@@ -65,6 +97,7 @@ class Hut:
         self.roofp = Part(f"{key}_roof", "wood", shade=None)
         self.paint = Part(f"{key}_paint", "paint", shade=sh, var=0.04)
         self.iron = Part(f"{key}_iron", "iron")
+        self.counter = Part(f"{key}_counter", "oak", var=0.06)       # oak top + lip, edge-wear shaded
         self.bulbs = Part("bulbs_0", "bulb_warm", var=0.03)
         self.wire = Part(f"{key}_wire", "wire", var=0.0)
         self.fir = Part(f"{key}_fir", "fir", var=0.2)
@@ -131,8 +164,13 @@ class Hut:
             zt = self.open_top + self.header_h
             if self.ridge_axis == 'y' or self.eave - zt > 0.08:
                 cp.plank_wall(self.paint if self.wall_band else self.wood, x0 + 0.1, x1 - 0.1, zt,
-                              lambda c: self.top_at('x', c), axis='x', at=yF + 0.03, pw=pw, tint=wt, var=0.12,
+                              lambda c: self.top_at('x', c), axis='x', at=yF + 0.03, pw=self.pw, tint=wt, var=0.12,
                               band=self.wall_band)
+
+    @property
+    def pw(self):
+        """Plank width; lite builds use wider boards (fewer boxes, same look at phone distance)."""
+        return self.plank_w * (1.7 if state.lite() else 1.0)
 
     def _wall(self, axis, a, b, at, top, outward, z0=0.1):
         if self.wall == "lap":
@@ -143,7 +181,7 @@ class Hut:
                               outward=outward, tint=self.wall_tint, var=0.12, bevel=self.plank_bevel)
                 if zmax > self.eave:
                     cp.plank_wall(self.wood, a, b, self.eave - 0.08, top, axis=axis, at=at,
-                                  pw=self.plank_w, tint=self.wall_tint, var=0.12, bevel=self.plank_bevel)
+                                  pw=self.pw, tint=self.wall_tint, var=0.12, bevel=self.plank_bevel)
             else:
                 cp.lap_siding(self.wood, a, b, z0, zmax, axis=axis, at=at, outward=outward,
                               tint=self.wall_tint, var=0.12, bevel=self.plank_bevel)
@@ -151,11 +189,11 @@ class Hut:
             self._lining(axis, a, b, at - outward * 0.03, top, z0)
         else:
             wp = self.paint if self.wall_band else self.wood
-            cp.plank_wall(wp, a, b, z0, top, axis=axis, at=at, pw=self.plank_w,
+            cp.plank_wall(wp, a, b, z0, top, axis=axis, at=at, pw=self.pw,
                           tint=None if self.wall_band else self.wall_tint, var=0.13 if not self.wall_band else 0.05,
                           band=self.wall_band, bevel=self.plank_bevel)
             if self.wall == "batten":
-                pos = a + self.plank_w
+                pos = a + self.pw
                 while pos < b - 0.05:
                     t = top(pos)
                     h = t - z0 - 0.02
@@ -165,14 +203,15 @@ class Hut:
                     else:
                         self.wood.box((at + outward * 0.02, pos, z0 + h / 2), (0.02, 0.045, h),
                                       tint=self.wall_tint, grain=2, bevel=self.plank_bevel)
-                    pos += self.plank_w * 1.02
+                    pos += self.pw * 1.02
             self._lining(axis, a, b, at - outward * 0.028, top, z0)
 
     def _lining(self, axis, a, b, at, top, z0):
         """Cheap inner skin: one board per 0.6 m, darker, only to close the wall visually."""
         pos = a
+        step = 1.2 if state.lite() else 0.6
         while pos < b - 1e-3:
-            w = min(0.6, b - pos)
+            w = min(step, b - pos)
             c = pos + w / 2
             t = min(top(pos + 0.02), top(pos + w - 0.02)) - 0.02
             h = t - z0
@@ -182,24 +221,34 @@ class Hut:
                 self.wood.box((at, c, z0 + h / 2), (0.012, w, h), tint=self.inner_tint, var=0.05, grain=2, bevel=0)
             pos += w
 
-    def build_counter(self, x0=None, x1=None, brackets=4, front_band=None):
-        """Counter top exactly at COUNTER_TOP, overhanging to the front, on brackets."""
+    def build_counter(self, x0=None, x1=None, brackets=4, front_band=None, wear=0.5):
+        """Counter top exactly at COUNTER_TOP, overhanging to the front, on brackets.
+        Oak kit boards; the front board has a rounded, worn nosing, and the top and lip carry a
+        vertex grid shaded by counter_wear (darkened front edge where hands rest)."""
         x0 = self.x0 + 0.1 if x0 is None else x0
         x1 = self.x1 - 0.1 if x1 is None else x1
         yF = self.yF
         th = 0.05
-        y_front = yF - self.counter_over
+        y_front = y_front0 = yF - self.counter_over
         y_back = y_front + self.counter_depth
-        # three thick boards along X
+        C = self.counter
+        C.shade = counter_wear(y_front, x0, x1, strength=wear, seed=len(self.key))
+        L = x1 - x0 + 0.06
+        nx = max(2, int(L / (0.25 if state.lite() else 0.1)))
+        # three thick boards along X; the front one is split lengthwise into a grid for the wear
         n = 3
         bw = (y_back - y_front) / n
         for i in range(n):
-            self.frame.box(((x0 + x1) / 2 + state.rng.uniform(-0.01, 0.01), y_front + (i + 0.5) * bw,
-                            COUNTER_TOP - th / 2), (x1 - x0 + 0.06, bw - 0.004, th),
-                           tint=self.counter_tint, grain=0, bevel=0.006, bevel_segments=2, var=0.1)
+            front = i == 0
+            C.box(((x0 + x1) / 2 + state.rng.uniform(-0.01, 0.01), y_front + (i + 0.5) * bw,
+                   COUNTER_TOP - th / 2), (L, bw - 0.004, th),
+                  tint=OAK_TINT.get(self.counter_tint, self.counter_tint), grain=0, var=0.1,
+                  bevel=0.012 if front else 0.005, bevel_segments=3 if front else 2,
+                  segs=(nx, 4 if front else 1, 1) if front else nx // 2)
         # front edge lip board
-        self.frame.box(((x0 + x1) / 2, y_front - 0.012, COUNTER_TOP - 0.06), (x1 - x0 + 0.08, 0.024, 0.09),
-                       tint=self.counter_tint, grain=0, band=front_band)
+        C.box(((x0 + x1) / 2, y_front0 - 0.012, COUNTER_TOP - 0.06), (x1 - x0 + 0.08, 0.024, 0.09),
+              tint=OAK_TINT.get(self.counter_tint, self.counter_tint), grain=0, segs=(nx, 1, 2), bevel=0.006,
+              bevel_segments=2)
         for i in range(brackets):
             x = x0 + 0.12 + i * (x1 - x0 - 0.24) / max(1, brackets - 1)
             M = Matrix.Translation((x, yF - 0.1, COUNTER_TOP - 0.19)) @ Euler((math.radians(45), 0, 0)).to_matrix().to_4x4()
@@ -248,10 +297,11 @@ class Hut:
                 self.roofp.mbox(Matrix.Translation(p) @ sl.basis(), (L, 0.16, 0.03), grain=0,
                                 tint=self.roof_tint)
 
-    def build_snow(self, start=0):
+    def build_snow(self, start=0, **kw):
+        """Thin, patchy snow caps (snow_<n>); kw go to carpentry.snow_cap (cover, thick, ...)."""
         for i, sl in enumerate(self.slopes):
             p = Part(f"snow_{start + i}", "snow", var=0.02)
-            cp.snow_cap(p, sl, seed=i * 3.7 + start)
+            cp.snow_cap(p, sl, seed=i * 3.7 + start + len(self.key) * 1.3, **kw)
             self.snow.append(p)
 
     def eave_bulbs(self, sides=None, sag=0.05, extra_anchors=None):
@@ -313,7 +363,7 @@ class Hut:
     # -------------------------------------------------------------- finish
     def finish(self):
         objs = []
-        for p in [self.wood, self.frame, self.roofp, self.paint, self.iron, self.bulbs, self.wire, self.fir,
+        for p in [self.wood, self.frame, self.counter, self.roofp, self.paint, self.iron, self.bulbs, self.wire, self.fir,
                   *self.beads.values(), *self.extra, *self.snow]:
             ob = p.finish()
             if ob is not None:

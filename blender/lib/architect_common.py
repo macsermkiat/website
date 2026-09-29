@@ -532,8 +532,107 @@ def add_lightmap_uv_pack(ob, margin=0.004):
     return uvl
 
 
-def bake_ao(targets, img_name, res, path, samples=24, distance=3.0):
-    """Bake AO for `targets` (objects sharing one 'lightmap' UV atlas) into one image."""
+def lightmap_atlas(objs, reserve_u=0.03, margin=0.0015, angle=66.0):
+    """One shared 'lightmap' UV atlas for several meshes: smart-project them together in
+    multi-object edit mode (islands scaled by world area, packed jointly), then squeeze the atlas
+    into u < 1 - reserve_u.  The reserved strip on the right is free for constant values (white =
+    unoccluded, or a ramp) that meshes outside the bake can point at."""
+    t0 = time.time()
+    for o in bpy.context.view_layer.objects: o.select_set(False)
+    for ob in objs:
+        me = ob.data
+        uvl = me.uv_layers.get("lightmap") or me.uv_layers.new(name="lightmap")
+        me.uv_layers.active = uvl
+        ob.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=math.radians(angle), island_margin=margin, area_weight=0.0,
+                             correct_aspect=True, scale_to_bounds=False)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    k = 1.0 - reserve_u
+    for ob in objs:
+        me = ob.data
+        uvl = me.uv_layers["lightmap"]
+        a = np.zeros(len(uvl.data) * 2, np.float32)
+        uvl.data.foreach_get("uv", a)
+        a[0::2] *= k
+        uvl.data.foreach_set("uv", a)
+        me.uv_layers.active = me.uv_layers["UVMap"]
+        ob.select_set(False)
+    log(f"lightmap atlas for {len(objs)} meshes in {time.time() - t0:.1f}s")
+
+
+def lightmap_const(ob, u, v=0.5):
+    """Point every loop's lightmap UV at one texel (for meshes outside the bake)."""
+    me = ob.data
+    uvl = me.uv_layers.get("lightmap") or me.uv_layers.new(name="lightmap")
+    a = np.zeros(len(uvl.data) * 2, np.float32)
+    a[0::2] = u; a[1::2] = v
+    uvl.data.foreach_set("uv", a)
+    me.uv_layers.active = me.uv_layers["UVMap"]
+
+
+def lightmap_values(ob, fn, u0, u1):
+    """Per-vertex occlusion as lightmap UVs into a vertical ramp stored in the reserved strip:
+    u in [u0, u1] (strip centre), v = occlusion value (0..1).  fn(world_co) -> occlusion."""
+    me = ob.data
+    uvl = me.uv_layers.get("lightmap") or me.uv_layers.new(name="lightmap")
+    uc = (u0 + u1) / 2
+    vals = [min(0.995, max(0.005, fn(ob.matrix_world @ v.co))) for v in me.vertices]
+    a = np.zeros(len(uvl.data) * 2, np.float32)
+    idx = np.zeros(len(me.loops), np.int64)
+    me.loops.foreach_get("vertex_index", idx)
+    a[0::2] = uc
+    a[1::2] = np.array(vals, np.float32)[idx]
+    uvl.data.foreach_set("uv", a)
+    me.uv_layers.active = me.uv_layers["UVMap"]
+
+
+def attach_ao(mat, img, uv="lightmap"):
+    """Wire an AO image into the glTF occlusion slot (glTF Material Output group, red channel)."""
+    nt = mat.node_tree; N = nt.nodes; L = nt.links
+    for n in list(N):
+        if n.type == "GROUP" and n.node_tree and n.node_tree.name == "glTF Material Output":
+            N.remove(n)
+    g = N.new("ShaderNodeGroup"); g.node_tree = _gltf_output_group()
+    u2 = N.new("ShaderNodeUVMap"); u2.uv_map = uv
+    ai = N.new("ShaderNodeTexImage"); ai.image = img; ai.extension = "EXTEND"
+    ai.interpolation = "Linear"
+    L.new(u2.outputs["UV"], ai.inputs["Vector"])
+    sep = N.new("ShaderNodeSeparateColor")
+    L.new(ai.outputs["Color"], sep.inputs["Color"])
+    L.new(sep.outputs["Red"], g.inputs["Occlusion"])
+
+
+def finish_ao_image(img, path, lift=0.25, strip=None, denoise=True):
+    """Post-process a baked AO image: light denoise, lift (glTF AO only scales ambient light), and
+    fill the reserved strip.  strip = (u0, fill) with fill 'white' or 'ramp'."""
+    res_x, res_y = img.size
+    px = np.array(img.pixels[:], np.float32).reshape(res_y, res_x, 4)
+    ao = px[..., 0].copy()
+    if denoise:
+        from scipy import ndimage as ndi
+        ao = ndi.median_filter(ao, size=3)
+        ao = 0.5 * ao + 0.5 * ndi.gaussian_filter(ao, 0.8)
+    ao = np.clip(lift + (1 - lift) * ao, 0, 1)
+    if strip:
+        u0, fill = strip
+        c0 = int(u0 * res_x)
+        if fill == "white":
+            ao[:, c0:] = 1.0
+        else:
+            ao[:, c0:] = np.linspace(0, 1, res_y)[:, None]
+    px[..., 0] = px[..., 1] = px[..., 2] = ao
+    px[..., 3] = 1.0
+    img.pixels.foreach_set(px.ravel())
+    img.filepath_raw = path; img.file_format = "PNG"; img.save()
+    return img
+
+
+def bake_ao(targets, img_name, res, path, samples=24, distance=3.0, post=True, margin=4):
+    """Bake AO for `targets` (objects sharing one 'lightmap' UV atlas) into one image.
+    post=False leaves the raw bake for finish_ao_image()."""
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
@@ -556,13 +655,14 @@ def bake_ao(targets, img_name, res, path, samples=24, distance=3.0):
     for ob in targets: ob.select_set(True)
     bpy.context.view_layer.objects.active = targets[0]
     t0 = time.time()
-    bpy.ops.object.bake(type="AO", margin=4, use_clear=True)
+    bpy.ops.object.bake(type="AO", margin=margin, use_clear=True)
     log(f"AO bake {img_name} {res}px in {time.time() - t0:.1f}s")
-    # soften and lift: AO in glTF only affects ambient light
-    px = np.array(img.pixels[:]).reshape(res, res, 4)
-    px[..., :3] = np.clip(0.25 + 0.75 * px[..., :3], 0, 1)
-    img.pixels.foreach_set(px.astype(np.float32).ravel())
-    img.filepath_raw = path; img.file_format = "PNG"; img.save()
+    if post:
+        # soften and lift: AO in glTF only affects ambient light
+        px = np.array(img.pixels[:]).reshape(res, res, 4)
+        px[..., :3] = np.clip(0.25 + 0.75 * px[..., :3], 0, 1)
+        img.pixels.foreach_set(px.astype(np.float32).ravel())
+        img.filepath_raw = path; img.file_format = "PNG"; img.save()
     for nt, n, u in temp_nodes:
         nt.nodes.remove(n); nt.nodes.remove(u)
     for ob in targets:
@@ -603,7 +703,10 @@ def export_glb(objs, path):
 OPT_FLAGS = ["--compress", "meshopt", "--texture-compress", "webp",
              # keep light_/cam_ empties, named bulbs_/snow_ nodes and material names intact:
              "--join", "false", "--flatten", "false", "--prune", "false", "--palette", "false",
-             "--instance", "false"]
+             "--instance", "false",
+             # the meshoptimizer simplifier collapsed the plaza's camber, relief and street UVs
+             # (round 1: 187 triangles of cobbles survived); geometry is budgeted by hand instead
+             "--simplify", "false"]
 
 
 def optimize(raw, out, tex_size=1024):

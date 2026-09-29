@@ -39,7 +39,7 @@ def build(lite):
     # carcass, but the front upper planks stop below the star board
     h.build_carcass(front_upper=False)
     cp.plank_wall(h.wood, h.x0 + 0.1, h.x1 - 0.1, 2.36, lambda c: min(h.top_at('x', c), star_z + 0.02),
-                  axis='x', at=yF + 0.03, pw=0.15, tint="honey", var=0.12)
+                  axis="x", at=yF + 0.03, pw=h.pw, tint="honey", var=0.12)
     h.build_counter()
     h.build_shelves()
     h.build_roof(cover="shingles", barge_band="red")

@@ -94,7 +94,7 @@ function groundTexture() {
 }
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(80, 80).rotateX(-Math.PI / 2),
-  new THREE.MeshStandardMaterial({ color: 0xbfc5cf, roughness: 1, roughnessMap: groundTexture(), metalness: 0 }),
+  new THREE.MeshStandardMaterial({ color: 0xd6dbe4, roughness: 1, roughnessMap: groundTexture(), metalness: 0 }),
 );
 ground.name = 'ground';
 ground.receiveShadow = true;
@@ -141,7 +141,7 @@ if (before) {
 } else {
   lighting = createLighting({
     scene, renderer, camera, lite,
-    options: { shadowCenter: [0, 0, 0.5], shadowRadius: 6, envCapture: q.get('capture') === '1', envCapturePosition: [0.2, 1.4, 2.4] },
+    options: { shadowCenter: [0, 0, 0.5], shadowRadius: 6, envCapture: q.get('capture') === '1', envCapturePosition: [2.5, 2.2, 7] },
   });
   const only = q.get('lights'); // e.g. ?lights=0 keeps just light_0
   lighting.placeLights(empties.filter((e, i) => only == null || only.split('').includes(String(i))).map((obj) => ({ obj, kind: 'section', id: 'gluehwein' })), {

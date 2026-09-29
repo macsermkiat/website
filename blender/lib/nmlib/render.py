@@ -106,14 +106,26 @@ def night_scene(ground_size=40, bokeh=False):
     return scene
 
 
-def add_light(name, kind, loc, energy, color=(1.0, 0.62, 0.32), size=0.3, rot=(0, 0, 0)):
+def add_light(name, kind, loc, energy, color=(1.0, 0.62, 0.32), size=0.3, rot=(0, 0, 0),
+              spot_size=None, spot_blend=None, size_y=None, target=None):
+    """Render-only light. `target` aims a SPOT/AREA/SUN at a point (overrides rot)."""
     ld = bpy.data.lights.new(name, kind)
     ld.energy = energy
     ld.color = color
     if kind == 'AREA':
         ld.size = size
+        if size_y:
+            ld.shape = 'RECTANGLE'
+            ld.size_y = size_y
     elif kind in ('POINT', 'SPOT'):
         ld.shadow_soft_size = size
+    if kind == 'SPOT':
+        if spot_size:
+            ld.spot_size = spot_size
+        if spot_blend is not None:
+            ld.spot_blend = spot_blend
+    if target is not None:
+        rot = (Vector(target) - Vector(loc)).to_track_quat('-Z', 'Y').to_euler()
     ob = bpy.data.objects.new(name, ld)
     ob.location = loc
     ob.rotation_euler = rot
@@ -149,6 +161,14 @@ def render(path_png, samples=48, res=(1280, 720), exposure=0.0, jpeg=None, jpeg_
     scene = bpy.context.scene
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
+    dev = os.environ.get('NM_DEVICE', 'CPU').upper()
+    if dev in ('METAL', 'CUDA', 'OPTIX', 'HIP', 'ONEAPI'):
+        prefs = bpy.context.preferences.addons['cycles'].preferences
+        prefs.compute_device_type = dev
+        prefs.get_devices()
+        for d in prefs.devices:
+            d.use = True
+        scene.cycles.device = 'GPU'
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
     try:
@@ -157,8 +177,12 @@ def render(path_png, samples=48, res=(1280, 720), exposure=0.0, jpeg=None, jpeg_
         pass
     scene.cycles.max_bounces = 6
     scene.cycles.use_adaptive_sampling = True
-    scene.render.threads_mode = 'FIXED'
-    scene.render.threads = 2
+    threads = int(os.environ.get('NM_THREADS', '2'))
+    if threads > 0:
+        scene.render.threads_mode = 'FIXED'
+        scene.render.threads = threads
+    else:
+        scene.render.threads_mode = 'AUTO'
     scene.render.resolution_x, scene.render.resolution_y = res
     scene.render.resolution_percentage = 100
     scene.view_settings.view_transform = 'AgX'

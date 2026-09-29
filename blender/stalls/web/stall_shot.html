@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stall check</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #03060f; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  #info { position: fixed; left: 10px; top: 8px; color: #e8dcc4; font: 12px system-ui, sans-serif; opacity: .8; }
+  body.shot #info { display: none; }
+</style>
+</head>
+<body>
+<div id="info"></div>
+<script type="module">
+// One stall glb from site/public/models under the site's own lighting module (site/src/lighting),
+// framed like its Cycles preview. Query:
+//   ?glb=stall_bier   model name (no extension)       ?lite=1  lite file + lite profile
+//   ?ao=0             strip every aoMap (A/B check)    ?snow=1  snow on (snow_ caps shown)
+//   ?cam=x,y,z,tx,ty,tz,lens   camera in BLENDER coordinates (Z up, front -Y), lens in mm
+//   ?kind=section|deco  light kind for placeLights     ?shot=1  hide the info line
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { createLighting } from '/site/src/lighting/index.js';
+
+const q = new URLSearchParams(location.search);
+const lite = q.get('lite') === '1';
+const name = q.get('glb') || 'stall_gluehwein';
+const kind = q.get('kind') || (name.startsWith('deco_') ? 'deco' : 'section');
+const snow = q.get('snow') === '1';
+if (q.get('shot') === '1') document.body.classList.add('shot');
+const info = (t) => (document.getElementById('info').textContent = t);
+THREE.Cache.enabled = true;
+
+const renderer = new THREE.WebGLRenderer({ antialias: false });
+renderer.setPixelRatio(1);
+renderer.setSize(innerWidth, innerHeight, false);
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+
+// Blender (x, y, z) -> three (x, z, -y)
+const b2t = (x, y, z) => new THREE.Vector3(x, z, -y);
+const cam = (q.get('cam') || '-4.4,-6.9,2.0,0,-0.5,1.95,30').split(',').map(Number);
+const lens = cam[6] || 30;
+const aspect = innerWidth / innerHeight;
+const vfov = THREE.MathUtils.radToDeg(2 * Math.atan(18 / lens / aspect));   // Blender sensor 36 mm, fit width
+const camera = new THREE.PerspectiveCamera(vfov, aspect, 0.1, 400);
+camera.position.copy(b2t(cam[0], cam[1], cam[2]));
+const target = b2t(cam[3], cam[4], cam[5]);
+camera.lookAt(target);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80).rotateX(-Math.PI / 2),
+  new THREE.MeshStandardMaterial({ color: 0xbfc5cf, roughness: 0.85, metalness: 0 }));
+ground.receiveShadow = true;
+scene.add(ground);
+
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const gltf = await loader.loadAsync(`/site/public/models/${name}${lite ? '.lite' : ''}.glb`);
+const stall = gltf.scene;
+stall.userData.kind = kind;
+scene.add(stall);
+let aoMaps = 0, meshes = 0;
+stall.traverse((o) => {
+  if (!o.isMesh) return;
+  meshes++;
+  if (/^snow_/.test(o.name)) o.visible = snow;
+  o.castShadow = !lite && !/^bulbs_/.test(o.name);
+  o.receiveShadow = !lite;
+  const m = o.material;
+  if (m.aoMap) {
+    aoMaps++;
+    if (q.get('ao') === '0') { m.aoMap = null; m.needsUpdate = true; }
+  }
+});
+scene.updateMatrixWorld(true);
+
+const lighting = createLighting({
+  scene, renderer, camera, lite,
+  options: { shadowCenter: [0, 0, 0], shadowRadius: 6, envCapture: true, envCapturePosition: [0, 1.4, 3] },
+});
+const spots = [];
+stall.traverse((o) => { if (/^light_/.test(o.name)) spots.push({ obj: o, kind, id: name }); });
+lighting.placeLights?.(spots, { focus: target, shadowed: lite ? 0 : 2 });
+if (snow) lighting.setSnow(true);
+window.lighting = lighting;
+
+const timer = new THREE.Timer();
+let T = snow ? 30 : 0, frames = 0;
+if (snow) for (let i = 0; i < 40; i++) lighting.update(0.1, T - 4 + i * 0.1);
+function frame() {
+  timer.update();
+  const dt = Math.min(timer.getDelta(), 0.1);
+  T += dt;
+  lighting.update(dt, T);
+  lighting.composer.render(dt);
+  if (++frames === 8) {
+    window.__ready = true;
+    const r = renderer.info.render;
+    info(`${name}${lite ? '.lite' : ''} · ao ${q.get('ao') === '0' ? 'off' : 'on'} (${aoMaps}/${meshes} meshes) · ${spots.length} light_ · ${r.triangles} tris`);
+    window.__info = { aoMaps, meshes, lights: spots.length, triangles: r.triangles };
+  }
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

@@ -57,7 +57,7 @@ uniform vec4 lightingGlow[ ${size} ];
     float win = 1.0 - d2 / r2;
     // half-wrapped: a line of bulbs lights a surface from many directions at once
     float ndl = clamp( dot( gn, dl * inversesqrt( max( d2, 1e-6 ) ) ) * 0.6 + 0.4, 0.0, 1.0 );
-    glowIrr += lightingGlow[ ${HEADER} + i * 3 + 2 ].rgb * ( win * win * ndl / ( d2 + 0.04 ) );
+    glowIrr += lightingGlow[ ${HEADER} + i * 3 + 2 ].rgb * ( win * win * ndl / ( d2 + 0.12 ) );
   }
   // moon rim: grazing edges that face the moon
   float rimF = pow( 1.0 - clamp( dot( gn, gv ), 0.0, 1.0 ), lightingGlow[ 0 ].z );

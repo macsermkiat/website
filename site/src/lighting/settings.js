@@ -5,14 +5,14 @@
 export const NIGHT = {
   // Tone mapping: AgX (same family as the Blender previews) with a blend toward Blender's "Punchy" look.
   exposure: 1.0,
-  punch: 0.3, // 0 = AgX base, 1 = AgX Punchy (power 1.35, saturation 1.4); 0.45 pushed dark wood to red
+  punch: 0.35, // 0 = AgX base, 1 = AgX Punchy (power 1.35, saturation 1.4); 0.45 pushed dark wood to red
   vignette: 0.28,
   grain: 0.012,
 
   sky: {
     zenith: 0x01030d,
-    mid: 0x02081d,
-    horizon: 0x0a1836,
+    mid: 0x020719,
+    horizon: 0x081430,
     ground: 0x07090f,
     glow: 0x221a12, // warm light pollution from the market and town, low on the horizon
     glowStrength: 0.35,
@@ -33,11 +33,11 @@ export const NIGHT = {
     discIntensity: 4.2, // HDR, so the disc blooms
     halo: 0x5d6fa8,
     haloStrength: 0.55,
-    lightColor: 0x86a0ff,
+    lightColor: 0x9ab0f0,
     lightIntensity: 0.36,
   },
 
-  hemi: { sky: 0x3a5294, ground: 0x12161f, intensity: 0.42 },
+  hemi: { sky: 0x4a5c90, ground: 0x14161c, intensity: 0.38 },
 
   fog: {
     color: 0x0a1630,
@@ -49,7 +49,7 @@ export const NIGHT = {
 
   env: {
     intensity: 0.4, // the synthetic night (scene.environment)
-    captureIntensity: 0.55, // the captured market (scene.environment on full)
+    captureIntensity: 0.45, // the captured market (scene.environment on full)
     probeIntensity: 1.0, // local probes on copper, glass and glaze (captured radiance, physical)
     refresh: 30, // seconds between re-captures of the market (full only; spread over 6 frames)
   },
@@ -58,16 +58,16 @@ export const NIGHT = {
   // clamp caps what feeds the bloom (by the brightest channel, so hue is kept): a bulb (max 6) and a
   // specular glint on copper (hundreds) both enter at <= clamp, so a few glint pixels cannot outshine
   // a string of bulbs. factors weight the five blur levels (tight to wide): a crisp core, short tail.
-  bloom: { strength: 0.45, radius: 0.0, threshold: 1.6, knee: 1.2, clamp: 5, factors: [1.0, 0.5, 0.2, 0.07, 0.025] },
+  bloom: { strength: 0.4, radius: 0.0, threshold: 1.6, knee: 1.2, clamp: 5, factors: [1.0, 0.4, 0.13, 0.045, 0.015] },
   // the lite profile blooms at half resolution, where every level is twice as wide on screen:
   // shift the weight toward the tight levels so the moon halo and lamp glows match full
-  bloomHalf: { strength: 0.45, factors: [1.0, 0.28, 0.07, 0.015, 0.0] },
+  bloomHalf: { strength: 0.4, factors: [1.0, 0.2, 0.04, 0.008, 0.0] },
 
   // "size" of the point and spot lights for direct specular (see shading.js): a roughness floor
   lightSize: { minRoughness: 0.32, minClearcoatRoughness: 0.3 },
 
   // local glows (shading.js): the bulb strings light what hangs near them (garland, lambrequin)
-  glow: { bulbs: { intensity: 1.4, reach: 1.1 } },
+  glow: { bulbs: { intensity: 0.6, reach: 1.1 } },
 
   // faint cool rim on edges that face the moon (figures and posts in front of the stalls)
   rim: { color: 0x9fb4ff, strength: 0.55, power: 2.5 },
@@ -83,17 +83,19 @@ export const NIGHT = {
   warm: {
     kelvin: 2900, // used only when color is not given
     color: [1.0, 0.6, 0.3], // linear: the Cycles previews' light colour (nmlib/render.py)
-    frontColor: [1.0, 0.74, 0.52], // paler front fill, so the cobbles in front read cream, not pink
+    frontColor: [1.0, 0.63, 0.35], // a little paler than the interior, so the cobbles in front read cream, not pink
     interiorShadow: 0.95, // near-opaque: no light through the walls
-    bounce: { intensity: 5, reach: 2.0 }, // unshadowed glow standing in for wall bounce (shadowed stalls)
+    bounce: { intensity: 9, reach: 2.4 }, // unshadowed glow standing in for wall bounce (shadowed stalls)
     // interior lights with no shadow: dropped below the eaves, shorter and a little dimmer
     unshadowed: { distance: 3.0, scale: 0.8, drop: 0.45 },
     // point: inside a stall; a short reach keeps unshadowed ones from leaking far through the walls
     // front: a point under the front eave (the front fill: garland, counter front, sign, cobbles)
     // spot: stage lights high on a landmark, or any light_ empty with userData.type = 'spot'
-    section: { point: 40, front: 9, spot: 34, pointDistance: 4.2, frontDistance: 7.5, spotDistance: 8 },
+    // front: the front fill is a wide spot under the front eave aimed down and out (frontAngle, rad),
+    // so it lights the counter front, the sign and the cobbles but not the fascia above it
+    section: { point: 40, front: 13, frontAngle: 1.15, spot: 34, pointDistance: 4.2, frontDistance: 8, spotDistance: 8 },
     landmark: { point: 26, spot: 40, pointDistance: 10, spotDistance: 12 },
-    deco: { point: 18, front: 5, spot: 20, pointDistance: 3.6, frontDistance: 6, spotDistance: 7 },
+    deco: { point: 18, front: 8, frontAngle: 1.15, spot: 20, pointDistance: 3.6, frontDistance: 6, spotDistance: 7 },
     lamp: { point: 7, spot: 12, pointDistance: 10, spotDistance: 10 },
     tree: { point: 16, spot: 20, pointDistance: 10, spotDistance: 10 },
     strings: { point: 10, spot: 14, pointDistance: 12, spotDistance: 12 },

@@ -2,11 +2,12 @@
 
 Kit keys (textured, tiling, tinted by COLOR_0):
     wood   1 m tile, light neutral spruce; tints in geo.TINTS make pine/honey/dark/grey/soot
+    oak    1 m tile, ring-porous oak for counter tops: pores, rays, scratches, mug rings
     paint  8 colour bands (geo.PAINT_BANDS) of chipped paint over wood, gold band is metallic
-    iron   0.5 m tile, dark forged iron with rust and soot
+    iron   0.5 m tile, forged iron: hammer dents, rust blooms and streaks, soot, pitting
 Simple keys (no texture, still multiplied by COLOR_0):
-    snow, bulb_warm, bulb_cold, wire, glass, fir, brass, copper, ember, ornament_red,
-    ornament_gold, fabric_red, fabric_white, fabric_green
+    snow, bulb_warm, bulb_cold, wire, glass, fir, brass, copper, ember, ash, ornament_red,
+    ornament_gold, fabric_red, fabric_white, fabric_green, lamp_glass
 
 The kit bakes are cached in blender/out/kit/ and reused by every stall, so all
 glb files that use the kit embed byte-identical textures (see export.externalize).
@@ -19,8 +20,8 @@ import numpy as np
 
 from . import state
 
-KIT_VERSION = "v7"
-KIT_RES = {"wood": 1024, "paint": 1024, "iron": 512}
+KIT_VERSION = "v8"   # v8: metal of constant-valued kits bakes to 0 (was the roughness); new wood/iron/oak
+KIT_RES = {"wood": 1024, "oak": 1024, "paint": 1024, "iron": 512}
 _mats = {}
 
 
@@ -169,33 +170,79 @@ def _wood_graph(nb, along_u=False):
     # distortion makes the lines drift and bunch like flat-sawn figure
     phase = nb.add(nb.mul(nb.u, 38.0), nb.mul(d1, 4.5), nb.mul(d2, 0.3), nb.mul(knot_halo, 2.5))
     ring = nb.add(nb.mul(nb.m('SINE', nb.mul(phase, 2 * math.pi)), 0.5), 0.5)
-    strength = nb.remap(nb.noise(30, 1.5, detail=1, off=(2.2, 0.1, 5.5, 1.0)), 0.3, 0.7, 0.25, 1.0)
-    late = nb.mul(nb.m('POWER', ring, 5.0), strength)
+    strength = nb.remap(nb.noise(30, 1.5, detail=1, off=(2.2, 0.1, 5.5, 1.0)), 0.35, 0.65, 0.45, 1.0)
+    # latewood: a hard dark band per ring (about a quarter of the ring), sharp on the outer side
+    late = nb.mul(nb.smooth(0.52, 0.93, ring), strength)
     phase2 = nb.add(nb.mul(nb.u, 11.0), nb.mul(d1, 3.0))
     zone = nb.add(nb.mul(nb.m('SINE', nb.mul(phase2, 2 * math.pi)), 0.5), 0.5)
-    fib = nb.noise(150, 4, detail=3, rough=0.65, off=(1.1, 3.3, 0.5, 1.9))
-    streak = nb.smooth(0.55, 0.75, nb.noise(7, 1, detail=3, off=(8.8, 4.1, 2.0, 0.3)))
-    tone = nb.noise(2, 1.5, detail=3, off=(9.2, 1.4, 3.3, 0.8))
-    weather = nb.smooth(0.52, 0.72, nb.noise(5, 2, detail=5, rough=0.6, off=(2.7, 8.1, 1.2, 4.4)))
-    dents = nb.noise(38, 30, detail=3, rough=0.6, off=(0.9, 0.4, 6.6, 3.1))
-    speck = nb.smooth(0.76, 0.83, nb.noise(260, 180, detail=0, off=(5.5, 2.2, 7.7, 1.1)))
-    crack = nb.smooth(0.76, 0.80, nb.noise(120, 1.5, detail=1, off=(3.9, 6.2, 2.5, 8.8)))
+    # fibre: fine streaks along the grain, stretched noise remapped to full contrast
+    fib = nb.remap(nb.noise(150, 4, detail=3, rough=0.65, off=(1.1, 3.3, 0.5, 1.9)), 0.36, 0.64, 0.0, 1.0)
+    # pores / resin canals: short dark dashes along the grain, a few px long
+    pore = nb.smooth(0.60, 0.70, nb.noise(230, 14, detail=1, off=(6.1, 0.7, 3.3, 2.9)))
+    fleck = nb.smooth(0.63, 0.72, nb.noise(90, 40, detail=1, off=(2.9, 5.1, 0.8, 7.3)))
+    streak = nb.smooth(0.55, 0.72, nb.noise(7, 1, detail=3, off=(8.8, 4.1, 2.0, 0.3)))
+    tone = nb.remap(nb.noise(2, 1.5, detail=3, off=(9.2, 1.4, 3.3, 0.8)), 0.35, 0.65, 0.0, 1.0)
+    weather = nb.smooth(0.54, 0.70, nb.noise(5, 2, detail=5, rough=0.6, off=(2.7, 8.1, 1.2, 4.4)))
+    dents = nb.remap(nb.noise(38, 30, detail=3, rough=0.6, off=(0.9, 0.4, 6.6, 3.1)), 0.3, 0.7, 0.0, 1.0)
+    speck = nb.smooth(0.72, 0.80, nb.noise(260, 180, detail=0, off=(5.5, 2.2, 7.7, 1.1)))
+    crack = nb.smooth(0.74, 0.79, nb.noise(120, 1.5, detail=1, off=(3.9, 6.2, 2.5, 8.8)))
 
-    early = nb.rgb((0.56, 0.48, 0.38))
-    latec = nb.rgb((0.24, 0.18, 0.12))
-    col = nb.mix(nb.add(nb.mul(late, 0.85), nb.mul(zone, 0.18)), early, latec)
-    col = nb.mix(nb.mul(tone, 0.45), col, nb.rgb((0.36, 0.29, 0.21)))
-    col = nb.mix(nb.mul(streak, 0.35), col, nb.rgb((0.30, 0.22, 0.15)))
-    col = nb.mix(nb.mul(fib, 0.30), col, nb.rgb((0.28, 0.23, 0.17)))
-    col = nb.mix(nb.mul(weather, 0.40), col, nb.rgb((0.46, 0.45, 0.43)))       # silvering
-    col = nb.mix(nb.mul(knot_halo, 0.45), col, nb.rgb((0.30, 0.19, 0.11)))
-    col = nb.mix(knot_core, col, nb.rgb((0.10, 0.06, 0.035)))
-    col = nb.mix(nb.mul(speck, 0.4), col, nb.rgb((0.10, 0.08, 0.06)))
-    col = nb.mix(nb.mul(crack, 0.85), col, nb.rgb((0.06, 0.045, 0.03)))
-    rough = nb.add(0.58, nb.mul(fib, 0.18), nb.mul(weather, 0.14), nb.mul(late, -0.10),
-                   nb.mul(knot_core, -0.15))
-    height = nb.add(nb.mul(late, -0.5), nb.mul(fib, 0.45), nb.mul(dents, 0.35),
+    early = nb.rgb((0.62, 0.52, 0.40))
+    latec = nb.rgb((0.20, 0.135, 0.08))
+    col = nb.mix(nb.add(nb.mul(late, 0.9), nb.mul(zone, 0.15)), early, latec)
+    col = nb.mix(nb.mul(tone, 0.30), col, nb.rgb((0.40, 0.31, 0.22)))
+    col = nb.mix(nb.mul(streak, 0.30), col, nb.rgb((0.30, 0.21, 0.14)))
+    col = nb.mix(nb.mul(fib, 0.38), col, nb.rgb((0.26, 0.20, 0.14)))
+    col = nb.mix(nb.mul(pore, 0.55), col, nb.rgb((0.14, 0.10, 0.07)))
+    col = nb.mix(nb.mul(fleck, 0.25), col, nb.rgb((0.66, 0.58, 0.47)))
+    col = nb.mix(nb.mul(weather, 0.30), col, nb.rgb((0.44, 0.43, 0.41)))       # silvering
+    col = nb.mix(nb.mul(knot_halo, 0.50), col, nb.rgb((0.30, 0.18, 0.10)))
+    col = nb.mix(knot_core, col, nb.rgb((0.09, 0.05, 0.03)))
+    col = nb.mix(nb.mul(speck, 0.5), col, nb.rgb((0.10, 0.08, 0.06)))
+    col = nb.mix(nb.mul(crack, 0.9), col, nb.rgb((0.05, 0.035, 0.025)))
+    rough = nb.add(0.56, nb.mul(fib, 0.16), nb.mul(weather, 0.14), nb.mul(late, -0.10),
+                   nb.mul(knot_core, -0.15), nb.mul(pore, 0.08))
+    height = nb.add(nb.mul(late, -0.55), nb.mul(fib, 0.40), nb.mul(dents, 0.30), nb.mul(pore, -0.45),
                     nb.mul(crack, -1.0), nb.mul(knot_core, 0.25), nb.mul(weather, -0.2))
+    return col, rough, 0.0, height
+
+
+def _oak_graph(nb):
+    """Ring-porous oak for counter tops: wide rings with a band of open pores at the start of
+    each ring, silver-grain ray flecks, oiled sheen, fine scratches across the grain and the
+    odd mug ring. Grain along V, like the spruce tile."""
+    d1 = nb.noise(2, 1.2, detail=3, rough=0.5, off=(5.3, 0.7, 1.1, 2.4))
+    phase = nb.add(nb.mul(nb.u, 24.0), nb.mul(d1, 3.5))
+    ringf = nb.m('FRACT', phase)                                   # 0 at the start of a ring
+    porezone = nb.m('SUBTRACT', 1.0, nb.smooth(0.0, 0.30, ringf))  # earlywood pore band
+    pores = nb.mul(nb.smooth(0.56, 0.66, nb.noise(260, 20, detail=1, off=(0.3, 4.4, 2.2, 6.1))), porezone)
+    latepores = nb.smooth(0.66, 0.74, nb.noise(200, 24, detail=1, off=(7.7, 1.9, 4.8, 0.2)))
+    rays = nb.smooth(0.62, 0.70, nb.noise(60, 26, detail=2, off=(1.4, 6.6, 3.0, 5.2)))
+    fib = nb.remap(nb.noise(140, 5, detail=3, rough=0.6, off=(4.2, 2.8, 7.1, 0.9)), 0.36, 0.64, 0.0, 1.0)
+    tone = nb.remap(nb.noise(2, 1.5, detail=3, off=(3.6, 8.2, 1.7, 4.0)), 0.35, 0.65, 0.0, 1.0)
+    # scratches: thin marks running across the grain (along u), short in v
+    scr = nb.smooth(0.70, 0.76, nb.noise(4, 320, detail=1, off=(2.4, 0.6, 9.1, 3.7)))
+    scr = nb.mul(scr, nb.smooth(0.5, 0.62, nb.noise(12, 6, detail=1, off=(8.1, 3.3, 0.4, 1.8))))
+    # mug rings: a few faint circles where hot mugs stood
+    dist, cell = nb.voronoi(5, 5, off=(3.2, 7.4, 2.6, 0.9))
+    ring_sel = nb.smooth(0.50, 0.55, nb.sepr(cell))
+    mug = nb.mul(nb.m('SUBTRACT', 1.0, nb.smooth(0.0, 0.028, nb.m('ABSOLUTE', nb.m('SUBTRACT', dist, 0.2)))), ring_sel)
+    stain = nb.smooth(0.55, 0.75, nb.noise(6, 4, detail=4, rough=0.6, off=(6.6, 2.1, 5.4, 3.3)))
+
+    light = nb.rgb((0.58, 0.44, 0.28))
+    dark = nb.rgb((0.36, 0.25, 0.14))
+    col = nb.mix(nb.add(nb.mul(nb.smooth(0.25, 0.9, ringf), 0.55), nb.mul(tone, 0.35)), light, dark)
+    col = nb.mix(nb.mul(fib, 0.30), col, nb.rgb((0.30, 0.20, 0.11)))
+    col = nb.mix(nb.mul(pores, 0.85), col, nb.rgb((0.10, 0.065, 0.035)))
+    col = nb.mix(nb.mul(latepores, 0.45), col, nb.rgb((0.16, 0.10, 0.06)))
+    col = nb.mix(nb.mul(rays, 0.35), col, nb.rgb((0.66, 0.52, 0.34)))
+    col = nb.mix(nb.mul(stain, 0.30), col, nb.rgb((0.20, 0.13, 0.07)))
+    col = nb.mix(nb.mul(mug, 0.45), col, nb.rgb((0.15, 0.09, 0.05)))
+    col = nb.mix(nb.mul(scr, 0.35), col, nb.rgb((0.70, 0.58, 0.42)))
+    rough = nb.add(0.42, nb.mul(fib, 0.10), nb.mul(pores, 0.25), nb.mul(scr, 0.25), nb.mul(stain, -0.08),
+                   nb.mul(mug, 0.12))
+    height = nb.add(nb.mul(pores, -0.9), nb.mul(latepores, -0.35), nb.mul(fib, 0.35), nb.mul(scr, -0.6),
+                    nb.mul(rays, 0.15))
     return col, rough, 0.0, height
 
 
@@ -257,24 +304,37 @@ def _paint_graph(nb):
 
 
 def _iron_graph(nb):
-    rust_n = nb.noise(9, 9, detail=6, rough=0.62, off=(1.2, 0.3, 4.4, 2.0))
-    rust = nb.smooth(0.60, 0.70, rust_n)
-    streak = nb.smooth(0.5, 0.8, nb.noise(30, 2, detail=3, off=(0.4, 2.2, 1.0, 3.0)))
-    soot = nb.noise(3, 3, detail=4, off=(6.1, 1.9, 0.2, 3.3))
-    hammer_d, _ = nb.voronoi(40, 40, off=(0.5, 0.9, 1.4, 2.2))
-    fine = nb.noise(120, 120, detail=2, off=(3.3, 3.1, 0.8, 0.2))
-    col = nb.mix(nb.mul(fine, 0.35), nb.rgb((0.05, 0.048, 0.045)), nb.rgb((0.022, 0.021, 0.02)))
-    col = nb.mix(nb.mul(streak, 0.25), col, nb.rgb((0.07, 0.05, 0.04)))
-    col = nb.mix(nb.mul(rust, 0.8), col, nb.mix(fine, nb.rgb((0.11, 0.045, 0.018)), nb.rgb((0.06, 0.03, 0.015))))
-    col = nb.mix(nb.mul(soot, 0.5), col, nb.rgb((0.012, 0.011, 0.010)))
-    rough = nb.add(0.45, nb.mul(rust, 0.35), nb.mul(fine, 0.12), nb.mul(streak, 0.08))
-    metal = nb.remap(rust, 0, 1, 0.7, 0.15)
-    height = nb.add(nb.mul(hammer_d, 0.6), nb.mul(rust_n, 0.4), nb.mul(fine, 0.2))
+    """Forged sheet iron: mid-grey hammered metal with dents, blooms of rust and rust runs,
+    soot clouds and fine pitting. Neutral enough that COLOR_0 can heat-tint or blacken it."""
+    ham_d, ham_c = nb.voronoi(26, 26, off=(0.5, 0.9, 1.4, 2.2))
+    dent = nb.smooth(0.0, 0.55, ham_d)                              # 0 in a dent centre
+    blotch = nb.remap(nb.noise(6, 6, detail=4, rough=0.6, off=(7.2, 3.1, 0.6, 1.5)), 0.32, 0.68, 0.0, 1.0)
+    rust_n = nb.remap(nb.noise(9, 9, detail=6, rough=0.62, off=(1.2, 0.3, 4.4, 2.0)), 0.30, 0.70, 0.0, 1.0)
+    rust = nb.smooth(0.55, 0.75, rust_n)
+    rust_core = nb.smooth(0.72, 0.88, rust_n)
+    runs = nb.mul(nb.smooth(0.55, 0.78, nb.noise(34, 2.5, detail=3, off=(0.4, 2.2, 1.0, 3.0))),
+                  nb.smooth(0.35, 0.7, rust_n))
+    soot = nb.smooth(0.45, 0.8, nb.remap(nb.noise(3, 3, detail=4, off=(6.1, 1.9, 0.2, 3.3)), 0.3, 0.7, 0.0, 1.0))
+    pit = nb.smooth(0.70, 0.78, nb.noise(150, 150, detail=1, off=(3.3, 3.1, 0.8, 0.2)))
+    fine = nb.remap(nb.noise(120, 120, detail=2, off=(9.3, 1.1, 2.8, 5.2)), 0.35, 0.65, 0.0, 1.0)
+    base = nb.mix(nb.add(nb.mul(blotch, 0.6), nb.mul(fine, 0.25)), nb.rgb((0.125, 0.12, 0.115)),
+                  nb.rgb((0.055, 0.052, 0.05)))
+    col = nb.mix(nb.mul(nb.m('SUBTRACT', 1.0, dent), 0.25), base, nb.rgb((0.16, 0.155, 0.15)))   # dent rims catch wear
+    rustc = nb.mix(fine, nb.rgb((0.23, 0.085, 0.03)), nb.rgb((0.12, 0.05, 0.02)))
+    col = nb.mix(nb.mul(runs, 0.65), col, nb.rgb((0.15, 0.065, 0.03)))
+    col = nb.mix(nb.mul(rust, 0.85), col, rustc)
+    col = nb.mix(nb.mul(rust_core, 0.7), col, nb.rgb((0.08, 0.035, 0.015)))
+    col = nb.mix(nb.mul(soot, 0.55), col, nb.rgb((0.018, 0.016, 0.015)))
+    col = nb.mix(nb.mul(pit, 0.6), col, nb.rgb((0.03, 0.025, 0.02)))
+    rough = nb.add(0.42, nb.mul(rust, 0.40), nb.mul(fine, 0.10), nb.mul(soot, 0.15), nb.mul(dent, -0.08))
+    metal = nb.m('MAXIMUM', 0.0, nb.add(0.75, nb.mul(rust, -0.65), nb.mul(soot, -0.35)))
+    height = nb.add(nb.mul(dent, 0.9), nb.mul(rust_core, 0.5), nb.mul(rust, 0.25), nb.mul(pit, -0.6),
+                    nb.mul(fine, 0.15))
     return col, rough, metal, height
 
 
-GRAPHS = {"wood": _wood_graph, "paint": _paint_graph, "iron": _iron_graph}
-BUMP = {"wood": (0.9, 0.0012), "paint": (0.8, 0.0008), "iron": (0.7, 0.0012)}
+GRAPHS = {"wood": _wood_graph, "oak": _oak_graph, "paint": _paint_graph, "iron": _iron_graph}
+BUMP = {"wood": (1.0, 0.0014), "oak": (0.9, 0.0010), "paint": (0.8, 0.0008), "iron": (1.0, 0.0025)}
 
 
 def kit_path(key, kind):
@@ -350,8 +410,13 @@ def bake_kit(key):
             nt.links.new(bsdf.outputs[0], out.inputs["Surface"])
             bpy.ops.object.bake(type='NORMAL', normal_space='TANGENT', margin=0, use_clear=True)
         else:
-            nb._in(emis.inputs["Color"], source) if not isinstance(source, (int, float)) else \
-                setattr(emis.inputs["Color"], "default_value", (source, source, source, 1))
+            # a constant source (e.g. wood metal = 0.0) must not inherit the previous pass's link
+            for l in list(emis.inputs["Color"].links):
+                nt.links.remove(l)
+            if isinstance(source, (int, float)):
+                emis.inputs["Color"].default_value = (source, source, source, 1)
+            else:
+                nt.links.new(source, emis.inputs["Color"])
             nt.links.new(emis.outputs[0], out.inputs["Surface"])
             bpy.ops.object.bake(type='EMIT', margin=0, use_clear=True)
         nt.nodes.remove(tn)
@@ -455,6 +520,7 @@ SIMPLE = {
     "brass":         ((0.78, 0.56, 0.26), 0.32, 1.0, None, 0.0, 1.0),
     "copper":        ((0.80, 0.42, 0.26), 0.30, 1.0, None, 0.0, 1.0),
     "ember":         ((0.25, 0.05, 0.01), 0.9, 0.0, (1.0, 0.28, 0.05), 3.0, 1.0),
+    "ash":           ((0.30, 0.29, 0.28), 0.95, 0.0, None, 0.0, 1.0),
     "ornament_red":  ((0.50, 0.015, 0.02), 0.18, 0.0, None, 0.0, 1.0),
     "ornament_gold": ((0.90, 0.64, 0.24), 0.22, 1.0, None, 0.0, 1.0),
     "fabric_red":    ((0.35, 0.02, 0.025), 0.85, 0.0, None, 0.0, 1.0),
