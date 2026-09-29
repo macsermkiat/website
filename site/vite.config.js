@@ -3,8 +3,12 @@ import { resolve } from 'node:path';
 import market from './plugins/market.js';
 
 // GitHub Pages project site: https://macsermkiat.github.io/website/
+// The Pages workflow passes the repository's real base path (PAGES_BASE) so a renamed repository or a custom
+// domain still works; a local build uses /website/.
+const base = process.env.PAGES_BASE && /^\/([\w.-]+\/)*$/.test(process.env.PAGES_BASE) ? process.env.PAGES_BASE : '/website/';
+
 export default defineConfig({
-  base: '/website/',
+  base,
   plugins: [market()],
   server: { fs: { allow: ['..'] } },
   build: {

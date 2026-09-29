@@ -5,7 +5,9 @@ import { PLACE_ORDER, SECTION_STALLS, placeFor, fileTokens } from './places.js';
 
 // Vite resolves this at build time; an empty object when layout.json does not exist yet.
 const layoutFiles = import.meta.glob('./layout.json', { eager: true, import: 'default' });
-const RAW = layoutFiles['./layout.json'] ?? null;
+// ?layout=builtin ignores layout.json (to test the BUILD.md fallback without deleting the file)
+const builtinLayout = (() => { try { return new URLSearchParams(globalThis.location?.search || '').get('layout') === 'builtin'; } catch { return false; } })();
+const RAW = builtinLayout ? null : layoutFiles['./layout.json'] ?? null;
 
 export const HOME = { position: [3, 9, 33], target: [0, 2.2, -3] };
 
@@ -34,7 +36,12 @@ export const FALLBACK_LAYOUT = [
   { id: 'strings', kind: 'strings', label: 'String lights', position: [0, 0, 0], rotation: 0, keys: ['strings', 'string-lights', 'stringlights', 'lamps', 'poles'] },
 ];
 
-const MODEL_FILES = (inventory.models || []).filter((f) => /\.(glb|gltf)$/i.test(f));
+// ?missing=all or ?missing=stall_bier,ferris pretends those models were never shipped (to test the stand-ins)
+const MISSING = (() => {
+  try { return (new URLSearchParams(globalThis.location?.search || '').get('missing') || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean); } catch { return []; }
+})();
+const isMissing = (f) => MISSING.includes('all') || MISSING.some((m) => f.toLowerCase().replace(/(\.lite)?\.(glb|gltf)$/, '') === m.replace(/(\.lite)?\.(glb|gltf)$/, ''));
+const MODEL_FILES = (inventory.models || []).filter((f) => /\.(glb|gltf)$/i.test(f) && !isMissing(f));
 const IGNORE_TOKENS = ['prop', 'props', 'person', 'people', 'crowd', 'vendor'];
 
 /** Find a model in site/public/models by name words. Returns the full (non-lite) relative path or null. */

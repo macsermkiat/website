@@ -19,6 +19,12 @@ Form: 32-bar AABA (A = 8 bars, B = 8 bars).
     bars 65-80   piano half      piano solo over A A, bass walks, tenor lays out
     bars 81-96   out head        tenor from the bridge (B A); ritardando from bar 93,
                                  bar 96 is a rubato fermata on G minor 6/9
+    TENOR_CHORUS_B               a second written tenor chorus over bars 33-64, rendered as
+                                 alternate sax and room segments for every second pass of the loop
+
+Breathing (round 1, pass 3): every written rest of half a beat or more ends a phrase and is heard as
+a breath, and the head, the chorus and the out head have breaths written in, so the tenor never
+plays more than about 9 s without one.
 
 The site loops bars 17-80 (head bridge .. end of piano half-chorus): the last beat of bar 80 is
 played exactly like the last beat of bar 16 (same pickup, same comp, same bass and brush), so the
@@ -191,13 +197,13 @@ def midi(name: str) -> int:
 HEAD = """
 D3:1 |
 Bb3:2.5 A3:.5 | _:2.5 r:.5 | r:1 G3:.5 A3:.5 C4:1 | Eb4:1.5 D4:.5 F#3:1 |
-G3:1.5 D3:.5 F3:.5 Ab3:.5 | Eb3:.5 G3:1 Bb3:.5 A3:1 | r:.5 F3:.5 A3:1 G3:1 | C4:1 A3:.5 Eb3:.5 D3:1 |
-Bb3:2.5 A3:.5 | _:2 G3:.5 Bb3:.5 | A3:.5 G3:.5 A3:.5 C4:.5 Eb4:1 | D4:1.5 C4:.5 F#3:1 |
-D4:1.5 C4:.5 B3:1 | C4:.5 Eb4:1.5 D4:1 | C4:2 B3:.5 Ab3:.5 | G3:1.5 r:.5 F3:.5 A3:.5 |
-D4:1.5 C4:.5 A3:1 | G3:1.5 Bb3:.5 C#4:1 | D4:.5 E4:1.5 B3:1 | Bb3:1.5 G3:.5 A3:1 |
-F3:.5 Ab3:.5 C4:1.5 Bb3:.5 | C4:1.5 Bb3:.5 G3:1 | Eb3:1 G3:.5 A3:.5 C4:1 | Eb4:1 D4:.5 Bb3:.5 D3:1 |
+G3:1.5 r:.5 F3:.5 Ab3:.5 | Eb3:.5 G3:1 Bb3:.5 A3:1 | r:.5 F3:.5 A3:1 G3:1 | C4:1 A3:.5 Eb3:.5 r:.5 D3:.5 |
+Bb3:2.5 A3:.5 | _:1.5 r:.5 G3:.5 Bb3:.5 | A3:.5 G3:.5 A3:.5 C4:.5 Eb4:1 | D4:1.5 C4:.5 F#3:.5 r:.5 |
+D4:1.5 C4:.5 B3:1 | C4:.5 Eb4:1.5 D4:.5 r:.5 | C4:2 B3:.5 Ab3:.5 | G3:1.5 r:.5 F3:.5 A3:.5 |
+D4:1.5 C4:.5 A3:1 | G3:1 r:.5 Bb3:.5 C#4:1 | D4:.5 E4:1.5 B3:1 | Bb3:1.5 G3:.5 A3:.5 r:.5 |
+F3:.5 Ab3:.5 C4:1.5 Bb3:.5 | C4:1.5 Bb3:.5 G3:.5 r:.5 | Eb3:1 G3:.5 A3:.5 C4:1 | Eb4:1 D4:.5 Bb3:.5 r:.5 D3:.5 |
 Bb3:2.5 A3:.5 | _:2.5 r:.5 | r:1 G3:.5 A3:.5 C4:1 | Eb4:1.5 D4:.5 F#3:1 |
-G3:1.5 D3:.5 F3:.5 Ab3:.5 | Eb3:.5 G3:1 Bb3:.5 A3:1 | C4:1 Bb3:.5 A3:.5 Eb3:.5 F#3:.5 | G3:2.5 r:.5 |
+G3:1.5 r:.5 F3:.5 Ab3:.5 | Eb3:.5 G3:1 Bb3:.5 A3:.5 r:.5 | C4:1 Bb3:.5 A3:.5 Eb3:.5 F#3:.5 | G3:2.5 r:.5 |
 """
 
 TENOR_CHORUS = """
@@ -205,10 +211,10 @@ r:1.5 D3:.5 G3:.5 A3:.5 | Bb3:2.5 A3:.5 | G3:1 r:2 | r:.5 F#3:.5 A3:.5 C4:.5 Eb4
 Bb3:1.5 A3:.5 B3:.5 D4:.5 | Eb4:1 D4:.5 C4:.5 A3:1 | D4:1.5 r:.5 G3:.5 Bb3:.5 | A3:.5 C4:.5 Eb4:1 D4:.25 C4:.25 Bb3:.25 Ab3:.25 |
 F#3:.5 G3:2.5 | r:1 F3:.5 G3:.5 A3:1 | C4:1.5 Bb3:.5 A3:.5 G3:.5 | F#3:1 r:2 |
 r:1 Bb3:.5 D4:.5 F4:.5 Eb4:.5 | D4:1 Eb4:.25 D4:.25 C4:.25 Bb3:.25 A3:1 | C4:1.5 A3:.5 B3:.5 Ab3:.5 | G3:1.5 r:.5 A3:.5 C4:.5 |
-D4:1 F4:2 | E4:.5 D4:.5 Bb3:1 C#4:.5 E4:.5 | F4:1 E4:.5 C4:.5 B3:.5 Ab3:.5 | G3:.25 Bb3:.25 D4:.25 F4:.25 Eb4:.5 C4:.5 A3:.5 F#3:.5 |
+D4:1 F4:2 | E4:.5 D4:.5 Bb3:1 C#4:.5 E4:.5 | F4:1 E4:.5 C4:.5 B3:.5 Ab3:.5 | r:.5 D4:.25 F4:.25 Eb4:.5 C4:.5 A3:.5 F#3:.5 |
 F3:.5 Ab3:.5 C4:1 Db4:.5 C4:.5 | C4:2.5 r:.5 | r:.5 Eb3:.5 G3:.5 A3:.5 C4:.5 Eb4:.5 | D4:1/3 Eb4:1/3 D4:1/3 C4:.5 Bb3:.5 Ab3:.5 F#3:.5 |
 G3:1.5 r:1.5 | r:.5 D3:.5 G3:.5 Bb3:.5 D4:1 | C4:.75 Bb3:.25 A3:.5 G3:.5 Eb3:1 | F#3:.5 A3:.5 C4:.5 Eb4:.5 r:1 |
-D4:2 B3:1 | Bb3:.5 G3:.5 Eb3:1 D3:1 | Eb3:.5 G3:.5 C4:1 F#3:.5 Eb3:.5 | G3:2 r:1 |
+D4:2 B3:1 | Bb3:.5 G3:.5 Eb3:.5 r:.5 D3:1 | Eb3:.5 G3:.5 C4:1 F#3:.5 Eb3:.5 | G3:2 r:1 |
 """
 
 PIANO_SOLO = """
@@ -221,10 +227,26 @@ Bb3:.5 D4:.5 A4:1 Ab4:1 | G4:1.5 Eb4:.5 D4:.5 C4:.5 | C4:.5 F4:.5 A4:1 Ab4:.5 F4
 # the tenor re-enters on beat 3 of bar 80 with the same pickup as bar 16, then plays the out head
 OUT_HEAD = """
 r:2 F3:.5 A3:.5 |
-D4:1.5 C4:.5 A3:1 | G3:1 A3:.5 Bb3:.5 C#4:1 | D4:.5 E4:1.5 B3:1 | Bb3:1.5 G3:.5 A3:1 |
-F3:.5 Ab3:.5 C4:1.5 Bb3:.5 | C4:2 Bb3:.5 G3:.5 | Eb3:1 G3:.5 A3:.5 C4:1 | Eb4:1 D4:.5 Bb3:.5 D3:1 |
+D4:1.5 C4:.5 A3:1 | G3:1 r:.5 Bb3:.5 C#4:1 | D4:.5 E4:1.5 B3:1 | Bb3:1.5 G3:.5 A3:.5 r:.5 |
+F3:.5 Ab3:.5 C4:1.5 Bb3:.5 | C4:2 Bb3:.5 r:.5 | Eb3:1 G3:.5 A3:.5 C4:1 | Eb4:1 D4:.5 Bb3:.5 r:.5 D3:.5 |
 Bb3:2.5 A3:.5 | _:2.5 r:.5 | r:1 G3:.5 A3:.5 C4:1 | Eb4:1.5 D4:.5 F#3:1 |
-G3:1.5 D3:.5 F3:.5 Ab3:.5 | Eb3:.5 G3:1 Bb3:.5 A3:1 | C4:1 Bb3:.5 A3:.5 Eb3:.5 F#3:.5 | G3:1 Bb3:.5 A3:1.5 |
+G3:1.5 r:.5 F3:.5 Ab3:.5 | Eb3:.5 G3:1 Bb3:.5 A3:.5 r:.5 | C4:1 Bb3:.5 A3:.5 Eb3:.5 F#3:.5 | G3:1 Bb3:.5 A3:1.5 |
+"""
+
+# A second written tenor chorus over the same changes (bars 33-64), played on alternate passes of
+# the site's loop so a visitor who stays hears a different solo the second time round. Same breath
+# plan as the first chorus (the piano's fills answer in the gaps both choruses leave), different
+# lines: a sparser first A built on a falling Bb-A motif, a sequence in the second A, long notes
+# in the bridge, and a low, dark last A.
+TENOR_CHORUS_B = """
+r:2 D4:.5 C4:.5 | Bb3:2 A3:1 | G3:1.5 r:1.5 | r:.5 A3:.5 C4:.5 Eb4:.5 D4:.5 C4:.5 |
+Bb3:1 A3:.5 G3:.5 B3:1 | C4:2 r:1 | r:.5 D4:.5 F4:.5 D4:.5 Eb4:1 | C4:1 A3:.5 F#3:.5 Eb3:1 |
+D3:.5 G3:2 r:.5 | r:1 Bb3:.5 D4:.5 A3:1 | G3:.5 A3:.5 C4:1.5 r:.5 | F#3:.5 A3:.5 C4:.5 Eb4:1.5 |
+D4:1.5 r:.5 B3:.5 Ab3:.5 | G3:1 Bb3:.5 D4:.5 Eb4:1 | F4:1.5 D4:.5 B3:1 | C4:1 r:.5 A3:.5 Gb3:.5 A3:.5 |
+Bb3:2.5 r:.5 | r:.5 G3:.5 Bb3:.5 D4:.5 C#4:1 | D4:2 B3:1 | Bb3:1.5 r:.5 A3:.5 F3:.5 |
+Ab3:1 C4:.5 Eb4:.5 Db4:1 | C4:.5 Bb3:.5 G3:2 | r:1.5 Eb3:.5 G3:.5 C4:.5 | Eb4:1 D4:.5 Bb3:.5 F#3:1 |
+G3:2 r:1 | r:.5 D3:.5 F3:.5 A3:.5 D4:1 | C4:1.5 Bb3:.5 A3:.5 G3:.5 | F#3:1 r:.5 A3:.5 C4:.5 Eb4:.5 |
+D4:1.5 Bb3:.5 B3:1 | C4:1 Eb4:1 r:.5 D3:.5 | Eb3:.5 G3:.5 C4:1.5 Gb3:.5 | G3:2 r:1 |
 """
 
 
@@ -315,9 +337,16 @@ def beat_to_bar(B):
 # --------------------------------------------------------------------------------------------
 # tenor
 # --------------------------------------------------------------------------------------------
-def tenor_notes(rng):
+PHRASE_SPLIT = 0.5   # a rest of half a beat or more is a breath: the phrase ends there
+
+
+def tenor_notes(rng, chorus="A"):
+    """The tenor's notes with performed times. `chorus` picks the written solo for bars 33-64:
+    "A" (TENOR_CHORUS, the main render) or "B" (TENOR_CHORUS_B, the alternate for every second
+    pass of the loop). Everything before bar 33 is drawn from the random stream first, so the head
+    is identical, sample for sample, in both."""
     head, _ = parse_part(HEAD, 0.0)
-    solo, end = parse_part(TENOR_CHORUS, bar_beat(33))
+    solo, end = parse_part(TENOR_CHORUS if chorus == "A" else TENOR_CHORUS_B, bar_beat(33))
     assert abs(end - bar_beat(65)) < 1e-6, end
     out, end = parse_part(OUT_HEAD, bar_beat(80))
     assert abs(end - bar_beat(97)) < 1e-6, end
@@ -328,12 +357,15 @@ def tenor_notes(rng):
     assert p16 == p80, (p16, p80)
 
     hum = Human(rng, mean=0.050, drift=0.028, jitter=0.010, rate=0.21)
+    rng_fall = random.Random(rng.random())
     notes.sort(key=lambda n: n.beat)
-    # phrases: split where a rest of >= 0.75 beat occurs
+    # phrases: a written rest of half a beat or more is a breath and ends the phrase. Inside a
+    # phrase the notes are slurred (each sounds until the next begins); a phrase's last note stops
+    # just before its written end, so every rest is heard as a breath.
     phrases = [[notes[0]]]
     for a, b in zip(notes, notes[1:]):
         gap = b.beat - (a.beat + a.beats)
-        (phrases.append([b]) if gap >= 0.74 else phrases[-1].append(b))
+        (phrases.append([b]) if gap >= PHRASE_SPLIT - 1e-6 else phrases[-1].append(b))
     for ph in phrases:
         hi = max(n.midi for n in ph)
         n_ph = len(ph)
@@ -359,16 +391,20 @@ def tenor_notes(rng):
                 n.dur = nxt.t - n.t          # legato: sounds until the next note
                 n.tags["legato_next"] = nxt.midi
             else:
+                # stop at the written end (less a breath of 0.08 beat), never into the rest
                 end_b = n.beat + n.beats
                 n.dur = beat_time(end_b) - n.t - 0.08 * 60 / TEMPO
-                gap_after = None
                 n.tags["legato_next"] = None
             n.dur = max(0.09, n.dur)
+    # the rest after each phrase (s, from the written end to the next phrase's onset) for the renderer
+    for ph, nxt in zip(phrases, phrases[1:] + [None]):
+        last = ph[-1]
+        last.tags["rest_after"] = (nxt[0].t - (last.t + last.dur)) if nxt else 9.0
     # a few expressive falls at phrase ends before long rests, and the final note
     for ph, nxt in zip(phrases, phrases[1:] + [None]):
         last = ph[-1]
         rest = (nxt[0].beat - (last.beat + last.beats)) if nxt else 9
-        if rest >= 1.5 and last.beats <= 1.0 and rng.random() < 0.35:
+        if rest >= 1.5 and last.beats <= 1.0 and rng_fall.random() < 0.35:
             last.tags["fall"] = True
     notes[-1].tags["final"] = True
     return notes, phrases
@@ -389,38 +425,76 @@ def lil_ok(v):
 
 
 def voicing_candidates(ch: Chord, lo, hi):
-    """Rootless A- and B-form voicings of `ch` inside [lo, hi], plus their three-note shells (one
-    inner voice left out), all within the low interval limits."""
+    """Rootless A- and B-form voicings of `ch` inside [lo, hi], their drop-2 spreads (the second
+    voice from the top taken down an octave, which opens the voicing around a low tune), and the
+    three-note shells of each (one inner voice left out), all within the low interval limits."""
     out = []
     for form in ("A", "B"):
         shape = ch.q[form]
         for base in range(24, 96, 12):
-            v = [base + ch.root + i for i in shape]
-            if v[0] >= lo and v[-1] <= hi:
-                out.append((form, v))
-                for k in (1, 2):
-                    out.append((form + "3", v[:k] + v[k + 1:]))
+            close = [base + ch.root + i for i in shape]
+            drop2 = sorted(close[:2] + [close[2] - 12] + close[3:])
+            for kind, v in ((form, close), (form + "d2", drop2)):
+                if v[0] >= lo and v[-1] <= hi:
+                    out.append((kind, v))
+                    for k in (1, 2):
+                        out.append((kind + "3", v[:k] + v[k + 1:]))
     return [(f, v) for f, v in out if lil_ok(v)]
 
 
-def choose_voicing(ch, prev, lo, hi, melody=None, target_center=58):
+# The comp's top voice while the tenor plays: B-flat 4 at most, so the piano stays in the tenor's
+# shadow instead of floating a brighter line above the soft subtone melody.
+TOP_CAP = 70
+
+
+def choose_voicing(ch, prev, lo, hi, melody=None, target_center=58, avoid=(), avoid_now=(), held=False, top_cap=None):
     """Pick the voicing that moves least from `prev`, sits near `target_center` and stays out of
-    the tenor's way. `melody` is the list of (midi, beats) the tune plays while the chord sounds.
-    A high tune (D4 and up) gets the comp underneath it. A low tune (the tenor's subtone register)
-    gets the comp above it in the normal piano register instead of being pushed down into mud."""
+    the tenor's way.
+      melody  (midi, beats) of the tune notes sounding while the chord sounds (both written tenor
+              choruses in bars 33-64, so the comp suits either)
+      avoid   the tune notes sounding at the strike (avoid_now) and the next one after it (the
+              look-ahead): no voice may sit within a semitone of them. Voicings are re-chosen, not thinned, so a
+              clash never leaves a two-note shell
+      held    the tenor holds a long note (1.5 beats or more) over this chord: thin the comp to a
+              three-note shell under or around it, the way a pianist leaves room for a held note
+      top_cap the highest top voice while the tenor plays (TOP_CAP)"""
     cands = voicing_candidates(ch, lo, hi) or voicing_candidates(ch, lo - 5, hi + 5)
+    # Filters, strictest first: clear of the tune now and of its next note, then clear of the note
+    # now only, then the same with a little more range; each first under the top-voice cap, then
+    # without it. The first stage with any voicing left wins. Only if all fail does clear_melody()
+    # thin the chosen voicing.
+    now = tuple(avoid_now)
+    stages = []
+    for cap in ((top_cap, None) if top_cap is not None else (None,)):
+        for av, rng_ in ((avoid, (lo, hi)), (now, (lo, hi)), (avoid, (lo - 4, hi + 4)), (now, (lo - 4, hi + 4))):
+            stages.append((cap, av, rng_))
+    for cap, av, (l2, h2) in stages:
+        pool = cands if (l2, h2) == (lo, hi) else voicing_candidates(ch, l2, h2)
+        pool = [(f, v) for f, v in pool if all(abs(x - m) > 1 for x in v for m in av)
+                and (cap is None or v[-1] <= cap)]
+        if pool:
+            cands = pool
+            break
     mel = [m for m, _ in melody] if melody else []
-    first = mel[0] if mel else None
+    key = max(avoid_now) if avoid_now else (max(avoid) if avoid else (mel[0] if mel else None))
+    if key is not None and key >= 60 and top_cap is not None:
+        # a tune note at C4 or above: the comp may go under it, down to B-flat 2 (the low interval
+        # limits keep that register open), so the melody is the top voice
+        under = [(f, v) for f, v in voicing_candidates(ch, 46, key - 2)
+                 if all(abs(x - m) > 1 for x in v for m in (avoid or ()))]
+        cands = cands + under
     best, bc = None, 1e9
     for form, v in cands:
         cost = 0.0
         if prev:
             pv = sorted(prev)
             cost += sum(min(abs(x - y) for y in pv) for x in v)            # voice leading
-            cost += 1.5 * abs(len(v) - len(pv))
+            cost += 0.75 * abs(len(v) - len(pv))
         cost += 0.35 * abs(sum(v) / len(v) - target_center)
-        if len(v) == 3:
-            cost += 2.5                                                    # prefer four voices
+        if held:
+            cost += 3.0 if len(v) == 4 else 0.0                            # a shell under a held note
+        elif len(v) == 3:
+            cost += 4.0                                                    # otherwise prefer four voices
         for m, beats in (melody or []):
             for x in v:
                 d = abs(x - m)
@@ -430,23 +504,24 @@ def choose_voicing(ch, prev, lo, hi, melody=None, target_center=58):
                     cost += 2.5 if beats >= 0.5 else 0.8                   # a 2nd against the tune: allowed, not sought
                 elif d % 12 in (1, 11) and d < 25:
                     cost += 2 if beats >= 0.5 else 0.5                     # minor 9th against the tune
-        if first is not None:
-            if first >= 62:
-                if v[-1] >= min(mel) - 1:
-                    cost += 12                                             # keep the comp under a high tune
+        if key is not None:
+            if key >= 60:
+                if v[-1] >= key - 1:
+                    cost += 8                                              # a C4-and-up tune note keeps the comp under it
             else:
-                if v[0] < first < v[-1]:
-                    cost += 5                                              # do not straddle a low tune
-                if v[-1] < first:
-                    cost += 9                                              # never comp under a low tune
+                if v[0] < key < v[-1] and min(abs(x - key) for x in v) < 3:
+                    cost += 5                                              # straddle a low tune only with room around it
+                if v[-1] < key:
+                    cost += 9                                              # never comp under a low tune (mud)
+                cost += 0.6 * max(0, v[-1] - (key + 12))                   # stay within an octave above a low tune
         if cost < bc:
             bc, best = cost, v
     return sorted(best)
 
 
 def clear_melody(v, mel):
-    """Keep the tune clear: leave out a voice a semitone from (or doubling) the melody note.
-    Voices are only ever removed, never moved an octave down, so no voicing is pushed into mud."""
+    """Last resort (choose_voicing() already avoids the tune): leave out a voice a semitone from (or
+    doubling) the melody note. Voices are only removed, never moved down, so nothing turns to mud."""
     if mel is None:
         return v
     kept = [x for x in v if abs(x - mel) > 1]
@@ -460,18 +535,28 @@ def melody_span(notes, b0, b1):
 
 def voicing_problems(log):
     """Voicings that break the low interval limits (should be none)."""
-    return [(bar, sym, v) for bar, sym, v in log if not lil_ok(v)]
+    return [(bar, sym, v) for bar, sym, v, *_ in log if not lil_ok(v)]
 
 
 def melody_at(notes, beat):
     for n in notes:
-        if n.beat - 0.01 <= beat < n.beat + n.beats:
+        if n.beat - 0.01 <= beat < n.beat + n.beats - 0.01:
             return n.midi
     return None
 
 
-def piano_part(rng, bars, tenor):
-    """Returns list of piano Notes (with performed times), plus the voicing log for the score."""
+def melody_next(notes, beat, until):
+    """The first tune note that starts after `beat` and before `until` (the look-ahead)."""
+    for n in sorted(notes, key=lambda n: n.beat):
+        if beat + 0.01 < n.beat < until - 0.01:
+            return n.midi
+    return None
+
+
+def piano_part(rng, bars, tenor, tenor_alt=None):
+    """Returns list of piano Notes (with performed times), plus the voicing log for the score.
+    `tenor_alt` is the tenor with the alternate chorus: in bars 33-64 the comp and the fills are
+    chosen against both choruses, so the one piano track suits either."""
     out = []
     log = []
     hum = Human(rng, mean=0.012, drift=0.010, jitter=0.006, rate=0.3)
@@ -501,23 +586,33 @@ def piano_part(rng, bars, tenor):
         part = b["part"]
         in_solo = part == "piano"
         lo, hi, center = (50, 74, 61) if not in_solo else (46, 66, 55)
+        tunes = [tenor] + ([tenor_alt] if tenor_alt is not None and part == "tenor" else [])
         segs = b["segs"]
         acc = 0
         # comping rhythm for this bar
         pattern = rng.random()
         for si, (ch, nb) in enumerate(segs):
             sb = B0 + acc
+            avoid, avoid_now, held, cap = (), (), False, None
             if in_solo:
                 span = melody_span(solo, sb, sb + nb) or [(67, 1.0)]
                 span = [(max(m for m, _ in span), 1.0)]      # the left hand stays under the solo line
                 mel = None
             else:
-                span = melody_span(tenor, sb, sb + nb) if part in ("head", "tenor", "out") else []
+                span = [x for tn in tunes for x in melody_span(tn, sb, sb + nb)] if part in ("head", "tenor", "out") else []
                 mel = melody_at(tenor, sb) if span else None
-            v = choose_voicing(ch, prev, lo, hi, melody=span, target_center=center)
+                cap = TOP_CAP if part in ("head", "tenor", "out") and bar < 96 else None
+                if span:
+                    now = [melody_at(tn, sb) for tn in tunes]
+                    ahead = [melody_next(tn, sb, sb + nb) for tn in tunes]
+                    avoid = tuple({m for m in now + ahead if m is not None})
+                    avoid_now = tuple({m for m in now if m is not None})
+                    held = any(bb >= 1.5 for _, bb in span)
+            v = choose_voicing(ch, prev, lo, hi, melody=span, target_center=center, avoid=avoid,
+                               avoid_now=avoid_now, held=held, top_cap=cap)
             prev = v
             v = clear_melody(v, mel)
-            log.append((bar, ch.symbol, v))
+            log.append((bar, ch.symbol, v, sb))
             # when is it struck?
             strike = sb
             if si == 0 and acc == 0 and bar > 1 and pattern < 0.22 and part != "out" and bar not in (17, 81, 96):
@@ -525,6 +620,10 @@ def piano_part(rng, bars, tenor):
             if bar == 96:
                 strike = sb
             vel = dyn * (0.78 if not in_solo else 0.70) + rng.gauss(0, 0.02)
+            if part in ("head", "tenor", "out") and bar < 96:
+                vel *= 0.86           # the comp sits under the soft tenor
+            if held:
+                vel *= 0.80           # and steps back further under a held tenor note
             end_beat = sb + nb
             roll_step = 0.018 if (bar in (1, 17, 33, 49, 65, 81, 96) or rng.random() < 0.25) else 0.006
             cid = (bar, si)
@@ -533,14 +632,14 @@ def piano_part(rng, bars, tenor):
                 add(strike, end_beat - strike, m, vel * (1.08 if top else 0.94), roll=roll_step * i,
                     tags={"comp": cid}, sustain_to=end_beat + 0.05)
             # a soft re-strike on beat 3 in a one-chord bar, sometimes (ballad "breathing")
-            if len(segs) == 1 and part != "piano" and rng.random() < 0.28 and bar not in (96,):
+            if len(segs) == 1 and part != "piano" and rng.random() < 0.28 and bar not in (96,) and not held:
                 for i, m in enumerate(v[1:]):
                     add(sb + 2.0, 1, m, vel * 0.72, roll=0.01 * i, tags={"comp": cid}, sustain_to=sb + 3.05)
             acc += nb
 
         # fills in the tenor's gaps (head, tenor chorus, out head): short right-hand answers
         if part in ("head", "tenor", "out") and bar not in (16, 80, 96):
-            gap_start, gap_len = tenor_gap(tenor, B0)
+            gap_start, gap_len = tenor_gap(tenor if not (tenor_alt and part == "tenor") else tenor + tenor_alt, B0)
             if gap_len >= 1.4 and rng.random() < 0.8:
                 ch = chord_at(bars, gap_start + 0.01)
                 fill_notes(rng, add, ch, gap_start, gap_len, dyn, prev)
@@ -832,10 +931,12 @@ def events(seed=1958):
     rng = random.Random(seed)
     bars = chart()
     tenor, phrases = tenor_notes(random.Random(seed + 1))
-    piano, voicings = piano_part(random.Random(seed + 2), bars, tenor)
+    tenor_b, phrases_b = tenor_notes(random.Random(seed + 1), chorus="B")
+    piano, voicings = piano_part(random.Random(seed + 2), bars, tenor, tenor_b)
     bass = bass_part(random.Random(seed + 3), bars)
     drums = drum_part(random.Random(seed + 4), bars)
-    return dict(bars=bars, tenor=tenor, phrases=phrases, piano=piano, voicings=voicings, bass=bass, drums=drums)
+    return dict(bars=bars, tenor=tenor, phrases=phrases, tenor_b=tenor_b, phrases_b=phrases_b,
+                piano=piano, voicings=voicings, bass=bass, drums=drums)
 
 
 def timeline():

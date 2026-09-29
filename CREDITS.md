@@ -21,9 +21,11 @@ The engine's stand-in models, textures and sounds are made in code; no third-par
 |---|---|---|---|
 | three.js (incl. GLTFLoader, OrbitControls, post-processing passes, meshopt decoder) | 3D engine | https://github.com/mrdoob/three.js | MIT |
 | Alegreya SC and Alegreya Sans (Huerta Tipográfica), via Fontsource | Page and panel type, stand-in signs | https://github.com/huertatipografica/Alegreya, https://fontsource.org | SIL Open Font License 1.1 |
-| FluidR3 GM soundfont samples by Frank Wen (piano, bass, sax) | Fallback generative band only, emitted from `prototype/samples.json` | https://github.com/gleitz/midi-js-soundfonts | CC BY 3.0 per that repo's README (the prototype footer said MIT; to confirm) |
+| FluidR3 GM soundfont samples by Frank Wen (piano, bass, sax), as rendered by gleitz/midi-js-soundfonts | Fallback generative band only (plays only if the recorded stems cannot), emitted from `prototype/samples.json` | https://github.com/gleitz/midi-js-soundfonts | CC BY 3.0 per that repo's README (the original FluidR3_GM.sf2 is MIT); credited in the footer of both pages either way |
 | Tone.js drum samples | Fallback generative band only | https://github.com/Tonejs/audio | MIT |
 | Vite, marked, yaml (build time only, not shipped) | Build, content from `content/*.md` | https://vitejs.dev, https://marked.js.org, https://eemeli.org/yaml | MIT, MIT, ISC |
+
+**Music credit on the site.** The recorded band the site plays is the music writer's (see *Music writer* below): its stems use the Salamander Grand Piano (CC BY 3.0) and the MusyngKite tenor sax samples (CC BY-SA 3.0, so the sax, room and mix recordings are CC BY-SA 3.0), with CC0 bass and drums. The engineer ships no audio of its own. The build reads `site/public/audio/manifest.json` → `license.recording.credit` and prints it, with links to the licence deeds and to this file, in the footer of `index.html` and `plain.html`; the FluidR3 line above is added to the same footer for the fallback band.
 
 ## Architect (square, town, tree, layout)
 
@@ -44,9 +46,9 @@ All architect textures (cobbles, setts, granite, plaster, timber, roof tiles, sl
 | Meatbass by Karoryfer Lecolds (1958 Otto Rubner double bass, played by Drogomir Smolken, recorded by Ludwik Zamenhof), pizzicato | Double bass | https://github.com/sfzinstruments/karoryfer.meatbass | CC0 1.0 |
 | Virtuosity Drums by Versilian Studios (house kit at Virtuosity Musical Instruments, Boston, played by Austin McMahon), overhead, room, kick and snare mics | Snare response and soft snare hits under the brushes, feathered bass drum, hi-hat foot, ride | https://github.com/sfzinstruments/virtuosity_drums | CC0 1.0 |
 | Musyng Kite soundfont, tenor sax program, as rendered to per-note files by gleitz/midi-js-soundfonts | Tenor sax in the shipped stems (sample layer; vibrato taken out, heavily reshaped) | https://github.com/gleitz/midi-js-soundfonts (MusyngKite/tenor_sax-ogg.js) | CC BY-SA 3.0 per that repo's README (the upstream synthfont.com page could not be reached from the build machine to confirm) |
-| FluidR3 GM soundfont by Frank Wen, tenor sax program, as rendered to per-note files by gleitz/midi-js-soundfonts | Tenor sax in the A/B files `music/out/ab/head_fluidr3*.mp3` (not shipped); the alternative bank (`render.py --sax-bank fluidr3`) | https://github.com/gleitz/midi-js-soundfonts (FluidR3_GM/tenor_sax-ogg.js) | CC BY 3.0 per that repo's README (the original FluidR3_GM.sf2 is distributed under the MIT licence) |
+| FluidR3 GM soundfont by Frank Wen, tenor sax program, as rendered to per-note files by gleitz/midi-js-soundfonts | Tenor sax in the A/B files `head_fluidr3*.mp3` (in `review/round-1/music/listen/`, not shipped on the site); the alternative bank (`render.py --sax-bank fluidr3`) | https://github.com/gleitz/midi-js-soundfonts (FluidR3_GM/tenor_sax-ogg.js) | CC BY 3.0 per that repo's README (the original FluidR3_GM.sf2 is distributed under the MIT licence) |
 
-**Share-alike.** Because the shipped tenor is built from the CC BY-SA 3.0 Musyng Kite samples, the stems that contain it (`ballad-sax.mp3`, `ballad-room.mp3` and `ballad-mix.mp3`) are adaptations and must be offered under CC BY-SA 3.0, with this credit. The composition itself (the notes in `music/score/`) is not affected. The piano stem needs the Salamander credit; the bass and drum stems come from CC0 sources. `manifest.json` carries the same information under `license`. If Mac prefers no share-alike, re-render with `--sax-bank fluidr3` and everything becomes attribution-only (CC BY).
+**Share-alike.** Because the shipped tenor is built from the CC BY-SA 3.0 Musyng Kite samples, the stems that contain it (`ballad-sax.mp3`, `ballad-room.mp3`, `ballad-mix.mp3` and the alternate-chorus segments `ballad-sax-b.mp3` and `ballad-room-b.mp3`, plus the review listening files in `review/round-1/music/listen/` that contain it) are adaptations and must be offered under CC BY-SA 3.0, with this credit. The composition itself (the notes in `music/score/`) is not affected. The piano stem needs the Salamander credit; the bass and drum stems come from CC0 sources. `manifest.json` carries the same information under `license`. If Mac prefers no share-alike, re-render with `--sax-bank fluidr3` and everything becomes attribution-only (CC BY).
 
 Attribution line for the site's credits page: *"Lanterns After Closing" (recording CC BY-SA 3.0). Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: Musyng Kite soundfont via gleitz/midi-js-soundfonts (CC BY-SA 3.0), reshaped. Bass: Karoryfer Meatbass (CC0). Drums: Virtuosity Drums by Versilian Studios (CC0).*
 
@@ -56,9 +58,10 @@ The sky, stars, moon, clouds, snow, environment map and grain are all generated 
 
 | Asset | Used for | Source | Licence |
 |---|---|---|---|
-| three.js AgX tone-mapping constants and post-processing passes (`EffectComposer`, `RenderPass`, `UnrealBloomPass`, `Pass`) | `grade.js` re-implements three's AgX (itself ported from Filament / Blender) to add the Punchy look; bloom and composer are used as shipped | https://github.com/mrdoob/three.js | MIT |
+| three.js AgX tone-mapping constants, post-processing passes (`EffectComposer`, `RenderPass`, `UnrealBloomPass`, `Pass`) and shader chunks (patched in `fog.js` and `shading.js`) | `grade.js` re-implements three's AgX (itself ported from Filament / Blender) to add the Punchy look; bloom and composer are used as shipped | https://github.com/mrdoob/three.js | MIT |
 | Filament's AgX implementation (via three.js) | AgX matrices and curve | https://github.com/google/filament/pull/7236 | Apache 2.0 |
-| Black-body colour approximation by Tanner Helland (algorithm only, re-implemented) | `kelvinRGB()` for the warm light colour | https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html | Published algorithm, no code copied |
+| Black-body colour approximation by Tanner Helland (algorithm only, re-implemented) | `kelvinRGB()` fallback warm light colour (the default is now the Cycles previews' linear colour) | https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html | Published algorithm, no code copied |
+| Roughness widening for lights with a size (Karis, "Real Shading in Unreal Engine 4", SIGGRAPH 2013; idea only, re-implemented as a roughness floor) | `shading.js` light size on direct specular | https://blog.selfshadow.com/publications/s2013-shading-course/ | Published technique, no code copied |
 
 ## Ride builder (Riesenrad, Karussell, bandstand, instruments: blender/rides/)
 

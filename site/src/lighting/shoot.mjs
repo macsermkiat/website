@@ -28,6 +28,8 @@ const SHOTS = {
   wide: '?shot=1&view=wide',
   wide_snow: '?shot=1&view=wide&snow=1&t=30',
   sky: '?shot=1&view=sky',
+  sky_lite: '?shot=1&view=sky&lite=1',
+  capture: '?shot=1&capture=1',
 };
 Object.assign(SHOTS, VARS);
 const only = Object.keys(VARS).length && ONLY === 'all' ? Object.keys(VARS) : null;

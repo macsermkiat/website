@@ -102,7 +102,7 @@ export function createBandActions({ market, audio, say, lite, togglePlay }) {
     const names = { sax: 'tenor sax', piano: 'piano', bass: 'double bass', drums: 'drums' };
     const pm = SECTIONS.band?.meta?.play || {};
     let play = audio.playing ? pm.playing || 'Listen for it in the mix.' : pm.stopped || 'Press play to hear it up front.';
-    if (!audio.separable) play = 'The lite market plays the band as one mix, so this spotlight is for the eyes. Switch to the full market to hear it up front.';
+    if (!audio.separable) play = pm.lite || 'The lite market plays the band as one mix, so this spotlight is for the eyes. Switch to the full market to hear it up front.';
     say(actionNote('band', name || 'whole', name ? `The spotlight is on the ${names[name]}. ${play}` : 'The whole band shares the light again.', { play }));
   }
 
@@ -110,10 +110,12 @@ export function createBandActions({ market, audio, say, lite, togglePlay }) {
   return {
     band: {
       hint: actionHint('band', 'Put one player in the spotlight.'),
+      // the lite market streams one mix: the player buttons move the light only, and say so
+      spotOnly: () => !audio.separable,
       acts: [
         { key: 'play', label: '▶ Play the ballad', fn: () => togglePlay(), play: true },
-        { key: 'sax', label: 'Sax', fn: () => feature('sax') }, { key: 'piano', label: 'Piano', fn: () => feature('piano') },
-        { key: 'bass', label: 'Bass', fn: () => feature('bass') }, { key: 'drums', label: 'Drums', fn: () => feature('drums') },
+        { key: 'sax', label: 'Sax', fn: () => feature('sax'), spot: true }, { key: 'piano', label: 'Piano', fn: () => feature('piano'), spot: true },
+        { key: 'bass', label: 'Bass', fn: () => feature('bass'), spot: true }, { key: 'drums', label: 'Drums', fn: () => feature('drums'), spot: true },
         { key: 'whole', label: 'Whole band', fn: () => feature(null) },
       ],
     },

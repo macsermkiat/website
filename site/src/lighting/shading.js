@@ -14,8 +14,9 @@
 //    A glow is a segment (a == b for a point) with a colour × intensity and a reach. They are not
 //    three.js lights, so they do not multiply the cost of every light in the scene.
 //
-// 3. Moon rim: a faint cool rim on edges that face the moon, so figures and posts in front of the
-//    stalls read as moonlit shapes instead of black cut-outs.
+// 3. Moon rim: a faint cool sheen on grazing edges that face the moon (added as radiance, so it
+//    shows on near-black coats too), so figures and posts in front of the stalls read as moonlit
+//    shapes instead of black cut-outs.
 //
 // The uniform data is one Float32Array shared by reference (UniformsUtils.clone keeps typed arrays
 // by reference), so updating it once updates every material.
@@ -59,9 +60,12 @@ uniform vec4 lightingGlow[ ${size} ];
     float ndl = clamp( dot( gn, dl * inversesqrt( max( d2, 1e-6 ) ) ) * 0.6 + 0.4, 0.0, 1.0 );
     glowIrr += lightingGlow[ ${HEADER} + i * 3 + 2 ].rgb * ( win * win * ndl / ( d2 + 0.12 ) );
   }
-  // moon rim: grazing edges that face the moon
-  float rimF = pow( 1.0 - clamp( dot( gn, gv ), 0.0, 1.0 ), lightingGlow[ 0 ].z );
-  glowIrr += lightingGlow[ 2 ].rgb * ( lightingGlow[ 0 ].y * rimF * clamp( dot( gn, lightingGlow[ 1 ].xyz ) * 0.5 + 0.5, 0.0, 1.0 ) );
+  // moon rim: a faint cool sheen on grazing edges that face the moon. It is added as radiance, not
+  // multiplied by the albedo, the way wool and skin catch light at grazing angles, so near-black
+  // coats still show their outline
+  // coats: only on steep faces (figures, posts, walls), not on the ground or the roofs
+  float rimF = pow( 1.0 - clamp( dot( gn, gv ), 0.0, 1.0 ), lightingGlow[ 0 ].z ) * ( 1.0 - gn.y * gn.y );
+  totalEmissiveRadiance += lightingGlow[ 2 ].rgb * ( lightingGlow[ 0 ].y * rimF * clamp( dot( gn, lightingGlow[ 1 ].xyz ) * 0.5 + 0.5, 0.0, 1.0 ) );
   #if defined( STANDARD )
     reflectedLight.directDiffuse += glowIrr * BRDF_Lambert( material.diffuseContribution );
   #else
@@ -218,7 +222,9 @@ export function bulbStrings(mesh) {
       }
     });
     const a = mid.clone().addScaledVector(dir, t0), b = mid.clone().addScaledVector(dir, t1);
-    out.push({ a, b, count: comp.length });
+    let y0 = Infinity, y1 = -Infinity;
+    comp.forEach((c) => { y0 = Math.min(y0, c.min.y); y1 = Math.max(y1, c.max.y); });
+    out.push({ a, b, count: comp.length, height: y1 - y0 });
   }
   return out;
 }

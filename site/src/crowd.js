@@ -13,6 +13,17 @@ const RAW = crowdFiles['./crowd.json'] ?? null;
 
 const GROUPS = [[-3.5, 5], [4, 4.2], [-9.5, 8], [9.5, 8.5], [0, 10], [-15, 9], [15, 10], [-5.5, 1.5], [6, 1.8], [-1.5, 14], [11, 13], [-17, 0], [17, 7], [-16.5, -6], [-7, -14], [1, -15.5], [11, -16], [-11, 15], [5, 17], [-4, -10.5], [13, -4.5]];
 
+// The lite market draws its 40 people from a smaller set of figures (recoloured, so the crowd still varies):
+// three fewer downloads, about 300 KB.
+const LITE_ALIAS = {
+  'people_man_parka.glb': 'people_man_coat.glb',
+  'people_woman_young.glb': 'people_woman_coat.glb',
+  'people_child_girl.glb': 'people_child_boy.glb',
+};
+// Full market: people farther than LOD_FAR metres from the camera switch to their .lite.glb figure
+// (about 1.5k triangles instead of 4.6k), and back nearer than LOD_NEAR.
+export const LOD_FAR = 18, LOD_NEAR = 16;
+
 function rel(url) {
   return String(url).replace(/^(\.\/|\/)+/, '').replace(/^(site\/)?(public\/)?/, '').replace(/^models\//, '');
 }
@@ -154,49 +165,70 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
 
   // person models, if the organizer has shipped them: each person names a file, or an index into variants
   const byFile = new Map();
+  const alias = (v) => (lite && LITE_ALIAS[v] && modelExists(liteVariant(LITE_ALIAS[v]) || LITE_ALIAS[v]) ? LITE_ALIAS[v] : v);
   const want = new Set(people.map((p) => p.model).filter(Boolean));
-  plan.variants.forEach((v) => want.add(v));
-  await Promise.all([...want].map(async (v) => {
+  if (!lite) plan.variants.forEach((v) => want.add(v));
+  await Promise.all([...new Set([...want].map(alias))].map(async (v) => {
     const file = (lite && liteVariant(v)) || v;
     if (!modelExists(file)) return;
     try { byFile.set(v, await loadGlb(file, manager)); } catch (e) { warn(`crowd: could not load ${file}.`); }
   }));
+  for (const v of want) if (alias(v) !== v && byFile.has(alias(v))) byFile.set(v, byFile.get(alias(v)));
   const variantRoots = plan.variants.map((v) => byFile.get(v)).filter(Boolean);
   const sourceFor = (p, i) => (p.model && byFile.get(p.model)) || (Number.isInteger(p.variant) && byFile.get(plan.variants[p.variant])) || (variantRoots.length ? variantRoots[i % variantRoots.length] : null);
+
+  /** One figure of a person (the full or the lite model): a recoloured skinned clone with its own mixer. */
+  const noMug = (p) => (p.clip && /_free$/.test(p.clip)) || (plan.organizer && p.mug === false);
+  function makeLevel(src, p, phase) {
+    const fig = cloneSkinned(src);
+    recolor(fig, p.colors);
+    // a figure without a mug still carries the (scaled-away) mug mesh: skip drawing it
+    if (noMug(p)) fig.traverse((o) => { if (o.isMesh && /^mug/i.test(o.name)) o.visible = false; });
+    fig.traverse((o) => { if (o.isMesh) { o.castShadow = !lite; o.receiveShadow = false; } });
+    const level = { root: fig, mixer: null, clips: null };
+    const clips = src.userData.animations || [];
+    if (clips.length) {
+      const mixer = new THREE.AnimationMixer(fig);
+      const named = (n) => n && clips.find((c) => c.name === n);
+      const clip = named(p.clip) || clips.find((c) => (p.path ? /walk/i : /idle|stand|talk/i).test(c.name)) || clips[0];
+      const action = mixer.clipAction(clip).play();
+      // the walk cycle is authored at 1.0 m/s (children 0.8): match the feet to the ground speed
+      if (p.path && /walk/i.test(clip.name)) action.timeScale = (p.speed || 0.9) / (/child/i.test(p.model || '') ? 0.8 : 1.0);
+      mixer.setTime(phase);
+      level.mixer = mixer;
+      level.clips = { all: clips, action, base: clip, mixer };
+    }
+    return level;
+  }
 
   const r = rng(91);
   const root = new THREE.Group();
   root.name = 'crowd';
   scene.add(root);
   const crowd = people.map((p, i) => {
-    let g;
+    const g = new THREE.Group();
+    g.name = p.id || `person_${i}`;
     const src = sourceFor(p, i);
+    const phase = p.phase || r() * 5;
+    let levels;
     if (src) {
-      g = cloneSkinned(src);
-      recolor(g, p.colors);
-      const box = new THREE.Box3().setFromObject(g);
+      const hi = makeLevel(src, p, phase);
+      g.add(hi.root);
+      const box = new THREE.Box3().setFromObject(hi.root);
       g.userData.head = box.max.y - 0.12;
-      const clips = src.userData.animations || [];
-      if (clips.length) {
-        const mixer = new THREE.AnimationMixer(g);
-        const named = (n) => n && clips.find((c) => c.name === n);
-        const clip = named(p.clip) || clips.find((c) => (p.path ? /walk/i : /idle|stand|talk/i).test(c.name)) || clips[0];
-        const action = mixer.clipAction(clip).play();
-        // the walk cycle is authored at 1.0 m/s (children 0.8): match the feet to the ground speed
-        if (p.path && /walk/i.test(clip.name)) action.timeScale = (p.speed || 0.9) / (/child/i.test(p.model || '') ? 0.8 : 1.0);
-        mixer.setTime(p.phase || r() * 5);
-        g.userData.mixer = mixer;
-        g.userData.clips = { all: clips, action, base: clip, mixer };
-      }
+      levels = [hi];
     } else {
-      g = buildPerson(r, { mug: p.mug });
+      const fig = buildPerson(r, { mug: p.mug });
+      fig.traverse((o) => { if (o.isMesh) { o.castShadow = !lite; o.receiveShadow = false; } });
+      g.add(fig);
+      g.userData.head = (fig.userData.head || 1.6) * fig.scale.y;
+      levels = [{ root: fig, mixer: null, clips: null }];
     }
     g.position.copy(p.pos);
     if (p.facing) g.rotation.y = Math.atan2(p.facing.x - p.pos.x, p.facing.z - p.pos.z);
     else g.rotation.y = p.ry || 0;
-    g.traverse((o) => { if (o.isMesh) { o.castShadow = !lite; o.receiveShadow = false; } });
     root.add(g);
-    const person = { g, kind: p.kind, walk: !!p.path, path: p.path, seg: 0, dir: 1, speed: p.speed || 0.8, ph: r() * 6, sayUntil: 0, head: (g.userData.head || 1.6) * g.scale.y };
+    const person = { g, plan: p, levels, lvl: levels[0], phase, kind: p.kind, vendor: p.kind === 'vendor', walk: !!p.path, path: p.path, seg: 0, dir: 1, speed: p.speed || 0.8, ph: r() * 6, sayUntil: 0, head: g.userData.head || 1.6 };
     if (person.walk) {
       // start part-way along the path (crowd.json "start" is the fraction of its length)
       const lens = p.path.slice(1).map((b, k) => b.distanceTo(p.path[k]));
@@ -208,6 +240,51 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
     }
     return person;
   });
+  const vendors = crowd.filter((p) => p.vendor);
+  let lodOn = false;
+
+  /**
+   * Full market only: load each figure's .lite.glb and give every person a second, lighter level that is
+   * drawn beyond LOD_FAR metres. Called after the first frame, so it never delays the market opening.
+   */
+  async function enableLod() {
+    if (lite || lodOn) return 0;
+    const files = new Map();
+    for (const p of crowd) {
+      const m = p.plan.model || (Number.isInteger(p.plan.variant) ? plan.variants[p.plan.variant] : null);
+      const lv = m && liteVariant(m);
+      if (lv && p.levels[0].clips) files.set(p, lv);
+    }
+    const loaded = new Map();
+    await Promise.all([...new Set(files.values())].map(async (f) => {
+      try { loaded.set(f, await loadGlb(f, manager)); } catch { warn(`crowd: could not load ${f} for the distance level.`); }
+    }));
+    let n = 0;
+    for (const [p, f] of files) {
+      const src = loaded.get(f);
+      if (!src) continue;
+      const lo = makeLevel(src, p.plan, p.phase);
+      lo.root.visible = false;
+      p.g.add(lo.root);
+      p.levels.push(lo);
+      n++;
+    }
+    lodOn = true;
+    return n;
+  }
+  const _cp = new THREE.Vector3();
+  function applyLod(p, camPos) {
+    if (p.levels.length < 2) return;
+    const d2 = p.g.position.distanceToSquared(camPos);
+    const want = p.lvl === p.levels[0] ? (d2 > LOD_FAR * LOD_FAR ? 1 : 0) : (d2 < LOD_NEAR * LOD_NEAR ? 0 : 1);
+    const next = p.levels[want];
+    if (next === p.lvl) return;
+    // carry the clip time over, so the switch does not restart a step or a sip
+    if (next.mixer && p.lvl.mixer) next.mixer.setTime(p.lvl.mixer.time);
+    p.lvl.root.visible = false;
+    next.root.visible = true;
+    p.lvl = next;
+  }
 
   const bubbles = [];
   let T = 0, nextTalk = 2;
@@ -226,7 +303,7 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
 
   /** Play another of a person's clips for a while (e.g. drink for Prost), then go back. Only for people holding a mug. */
   function gesture(p, name, secs) {
-    const c = p.g.userData.clips;
+    const c = p.lvl.clips;
     if (!c || /_free$/.test(c.base.name) || p.walk) return;
     const clip = c.all.find((x) => x.name === name);
     if (!clip || clip === c.base) return;
@@ -253,9 +330,48 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
     return false;
   }
 
+  /** Is a person on the line from the camera to a vendor's chest, nearer than the vendor? (a narrow cone) */
+  const vLine = [];
+  function blocksVendor(pos, from) {
+    for (const v of vLine) {
+      for (const y of [1.0, 1.55]) {
+        probe.set(pos.x, pos.y + y, pos.z);
+        rel.subVectors(probe, from);
+        const s = rel.dot(v.dir);
+        if (s < 0.3 || s > v.len - 0.45) continue;
+        if (rel.addScaledVector(v.dir, -s).length() < 0.32 + s * 0.09) return true;
+      }
+    }
+    return false;
+  }
+  const _vp = new THREE.Vector3();
+  /** Vendors a close camera can see: in front of it, within 14 m and near the middle of the view. */
+  function vendorLines(camera, look) {
+    vLine.length = 0;
+    for (const v of vendors) {
+      _vp.copy(v.g.position); _vp.y += 1.25;
+      const dir = _vp.clone().sub(camera.position);
+      const len = dir.length();
+      if (len > 14) continue;
+      dir.divideScalar(len);
+      if (dir.dot(look) < 0.8) continue; // more than ~37 degrees off the sight line
+      vLine.push({ dir, len });
+    }
+  }
+
   return {
     group: root,
     count: crowd.length,
+    enableLod,
+    get lodLevels() { return crowd.filter((p) => p.levels.length > 1).length; },
+    /** Numbers for tests and the debug report. */
+    stats() {
+      let hidden = 0, far = 0;
+      for (const p of crowd) { if (!p.g.visible) hidden++; if (p.levels.length > 1 && p.lvl === p.levels[1]) far++; }
+      return { people: crowd.length, hidden, lite: far, vendorsVisible: vendors.filter((v) => v.g.visible).length };
+    },
+    /** For tests: the people standing between the camera and a vendor that the camera looks at. */
+    hiddenIds: () => crowd.filter((p) => !p.g.visible).map((p) => p.g.name),
     speak,
     /** Up to five standing people near `center` say `text`, one after another, and raise their mugs if they have one. */
     say(text, center, radius) {
@@ -269,10 +385,15 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
         segDir.subVectors(look, camera.position);
         seg = segDir.length();
         segDir.divideScalar(seg || 1);
+        if (seg < 20) vendorLines(camera, segDir); else vLine.length = 0;
       }
+      camera.getWorldPosition(_cp);
       for (const p of crowd) {
-        if (look) p.g.visible = !(seg < 20 && blocks(p.g.position, camera.position, segDir, seg));
-        if (p.g.userData.mixer && !still) p.g.userData.mixer.update(dt);
+        // Vendors stay: they are what a close-up looks at. Anyone else on the sight line, or on the line to a
+        // vendor in view (the queue at the counter), steps out of the shot.
+        if (look) p.g.visible = p.vendor || !(seg < 20 && (blocks(p.g.position, camera.position, segDir, seg) || blocksVendor(p.g.position, camera.position)));
+        if (lodOn) applyLod(p, _cp);
+        if (p.lvl.mixer && !still && p.g.visible) p.lvl.mixer.update(dt);
         if (p.walk && !still) {
           const a = p.path[p.seg], b = p.path[p.seg + 1];
           const len = a.distanceTo(b) || 1;
@@ -284,12 +405,12 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
           const A = p.path[p.seg], B = p.path[p.seg + 1];
           p.g.position.lerpVectors(A, B, p.u);
           p.g.rotation.y = Math.atan2((B.x - A.x) * p.dir, (B.z - A.z) * p.dir);
-          if (!p.g.userData.mixer) {
+          if (!p.lvl.mixer) {
             p.ph += dt * p.speed * 5.2;
             p.g.position.y = Math.abs(Math.cos(p.ph)) * 0.035;
             p.g.rotation.z = Math.sin(p.ph) * 0.03;
           }
-        } else if (!p.walk && !still && !p.g.userData.mixer) {
+        } else if (!p.walk && !still && !p.lvl.mixer) {
           p.g.rotation.z = Math.sin(t * 0.9 + p.ph) * 0.012;
         }
       }

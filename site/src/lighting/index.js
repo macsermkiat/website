@@ -38,6 +38,7 @@ class ScaledBloomPass extends UnrealBloomPass {
   setScale(scale) { this.scale = scale; this.setSize(this.fullSize.x, this.fullSize.y); }
 }
 
+const PROBE_KINDS = new Set(['section', 'deco', 'landmark']);
 const damp = (a, b, rate, dt) => a + (b - a) * (1 - Math.exp(-rate * dt));
 
 /**
@@ -107,7 +108,9 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     moonLight.shadow.bias = -0.0004;
     moonLight.shadow.normalBias = 0.025;
     moonLight.shadow.intensity = 0.85;
+    moonLight.shadow.autoUpdate = !(P.moonShadowEvery > 1);
   }
+  let moonShadowEvery = P.moonShadowEvery || 1;
   fitShadow();
 
   // ---------- environment for reflections ----------
@@ -140,6 +143,9 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     const holders = new Map();
     scene.children.forEach((h) => {
       if (h === sky.mesh || h === snow.group || h.isLight) return;
+      // stalls and landmarks only: rides turn (a static probe would lie) and the town ring is too big
+      const kind = h.userData.entry?.kind || h.userData.kind;
+      if (!PROBE_KINDS.has(kind)) return;
       const meshes = probeTargets(h).filter((m) => !m.material?.userData?.probe);
       if (meshes.length) holders.set(h, meshes);
     });
@@ -163,7 +169,10 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
       if (!bulb && !/^bulbs_/i.test(o.name)) return;
       const cold = /cold/i.test(bulb?.name || '');
       const color = cold ? N.emissive.cold.color : N.emissive.warm.color;
-      glowOf.set(o, bulbStrings(o).map((st) => shading.add({ a: st.a, b: st.b, color, intensity: G.intensity, reach: G.reach, tag: 'bulbs' })));
+      // strings on stalls only: short and level (the wheel, the carousel crown, the tree and the
+      // long festoons across the square are skipped: they move, or hang far from anything to light)
+      const strings = bulbStrings(o).filter((st) => st.a.distanceTo(st.b) <= G.maxLength && st.height <= G.maxHeight);
+      glowOf.set(o, strings.map((st) => shading.add({ a: st.a, b: st.b, color, intensity: G.intensity, reach: G.reach, tag: 'bulbs' })));
     });
   }
   const emissives = tuneEmissives(scene, N, { lite });
@@ -247,8 +256,11 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   // Measured in wall-clock time after the first captures. If the median frame is slower than
   // ~55 fps, step down once per window: 1) MSAA 4x -> 2x, 2) composer pixel ratio <= 1.5,
   // 3) bloom at half resolution (with the half-resolution bloom weights). Never steps back up.
-  const adaptive = (options.adaptive ?? P.adaptive) && !lite;
-  const quality = { level: 0, msaa: P.msaa, pixelRatioCap: null, bloomScale: P.bloomScale };
+  // ?lighting-adaptive=0 in the page URL turns it off (for profiling the fixed full profile)
+  let urlAdaptive = null;
+  try { urlAdaptive = new URLSearchParams(globalThis.location?.search || '').get('lighting-adaptive'); } catch { /* no location */ }
+  const adaptive = (options.adaptive ?? (urlAdaptive != null ? urlAdaptive !== '0' : P.adaptive)) && !lite;
+  const quality = { level: 0, msaa: P.msaa, pixelRatioCap: null, bloomScale: P.bloomScale, moonShadowEvery };
   const ft = new Float32Array(240);
   let ftN = 0, ftAll = 0, sinceStep = 0;
   function stepDown() {
@@ -266,8 +278,13 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
       bloom.setScale(0.5);
       quality.bloomScale = 0.5;
       bloomLook(true);
+    } else if (quality.level <= 4 && P.shadows && moonShadowEvery < 4) {
+      quality.level = 4;
+      moonShadowEvery = 4;
+      moonLight.shadow.autoUpdate = false;
+      quality.moonShadowEvery = 4;
     } else {
-      quality.level = 4; // nothing left to give here; main.js offers the lite market
+      quality.level = 5; // nothing left to give here; main.js offers the lite market
     }
     console.info('[lighting] adaptive quality', JSON.stringify(quality));
   }
@@ -296,7 +313,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     if (frame > 10 && wdt > 0) {
       ft[ftN++ % ft.length] = wdt * 1000;
       ftAll++;
-      if (adaptive && quality.level < 4 && ++sinceStep >= 150 && ftN >= 150 && frame > 200) {
+      if (adaptive && quality.level < 5 && ++sinceStep >= 150 && ftN >= 150 && frame > 200) {
         const s = stats();
         if (s.p50 > 18.2) { stepDown(); ftN = 0; }
         sinceStep = 0;
@@ -327,6 +344,8 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     snow.uniforms.uFall.value = N.snow.fall;
     if (k > 0 && frame % 30 === 1) feedSnowLights();
     snow.update({ t, windOffset, fog: scene.fog, opacity: k });
+
+    if (P.shadows && moonShadowEvery > 1 && frame % moonShadowEvery === 0) moonLight.shadow.needsUpdate = true;
 
     // local glows nearest the camera into the shared uniform (the camera moves slowly)
     if (frame % 15 === 1) shading.update(camera.getWorldPosition(_cam));
@@ -380,12 +399,13 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     grade.dispose();
     composer.dispose?.();
     target.dispose();
+    if (globalThis.__lighting === api) delete globalThis.__lighting;
     fogPatch.restore();
     scene.fog = null;
     disposers.forEach((f) => f());
   }
 
-  return {
+  const api = {
     composer,
     update,
     setSnow,
@@ -415,6 +435,8 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     get snow() { return snowTarget === 1; },
     get snowAmount() { return snowMix; },
   };
+  globalThis.__lighting = api; // a debug handle for profiling and the console (perf.mjs reads stats())
+  return api;
 }
 
 export default createLighting;

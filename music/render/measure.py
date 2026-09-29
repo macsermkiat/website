@@ -253,7 +253,7 @@ def main():
         "sax_phrase_dynamics": phrase_dynamics(stems["sax"][:n], ev["phrases"]),
         "piano_voicings": {"count": len(ev["voicings"]),
                            "below_low_interval_limits": len(ballad.voicing_problems(ev["voicings"])),
-                           "voices": {str(k): sum(len(v) == k for _, _, v in ev["voicings"]) for k in (2, 3, 4)}},
+                           "voices": {str(k): sum(len(v) == k for _, _, v, *_ in ev["voicings"]) for k in (2, 3, 4)}},
         "duration_s": round(n / SR, 3),
         "sax_centroid": {k: round(v, 1) for k, v in centroid_report(stems["sax"]).items()},
         "mix_centroid": {k: round(v, 1) for k, v in centroid_report(mix).items()},
@@ -263,6 +263,42 @@ def main():
         "stem_lufs": {k: round(float(meter.integrated_loudness(stems[k][:n].astype(np.float64))), 2) for k in stems},
         "loop_seam": {k: round(v, 4) for k, v in seam_report(mix, ls, le).items()},
     }
+    # ---- pass 3 checks (checks.py): breathing, melody on top, air, intonation, alternate chorus ----
+    import checks
+    rep["tenor_runs_score"] = checks.runs_summary(checks.tenor_runs_score(ev["tenor"]))
+    rep["tenor_runs_audio"] = checks.runs_summary(checks.tenor_runs_audio(stems["sax"][:n]))
+    t_head0, t_head1 = ballad.beat_time(0), ballad.beat_time(ballad.bar_beat(33))
+    rep["melody_audibility_head"] = checks.melody_audibility(stems["sax"][:n], stems["piano"][:n], ev["tenor"], t_head0, t_head1)
+    a, t = checks.piano_top_vs_tenor([x for x in ev["voicings"] if x[0] <= 32], ev["tenor"])
+    a2, t2 = checks.piano_top_vs_tenor(ev["voicings"], ev["tenor"])
+    rep["piano_top_above_tenor"] = {"head": f"{a} of {t}", "whole_piece": f"{a2} of {t2}",
+                                    "max_top_voice_while_tenor_plays": int(max(max(v) for bar, sym, v, *_ in ev["voicings"]
+                                                                               if bar < 96 and not 65 <= bar <= 80))}
+    rep["sax_air"] = checks.air_band(stems["sax"][:n])
+    rep["tenor_sample_intonation"] = checks.intonation(man.get("tenorBank", "musyngkite"))
+    alts = []
+    for alt in man.get("alternates", []):
+        a0, a1 = int(round(alt["start"] * SR)), int(round(alt["end"] * SR))
+        seg = {k: sf.read(str(SITE_AUDIO / fn), always_2d=True, dtype="float32")[0] for k, fn in alt["stems"].items()}
+        L = min(len(v) for v in seg.values())
+        mix_b = mix[a0:a0 + L].copy()
+        for k, v in seg.items():
+            mix_b += v[:L] - stems[k][a0:a0 + L]
+        # skip the first 0.1 s: an MP3 without a gapless header starts with the decoder's priming
+        e0, e1 = int(0.1 * SR), int(0.5 * SR)
+        diff = {k: round(float(20 * np.log10(np.sqrt(np.mean((v[e0:e1] - stems[k][a0 + e0:a0 + e1]) ** 2)) /
+                                              (np.sqrt(np.mean(stems[k][a0 + e0:a0 + e1] ** 2)) + 1e-12) + 1e-12)), 1)
+                for k, v in seg.items()}
+        a_runs = checks.tenor_runs_audio(seg["sax"][:L])
+        alts.append({"name": alt["name"], "decoded_samples": {k: len(v) for k, v in seg.items()},
+                     "expected_samples": a1 - a0,
+                     "start_edge_residual_vs_main_db_0.1_to_0.5s": diff,
+                     "mix_peak_dbfs": round(float(20 * np.log10(np.abs(mix_b).max())), 2),
+                     "mix_lufs_segment": round(float(meter.integrated_loudness(mix_b.astype(np.float64))), 2),
+                     "main_mix_lufs_same_segment": round(float(meter.integrated_loudness(mix[a0:a0 + L].astype(np.float64))), 2),
+                     "sax_centroid_hz": round(centroid_report(seg["sax"][:L])["active_frames_mean_hz"], 1),
+                     "tenor_runs_audio": checks.runs_summary([(x + alt["start"], y + alt["start"]) for x, y in a_runs])})
+    rep["alternates"] = alts
     mf = SITE_AUDIO / man["mix"] if man.get("mix") else None
     if mf and mf.exists():
         y, _ = sf.read(str(mf), always_2d=True, dtype="float32")

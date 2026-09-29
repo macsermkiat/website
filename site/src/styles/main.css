@@ -45,6 +45,9 @@ h1 span { color: var(--gold); }
 .places span { color: var(--muted); font-size: 14px; }
 .places kbd { font: inherit; font-size: 12px; color: var(--muted); float: right; }
 footer { color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+footer .credits { flex-basis: 100%; margin: 4px 0 0; font-size: 13px; line-height: 1.45; max-width: 110ch; }
+footer .credits:empty { display: none; }
+footer .credits a { color: inherit; text-decoration-color: var(--line); }
 
 .panel { position: absolute; top: 12px; right: 12px; bottom: 12px; width: min(430px, calc(100% - 24px)); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px 22px 28px; overflow: auto; box-shadow: 0 24px 70px rgba(0, 0, 0, .55); z-index: 10; display: grid; align-content: start; gap: 14px; }
 .panel .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
@@ -69,10 +72,16 @@ mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-rad
 @media (max-width: 640px) {
   body { padding-block: 14px 40px; }
   .stage { height: 64vh; min-height: 360px; }
-  .panel { position: fixed; top: auto; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: auto; height: min(62vh, 600px); }
+  /* a bottom sheet over the lower part of the market, at most ~58% of the screen, so the stall stays in view above it */
+  .panel { position: fixed; top: auto; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: auto; height: auto; max-height: min(58vh, 560px); max-height: min(58svh, 560px); padding: 16px 16px 20px; gap: 12px; }
+  .panel h2 { font-size: 26px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 /* Gaps the writer left for Mac to fill in ("[[Mac: ...]]"). */
 .formac { display: inline; color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; padding: 1px 6px; font-size: .88em; font-style: italic; }
+/* ?perf: the frame-time meter */
+.perf { position: absolute; left: 12px; top: 12px; z-index: 5; display: grid; gap: 6px; justify-items: start; background: rgba(8, 11, 22, .78); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.perf pre { margin: 0; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
+.perf .btn { min-height: 28px; padding: 3px 10px; font-size: 12px; }

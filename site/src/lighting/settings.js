@@ -67,10 +67,11 @@ export const NIGHT = {
   lightSize: { minRoughness: 0.32, minClearcoatRoughness: 0.3 },
 
   // local glows (shading.js): the bulb strings light what hangs near them (garland, lambrequin)
-  glow: { bulbs: { intensity: 0.6, reach: 1.1 } },
+  glow: { bulbs: { intensity: 0.6, reach: 1.1, maxLength: 5, maxHeight: 1.0 } },
 
   // faint cool rim on edges that face the moon (figures and posts in front of the stalls)
-  rim: { color: 0x9fb4ff, strength: 0.55, power: 2.5 },
+  // (radiance at the very edge, not multiplied by albedo: the crowd's coats are albedo 0.01-0.07)
+  rim: { color: 0x9fb4ff, strength: 0.09, power: 1.6 },
 
   // Emissives the lighting owns: bulbs_ (bulb_warm / bulb_cold) and window_warm.
   emissive: {
@@ -83,11 +84,11 @@ export const NIGHT = {
   warm: {
     kelvin: 2900, // used only when color is not given
     color: [1.0, 0.6, 0.3], // linear: the Cycles previews' light colour (nmlib/render.py)
-    frontColor: [1.0, 0.63, 0.35], // a little paler than the interior, so the cobbles in front read cream, not pink
+    frontColor: [1.0, 0.7, 0.36], // a little paler than the interior, so the cobbles in front read cream, not pink
     interiorShadow: 0.95, // near-opaque: no light through the walls
     bounce: { intensity: 9, reach: 2.4 }, // unshadowed glow standing in for wall bounce (shadowed stalls)
     // interior lights with no shadow: dropped below the eaves, shorter and a little dimmer
-    unshadowed: { distance: 3.0, scale: 0.8, drop: 0.45 },
+    unshadowed: { distance: 3.0, scale: 0.7, drop: 0.3 },
     // point: inside a stall; a short reach keeps unshadowed ones from leaking far through the walls
     // front: a point under the front eave (the front fill: garland, counter front, sign, cobbles)
     // spot: stage lights high on a landmark, or any light_ empty with userData.type = 'spot'
@@ -120,6 +121,9 @@ export const PROFILES = {
     shadows: true,
     shadowMapSize: 2048,
     shadowRadius: 4,
+    // the moon's shadow map is redrawn every Nth frame: the stalls and town are still, and people
+    // walking at 30 Hz shadows read the same; it halves the shadow pass's draw calls
+    moonShadowEvery: 2,
     msaa: 4,
     bloomScale: 1,
     envSize: 256,

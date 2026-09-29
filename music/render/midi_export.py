@@ -14,6 +14,12 @@ def nn(m):
     return f"{NAMES[m % 12]}{m // 12 - 1}"
 
 
+def key_signature(key):
+    """ballad.KEY ("G minor") -> the MIDI key-signature name mido expects ("Gm")."""
+    tonic, mode = key.split()
+    return tonic + ("m" if mode == "minor" else "")
+
+
 def _tick(beat):
     return int(round(beat * TPB))
 
@@ -42,7 +48,7 @@ def write(ev, path):
     tr = mido.MidiTrack()
     tr.append(mido.MetaMessage("track_name", name=ballad.TITLE, time=0))
     tr.append(mido.MetaMessage("time_signature", numerator=3, denominator=4, time=0))
-    tr.append(mido.MetaMessage("key_signature", key="Cm", time=0))
+    tr.append(mido.MetaMessage("key_signature", key=key_signature(ballad.KEY), time=0))
     metas = [(0, mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(ballad.TEMPO)))]
     B = ballad.RIT_B0
     while B < ballad.bar_beat(97):
@@ -67,6 +73,10 @@ def write(ev, path):
         now = t
     mf.tracks.append(tr)
     mf.tracks.append(_track("Tenor sax", 66, 0, [(n.beat, n.beats, n.midi, n.vel) for n in ev["tenor"]]))
+    solo_b = [n for n in ev.get("tenor_b", []) if ballad.bar_beat(33) <= n.beat < ballad.bar_beat(65)]
+    if solo_b:
+        mf.tracks.append(_track("Tenor sax (alternate chorus, bars 33-64)", 66, 3,
+                                [(n.beat, n.beats, n.midi, n.vel) for n in solo_b]))
     mf.tracks.append(_track("Piano", 0, 1, [(n.beat, n.beats, n.midi, n.vel) for n in ev["piano"]]))
     mf.tracks.append(_track("Double bass", 32, 2, [(n.beat, n.beats, n.midi, n.vel) for n in ev["bass"]]))
     # drums (GS brush kit numbering): 38 brush tap, 40 brush swirl, 36 kick, 44 pedal hat, 51 ride
@@ -118,13 +128,15 @@ def write_leadsheet(ev, path):
               "## Head melody (tenor, concert pitch)", "",
               "Written as `note:beats`, bars separated by `|`; `_` ties, `r` rests. C4 is middle C.", "", "```",
               ballad.HEAD.strip(), "```", "",
+              "Every rest of half a beat or more is a breath: the tenor's phrase ends there, and no run goes on longer than about 6 s without one.", "",
               "## Piano voicings (head, bars 1-32)", "",
-              "Rootless voicings (Bill Evans A/B forms: 3-5-7-9 or 7-9-3-5 and their altered cousins, or a three-note shell of one), chosen by the smallest total voice movement from the previous chord. Every voicing keeps the low interval limits (no minor 2nd below E3, no major 2nd below E-flat 3, no minor 3rd below C3), so nothing clusters in the bass register. Because the tenor's head now sits low (D3-E4), the comp sits just above the tune in the piano's middle register instead of under it, and a voice a semitone from the tune note is left out rather than moved down. The bass plays the roots.", "",
+              "Rootless voicings (Bill Evans A/B forms: 3-5-7-9 or 7-9-3-5 and their altered cousins, their drop-2 spreads, or a three-note shell of one), chosen by the smallest total voice movement from the previous chord. Every voicing keeps the low interval limits (no minor 2nd below E3, no major 2nd below E-flat 3, no minor 3rd below C3), so nothing clusters in the bass register. The comp is chosen clear of the tune note it is struck against and of the next tune note (a look-ahead), so a clash is re-voiced rather than thinned. While the tenor plays, the comp's top voice stays at or below B-flat 4; under a held tenor note the comp thins to a three-note shell and steps back; under a tune note of C4 or higher it may go under the melody. Because the head sits low (D3-E4), most chords still reach above the tune: a comp entirely under a tune at G3 would sit in the muddy register below E3. The bass plays the roots.", "",
               "| Bar | Chord | Voicing (low to high) |", "|---|---|---|"]
-    for bar, sym, v in ev["voicings"]:
+    for bar, sym, v, *_ in ev["voicings"]:
         if bar <= 32:
             lines.append(f"| {bar} | {sym} | {' '.join(nn(m) for m in v)} |")
     lines += ["", "## Tenor chorus (bars 33-64, written-out improvisation)", "", "```", ballad.TENOR_CHORUS.strip(), "```", "",
+              "## Alternate tenor chorus (bars 33-64, played on every second pass of the site's loop)", "", "```", ballad.TENOR_CHORUS_B.strip(), "```", "",
               "## Piano half-chorus (bars 65-80, right hand)", "", "```", ballad.PIANO_SOLO.strip(), "```", "",
               "## Out head (from beat 3 of bar 80)", "", "```", ballad.OUT_HEAD.strip(), "```", ""]
     path.write_text("\n".join(lines))

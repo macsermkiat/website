@@ -4,6 +4,7 @@
   "bpm": 66.0,
   "timeSignature": "3/4",
   "key": "G minor",
+  "tenorBank": "musyngkite",
   "sampleRate": 44100,
   "duration": 269.221791,
   "loopStart": 44.845465,
@@ -17,7 +18,7 @@
   },
   "mix": "ballad-mix.mp3",
   "events": "ballad-events.json",
-  "form": "32-bar AABA in 3/4: head (1-32), tenor chorus (33-64), piano half-chorus (65-80), out head from the bridge (81-96) with ritardando and a rubato fermata; the loop is bars 17-80",
+  "form": "32-bar AABA in 3/4: head (1-32), tenor chorus (33-64), piano half-chorus (65-80), out head from the bridge (81-96) with ritardando and a rubato fermata; the loop is bars 17-80, with a second written tenor chorus for alternate passes (alternates)",
   "sections": [
     {
       "name": "head",
@@ -56,6 +57,24 @@
     "musicEnds": 266.322,
     "howTo": "To finish the tune instead of looping, let playback run on past loopEnd to the end of the file: the out head (bars 81-96) follows seamlessly and ends on a fermata."
   },
+  "alternates": [
+    {
+      "name": "tenor chorus B",
+      "bars": [
+        33,
+        64
+      ],
+      "when": "every second pass through the loop (pass 1 plays the main stems, pass 2 this, and so on)",
+      "start": 87.981814,
+      "end": 181.209093,
+      "stems": {
+        "sax": "ballad-sax-b.mp3",
+        "room": "ballad-room-b.mp3"
+      },
+      "howTo": "The files hold the stems' audio from start to end on the same timeline (sample 0 = start). On an alternate pass, play them in place of the sax and room stems between start and end. The first and last 0.5 s are identical to the main stems, so any crossfade inside those windows is seamless; the other three stems do not change.",
+      "maxDifferenceFromMainStemsAtEdges": 0.0
+    }
+  ],
   "decodedDuration": 269.270204,
   "stemsEnd": null,
   "durationNote": "duration is the rendered length; an MP3 decoder (Chromium, libmpg123) returns decodedDuration, which is longer by the encoder's final-frame padding (silence).",

@@ -215,6 +215,40 @@ export function buildInventory() {
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
+// Licence names in a credit line become links to the licence deeds (CC BY and CC BY-SA ask for a link).
+const LICENCES = [
+  [/CC BY-SA 3\.0/g, 'https://creativecommons.org/licenses/by-sa/3.0/'],
+  [/CC BY 3\.0/g, 'https://creativecommons.org/licenses/by/3.0/'],
+  [/CC0(?: 1\.0)?/g, 'https://creativecommons.org/publicdomain/zero/1.0/'],
+];
+const CREDITS_URL = 'https://github.com/macsermkiat/website/blob/main/CREDITS.md';
+function linkLicences(text) {
+  let out = esc(text);
+  const marks = [];
+  for (const [re, url] of LICENCES) out = out.replace(re, (m) => { marks.push(`<a href="${url}" rel="license">${m}</a>`); return `\u0000${marks.length - 1}\u0000`; });
+  return out.replace(/\u0000(\d+)\u0000/g, (_, i) => marks[+i]);
+}
+
+/**
+ * The music credit shown in the footer of both pages, drawn from the music writer's manifest.license.credit
+ * (the recording holds CC BY and CC BY-SA samples, which must be credited where the music plays).
+ * The generative fallback band's samples (FluidR3 GM, CC BY 3.0) are credited as well, since it can play instead.
+ */
+export function audioCredit(inv = buildInventory()) {
+  const m = inv.audio;
+  const lines = [];
+  const lic = m?.license || m?.licence || {};
+  const credit = lic.credit || lic.recording?.credit || (typeof lic.recording === 'string' ? lic.recording : '');
+  if (credit) {
+    const title = m.title ? `Music: “${esc(m.title)}”, an original ballad for this site. ` : 'Music: ';
+    lines.push(`${title}${linkLicences(credit)}`);
+  }
+  if (inv.samples) lines.push(`If the recording cannot play, a stand-in band uses the ${linkLicences('FluidR3 GM soundfont by Frank Wen (CC BY 3.0)')} and Tone.js drum samples (MIT).`);
+  if (!lines.length) return '';
+  lines.push(`<a href="${CREDITS_URL}">All credits</a>.`);
+  return lines.join(' ');
+}
+
 export function plainHtml(content) {
   const { sections, order } = content;
   const nav = order
@@ -283,13 +317,13 @@ export default function marketPlugin() {
           const site = content.sections.site;
           const tagline = site?.meta?.tagline ? `<p>${esc(site.meta.tagline)}</p>` : site && !site.fromWriter ? site.html : '';
           const hint = site?.meta?.ui?.hint;
-          let out = html.replace('<!--TAGLINE-->', tagline);
+          let out = html.replace('<!--TAGLINE-->', tagline).replace('<!--AUDIO_CREDIT-->', audioCredit());
           if (site?.meta?.description) out = out.replace(/(<meta name="description" content=")[^"]*"/, `$1${esc(site.meta.description)}"`);
           if (hint) out = out.replace(/(<p class="hint" id="hint">)[\s\S]*?(<\/p>)/, `$1${esc(hint)} Keyboard: Tab reaches the places below, or press 1–7.$2`);
           return out;
         }
         const { nav, body, intro } = plainHtml(content);
-        return html.replace('<!--PLAIN_NAV-->', nav).replace('<!--PLAIN_BODY-->', body).replace('<!--PLAIN_INTRO-->', intro);
+        return html.replace('<!--PLAIN_NAV-->', nav).replace('<!--PLAIN_BODY-->', body).replace('<!--PLAIN_INTRO-->', intro).replace('<!--AUDIO_CREDIT-->', audioCredit());
       },
     },
     configureServer(server) {

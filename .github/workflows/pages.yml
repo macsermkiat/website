@@ -32,8 +32,15 @@ jobs:
           cache: npm
           cache-dependency-path: site/package-lock.json
       - run: npm ci
+      # The Pages base path ("/website" for this repository; "" with a custom domain) becomes Vite's base
+      - id: pages
+        uses: actions/configure-pages@v5
+      # Release gate: set the repository variable STRICT_CONTENT to 1 (Settings > Secrets and variables >
+      # Actions > Variables) and the build fails while any [[Mac: ...]] placeholder is left in content/*.md.
       - run: npm run build
-      - uses: actions/configure-pages@v5
+        env:
+          STRICT_CONTENT: ${{ vars.STRICT_CONTENT || '0' }}
+          PAGES_BASE: ${{ steps.pages.outputs.base_path }}/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist

@@ -12,7 +12,11 @@ Each note is built from three layers, all following the same performed pitch cur
      small puff on every attack, more of it when playing quietly.
 Articulation: slow, breathy attacks (130-220 ms from silence; 55 ms legato crossfades inside a
 phrase), vibrato that blooms late in long notes (4.7-5.3 Hz, 13-20 cents), scoops into phrase
-starts and leaps, occasional falls, audible breath intakes before phrases.
+starts and leaps, occasional falls, audible breath intakes before every phrase that follows a
+silence of INHALE_GAP (0.35 s) or more; a phrase's last note releases in at most half the rest that
+follows it, so short rests are heard as breaths.
+Air (round 1, pass 3): a second, low breath path at 2.4-7 kHz bypasses the dark EQ and the final
+5.2 kHz low-pass, so the subtone reads as breathy rather than muffled (AIR sets its level).
 Dynamics (round 1, pass 2): each phrase is shaped in breath groups of 2.5-4.5 s. A group's
 pressure rises from about -5.5 to -8 dB to its most important note and relaxes after it, the
 last group of a phrase falls to about -10 to -13 dB, long notes swell by 2.5-4 dB inside that,
@@ -33,8 +37,10 @@ import soundfile as sf
 from lib import SR, SAMPLES, CACHE, sos, filt, eq_chain, smoothstep
 
 NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]
-BREATH = 1.2      # breath layer level
+BREATH = 1.2      # breath layer level (650-2600 Hz, inside the dark channel EQ)
 CORE = 0.9        # subtone body level (relative to the sample)
+AIR = 1.0         # the air path: breath noise at 2.4-7 kHz that bypasses the final low-pass (0 = off)
+INHALE_GAP = 0.35 # an audible breath intake before any phrase that follows at least this much silence (s)
 
 
 def _name(m):
@@ -86,12 +92,19 @@ def pitch_track(d, midi, hop=441, n=4096):
 
 def flatten_pitch(d, midi):
     """Take out the vibrato and drift baked into a sample (MusyngKite has a 3.5-4.5 Hz vibrato of
-    4-8 cents), so that the only vibrato is the one the renderer plays. The level and colour
-    changes of the recording stay."""
+    4-8 cents), so that the only vibrato is the one the renderer plays, and tune the sustained part
+    to the nominal pitch. The level and colour changes of the recording stay."""
     t, c = pitch_track(d, midi)
     ok = t > 0.12 * SR
-    c = c - np.median(c[ok])
-    c = np.where(ok, c, c[ok][0])
+    # Tune as well as flatten (round 1, pass 3): up to pass 2 the curve was centred on its own
+    # median, which took out the vibrato but kept each sample's tuning, and the MusyngKite samples
+    # sit a median 5 cents sharp (G3 +10). Now the pitch is pulled to the nominal pitch, with the
+    # sustained part (0.6 s to the end, the part _prepare() splices) as the reference: the
+    # deviations are measured from the sustained median, and that median is removed too.
+    sus = (t > 0.6 * SR) & (t < len(d) - 0.15 * SR)
+    ref = sus if sus.sum() > 5 else ok
+    c = (c - np.median(c[ref])) + np.median(c[ref])
+    c = np.where(ok, c, np.median(c[ref]))
     c = np.convolve(np.pad(c, 2, mode="edge"), np.ones(5) / 5, mode="valid")    # 50 ms smoothing
     cents = np.interp(np.arange(len(d)), t, c)
     pos = np.cumsum(2 ** (-cents / 1200.0))
@@ -103,7 +116,7 @@ def flatten_pitch(d, midi):
 class SaxBank:
     def __init__(self, bank=DEFAULT_BANK, lo=45, hi=72):
         self.bank = bank
-        cp = CACHE / f"{bank}_tenor_v3.npz"
+        cp = CACHE / f"{bank}_tenor_v5.npz"
         if cp.exists():
             z = np.load(cp)
             self.s = {int(k): z[k] for k in z.files}
@@ -217,6 +230,9 @@ def render(notes, phrases, n_samples, seed=7, bank=DEFAULT_BANK):
     lp_air = sos("lp", 900.0)
     bp_click = sos("bp", (1500.0, 4000.0))
     bp_inhale = sos("bp", (320.0, 1500.0))
+    hp_air = sos("hp", 2400.0, order=2)
+    lp_air_top = np.concatenate([sos("lp", 7000.0, order=8), sos("lp", 4500.0, order=1)])  # steep above 7 kHz, a gentle tilt below
+    air_out = np.zeros(n_samples, np.float32)
 
     order = sorted(notes, key=lambda n: n.t)
     prev_end_t = -10.0
@@ -229,6 +245,9 @@ def render(notes, phrases, n_samples, seed=7, bank=DEFAULT_BANK):
         f0 = 440.0 * 2 ** ((n.midi - 69) / 12)
         att = 0.055 if legato_in else rng.uniform(0.13, 0.20) * (1.15 if n.beats >= 2 else 1.0)
         rel = 0.055 if legato_out else (1.6 if final else rng.uniform(0.20, 0.30))
+        if not legato_out and not final:
+            # a short rest is a breath: the note has to be gone well before the next phrase
+            rel = min(rel, max(0.09, 0.5 * n.tags.get("rest_after", 9.0)))
         dur = n.dur
         N = int((dur + rel) * SR)
         t = np.arange(N, dtype=np.float64) / SR
@@ -322,6 +341,11 @@ def render(notes, phrases, n_samples, seed=7, bank=DEFAULT_BANK):
         # breath fades less than the tone when the pressure drops, so soft tails turn airy
         b_env = (env * dyn ** -0.45 * base + puff * np.clip(1 - rel_t / rel, 0, 1)).astype(np.float32)
         voice += breath * sync * b_env * 0.1 * BREATH
+        # the air: the same breath, but the part above the dark EQ (2.4-7.5 kHz), low and pulsed by the
+        # pitch like the rest of the breath. It bypasses the channel low-pass, so the subtone reads as
+        # breathy rather than muffled
+        air = filt(lp_air_top, filt(hp_air, rng.standard_normal(N).astype(np.float32)))
+        a_env = (env * dyn ** -0.3 * (0.6 + 0.8 * (1 - n.vel)) + 1.6 * puff * np.clip(1 - rel_t / rel, 0, 1)).astype(np.float32)
 
         # key click on legato note changes (tiny)
         if legato_in:
@@ -333,11 +357,14 @@ def render(notes, phrases, n_samples, seed=7, bank=DEFAULT_BANK):
         e = min(n_samples, s0 + N)
         if s0 < n_samples:
             out[s0:e] += seg[:e - s0]
+            air_out[s0:e] += (air * sync * a_env * gain * 0.0088 * AIR)[:e - s0]
 
         # ---- breath intake before a phrase that follows a rest ----
-        if not legato_in and n.t - prev_end_t > 1.0:
-            L = rng.uniform(0.26, 0.36)
-            M = int(L * SR)
+        gap = n.t - prev_end_t
+        if not legato_in and gap > INHALE_GAP:
+            # the intake fits in the gap: it starts after the last note has gone, ends 70 ms before
+            L = min(rng.uniform(0.26, 0.36), gap - 0.10)
+            M = max(int(L * SR), 16)
             tt = np.arange(M) / SR
             e_in = np.sin(np.pi * 0.5 * np.clip(tt / (0.8 * L), 0, 1)) ** 2 * np.clip((L - tt) / (0.2 * L), 0, 1)
             inh = filt(bp_inhale, rng.standard_normal(M).astype(np.float32)) * e_in.astype(np.float32)
@@ -356,4 +383,4 @@ def render(notes, phrases, n_samples, seed=7, bank=DEFAULT_BANK):
                          ("peak", 1300.0, -4.0, 1.0),
                          ("highshelf", 2700.0, tc["shelf_db"], 0.7)])
     out = filt(sos("lp", 5200.0), out)
-    return out
+    return out + air_out

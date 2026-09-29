@@ -43,6 +43,10 @@ export function createPanel({ actionsFor, onOpen, onClose, playButtonLabel }) {
         b.className = a.play ? 'btn primary' : 'btn';
         b.dataset.action = a.key;
         if (a.play) { b.dataset.play = ''; b.textContent = playButtonLabel(); } else b.textContent = a.label;
+        if (a.spot && A.spotOnly?.()) {
+          b.textContent = `Spotlight: ${a.label}`;
+          b.title = 'The lite market plays the band as one mix, so this moves the spotlight only.';
+        }
         b.addEventListener('click', a.fn);
         box.appendChild(b);
       }

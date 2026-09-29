@@ -10,7 +10,9 @@ export function createPicking({ dom, camera, market, overlay, outline, labelFor,
   overlay.appendChild(tip);
 
   // coarse boxes first, so a pointer move only tests triangles of the place under it
-  const boxes = market.hotRoots.map((h) => ({ h, box: new THREE.Box3().setFromObject(h).expandByScalar(0.2) }));
+  let boxes = [];
+  const refresh = () => { boxes = market.hotRoots.map((h) => ({ h, box: new THREE.Box3().setFromObject(h).expandByScalar(0.2) })); };
+  refresh();
   const books = market.places.books ? Object.entries(market.places.books.nodes.acts).filter(([k]) => k.startsWith('act_book_')).map(([, o]) => o) : [];
   let hover = null, downAt = null, pending = null, enabled = true;
 
@@ -81,8 +83,12 @@ export function createPicking({ dom, camera, market, overlay, outline, labelFor,
 
   return {
     get hover() { return hover; },
+    /** Places added after the market opened (the lite market's deferred rides and stalls). */
+    refresh,
+    /** The act_book_ node a click at client (x, y) would pull, or null (tests use it to aim at a spine). */
+    bookAt: (x, y) => pickBook({ clientX: x, clientY: y })?.name || null,
     setEnabled(v) { enabled = v; if (!v) show(null); },
     /** Highlight a place without a pointer, for keyboard focus on the place buttons. */
-    highlight(id) { if (outline) outline.selectedObjects = id ? [market.places[id].holder] : []; },
+    highlight(id) { if (outline) outline.selectedObjects = id && market.places[id] ? [market.places[id].holder] : []; },
   };
 }

@@ -1,5 +1,6 @@
-"""Piano comp register, round 1 first pass against now: every voicing as dots at its pitches, with
-the tenor line, so the low clusters of the first pass (and their absence now) are visible.
+"""Piano comp register, an earlier pass against now: every voicing as dots at its pitches, with
+the tenor line, the E3 line (below which 2nds are muddy) and the B-flat 4 cap on the comp's top
+voice while the tenor plays.
 
     python3 music/render/voicing_figure.py [old_ballad.py]
 
@@ -37,12 +38,12 @@ def muddy(v):
 def panel(ax, mod, title):
     ev = mod.events()
     x0 = 0
-    for bar, sym, v in ev["voicings"]:
+    for bar, sym, v, *_ in ev["voicings"]:
         pass
     # x = bar + position of the chord inside the bar
     seen = {}
     bad = 0
-    for bar, sym, v in ev["voicings"]:
+    for bar, sym, v, *_ in ev["voicings"]:
         if bar > 32:
             continue
         k = seen.get(bar, 0)
@@ -63,7 +64,13 @@ def panel(ax, mod, title):
     ax.set_xlim(0.5, 33.3)
     ax.set_yticks(range(40, 81, 5))
     ax.set_yticklabels([f"{NAMES[m % 12]}{m // 12 - 1}" for m in range(40, 81, 5)])
-    ax.set_title(f"{title}: {bad} voicings with a 2nd below E3", loc="left", fontsize=11, color="#1f1f1d")
+    ax.axhline(70, color="#6b6b66", lw=0.8, ls=(0, (1, 2)))
+    ax.text(33.2, 70.4, "Bb4", fontsize=8, color="#4a4a46", va="bottom", ha="right")
+    head = [v for bar, sym, v, *_ in ev["voicings"] if bar <= 32]
+    two = sum(len(v) == 2 for bar, sym, v, *_ in ev["voicings"])
+    over = sum(max(v) > 70 for v in head)
+    ax.set_title(f"{title}: {bad} with a 2nd below E3, {over} of {len(head)} tops above Bb4, "
+                 f"{two} two-note shells in the whole piece", loc="left", fontsize=10.5, color="#1f1f1d")
     for s in ax.spines.values():
         s.set_color("#c9c8c2")
     ax.tick_params(colors="#4a4a46", labelsize=8)
@@ -75,8 +82,8 @@ def main():
     fig, axes = plt.subplots(rows, 1, figsize=(12.8, 3.4 * rows + 0.6), dpi=100, sharex=True)
     axes = axes if rows > 1 else [axes]
     if old:
-        panel(axes[0], load(old, "ballad_first_pass"), "First pass (C minor): piano comp (blue, red = muddy) and tenor (orange), head bars 1-32")
-    panel(axes[-1], ballad, "Now (G minor): comp above the low tenor, low interval limits kept")
+        panel(axes[0], load(old, "ballad_earlier"), "Pass 2: comp (blue, red = muddy), tenor (orange), head")
+    panel(axes[-1], ballad, "Pass 3: capped, look-ahead, shells under held notes")
     axes[-1].set_xlabel("bar", color="#4a4a46")
     fig.tight_layout()
     fig.savefig(REVIEW / "piano_voicings.jpg", pil_kwargs={"quality": 88})

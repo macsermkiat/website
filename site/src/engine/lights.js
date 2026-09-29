@@ -26,8 +26,8 @@ function pool() {
  * spots: [{ obj, kind, id }]. Returns { lights, pools, reserve } and adds them to the scene.
  * `reserved` lights are kept back for the bandstand spotlights.
  */
-export function placeLights(scene, spots, { lite, focus, reserved = 0 }) {
-  const cap = Math.max(0, (lite ? LIGHT_BUDGET.lite : LIGHT_BUDGET.full) - reserved);
+export function placeLights(scene, spots, { lite, focus, reserved = 0, budget }) {
+  const cap = Math.max(0, (budget ?? (lite ? LIGHT_BUDGET.lite : LIGHT_BUDGET.full)) - reserved);
   const tmp = new THREE.Vector3();
   const ranked = spots
     .map((s) => ({ ...s, pos: s.obj.getWorldPosition(new THREE.Vector3()) }))

@@ -40,8 +40,14 @@ function seatOffset(node, fallbackY, siblings = []) {
 }
 
 export function createRideActions({ market, rig, say, sfx, motion }) {
-  const ferris = market.places.ferris;
-  const carousel = market.places.carousel;
+  // the lite market loads the rides just after it opens: look them up when they are used
+  const place = (id) => market.places[id];
+  /** Run `start` once the ride is in the market (at once, or when a deferred ride arrives). */
+  function whenReady(id, start) {
+    if (place(id) || !market.whenPlace) return start();
+    say('One moment, the ride is still being set up…');
+    market.whenPlace(id).then(() => start());
+  }
   const lookAtMarket = new THREE.Vector3(0, 1.5, -2);
   const tmp = new THREE.Vector3();
   let riding = null;
@@ -56,6 +62,7 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
   }
 
   function startFerris() {
+    const ferris = place('ferris');
     const r = ferris?.rides;
     if (!r || !r.gondolas.length) return say('This Riesenrad has no gondolas to sit in yet.');
     if (riding) endRide(true);
@@ -71,6 +78,7 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
   }
 
   function startCarousel() {
+    const carousel = place('carousel');
     const r = carousel?.rides;
     if (!r || !r.horses.length) return say('This carousel has no horses to ride yet.');
     if (riding) endRide(true);
@@ -91,8 +99,8 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
   }
 
   return {
-    ferris: { hint: actionHint('ferris', 'Take a ride to the top for the view over the market.'), acts: [{ key: 'ride', label: 'Ride to the top', fn: startFerris }, { key: 'off', label: 'Get off', fn: () => endRide(false) }] },
-    carousel: { hint: actionHint('carousel', 'Climb on a horse and go round.'), acts: [{ key: 'ride', label: 'Ride a horse', fn: startCarousel }, { key: 'bell', label: 'Ring the bell', fn: () => sfx('chime') }, { key: 'off', label: 'Get off', fn: () => endRide(false) }] },
+    ferris: { hint: actionHint('ferris', 'Take a ride to the top for the view over the market.'), acts: [{ key: 'ride', label: 'Ride to the top', fn: () => whenReady('ferris', startFerris) }, { key: 'off', label: 'Get off', fn: () => endRide(false) }] },
+    carousel: { hint: actionHint('carousel', 'Climb on a horse and go round.'), acts: [{ key: 'ride', label: 'Ride a horse', fn: () => whenReady('carousel', startCarousel) }, { key: 'bell', label: 'Ring the bell', fn: () => sfx('chime') }, { key: 'off', label: 'Get off', fn: () => endRide(false) }] },
     endRide,
     get riding() { return riding; },
     /** While riding, rides keep turning even with reduced motion (the visitor asked for the motion). */

@@ -103,7 +103,8 @@ Everyone's round-1 output is in the market now:
   - lite detection (no shadows, 4 lights or fewer);
   - a phone with reduced motion;
   - plain.html.
-- After that run I changed only the carousel rider's view direction. The interaction phase was re-run afterwards; see the last line.
+- That run was made on the final build, after the last code change (the crowd cone test, the carousel rider's view and the organizer's musicians). All the screenshots in this folder come from it.
+- One earlier run failed once on the stems handover, under heavy CPU load from the other roles. Since then the test freezes rendering while it waits, and the handover has passed in every run.
 - `npm run dev` serves the same page, with the content and inventory as virtual modules.
 
 Screenshots in this folder:

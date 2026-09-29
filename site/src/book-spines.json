@@ -1,0 +1,32 @@
+{
+ "about": "Which act_book_ spine shows which named title (written by tools/book-spines.mjs from the vendor glbs and atlas regions).",
+ "titles": {
+  "order_of_time": "THE ORDER OF TIME",
+  "geb": "GÖDEL, ESCHER, BACH",
+  "feynman_1": "THE FEYNMAN LECTURES ON PHYSICS",
+  "feynman_2": "THE FEYNMAN LECTURES ON PHYSICS",
+  "feynman_3": "THE FEYNMAN LECTURES ON PHYSICS",
+  "being_you": "BEING YOU",
+  "book_of_why": "THE BOOK OF WHY"
+ },
+ "sets": {
+  "prop_books_shelf_1": {
+   "act_book_22": "order_of_time",
+   "act_book_23": "geb",
+   "act_book_24": "feynman_1",
+   "act_book_25": "feynman_2",
+   "act_book_26": "feynman_3",
+   "act_book_27": "being_you",
+   "act_book_28": "book_of_why"
+  },
+  "prop_books_shelf_1.lite": {
+   "act_book_23": "order_of_time",
+   "act_book_24": "geb",
+   "act_book_25": "feynman_1",
+   "act_book_26": "feynman_2",
+   "act_book_27": "feynman_3",
+   "act_book_28": "being_you",
+   "act_book_29": "book_of_why"
+  }
+ }
+}

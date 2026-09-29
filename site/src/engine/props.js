@@ -35,14 +35,17 @@ function normalise(json) {
 }
 
 /** placed: [{ entry, root, nodes }]. Loads and parents props; never throws. */
-export async function placeProps(placed, { lite, manager, warn }) {
+export async function placeProps(placed, { lite, manager, warn, elsewhere = [] }) {
   const json = inventory.props;
   if (!json) return 0;
   const items = normalise(json);
   const cache = new Map();
   let n = 0;
   await Promise.all(items.map(async (it) => {
-    const target = placed.find((p) => p.entry.id.toLowerCase() === it.owner.toLowerCase() || (p.entry.place && p.entry.place === placeFor(it.owner)) || (p.file && p.file.toLowerCase().includes(it.owner.toLowerCase())));
+    const owns = (e, file) => e.id.toLowerCase() === it.owner.toLowerCase() || (e.place && e.place === placeFor(it.owner)) || (file && file.toLowerCase().includes(it.owner.toLowerCase()));
+    const target = placed.find((p) => owns(p.entry, p.file));
+    // a set for a stall loaded in the other batch (the lite market loads the deco stalls after its first frame)
+    if (!target && elsewhere.some((e) => owns(e, e.lite) || owns(e, e.model))) return;
     if (!target) return warn(`props.json: no stall called "${it.owner}".`);
     const slot = target.nodes.slots[it.slot];
     if (!slot) return warn(`props.json: ${it.owner} has no ${it.slot}.`);
@@ -56,6 +59,7 @@ export async function placeProps(placed, { lite, manager, warn }) {
       obj.rotation.y += it.rotation;
       obj.scale.multiplyScalar(it.scale);
       obj.name = obj.name || `prop_${file}`;
+      obj.userData.propFile = file; // e.g. the bookshop's spine titles are keyed by file (tools/book-spines.mjs)
       slot.add(obj);
       n++;
     } catch (e) {

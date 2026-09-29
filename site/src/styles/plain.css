@@ -25,6 +25,9 @@ li { margin: 4px 0; }
 .note { font-size: 15px; color: var(--muted); }
 mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-radius: 4px; padding: 0 4px; font-size: .8em; }
 footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 12px; color: var(--muted); font-size: 15px; }
+footer .credits { font-size: 14px; }
+footer .credits:empty { display: none; }
+footer .credits a { color: inherit; }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) { --bg: #fbf7ef; --surface: #f1eadc; --ink: #1d1824; --muted: #5d566a; --line: #dcd2c0; --gold: #8a5a0e; --gold-ink: #fff; color-scheme: light; }
 }

@@ -1,10 +1,11 @@
 // End-to-end smoke test: the built site served by `vite preview`, driven by Playwright on software GL.
 // 1. full market at 1280 px: home view, a stall panel, snow (screenshots)
 // 2. every panel action, both rides, snow, reset, keyboard and a click in 3D (small viewport, for speed)
-// 3. lite market auto-detected on a weak GPU; a phone with reduced motion
-// 4. plain.html
+// 3. lite market auto-detected on a weak GPU (first-paint download, deferred models); a phone with reduced motion
+// 4. plain.html and the music credit on both pages
+// 5. every model missing (and layout.json ignored): stand-ins, no errors
 // Fails on any console error, failed request or HTTP error.
-// Usage: npm run build && node tests/smoke.mjs [--out ../review/round-1/engineer] [--port 4317] [--only shots,interact,audio,lite,phone,plain]
+// Usage: npm run build && node tests/smoke.mjs [--out ../review/round-1/engineer] [--port 4317] [--only shots,interact,audio,lite,phone,plain,missing]
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -67,10 +68,10 @@ async function frames(page, n) {
 const note = (page) => page.textContent('#actNote');
 const waitNote = (page, re) => page.waitForFunction((src) => new RegExp(src).test(document.getElementById('actNote')?.textContent || ''), re.source, { timeout: LONG }).then(() => true, () => false);
 const state = (page, k) => page.evaluate((k) => window.__market[k], k);
-const shot = async (page, name, sel) => {
+const shot = async (page, name, sel, { keepScroll = false } = {}) => {
   const file = path.join(OUT, name);
   // hold the last rendered frame so the capture does not wait behind a slow software-GL frame
-  if (!sel) await page.evaluate(() => window.scrollTo(0, 0)); // clicking the place buttons scrolls the page
+  if (!sel && !keepScroll) await page.evaluate(() => window.scrollTo(0, 0)); // clicking the place buttons scrolls the page
   const frozen = await page.evaluate(() => { if (!window.__market?.freeze) return false; window.__market.freeze(true); return true; });
   // a frozen page still waits for the frames already queued on the GPU; on SwiftShader those can take minutes
   const SHOT = 900000;
@@ -89,13 +90,26 @@ try {
     console.log(JSON.stringify(report).slice(0, 3000));
     console.log('full scene', JSON.stringify(report.scene));
     check('full market chosen with ?quality=full', report.quality.lite === false);
-    await frames(page, 4);
+    // the distance LOD for the crowd loads after the first frame; hold the picture so it is not stuck behind frames
+    await page.evaluate(() => window.__market.freeze(true));
+    const settled = await page.evaluate(() => window.__market.settled());
+    await page.evaluate(() => window.__market.freeze(false));
+    await frames(page, 2);
+    const crowd = await page.evaluate(() => window.__market.crowd());
+    const sceneNow = await page.evaluate(() => window.__market.sceneStats());
+    console.log('full scene after LOD', JSON.stringify(sceneNow), JSON.stringify(crowd));
+    check('crowd distance LOD: far people use their lite figure', settled.lod > 0 && crowd.lite > 0, JSON.stringify({ settled, crowd }));
+    check('bookshop spines merged into a few meshes', report.books?.merged?.meshes > 0 && report.books.merged.books > 20, JSON.stringify(report.books));
+    await frames(page, 2);
     await shot(page, 'home_full.jpg');
     // Full quality on SwiftShader takes tens of seconds a frame, and clicks wait on frames to check the target.
     // So this phase drives the page through window.__market; the clicks themselves are tested on lite below.
     const go = (fn, ...a) => page.evaluate(fn, ...a);
     await go(() => { window.__market.openPlace('glueh'); window.__market.act('glueh', 'pour'); window.__market.act('glueh', 'prost'); });
     await frames(page, 3);
+    const hidden = await page.evaluate(() => window.__market.hiddenPeople());
+    check('Glühwein close-up: the vendor stays in view', !hidden.includes('vendor_gluehwein') && (await page.evaluate(() => window.__market.crowd().vendorsVisible)) === 4, hidden.join(' '));
+    check('Glühwein close-up: the queue at the counter steps out of the shot', hidden.length > 0, hidden.join(' '));
     await shot(page, 'panel_gluehwein.jpg');
     await go(() => { window.__market.openPlace('books'); window.__market.act('books', 'book'); });
     await frames(page, 3);
@@ -139,8 +153,26 @@ try {
     await page.click('#places button[data-place="books"]');
     await page.click('#pActions [data-action="book"]');
     check('pull a book', /Rovelli|Hofstadter|Feynman|Seth|Pearl|·/.test(await note(page)), await note(page));
+    // each of Mac's books sits on its own spine: aim at the second one and click it in 3D
+    const spines = await page.evaluate(() => window.__market.featuredBooks());
+    check('five named spines for the five books', spines.length === 5, spines.join(' '));
+    await frames(page, 2);
+    const aim = await page.evaluate((name) => {
+      const m = window.__market, c = m.screenPoint(name);
+      if (!c) return null;
+      for (let r = 0; r <= 12; r += 2) for (let a = 0; a < 8; a++) {
+        const x = c.x + Math.cos(a * Math.PI / 4) * r, y = c.y + Math.sin(a * Math.PI / 4) * r;
+        if (m.bookAt(x, y) === name) return { x, y };
+      }
+      return null;
+    }, spines[1]);
+    if (aim) {
+      await page.mouse.click(aim.x, aim.y);
+      check('clicking a named spine gives that book', /Hofstadter|Gödel/.test(await note(page)), await note(page));
+    } else check('clicking a named spine gives that book', false, `no clear pixel on ${spines[1]}`);
 
     await page.click('#places button[data-place="band"]');
+    check('lite: the player buttons say they move the spotlight', /Spotlight/.test(await page.textContent('#pActions [data-action="sax"]')));
     await page.click('#pActions [data-action="sax"]');
     check('feature a band member', /sax/i.test(await note(page)), await note(page));
     await page.click('#pActions [data-action="whole"]');
@@ -153,6 +185,9 @@ try {
     await page.click('#pActions [data-play]');
     check('the band stops', /Play/.test(await page.textContent('#play')));
 
+    // the lite market loads the rides and deco stalls after its first frame
+    const later = await page.evaluate(() => window.__market.settled());
+    check('lite: rides and deco stalls arrive after the first frame', later.deferred >= 2, JSON.stringify(later));
     await page.click('#places button[data-place="ferris"]');
     await page.click('#pActions [data-action="ride"]');
     check('Riesenrad ride', (await state(page, 'riding')) === 'ferris');
@@ -214,8 +249,15 @@ try {
   if (run('lite')) {
     log('lite market, auto-detected');
     const { ctx, page } = await openPage(`${BASE}?snow=0`);
+    let bytes = 0;
+    page.on('response', async (r) => { try { bytes += (await r.body()).length; } catch { /* aborted */ } });
     await waitReady(page);
+    const atReady = bytes;
     const report = await page.evaluate(() => window.__market.report);
+    log(`lite: ${(atReady / 1e6).toFixed(2)} MB downloaded when the market opens`);
+    check('lite: under 8.5 MB (code, fonts and models) before the market opens', atReady < 8.5e6, `${(atReady / 1e6).toFixed(2)} MB`);
+    const sections = ['gluehwein', 'bierstand', 'bratwurst', 'buecherstand'];
+    check('lite: each of the four section stalls has one of the four lights', sections.every((id) => report.lights.places.filter((p) => p === id).length === 1), report.lights.places.join(' '));
     console.log('lite scene', JSON.stringify(report.scene), JSON.stringify(report.lights));
     check('lite market detected on a weak GPU', report.quality.lite === true, report.quality.reasons.join('; '));
     check('lite: no shadows', await page.evaluate(() => window.__market.renderer.shadowMap.enabled === false));
@@ -234,11 +276,18 @@ try {
     await frames(page, 6);
     const cam1 = await page.evaluate(() => window.__market.camera.position.toArray());
     check('reduced motion: no auto-rotate', cam0.every((v, i) => Math.abs(v - cam1[i]) < 1e-3));
+    await page.evaluate(() => window.__market.settled());
     await page.click('#places button[data-place="carousel"]');
     await frames(page, 1);
     check('reduced motion: flights are instant', (await page.evaluate(() => window.__market.camera.position.distanceTo({ x: 19, y: 2.5, z: -12 }))) < 20);
     await frames(page, 3);
-    await shot(page, 'phone_reduced_motion.jpg');
+    const sheet = await page.evaluate(() => {
+      const p = document.getElementById('panel').getBoundingClientRect(), s = document.getElementById('stage').getBoundingClientRect();
+      return { panel: p.height / innerHeight, visible: (Math.min(p.top, s.bottom) - Math.max(0, s.top)) / innerHeight };
+    });
+    check('phone: the bottom sheet takes at most 60% of the screen', sheet.panel <= 0.6, JSON.stringify(sheet));
+    check('phone: part of the market stays in view above the sheet', sheet.visible >= 0.3, JSON.stringify(sheet));
+    await shot(page, 'phone_reduced_motion.jpg', null, { keepScroll: true });
     await ctx.close();
   }
 
@@ -248,10 +297,35 @@ try {
     const n = await page.locator('main section').count();
     check('plain.html has all seven sections', n === 7, `${n} sections`);
     check('plain.html links back to the market', (await page.locator('a[href="./"]').count()) > 0);
+    const credit = /Salamander[\s\S]*CC BY 3\.0[\s\S]*MusyngKite[\s\S]*CC BY-SA 3\.0/;
+    check('plain.html credits the music (Salamander CC BY, MusyngKite CC BY-SA)', credit.test(await page.textContent('#credits')), await page.textContent('#credits'));
     await shot(page, 'plain_html.jpg');
     await ctx.close();
     const { ctx: c2, page: p2 } = await openPage(`${BASE}?quality=lite`);
     check('the 3D page links to plain.html', (await p2.locator('a[href="plain.html"]').count()) > 0);
+    check('the 3D page credits the music in its footer', credit.test(await p2.textContent('footer #credits')), await p2.textContent('footer #credits'));
+    check('the credit links the licences', (await p2.locator('#credits a[href*="creativecommons.org/licenses/by-sa/3.0"]').count()) > 0);
+    await c2.close();
+  }
+
+  if (run('missing')) {
+    log('every model missing and layout.json ignored: the BUILD.md layout with labelled stand-ins');
+    const { ctx, page } = await openPage(`${BASE}?quality=lite&snow=0&missing=all&layout=builtin`, { viewport: { width: 960, height: 640 } });
+    await waitReady(page);
+    const report = await page.evaluate(() => window.__market.report);
+    check('missing glbs: every place is a stand-in', report.models.every((m) => m.source === 'standin'), JSON.stringify(report.models.filter((m) => m.source !== 'standin')));
+    check('missing layout.json: the BUILD.md layout', report.layout === 'BUILD.md fallback', report.layout);
+    await page.click('#places button[data-place="glueh"]');
+    await page.click('#pActions [data-action="pour"]');
+    check('stand-ins keep the actions working', /poured tonight: 1/.test(await note(page)), await note(page));
+    await frames(page, 2);
+    await shot(page, 'missing_models_standins.jpg', '#stage');
+    await ctx.close();
+    const { ctx: c2, page: p2 } = await openPage(`${BASE}?quality=lite&snow=0&missing=stall_bier,ferris`, { viewport: { width: 960, height: 640 } });
+    await waitReady(p2);
+    await p2.evaluate(() => window.__market.settled());
+    const r2 = await p2.evaluate(() => window.__market.report.models);
+    check('two missing glbs: just those two are stand-ins', r2.filter((m) => m.source === 'standin').map((m) => m.id).sort().join() === 'bierstand,riesenrad', JSON.stringify(r2.filter((m) => m.source === 'standin')));
     await c2.close();
   }
 

@@ -19,7 +19,7 @@ I'm Mac. I'm a physician at Chulalongkorn University in Bangkok, and I build sof
 
 [[Mac: one or two lines on your department and what your day job involves. Leave this out if you'd rather not say.]]
 
-Outside work I listen to jazz, ballads most of all. I read physics, philosophy and books about the brain. The questions I like best are about causes: what made something happen, and how you could ever tell. <!-- check -->
+Outside work I mostly listen to jazz and read. The bandstand and the bookshop say more about both. The questions I like best are about causes: what made something happen, and how you could ever tell. <!-- check -->
 
 I like beer and wine, and I like Christmas markets, so this website is one. Each stall opens a part of it.
 

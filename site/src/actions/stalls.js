@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { act, acts, counterLocal, toLocal, worldOf, longAxis, findNode } from './util.js';
 import { createEmitter } from './effects.js';
+import { viewFor } from '../engine/market.js';
 import { actionHint, actionNote, toastLines, crowdLine } from '../content.js';
 
 const MUG = new THREE.MeshStandardMaterial({ name: 'action_mug', color: 0xa3162c, roughness: 0.35 });
@@ -173,19 +174,39 @@ export function createStallActions(ctx) {
   }
 
   // ---------- Bücherstand ----------
+  // Mac's books (reading.md) are on named spines, so clicking a spine gives that book. The vendor printed the
+  // five titles on real spines in the middle of the lower shelf (book-spines.json says which node is which);
+  // a book with no printed spine gets a free spine near the middle of the view, wearing a red paper band.
+  // Every other spine is the bookseller's stock.
   const booksPlace = P.books;
   const bookNodes = acts(booksPlace, 'act_book_');
+  const picks = ctx.books;
+  const pickOf = booksPlace ? titledSpines(bookNodes, picks) : new Map();
+  const untitled = picks.map((_, i) => i).filter((i) => ![...pickOf.values()].includes(i));
+  const banded = booksPlace ? chooseSpines(booksPlace, bookNodes.filter((n) => !pickOf.has(n)), untitled.length) : [];
+  banded.forEach((n, k) => { pickOf.set(n, untitled[k]); const b = paperBand(n); if (b) b.name = `band_pick_${untitled[k]}`; });
+  // the spine the bookseller pulls for each book (the first volume of a set)
+  const spineFor = picks.map((_, i) => [...pickOf.entries()].filter(([, j]) => j === i).map(([n]) => n).sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }))[0] || null);
+  const featured = spineFor.filter(Boolean);
+  const where = banded.length ? 'His picks wear a red paper band.' : 'His five stand together in the middle of the lower shelf.';
   const bookBase = new Map();
-  let bookBusy = false, bookIdx = 0;
+  const busy = new Set();
+  let bookIdx = 0;
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   function pullBook(node) {
-    const picks = ctx.books;
-    const b = picks[bookIdx++ % picks.length];
+    // the button lets the bookseller choose: Mac's books in turn
+    let i, n = node;
+    if (node) i = pickOf.has(node) ? pickOf.get(node) : -1;
+    else { i = bookIdx++ % picks.length; n = spineFor[i] || (bookNodes.length ? bookNodes[(Math.random() * bookNodes.length) | 0] : null); }
     sfx('page');
-    const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
-    const fallback = `<b>${esc(b[0])}</b>${b[1] ? ' · ' + esc(b[1]) : ''}${b[2] ? '<br>' + esc(b[2]) : ''}`;
-    say(`${actionNote('books', 'book', fallback, { title: b[0], author: b[1], note: b[2] })}<br><em>Click another spine to keep browsing.</em>`);
-    if (!booksPlace || !bookNodes.length || bookBusy) return;
-    const n = node || bookNodes[(Math.random() * bookNodes.length) | 0];
+    if (i >= 0) {
+      const b = picks[i];
+      const fallback = `<b>${esc(b[0])}</b>${b[1] ? ' · ' + esc(b[1]) : ''}${b[2] ? '<br>' + esc(b[2]) : ''}`;
+      say(`${actionNote('books', 'book', fallback, { title: b[0], author: b[1], note: b[2] })}<br><em>Click another spine to keep browsing.</em>`);
+    } else {
+      say(actionNote('books', 'other', `A secondhand copy from the bookseller’s stock, not one of Mac’s. <em>${where}</em>`));
+    }
+    if (!booksPlace || !n || busy.has(n)) return;
     if (!bookBase.has(n)) bookBase.set(n, n.position.clone());
     const p0 = bookBase.get(n);
     // out toward the front of the stall, in the book's own parent frame
@@ -194,17 +215,21 @@ export function createStallActions(ctx) {
     const parentQ = n.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
     const parentScale = n.parent.getWorldScale(new THREE.Vector3());
     const out = worldOut.applyQuaternion(parentQ).divide(parentScale);
-    bookBusy = true;
+    busy.add(n);
+    booksPlace.merge?.lift(n); // out of the merged shelf mesh while it moves
     const set = (k) => n.position.copy(p0).addScaledVector(out, k);
-    anim.add(0.45, set, () => setTimeout(() => anim.add(0.45, (k) => set(1 - k), () => { bookBusy = false; }), 2600));
+    anim.add(0.45, set, () => setTimeout(() => anim.add(0.45, (k) => set(1 - k), () => { booksPlace.merge?.settle(n); busy.delete(n); }), 2600));
   }
 
   return {
     glueh: { hint: actionHint('glueh', 'Pour a cup of Glühwein, then raise it with the crowd.'), acts: [{ key: 'pour', label: 'Pour a cup', fn: pourMug }, { key: 'prost', label: 'Prost!', fn: () => prost('glueh') }] },
     bier: { hint: actionHint('bier', 'Pull a pint from the middle tap.'), acts: [{ key: 'pint', label: 'Pull a pint', fn: pullPint }, { key: 'prost', label: 'Prost!', fn: () => prost('bier') }] },
     wurst: { hint: actionHint('wurst', 'Turn the sausages on the grill.'), acts: [{ key: 'turn', label: 'Turn the sausages', fn: turnSausages }, { key: 'bun', label: 'One in a bun, please', fn: bun }] },
-    books: { hint: actionHint('books', 'Click any spine on the shelves, or let the bookseller choose.'), acts: [{ key: 'book', label: 'Pick a book for me', fn: () => pullBook(null) }] },
+    books: { hint: actionHint('books', 'Click any spine on the shelves, or let the bookseller choose.') + (banded.length ? ' <em>Mac’s picks wear a red paper band.</em>' : ''), acts: [{ key: 'book', label: 'Pick a book for me', fn: () => pullBook(null) }] },
     pullBook,
+    /** The spine for each of Mac's books, in reading.md order (for tests and the curious). */
+    featuredBooks: featured,
+    bookOf: (node) => (pickOf.has(node) ? picks[pickOf.get(node)][0] : null),
     update(dt, t, still) {
       grillFlare *= Math.exp(-dt * 1.2);
       if (smoke) smoke.base = 0.28 + grillFlare * 0.1;
@@ -218,4 +243,86 @@ export function createStallActions(ctx) {
       }
     },
   };
+}
+
+// Which act_book_ node shows which printed title: the vendor's node extras { title } when present, else the
+// map tools/book-spines.mjs reads from the vendor's glbs (keyed by prop file, full and lite).
+const spineFiles = import.meta.glob('../book-spines.json', { eager: true, import: 'default' });
+const SPINES = spineFiles['../book-spines.json'] || null;
+const norm = (t) => String(t || '').toLowerCase().normalize('NFC').replace(/[^\p{L}\p{N}]+/gu, '');
+
+/** Map spine node -> index into `picks` for spines whose printed title is one of Mac's books. */
+function titledSpines(nodes, picks) {
+  const out = new Map();
+  const wanted = picks.map((b) => norm(b[0]));
+  for (const n of nodes) {
+    let key = n.userData?.title || null;
+    if (!key) {
+      let o = n.parent;
+      while (o && !o.userData?.propFile) o = o.parent;
+      const file = o?.userData.propFile?.replace(/\.(glb|gltf)$/i, '');
+      key = file ? SPINES?.sets?.[file]?.[n.name] || null : null;
+    }
+    if (!key) continue;
+    const t = norm(SPINES?.titles?.[key] || key);
+    const i = wanted.findIndex((w) => w && t && (w === t || (w.length > 5 && t.includes(w)) || (t.length > 5 && w.includes(t))));
+    if (i >= 0) out.set(n, i);
+  }
+  return out;
+}
+
+/** A book standing on a shelf (not lying on the counter). */
+function onShelf(place, n) {
+  for (let o = n.parent; o && o !== place.root; o = o.parent) if (/counter/i.test(o.name || '')) return false;
+  return true;
+}
+
+/**
+ * Pick `count` spines for Mac's books: shelf books nearest the middle of the bookshop's view, at least
+ * 0.3 m apart, then in order along the shelves (left to right, top shelf first), so the list reads as it stands.
+ */
+function chooseSpines(place, nodes, count) {
+  if (!nodes.length || !count) return [];
+  const view = viewFor(place);
+  const ray = new THREE.Ray(view.pos, view.target.clone().sub(view.pos).normalize());
+  // not behind the bookseller: skip spines within 0.5 m (sideways, as seen from the view) of the vendor's spot
+  const vendor = place.nodes.slots.slot_vendor?.getWorldPosition(new THREE.Vector3());
+  const side = (p) => {
+    if (!vendor) return Infinity;
+    const a = new THREE.Vector2(vendor.x - view.pos.x, vendor.z - view.pos.z).normalize();
+    const b = new THREE.Vector2(p.x - view.pos.x, p.z - view.pos.z);
+    return Math.abs(a.x * b.y - a.y * b.x);
+  };
+  const cands = nodes.filter((n) => onShelf(place, n)).map((n) => ({ n, p: n.getWorldPosition(new THREE.Vector3()) })).filter((c) => side(c.p) > 0.5);
+  cands.forEach((c) => { c.d = ray.distanceToPoint(c.p); });
+  cands.sort((a, b) => a.d - b.d);
+  const chosen = [];
+  for (const c of cands) {
+    if (chosen.length >= count) break;
+    if (chosen.every((o) => o.p.distanceTo(c.p) > 0.3)) chosen.push(c);
+  }
+  const right = new THREE.Vector3(Math.cos(place.ry), 0, -Math.sin(place.ry));
+  chosen.sort((a, b) => (Math.abs(a.p.y - b.p.y) > 0.15 ? b.p.y - a.p.y : a.p.dot(right) - b.p.dot(right)));
+  return chosen.map((c) => c.n);
+}
+
+const BAND = new THREE.MeshStandardMaterial({ name: 'action_book_band', color: 0xb3342a, roughness: 0.72 });
+/** A paper band round the lower part of a book (like a bookshop's belly band), as a child of its pivot. */
+function paperBand(pivot) {
+  pivot.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(pivot.matrixWorld).invert();
+  const box = new THREE.Box3(), tmp = new THREE.Box3();
+  pivot.traverse((m) => {
+    if (!m.isMesh) return;
+    if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+    box.union(tmp.copy(m.geometry.boundingBox).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld)));
+  });
+  if (box.isEmpty()) return null;
+  const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  const h = Math.min(0.05, size.y * 0.24);
+  const band = new THREE.Mesh(new THREE.BoxGeometry(size.x + 0.004, h, size.z + 0.004), BAND);
+  band.position.set(c.x, box.min.y + size.y * 0.4, c.z);
+  band.castShadow = false;
+  pivot.add(band);
+  return band;
 }

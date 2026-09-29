@@ -6,7 +6,8 @@ import os
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-RAW = os.path.join(ROOT, 'review/round-1/lighting/raw')
+RAW = os.environ.get('RAW') or os.path.join(ROOT, 'review/round-1/lighting/raw')
+PASS1 = os.environ.get('PASS1')  # the pass-1 'after' PNG, for the pass-1 vs pass-2 sheet
 OUT = os.path.join(ROOT, 'review/round-1/lighting')
 REF = os.path.join(ROOT, 'review/reference/gluehwein_preview.png')
 
@@ -47,6 +48,19 @@ def grid(cells, cols, cell, out, q=88):
     print('wrote', out, sheet.size)
 
 
+def crops(cells, box, scale, out):
+    w, h = box[2] - box[0], box[3] - box[1]
+    sheet = Image.new('RGB', (w * scale * len(cells), h * scale), (8, 10, 18))
+    for i, (name, text) in enumerate(cells):
+        im = load(name)
+        if im is None:
+            continue
+        im = im.resize((1280, 720), Image.LANCZOS).crop(box).resize((w * scale, h * scale), Image.LANCZOS)
+        sheet.paste(label(im, text, 15), (i * w * scale, 0))
+    sheet.save(os.path.join(OUT, out), quality=92)
+    print('wrote', out, sheet.size)
+
+
 def save(name, out, text):
     im = load(name)
     if im is None:
@@ -62,6 +76,12 @@ grid([(REF, 'Cycles reference (AgX Punchy)'), ('after', 'three.js, lighting/inde
 stack = [(REF, 'Cycles reference'), ('after', 'three.js: lighting/index.js (full)')]
 grid(stack, 1, (1280, 720), 'side_by_side_full.jpg', 90)
 grid([('before', 'Before: engine stand-in lighting'), ('after', 'After: lighting/index.js')], 2, (640, 360), 'before_after.jpg', 92)
+if PASS1:
+    grid([(REF, 'Cycles reference'), (PASS1, 'Pass 1'), ('after', 'Pass 2 (full)'), ('lite', 'Pass 2 (lite)')], 2, (640, 360), 'pass1_vs_pass2.jpg', 92)
+    crops([(REF, 'Cycles'), (PASS1, 'Pass 1'), ('after', 'Pass 2'), ('lite', 'Pass 2 lite')], (620, 350, 800, 470), 2, 'pot_closeup.jpg')
+    crops([(REF, 'Cycles'), (PASS1, 'Pass 1'), ('after', 'Pass 2')], (430, 200, 1030, 330), 1, 'bulbs_garland.jpg')
+save('capture', 'after_capture.jpg', 'Full, ?capture=1 (environment captured from the scene)')
+grid([('sky', 'Sky, full (bloom at full resolution)'), ('sky_lite', 'Sky, lite (half-resolution bloom, own weights)')], 2, (640, 360), 'bloom_full_vs_lite.jpg', 92)
 save('before', 'before.jpg', 'Before: engine stand-in lighting')
 save('after', 'after.jpg', 'After: lighting/index.js (full)')
 save('lite', 'after_lite.jpg', 'After: lite profile (4 lights, no shadows)')

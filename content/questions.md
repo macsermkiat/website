@@ -17,11 +17,11 @@ I keep the questions I come back to up here. I don't have answers to them. When 
 
 ### What is a cause?
 
-What do we mean when we say one thing made another happen? <!-- check -->
+<!-- check -->
 
 ### Is time something the brain makes?
 
-How much of time is out there, and how much is our own doing? <!-- check -->
+<!-- check -->
 
 ### Why does improvisation feel inevitable afterwards?
 
