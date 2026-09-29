@@ -40,9 +40,10 @@ const results = [];
 const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); console.log(ok ? '  ok  ' : '  FAIL', name, detail ? `(${String(detail).slice(0, 140)})` : ''); };
 const LONG = 180000;
 
-async function openPage(url, { reducedMotion = 'no-preference', viewport = { width: 1280, height: 860 } } = {}) {
+async function openPage(url, { reducedMotion = 'no-preference', viewport = { width: 1280, height: 860 }, before = null } = {}) {
   const ctx = await browser.newContext({ viewport, reducedMotion, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
+  before?.(page);
   page.setDefaultTimeout(LONG);
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`${url}: ${m.text()}`); });
   page.on('pageerror', (e) => errors.push(`${url}: pageerror ${e.message}`));
@@ -248,9 +249,8 @@ try {
 
   if (run('lite')) {
     log('lite market, auto-detected');
-    const { ctx, page } = await openPage(`${BASE}?snow=0`);
     let bytes = 0;
-    page.on('response', async (r) => { try { bytes += (await r.body()).length; } catch { /* aborted */ } });
+    const { ctx, page } = await openPage(`${BASE}?snow=0`, { before: (pg) => pg.on('response', async (r) => { const n = Number(r.headers()['content-length']); if (n) bytes += n; else try { bytes += (await r.body()).length; } catch { /* aborted */ } }) });
     await waitReady(page);
     const atReady = bytes;
     const report = await page.evaluate(() => window.__market.report);

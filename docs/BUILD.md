@@ -9,7 +9,7 @@ This file is how the specialists building the market fit their work together. Th
 - The look is a **realistic miniature**: real materials, warm light, believable wear. It is not near-photoreal and not cartoon.
 - The band plays a **pre-mixed recorded ballad**, shipped as separate stems so the page can place instruments in space and feature one player. Stall sounds stay live.
 - A plain HTML version of all content ships next to the 3D market.
-- Content is drafted by the writer, and every factual claim about Mac is marked for him to check.
+- Content is drafted by the writer, and every factual claim about Mac is marked for Mac to check.
 - Theme rule: no lab, pathology or clinical imagery in the scene. Research tools appear only as content.
 
 ## Repo layout and ownership
@@ -35,20 +35,17 @@ Only write inside the paths your role owns. You may read anything.
 | `review/round-N/<role>/` | everyone: your preview images (JPEG, 1280 px wide at most) |
 | `docs/BUILD.md`, `docs/adr/`, `CONTEXT.md` | market owner |
 
-On the cloud machine, don't commit; the market owner commits. On the Mac, the Blender roles commit their own paths to the round branch as described above.
+Don't commit; the market owner commits and pushes.
 
 ## Where things run
 
-- **Blender work (architect, carpenter, vendor, ride builder, organizer) runs on Mac's MacBook Air (Apple M3, 24 GB) from round 1 pass 2 on.** A Cycles preview renders there in about 7 s on the Metal GPU, against about 3.5 min on the cloud machine. The repo clone is `/Users/admin/Project_Chatbot_research/website`.
-  - Blender: `~/nachtmarkt-tools/bpy-venv/bin/python your_script.py` (bpy 4.2 LTS, headless, with Pillow).
-  - gltf-transform: `NPM_CONFIG_PREFIX=~/nachtmarkt-tools/npm`.
-  - Every render must honour two environment variables: `NM_DEVICE` (CPU, or METAL for the GPU) and `NM_THREADS` (0 means all cores). `blender/lib/nmlib/render.py` shows how. On the Mac, run with `NM_DEVICE=METAL NM_THREADS=0`.
-  - With the GPU, previews can use 128 samples at 1920x1080. Keep a 1280 px JPEG for review.
-  - bpy on macOS segfaults at interpreter exit (code 139) after writing everything. Treat that as success if the outputs exist.
-- **Site, lighting, music and writing run on the cloud machine** (4 CPUs, no GPU). The repo is `/home/claude/website`. Blender there is `/home/claude/tools/bpy-venv/bin/python`.
-- Both machines exchange work through git on the `build/round-N` branch. Pull before starting, and commit only your own paths with a message naming your role.
+- **All roles run on the cloud machine** (4 CPUs, no GPU). The repo is `/home/claude/website`. (Blender briefly ran on Mac's MacBook, but its usage limit made that impractical.)
+  - Blender: `/home/claude/tools/bpy-venv/bin/python your_script.py`.
+  - Every render must honour `NM_DEVICE` and `NM_THREADS` (0 = all cores), as `blender/lib/nmlib/render.py` does. The default is CPU with 2 threads.
+  - Renders are slow here (about 3 min for a 1280x720 stall preview). Render only what you need to check, iterate at 960x540 and 32 samples, and make the final review renders at 1280x720 and 48 samples.
+  - bpy may segfault at interpreter exit after writing everything. Treat that as success if the outputs exist.
 
-## Tools on both machines
+## Tools
 
 - glTF optimisation: `gltf-transform`. The standard web step is:
   `gltf-transform optimize in.glb out.glb --compress meshopt --texture-compress webp --texture-size 1024`

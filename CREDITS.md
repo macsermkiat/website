@@ -24,6 +24,7 @@ The engine's stand-in models, textures and sounds are made in code; no third-par
 | FluidR3 GM soundfont samples by Frank Wen (piano, bass, sax), as rendered by gleitz/midi-js-soundfonts | Fallback generative band only (plays only if the recorded stems cannot), emitted from `prototype/samples.json` | https://github.com/gleitz/midi-js-soundfonts | CC BY 3.0 per that repo's README (the original FluidR3_GM.sf2 is MIT); credited in the footer of both pages either way |
 | Tone.js drum samples | Fallback generative band only | https://github.com/Tonejs/audio | MIT |
 | Vite, marked, yaml (build time only, not shipped) | Build, content from `content/*.md` | https://vitejs.dev, https://marked.js.org, https://eemeli.org/yaml | MIT, MIT, ISC |
+| glTF Transform and meshoptimizer (dev tool only, not shipped) | `site/tools/book-spines.mjs`, which finds the bookshop's titled spines | https://gltf-transform.dev, https://github.com/zeux/meshoptimizer | MIT, MIT |
 
 **Music credit on the site.** The recorded band the site plays is the music writer's (see *Music writer* below): its stems use the Salamander Grand Piano (CC BY 3.0) and the MusyngKite tenor sax samples (CC BY-SA 3.0, so the sax, room and mix recordings are CC BY-SA 3.0), with CC0 bass and drums. The engineer ships no audio of its own. The build reads `site/public/audio/manifest.json` → `license.recording.credit` and prints it, with links to the licence deeds and to this file, in the footer of `index.html` and `plain.html`; the FluidR3 line above is added to the same footer for the fallback band.
 

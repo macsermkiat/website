@@ -43,7 +43,8 @@ export function createPicking({ dom, camera, market, overlay, outline, labelFor,
     const h = ray.intersectObjects(books, true)[0];
     if (!h || h.distance > 14) return null;
     let o = h.object;
-    while (o && !/^act_book_/i.test(o.name)) o = o.parent;
+    // the pivot (act_book_12), not its geometry (act_book_12_mesh) or a band on it
+    while (o && !(/^act_book_/i.test(o.name) && !/_mesh(\.\d+)?$/i.test(o.name))) o = o.parent;
     return o;
   }
 

@@ -3,7 +3,7 @@ section: phrases
 title: "Crowd chatter"
 actions: []
 # Lines the market crowd says in speech bubbles, picked at random. They are the crowd's words, not Mac's.
-# The engine reads the list items below. Lines about Mac's own shelf wait until he confirms it.
+# The engine reads the list items below. Lines about Mac's own shelf wait until Mac confirms it.
 ---
 
 - Prost!
