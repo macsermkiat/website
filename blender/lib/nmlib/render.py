@@ -149,6 +149,14 @@ def render(path_png, samples=48, res=(1280, 720), exposure=0.0, jpeg=None, jpeg_
     scene = bpy.context.scene
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
+    dev = os.environ.get('NM_DEVICE', 'CPU').upper()
+    if dev in ('METAL', 'CUDA', 'OPTIX', 'HIP', 'ONEAPI'):
+        prefs = bpy.context.preferences.addons['cycles'].preferences
+        prefs.compute_device_type = dev
+        prefs.get_devices()
+        for d in prefs.devices:
+            d.use = True
+        scene.cycles.device = 'GPU'
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
     try:
@@ -158,7 +166,7 @@ def render(path_png, samples=48, res=(1280, 720), exposure=0.0, jpeg=None, jpeg_
     scene.cycles.max_bounces = 6
     scene.cycles.use_adaptive_sampling = True
     scene.render.threads_mode = 'FIXED'
-    scene.render.threads = 2
+    scene.render.threads = int(os.environ.get('NM_THREADS', '2'))
     scene.render.resolution_x, scene.render.resolution_y = res
     scene.render.resolution_percentage = 100
     scene.view_settings.view_transform = 'AgX'
