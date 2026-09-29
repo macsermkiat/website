@@ -1,0 +1,23 @@
+{
+  "name": "nachtmarkt-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Mac's Nachtmarkt: a 3D German Christmas night market in the browser.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:e2e": "node tests/smoke.mjs"
+  },
+  "dependencies": {
+    "@fontsource/alegreya-sans": "^5.3.0",
+    "@fontsource/alegreya-sc": "^5.3.0",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "marked": "^18.0.14",
+    "vite": "^8.3.1",
+    "yaml": "^2.9.1"
+  }
+}

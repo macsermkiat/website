@@ -1,0 +1,629 @@
+"""Market square: cobbled plaza (fan pattern), gutters, ring street, curbs, sidewalk, puddles,
+cast-iron street lamps, string-light poles with swagged bulb wires, benches, bins, bollards and a
+snow layer.  Exports site/public/models/square.glb (and square.lite.glb with LITE=1).
+
+Run:  /home/claude/tools/bpy-venv/bin/python blender/square/square.py          (full + AO bake)
+      LITE=1 /home/claude/tools/bpy-venv/bin/python blender/square/square.py   (lite, reuses the AO)
+"""
+import os, sys, math, random
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
+import numpy as np
+import bpy, bmesh
+from mathutils import Vector, Matrix, Euler
+import architect_common as C
+import architect_plan as P
+import architect_tex as TX
+
+LITE = bool(os.environ.get("LITE"))
+HERE = os.path.dirname(os.path.abspath(__file__))
+OUT = os.path.join(HERE, "out"); os.makedirs(OUT, exist_ok=True)
+random.seed(3)
+scene = C.reset()
+col = C.collection("Square")
+occ = C.collection("Occluders")
+
+# ------------------------------------------------------------------ textures & materials
+T_COB = C.make_texture_set("square", "cobble_fan", lambda: TX.cobble_fan(1024, 3.2), normal_strength=5.0)
+T_SETT = C.make_texture_set("square", "setts", lambda: TX.setts(1024, 2.4), normal_strength=5.0)
+T_WALK = C.make_texture_set("square", "setts_warm", lambda: TX.setts(1024, 2.4, row_m=0.16, len_range=(0.16, 0.26), seed=27, warm=True), normal_strength=4.0)
+T_GRAN = C.make_texture_set("square", "granite", lambda: TX.granite(512), normal_strength=2.0)
+T_WOOD = C.make_texture_set("square", "timber", lambda: TX.timber(512), normal_strength=3.0)
+
+AO_PATH = os.path.join(C.tex_dir("square"), "square_ao.png")
+AO_X0, AO_SIZE = -80.0, 160.0      # the lightmap covers the whole ground mesh (r <= 78)
+ao_img = None
+REUSE_AO = bool(os.environ.get("REUSE_AO")) and os.path.exists(AO_PATH)
+if (LITE or REUSE_AO) and os.path.exists(AO_PATH):
+    ao_img = C.load_img(AO_PATH, True)
+elif not LITE:
+    ao_img = bpy.data.images.new("square_ao", 8, 8)   # placeholder, replaced by the bake
+
+M = {}
+M["cobble"] = C.pbr("cobble_fan", tex=T_COB, vcol="grime", ao_img=ao_img, normal_strength=1.0)
+M["gutter"] = C.pbr("setts_gutter", tex=T_SETT, vcol="grime", ao_img=ao_img, factor=(0.85, 0.85, 0.88))
+M["street"] = C.pbr("setts_street", tex=T_SETT, vcol="grime", ao_img=ao_img)
+M["walk"] = C.pbr("setts_sidewalk", tex=T_WALK, vcol="grime", ao_img=ao_img)
+M["curb"] = C.pbr("granite_curb", tex=T_GRAN, factor=(0.95, 0.93, 0.9))
+M["iron"] = C.solid("cast_iron", (0.018, 0.024, 0.021), rough=0.42, metal=0.75)
+M["wood"] = C.pbr("bench_wood", tex=T_WOOD, factor=(1.25, 1.1, 1.0))
+M["pole"] = C.pbr("pole_wood", tex=T_WOOD, factor=(0.8, 0.75, 0.7))
+M["wire"] = C.solid("wire_black", (0.01, 0.01, 0.01), rough=0.5)
+M["bulb"] = C.solid("bulb_warm", (1.0, 0.8, 0.55), rough=0.3, emit=(1.0, 0.62, 0.28), strength=6.0)
+M["snow"] = C.solid("snow", (0.82, 0.85, 0.92), rough=0.75)
+M["puddle"] = C.solid("puddle_water", (0.06, 0.058, 0.055), rough=0.1)
+M["bands"] = C.pbr("granite_bands", tex=T_WALK, factor=(1.12, 1.1, 1.05), ao_img=ao_img)
+for m in M.values():
+    m.use_backface_culling = True
+
+UV = {"cobble": (3.2, 3.2), "gutter": (2.4, 2.4), "street": (2.4, 2.4), "walk": (2.4, 2.4)}
+
+# ------------------------------------------------------------------ ground profile
+NTH = 96 if LITE else 176
+K_ARC = round(2 * math.pi * 42 / 2.4) * 2.4 / (2 * math.pi)      # arc-length scale so the texture closes
+grime_noise = TX.pnoise(256, 6, 5, 0.55, seed=5)                    # covers 160 m
+
+
+def grime_at(x, y):
+    u = ((x + 80) / 160 * 256) % 256; v = ((y + 80) / 160 * 256) % 256
+    i, j = int(u), int(v)
+    fu, fv = u - i, v - j
+    a = grime_noise[j % 256, i % 256]; b = grime_noise[j % 256, (i + 1) % 256]
+    c = grime_noise[(j + 1) % 256, i % 256]; d = grime_noise[(j + 1) % 256, (i + 1) % 256]
+    return (a * (1 - fu) + b * fu) * (1 - fv) + (c * (1 - fu) + d * fu) * fv
+
+
+def profile(t):
+    """Radial samples for angle t: list of (r, z, zone) from the centre outward."""
+    Rp = P.plaza_r(t)
+    ex = P.exit_at(t, P.house_r(t), pad=0.5) >= 0
+    pts = []
+    inner = [0.14, 0.3, 0.46, 0.6, 0.72, 0.82, 0.9, 0.96] if not LITE else [0.2, 0.45, 0.7, 0.88]
+    for f in inner:
+        r = Rp * f
+        pts.append((r, -0.06 * f * f, "cobble"))
+    pts.append((Rp, -0.06, "cobble"))
+    # gutter: shallow V of three rows of setts
+    pts += [(Rp + 0.25, -0.1, "gutter"), (Rp + GW, -0.075, "gutter")]
+    # street with a crown
+    nst = 5 if not LITE else 3
+    for k in range(1, nst + 1):
+        s = GW + P.STREET_W * k / nst
+        z = -0.075 + 0.06 * math.sin(math.pi * (s - GW) / P.STREET_W)
+        pts.append((Rp + s, z, "street"))
+    if ex:
+        # the street runs out between the houses
+        pts += [(Rp + P.CURB_S, -0.07, "street"), (Rp + P.CURB_S + 4, -0.04, "street"),
+                (Rp + P.CURB_S + 14, 0.0, "street"), (78, 0.02, "street")]
+    else:
+        pts += [(Rp + P.CURB_S - 0.25, -0.11, "gutter"), (Rp + P.CURB_S, -0.08, "gutter"),
+                (Rp + P.CURB_S + 0.001, P.SIDEWALK_Z, "walk"),
+                (Rp + P.CURB_S + 3, P.SIDEWALK_Z + 0.02, "walk"), (78, P.SIDEWALK_Z + 0.05, "walk")]
+    return pts
+
+
+GW = P.GUTTER_W
+
+
+def ground_height(x, y):
+    t = math.atan2(y, x) % (2 * math.pi); r = math.hypot(x, y)
+    pr = profile(t)
+    if r <= pr[0][0]:
+        return pr[0][1]
+    for (r0, z0, _), (r1, z1, _) in zip(pr, pr[1:]):
+        if r0 <= r <= r1:
+            return z0 + (z1 - z0) * (r - r0) / max(r1 - r0, 1e-6)
+    return pr[-1][1]
+
+
+def build_ground():
+    bm = bmesh.new()
+    uvl = bm.loops.layers.uv.new("UVMap")
+    cl = bm.loops.layers.color.new("grime")
+    zones = ["cobble", "gutter", "street", "walk"]
+    cols = []
+    for i in range(NTH + 1):
+        t = 2 * math.pi * i / NTH
+        cols.append((t, profile(t)))
+    # profiles may have different lengths (exits); build per column pair by matching radii indices
+    centre = bm.verts.new((0, 0, 0))
+    vcols = []
+    for t, pr in cols:
+        vcols.append([bm.verts.new((r * math.cos(t), r * math.sin(t), z)) for r, z, _ in pr])
+
+    def uv_of(zone, x, y, t, r, Rp):
+        if zone == "cobble":
+            return (x / UV["cobble"][0], y / UV["cobble"][1])
+        s = r - Rp
+        arc = t * K_ARC
+        if zone == "gutter":
+            return (arc / 2.4, s / 2.4)
+        if zone == "street":
+            return (s / 2.4, arc / 2.4)
+        return (arc / 2.4, s / 2.4)
+
+    def shade(x, y, zone, r, Rp):
+        g = grime_at(x, y)
+        v = 0.62 + 0.45 * g ** 1.3
+        s = r - Rp
+        if -1.2 < s < GW + 0.3 or (P.CURB_S - 0.6 < s < P.CURB_S + 0.05):
+            v *= 0.82                      # wet, dirty edges along the gutters
+        if zone == "walk":
+            v *= 1.05
+        return min(v, 1.0)
+
+    faces = 0
+    for i in range(NTH):
+        (t0, p0), (t1, p1) = cols[i], cols[i + 1]
+        v0, v1 = vcols[i], vcols[i + 1]
+        # centre fan
+        f = bm.faces.new((centre, v0[0], v1[0]))
+        f.material_index = 0
+        for l in f.loops:
+            co = l.vert.co
+            l[uvl].uv = (co.x / 3.2, co.y / 3.2)
+            g = shade(co.x, co.y, "cobble", co.length, 36)
+            l[cl] = (g, g, g, 1)
+        n = min(len(p0), len(p1))
+        for k in range(n - 1):
+            zone = p0[k + 1][2] if len(p0) == len(p1) else p0[min(k + 1, len(p0) - 1)][2]
+            a, b, c, d = v0[k], v0[k + 1], v1[k + 1], v1[k]
+            try:
+                f = bm.faces.new((a, b, c, d))
+            except ValueError:
+                continue
+            f.material_index = zones.index(zone)
+            for l, (tt, pr) in zip(f.loops, [(t0, p0), (t0, p0), (t1, p1), (t1, p1)]):
+                co = l.vert.co
+                r = math.hypot(co.x, co.y)
+                Rp = P.plaza_r(tt)
+                l[uvl].uv = uv_of(zone, co.x, co.y, tt, r, Rp)
+                g = shade(co.x, co.y, zone, r, Rp)
+                l[cl] = (g, g, g, 1)
+        # if one profile is longer (exit edge), close with the extra outer ring as walk/street
+        if len(p0) != len(p1):
+            lo, hi = (v0, v1) if len(p0) < len(p1) else (v1, v0)
+            for k in range(len(lo) - 1, len(hi) - 1):
+                try:
+                    f = bm.faces.new((lo[-1], hi[k], hi[k + 1]) if len(p0) < len(p1) else (hi[k + 1], hi[k], lo[-1]))
+                except ValueError:
+                    continue
+                f.material_index = 2
+                for l in f.loops:
+                    co = l.vert.co; tt = math.atan2(co.y, co.x) % (2 * math.pi)
+                    l[uvl].uv = uv_of("street", co.x, co.y, tt, math.hypot(co.x, co.y), P.plaza_r(tt))
+                    g = shade(co.x, co.y, "street", math.hypot(co.x, co.y), P.plaza_r(tt)); l[cl] = (g, g, g, 1)
+    bmesh.ops.remove_doubles(bm, verts=[vcols[0][k] for k in range(len(vcols[0]))] + [vcols[-1][k] for k in range(len(vcols[-1]))], dist=1e-5)
+    bm.normal_update()
+    for f in bm.faces:
+        if f.normal.z < 0:
+            f.normal_flip()
+    me = bpy.data.meshes.new("ground")
+    bm.to_mesh(me); bm.free()
+    ob = bpy.data.objects.new("ground", me)
+    col.objects.link(ob)
+    for z in zones:
+        me.materials.append(M[z])
+    for p in me.polygons: p.use_smooth = True
+    return ob
+
+
+ground = build_ground()
+C.log("ground tris", C.count_tris([ground]))
+
+# ------------------------------------------------------------------ bands of granite slabs dividing the cobble field
+bands = C.Geo("plaza_bands", M["bands"], (7.2, 7.2))
+
+
+def strip(path, width):
+    """Flat strip following a 2D polyline, draped on the ground."""
+    L = 0.0
+    prev = None
+    left, right, us = [], [], []
+    for i, (x, y) in enumerate(path):
+        a = path[max(i - 1, 0)]; b = path[min(i + 1, len(path) - 1)]
+        tx, ty = b[0] - a[0], b[1] - a[1]
+        ln = math.hypot(tx, ty) or 1
+        nx, ny = -ty / ln * width / 2, tx / ln * width / 2
+        if prev: L += math.hypot(x - prev[0], y - prev[1])
+        prev = (x, y)
+        for side, lst in ((1, left), (-1, right)):
+            px, py = x + side * nx, y + side * ny
+            lst.append((px, py, ground_height(px, py) + 0.008))
+        us.append(L)
+    verts = left + right
+    n = len(path)
+    faces, uvs = [], []
+    for i in range(n - 1):
+        faces.append((i, n + i, n + i + 1, i + 1))
+        uvs.append([(us[i] / 7.2, 0), (us[i] / 7.2, width / 7.2), (us[i + 1] / 7.2, width / 7.2), (us[i + 1] / 7.2, 0)])
+    bands.raw(verts, faces, uvs)
+
+
+RB = 25.8
+nseg = 96 if not LITE else 48
+strip([(RB * math.cos(2 * math.pi * k / nseg), RB * math.sin(2 * math.pi * k / nseg)) for k in range(nseg + 1)], 0.6)
+for k in range(8):
+    t = math.radians(22.5 + 45 * k)
+    r1 = P.plaza_r(t) - 0.05
+    pts = [((RB + 0.3 + (r1 - RB - 0.3) * j / 6) * math.cos(t), (RB + 0.3 + (r1 - RB - 0.3) * j / 6) * math.sin(t)) for j in range(7)]
+    strip(pts, 0.6)
+# a ring of slabs round the tree
+tpx, tpy = 6.5, 15.0
+strip([(tpx + 3.4 * math.cos(2 * math.pi * k / 40), tpy + 3.4 * math.sin(2 * math.pi * k / 40)) for k in range(41)], 0.5)
+bands_ob = bands.finish(col)
+
+# ------------------------------------------------------------------ curbs (individual granite stones)
+curb = C.Geo("curbs", M["curb"], (0.8, 0.8))
+t = 0.0
+while t < 2 * math.pi:
+    Rp = P.plaza_r(t)
+    r = Rp + P.CURB_S + 0.15
+    L = random.uniform(0.8, 1.25) if not LITE else 2.0
+    dt = L / r
+    tm = t + dt / 2
+    if P.exit_at(tm, P.house_r(tm), pad=0.5) < 0:
+        rm = P.plaza_r(tm) + P.CURB_S + 0.15
+        cx, cy = rm * math.cos(tm), rm * math.sin(tm)
+        h = 0.3
+        ztop = P.SIDEWALK_Z + 0.02 + random.uniform(-0.006, 0.006)
+        # chord length of the stone, tangent orientation
+        curb.box((cx, cy, ztop - h / 2), (L - 0.012, 0.3, h),
+                 rot=(random.uniform(-0.006, 0.006), random.uniform(-0.008, 0.008), tm + math.pi / 2 + random.uniform(-0.01, 0.01)),
+                 skip_bottom=True)
+    t += dt
+curb_ob = curb.finish(col)
+
+# ------------------------------------------------------------------ puddles
+pud = C.Geo("puddles", M["puddle"], (2, 2))
+places = P.layout_places()
+occupied = [(x, y, 3.2) for (_id, kind, x, y, _r, _p) in places if kind in ("section", "deco", "landmark")]
+occupied.append((6.5, 15, 3.5))
+
+
+def free_spot(x, y, rad):
+    return all(math.hypot(x - ox, y - oy) > orad + rad for ox, oy, orad in occupied)
+
+
+npud = 0
+tries = 0
+while npud < (12 if not LITE else 6) and tries < 500:
+    tries += 1
+    if npud < 8:     # along the gutters
+        t = random.uniform(0, 2 * math.pi)
+        r = P.plaza_r(t) + random.choice([0.2, 0.3, P.CURB_S - 0.2])
+        rad = random.uniform(0.35, 0.9)
+    else:            # low spots on the plaza
+        t = random.uniform(0, 2 * math.pi); r = random.uniform(6, 30); rad = random.uniform(0.4, 0.9)
+    x, y = r * math.cos(t), r * math.sin(t)
+    if not free_spot(x, y, rad):
+        continue
+    nv = 10 if LITE else 16
+    ph = [random.uniform(0, 6.28) for _ in range(3)]
+    ring = []
+    for k in range(nv):
+        a = 2 * math.pi * k / nv
+        rr = rad * (1 + 0.25 * math.sin(2 * a + ph[0]) + 0.15 * math.sin(3 * a + ph[1]) + 0.08 * math.sin(5 * a + ph[2]))
+        px_, py_ = x + rr * math.cos(a) * 1.3, y + rr * math.sin(a) * 0.8
+        ring.append((px_, py_, ground_height(px_, py_) + 0.012))
+    zc = max(p[2] for p in ring)
+    ring = [(p[0], p[1], zc) for p in ring]
+    pud.poly(ring)
+    npud += 1
+pud_ob = pud.finish(col)
+
+# ------------------------------------------------------------------ street lamps
+iron = C.Geo("street_iron", M["iron"], (1, 1))
+snowp = C.Geo("snow_props", M["snow"], (1, 1))
+bulb_objs, light_objs = [], []
+
+
+def lamp(idx, x, y, rot):
+    z0 = ground_height(x, y)
+    F = Matrix.Translation((x, y, z0)) @ Matrix.Rotation(rot, 4, "Z")
+    iron.frame = F; snowp.frame = F
+    seg = 6 if LITE else 10
+    iron.cyl((0, 0, 0.18), 0.2, 0.17, 0.36, seg=seg, bottom=False)
+    if not LITE:
+        iron.cyl((0, 0, 0.39), 0.15, 0.12, 0.06, seg=seg, bottom=False)
+        iron.cyl((0, 0, 0.52), 0.12, 0.09, 0.22, seg=seg, bottom=False)
+        iron.cyl((0, 0, 1.6), 0.092, 0.092, 0.07, seg=seg, caps=False)
+    # fluted shaft (star section)
+    nfl = 16 if not LITE else 6
+    shaft = []
+    for zz, rr in ((0.6, 0.085), (3.1, 0.058)):
+        ring = []
+        for k in range(nfl):
+            a = 2 * math.pi * k / nfl
+            rk = rr * (1.0 if k % 2 == 0 else 0.86) if not LITE else rr
+            ring.append((rk * math.cos(a), rk * math.sin(a), zz))
+        shaft.append(ring)
+    verts = shaft[0] + shaft[1]
+    faces = [(k, (k + 1) % nfl, nfl + (k + 1) % nfl, nfl + k) for k in range(nfl)]
+    iron.raw(verts, faces)
+    iron.cyl((0, 0, 3.12), 0.1, 0.085, 0.1, seg=seg, caps=False)
+    # ladder rest bar with ball ends
+    iron.beam((-0.34, 0, 3.02), (0.34, 0, 3.02), 0.028, 0.028)
+    if not LITE:
+        for sx in (-0.36, 0.36):
+            iron.uvsphere((sx, 0, 3.02), 0.035, seg=6, rings=3)
+    # lantern: base cup, six posts, roof, finial
+    iron.cyl((0, 0, 3.26), 0.06, 0.17, 0.2, seg=6)
+    ztop = 3.9
+    bulbs = C.Geo(f"bulbs_lamp_{idx:02d}", M["bulb"], (1, 1)); bulbs.frame = F
+    corners0, corners1 = [], []
+    for k in range(6):
+        a = 2 * math.pi * k / 6
+        corners0.append((0.17 * math.cos(a), 0.17 * math.sin(a), 3.36))
+        corners1.append((0.25 * math.cos(a), 0.25 * math.sin(a), ztop))
+    for k in range(6):
+        iron.beam(corners0[k], corners1[k], 0.018, 0.018, up=(corners0[k][0], corners0[k][1], 0))
+    iron.cyl((0, 0, 3.37), 0.18, 0.18, 0.025, seg=6, caps=False)
+    iron.cyl((0, 0, ztop + 0.02), 0.27, 0.27, 0.04, seg=6)
+    iron.cyl((0, 0, ztop + 0.18), 0.31, 0.06, 0.28, seg=6, bottom=False)
+    iron.cyl((0, 0, ztop + 0.36), 0.06, 0.05, 0.08, seg=6, caps=False)
+    if not LITE:
+        iron.uvsphere((0, 0, ztop + 0.45), 0.045, seg=6, rings=3)
+    # glowing frosted glass (bulbs_) slightly inside the frame
+    for k in range(6):
+        k2 = (k + 1) % 6
+        s = 0.94
+        a0 = Vector(corners0[k]) * 1; a1 = Vector(corners0[k2]) * 1
+        b0 = Vector(corners1[k]) * 1; b1 = Vector(corners1[k2]) * 1
+        for v in (a0, a1, b0, b1):
+            v.x *= s; v.y *= s
+        bulbs.poly([tuple(a0), tuple(a1), tuple(b1), tuple(b0)])
+    bulbs.poly([tuple(Vector(c) * Vector((0.94, 0.94, 1))) for c in corners1][::-1])
+    ob = bulbs.finish(col)
+    bulb_objs.append(ob)
+    lw = F @ Vector((0, 0, 3.62))
+    light_objs.append(C.empty(f"light_lamp_{idx:02d}", lw, col))
+    # snow on the lantern roof
+    snowp.cyl((0, 0, ztop + 0.2), 0.3, 0.07, 0.24, seg=6, caps=False)
+    iron.frame = Matrix.Identity(4); snowp.frame = Matrix.Identity(4)
+
+
+lamp_spots = []
+for k in range(12):
+    t = math.radians(15 + 30 * k + random.uniform(-4, 4))
+    if P.exit_at(t, P.plaza_r(t) + 1, pad=1.0) >= 0:
+        t += math.radians(6)
+    r = P.plaza_r(t) - 1.1
+    lamp_spots.append((r * math.cos(t), r * math.sin(t), random.uniform(0, 6.28)))
+# corner lamps on the sidewalk next to each exit
+for deg, w in P.EXITS:
+    t = math.radians(deg) + (w / 2 + 1.2) / P.house_r(math.radians(deg))
+    r = P.plaza_r(t) + P.CURB_S + 0.9
+    lamp_spots.append((r * math.cos(t), r * math.sin(t), random.uniform(0, 6.28)))
+if LITE:
+    lamp_spots = lamp_spots[:12]
+for i, (x, y, rot) in enumerate(lamp_spots):
+    lamp(i, x, y, rot)
+
+# ------------------------------------------------------------------ string-light poles, wires and bulbs
+wood = C.Geo("poles_wood", M["pole"], (1.0, 1.0))
+wire = C.Geo("string_wire", M["wire"], (1, 1))
+poles = [C.three_to_blender(x, z) for x, z in P.POLES_THREE]
+H = P.POLE_H
+for i, p in enumerate(poles):
+    z0 = ground_height(p.x, p.y)
+    seg = 7 if LITE else 10
+    wood.cyl((p.x, p.y, z0 + H / 2), 0.11, 0.075, H, seg=seg, rot=(0, 0, random.uniform(0, 6)), caps=False)
+    iron.cyl((p.x, p.y, z0 + 0.35), 0.135, 0.13, 0.7, seg=seg, bottom=False)
+    iron.cyl((p.x, p.y, z0 + H + 0.05), 0.09, 0.09, 0.1, seg=seg, caps=False)
+    iron.cyl((p.x, p.y, z0 + H + 0.2), 0.12, 0.0, 0.22, seg=seg, bottom=False)
+    if not LITE:
+        iron.cyl((p.x, p.y, z0 + H - 0.3), 0.1, 0.1, 0.06, seg=seg, caps=False)       # hanging ring for the wires
+        snowp.cyl((p.x, p.y, z0 + H + 0.22), 0.13, 0.02, 0.2, seg=seg, caps=False)
+
+
+def catenary(a, b, sag, n):
+    pts = []
+    for k in range(n + 1):
+        t = k / n
+        p = a.lerp(b, t)
+        p.z -= sag * 4 * t * (1 - t)
+        pts.append(p)
+    return pts
+
+
+spacing = 0.55 if not LITE else 1.0
+for si, (i, j) in enumerate(P.SPANS):
+    a = poles[i].copy(); b = poles[j].copy()
+    a.z = ground_height(a.x, a.y) + H - 0.3; b.z = ground_height(b.x, b.y) + H - 0.3
+    L = (b - a).length
+    sag = min(0.07 * L, 1.1) * random.uniform(0.85, 1.1)
+    n = max(4, int(L / (0.7 if not LITE else 1.5)))
+    pts = catenary(a, b, sag, n)
+    wire.tube(pts, 0.008 if not LITE else 0.012, tseg=3)
+    bl = C.Geo(f"bulbs_string_{si:02d}", M["bulb"], (1, 1))
+    nb = max(2, int(L / spacing))
+    for k in range(1, nb):
+        t = k / nb
+        p = a.lerp(b, t); p.z -= sag * 4 * t * (1 - t)
+        if not LITE:
+            wire.cyl((p.x, p.y, p.z - 0.03), 0.012, 0.012, 0.04, seg=3, caps=False)
+        bl.bulb((p.x, p.y, p.z - 0.075), 0.027 if not LITE else 0.034, sides=4 if not LITE else 3)
+    bulb_objs.append(bl.finish(col))
+    if not LITE or si % 2 == 0:
+        mid = catenary(a, b, sag, 2)[1]
+        light_objs.append(C.empty(f"light_string_{si:02d}", mid - Vector((0, 0, 0.25)), col))
+wood_ob = wood.finish(col)
+wire_ob = wire.finish(col)
+
+# ------------------------------------------------------------------ benches, bins, bollards
+bench_wood = C.Geo("benches_wood", M["wood"], (1.0, 0.25))
+
+
+def bench(x, y, rot):
+    z0 = ground_height(x, y)
+    F = Matrix.Translation((x, y, z0)) @ Matrix.Rotation(rot, 4, "Z")
+    bench_wood.frame = F; iron.frame = F; snowp.frame = F
+    L = 1.9
+    for sx in (-0.78, 0.78):
+        iron.box((sx, -0.18, 0.22), (0.05, 0.05, 0.44))
+        iron.box((sx, 0.2, 0.38), (0.05, 0.05, 0.76), rot=(-0.18, 0, 0))
+        iron.box((sx, 0.0, 0.43), (0.05, 0.5, 0.04))
+        if not LITE:
+            iron.box((sx, -0.02, 0.64), (0.045, 0.46, 0.04))      # armrest
+            iron.box((sx, -0.24, 0.53), (0.045, 0.04, 0.2))
+    for k in range(4 if not LITE else 2):
+        yy = -0.2 + k * 0.125 * (4 / (4 if not LITE else 2))
+        bench_wood.box((0, yy, 0.46), (L, 0.105, 0.035))
+    for k in range(3 if not LITE else 1):
+        zz = 0.6 + k * 0.13
+        bench_wood.box((0, 0.24 + 0.022 * k, zz), (L, 0.035, 0.1), rot=(-0.18, 0, 0))
+    snowp.box((0, -0.02, 0.49), (L - 0.1, 0.44, 0.03))
+    bench_wood.frame = Matrix.Identity(4); iron.frame = Matrix.Identity(4); snowp.frame = Matrix.Identity(4)
+
+
+def binn(x, y):
+    z0 = ground_height(x, y)
+    seg = 8 if LITE else 14
+    iron.cyl((x, y, z0 + 0.45), 0.23, 0.25, 0.9, seg=seg, bottom=False)
+    iron.cyl((x, y, z0 + 0.93), 0.27, 0.27, 0.06, seg=seg)
+    if not LITE:
+        iron.cyl((x, y, z0 + 0.05), 0.24, 0.24, 0.1, seg=seg, caps=False)
+        iron.cyl((x, y, z0 + 1.0), 0.22, 0.05, 0.1, seg=seg)
+    snowp.cyl((x, y, z0 + 0.975), 0.26, 0.2, 0.035, seg=seg)
+
+
+def bollard(x, y):
+    z0 = ground_height(x, y)
+    seg = 6 if LITE else 8
+    iron.cyl((x, y, z0 + 0.42), 0.09, 0.075, 0.84, seg=seg, caps=False)
+    if not LITE:
+        iron.cyl((x, y, z0 + 0.7), 0.095, 0.095, 0.05, seg=seg, caps=False)
+        iron.cyl((x, y, z0 + 0.06), 0.11, 0.11, 0.12, seg=seg, bottom=False)
+    iron.uvsphere((x, y, z0 + 0.84), 0.078, seg=seg, rings=3, scale=(1, 1, 0.7))
+    snowp.uvsphere((x, y, z0 + 0.88), 0.07, seg=seg, rings=3, scale=(1, 1, 0.45))
+
+
+bench_spots = []
+for k in range(7):
+    t = math.radians(30 * (2 * k + 1) + 15 + random.uniform(-3, 3))
+    if P.exit_at(t, P.plaza_r(t), pad=2.0) >= 0:
+        continue
+    r = P.plaza_r(t) - 2.4
+    x, y = r * math.cos(t), r * math.sin(t)
+    if free_spot(x, y, 1.2):
+        bench_spots.append((x, y, t + math.pi / 2))
+# two benches by the tree, facing the square
+bench_spots += [(6.5 - 4.2, 15 - 2.6, math.radians(-30)), (6.5 + 4.4, 15 - 2.4, math.radians(28))]
+for i, (x, y, rot) in enumerate(bench_spots):
+    bench(x, y, rot)
+    if i % 2 == 0:
+        ox, oy = math.cos(rot) * 1.35, math.sin(rot) * 1.35
+        binn(x + ox, y + oy)
+
+for deg, w in P.EXITS:
+    t = math.radians(deg)
+    rr = P.plaza_r(t) + P.CURB_S + 0.6
+    tang = Vector((-math.sin(t), math.cos(t), 0))
+    base = Vector((rr * math.cos(t), rr * math.sin(t), 0))
+    n = 4 if not LITE else 3
+    for k in range(n):
+        off = (k - (n - 1) / 2) * (w * 0.8 / (n - 1))
+        p = base + tang * off
+        bollard(p.x, p.y)
+
+bench_ob = bench_wood.finish(col)
+iron_ob = iron.finish(col)
+
+# ------------------------------------------------------------------ snow cover over the ground (snow_ground)
+def build_snow():
+    bm = bmesh.new()
+    nth = NTH // 2 if not LITE else 64
+    uvl = bm.loops.layers.uv.new("UVMap")
+    cols = []
+    centre = bm.verts.new((0, 0, 0.04))
+    for i in range(nth):
+        t = 2 * math.pi * i / nth
+        Rp = P.plaza_r(t)
+        ex = P.exit_at(t, P.house_r(t), pad=0.5) >= 0
+        rs = [Rp * f for f in ((0.25, 0.5, 0.75, 0.92) if not LITE else (0.4, 0.8))] + [Rp, Rp + 0.25, Rp + GW + 3.5, Rp + P.CURB_S - 0.2]
+        if ex:
+            rs += [Rp + P.CURB_S + 4, 66]
+        else:
+            rs += [Rp + P.CURB_S + 0.02, Rp + P.CURB_S + 0.3, 66]
+        vs = []
+        for r in rs:
+            x, y = r * math.cos(t), r * math.sin(t)
+            z = ground_height(x, y) + 0.035
+            if not ex and Rp + P.CURB_S - 0.01 < r < Rp + P.CURB_S + 0.31:
+                z = P.SIDEWALK_Z + 0.02 + 0.035
+            vs.append(bm.verts.new((x, y, z)))
+        cols.append(vs)
+    for i in range(nth):
+        a, b = cols[i], cols[(i + 1) % nth]
+        bm.faces.new((centre, a[0], b[0]))
+        for k in range(min(len(a), len(b)) - 1):
+            bm.faces.new((a[k], a[k + 1], b[k + 1], b[k]))
+        if len(a) != len(b):
+            lo, hi = (a, b) if len(a) < len(b) else (b, a)
+            for k in range(len(lo) - 1, len(hi) - 1):
+                try:
+                    bm.faces.new((lo[-1], hi[k], hi[k + 1]))
+                except ValueError:
+                    pass
+    bm.normal_update()
+    for f in bm.faces:
+        if f.normal.z < 0: f.normal_flip()
+        for l in f.loops:
+            l[uvl].uv = (l.vert.co.x / 4, l.vert.co.y / 4)
+    me = bpy.data.meshes.new("snow_ground"); bm.to_mesh(me); bm.free()
+    ob = bpy.data.objects.new("snow_ground", me); col.objects.link(ob)
+    me.materials.append(M["snow"])
+    for p in me.polygons: p.use_smooth = True
+    return ob
+
+
+snow_ob = build_snow()
+snowp_ob = snowp.finish(col, smooth=False)
+
+# ------------------------------------------------------------------ AO bake (full build) and export
+exported = [o for o in col.objects]
+tris = C.count_tris(exported)
+C.log("SQUARE TRIANGLES", tris, "lite" if LITE else "full")
+by = {}
+for o in exported:
+    k = o.name.split("_")[0] if o.name.startswith(("bulbs_", "light_")) else o.name
+    by[k] = by.get(k, 0) + C.count_tris([o])
+C.log("BREAKDOWN", sorted(by.items(), key=lambda kv: -kv[1]))
+if os.environ.get("STATS_ONLY"):
+    sys.exit(0)
+
+if not LITE and not REUSE_AO:
+    # occluders: the town, if it has been built, darkens the sidewalk at the house fronts
+    town_raw = os.path.join(C.REPO, "blender", "town", "out", "town_raw.glb")
+    if os.path.exists(town_raw):
+        before = set(bpy.data.objects)
+        bpy.ops.import_scene.gltf(filepath=town_raw)
+        for o in set(bpy.data.objects) - before:
+            for c in list(o.users_collection): c.objects.unlink(o)
+            occ.objects.link(o)
+    scene.world = bpy.data.worlds.new("w")
+    C.add_lightmap_uv_planar(ground, AO_X0, AO_X0, AO_SIZE)
+    C.add_lightmap_uv_planar(bands_ob, AO_X0, AO_X0, AO_SIZE)
+    snow_hidden = [o for o in col.objects if o.name.startswith("snow_") or o.name.startswith("bulbs_")]
+    for o in snow_hidden: o.hide_render = True
+    baked = C.bake_ao([ground], "square_ao", 1024, AO_PATH, samples=32, distance=2.5)
+    for o in snow_hidden: o.hide_render = False
+    # swap the placeholder for the baked image in the ground materials
+    for m in list(ground.data.materials) + list(bands_ob.data.materials):
+        for n in m.node_tree.nodes:
+            if n.type == "TEX_IMAGE" and n.image and n.image.name == "square_ao":
+                n.image = baked
+    for o in list(occ.objects):
+        bpy.data.objects.remove(o)
+else:
+    C.add_lightmap_uv_planar(ground, AO_X0, AO_X0, AO_SIZE)
+    C.add_lightmap_uv_planar(bands_ob, AO_X0, AO_X0, AO_SIZE)
+
+name = "square.lite" if LITE else "square"
+raw = C.export_glb(exported, os.path.join(OUT, f"{name}_raw.glb"))
+bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, f"{name}.blend"))
+final = C.optimize(raw, os.path.join(C.MODELS, f"{name}.glb"), tex_size=512 if LITE else 1024)
+st = C.glb_stats(final)
+C.log("FINAL", name, "tris", st["tris"], "bytes", st["size"])
+C.log("NODES", " ".join(n for n in st["nodes"] if n.startswith(("light_", "bulbs_", "snow_")))[:600])
+C.log("MATERIALS", st["materials"])

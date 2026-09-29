@@ -1,0 +1,17 @@
+---
+id: phrases
+---
+- Prost!
+- Zum Wohl!
+- ชนแก้ว!
+- One more Glühwein?
+- Listen to that sax.
+- So slow, so good.
+- Is time real, though?
+- Have you read Rovelli?
+- Try the Bratwurst.
+- Riesenrad after this?
+- Cheers!
+- What a night.
+- Hot wine, cold hands.
+- Found a Feynman at the bookshop.

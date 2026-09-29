@@ -1,0 +1,15 @@
+/* Self-hosted Alegreya (SIL Open Font License), latin subset only. */
+@import '@fontsource/alegreya-sc/latin-700.css';
+@import '@fontsource/alegreya-sc/latin-800.css';
+@import '@fontsource/alegreya-sans/latin-400.css';
+@import '@fontsource/alegreya-sans/latin-500.css';
+@import '@fontsource/alegreya-sans/latin-700.css';
+@import '@fontsource/alegreya-sans/latin-400-italic.css';
+
+:root {
+  color-scheme: dark;
+  --bg: #080b16; --surface: #141827; --surface2: #1c2133; --ink: #f1e9da; --muted: #aaa5b6; --line: #2b3048;
+  --gold: #e6b65e; --gold-ink: #1a1206;
+  --display: "Alegreya SC", Georgia, serif;
+  --body: "Alegreya Sans", "Gill Sans", "Trebuchet MS", sans-serif;
+}

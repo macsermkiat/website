@@ -1,0 +1,420 @@
+// The night: sky, moonlight, fill, fog, reflections, tone mapping, bloom, warm lights and snow.
+//
+//   const lighting = createLighting({ scene, renderer, camera, lite });
+//   lighting.composer.render(dt);          // every frame, after lighting.update(dt, t)
+//   lighting.setSnow(true);                // flakes fade in, fog thickens, stars go behind cloud
+//
+// Also returned (optional for the engine): placeLights(spots, opts), tune(root), captureEnvironment(pos),
+// captureProbes(), fitShadow(center, radius), stats(), settings, profile, and the parts (sky,
+// moonLight, hemi, bloom, grade, shading).
+// See README.md in this folder for the settings and the reasoning behind them.
+import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { NIGHT, PROFILES } from './settings.js';
+import { createSky } from './sky.js';
+import { installHeightFog, recompile } from './fog.js';
+import { syntheticEnvironment, createEnvUpdater, probeTargets, captureProbe } from './env.js';
+import { installShading, bulbStrings } from './shading.js';
+import { createSnow } from './snow.js';
+import { GradePass } from './grade.js';
+import { placeWarmLights, adoptEngineLights, tuneEmissives } from './lights.js';
+
+export { NIGHT, PROFILES } from './settings.js';
+export { placeWarmLights, tuneEmissives } from './lights.js';
+
+/** Bloom at a fraction of the composer's resolution (the lite market blooms at half size). */
+class ScaledBloomPass extends UnrealBloomPass {
+  constructor(res, strength, radius, threshold, scale = 1) {
+    super(new THREE.Vector2(Math.max(2, res.x * scale), Math.max(2, res.y * scale)), strength, radius, threshold);
+    this.scale = scale;
+    this.fullSize = res.clone();
+  }
+  setSize(w, h) {
+    this.fullSize.set(w, h);
+    super.setSize(Math.max(2, Math.round(w * this.scale)), Math.max(2, Math.round(h * this.scale)));
+  }
+  setScale(scale) { this.scale = scale; this.setSize(this.fullSize.x, this.fullSize.y); }
+}
+
+const damp = (a, b, rate, dt) => a + (b - a) * (1 - Math.exp(-rate * dt));
+
+/**
+ * @param {object} ctx
+ * @param {THREE.Scene} ctx.scene
+ * @param {THREE.WebGLRenderer} ctx.renderer
+ * @param {THREE.Camera} ctx.camera
+ * @param {boolean} [ctx.lite] the lite market: fewer lights, no shadows, cheaper post
+ * @param {object} [ctx.options] { shadowCenter:[x,y,z], shadowRadius, envCapturePosition:[x,y,z], envCapture,
+ *   envRefresh, probes, adaptive, profile:{...overrides}, adoptEngineLights (legacy, off) }
+ */
+export function createLighting({ scene, renderer, camera, lite = false, options = {} }) {
+  const N = NIGHT;
+  const P = { ...(lite ? PROFILES.lite : PROFILES.full), ...(options.profile || {}) };
+  const added = [];
+  const add = (o) => { scene.add(o); added.push(o); return o; };
+  const disposers = [];
+
+  // ---------- colour management and tone mapping ----------
+  // The scene renders linear HDR into a half-float target; GradePass does AgX + look + sRGB.
+  THREE.ColorManagement.enabled = true;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.AgXToneMapping; // for anything rendered straight to the screen
+  renderer.toneMappingExposure = N.exposure;
+  renderer.shadowMap.enabled = P.shadows;
+  renderer.shadowMap.type = THREE.PCFShadowMap; // three r18x: PCF is Vogel-disk soft, radius-controlled
+
+  // ---------- fog (with ground mist) ----------
+  const fogPatch = installHeightFog({ mist: N.fog.mist, mistHeight: N.fog.mistHeight });
+  const fogBase = { color: new THREE.Color(N.fog.color), density: N.fog.density };
+  scene.fog = new THREE.FogExp2(fogBase.color.clone(), fogBase.density);
+  scene.background = fogBase.color.clone();
+  recompile(scene);
+
+  // ---------- light size, local glows (bulb strings, bounce) and moon rim ----------
+  const shading = installShading({ maxGlows: P.glows, minRoughness: N.lightSize.minRoughness, minClearcoatRoughness: N.lightSize.minClearcoatRoughness });
+  shading.setRim(new THREE.Vector3(...N.moon.skyDirection), new THREE.Color(N.rim.color), N.rim.strength, N.rim.power);
+
+  // ---------- sky ----------
+  const sky = createSky(N, { clouds: P.clouds });
+  add(sky.mesh);
+
+  // ---------- moonlight and fill ----------
+  const hemi = add(new THREE.HemisphereLight(N.hemi.sky, N.hemi.ground, N.hemi.intensity));
+  hemi.name = 'lighting_hemi';
+  const moonLight = new THREE.DirectionalLight(N.moon.lightColor, N.moon.lightIntensity);
+  moonLight.name = 'lighting_moon';
+  const moonDir = new THREE.Vector3(...N.moon.lightDirection).normalize();
+  const shadowCenter = new THREE.Vector3(...(options.shadowCenter || [0, 0, -4]));
+  let shadowRadius = options.shadowRadius || 42;
+  add(moonLight);
+  add(moonLight.target);
+  function fitShadow(center = shadowCenter, radius = shadowRadius) {
+    shadowCenter.copy(center);
+    shadowRadius = radius;
+    moonLight.target.position.copy(center);
+    moonLight.position.copy(center).addScaledVector(moonDir, radius * 2);
+    const c = moonLight.shadow.camera;
+    Object.assign(c, { left: -radius, right: radius, top: radius, bottom: -radius, near: radius * 0.5, far: radius * 3.5 });
+    c.updateProjectionMatrix();
+    moonLight.shadow.needsUpdate = true;
+  }
+  if (P.shadows) {
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.set(P.shadowMapSize, P.shadowMapSize);
+    moonLight.shadow.radius = P.shadowRadius;
+    moonLight.shadow.bias = -0.0004;
+    moonLight.shadow.normalBias = 0.025;
+    moonLight.shadow.intensity = 0.85;
+  }
+  fitShadow();
+
+  // ---------- environment for reflections ----------
+  // The synthetic night first; on full, the real market is captured on frame 3 and then refreshed
+  // every N.env.refresh seconds a face per frame. Local probes (frame 3) give copper, glass and glaze
+  // near the view their own reflections of the lit stall around them.
+  const synthRT = syntheticEnvironment(renderer, sky, { size: P.envSize });
+  scene.environment = synthRT.texture;
+  scene.environmentIntensity = N.env.intensity;
+  const envCapture = options.envCapture ?? P.envCapture;
+  const envRefresh = envCapture && (options.envRefresh ?? P.envRefresh) && N.env.refresh > 0;
+  const envPos = new THREE.Vector3(...(options.envCapturePosition || [0, 1.6, 2]));
+  let updater = null;
+  const hideInCapture = [];
+  let captureAt = envCapture ? 3 : -1; // frame on which to capture the real scene
+  let nextRefresh = Infinity, wall = 0;
+  function captureEnvironment(position = envPos) {
+    updater ||= createEnvUpdater(renderer, scene, { size: P.envSize, hide: hideInCapture });
+    envPos.copy(position);
+    const rt = updater.captureNow(position);
+    scene.environment = rt.texture;
+    scene.environmentIntensity = N.env.captureIntensity;
+    nextRefresh = wall + N.env.refresh;
+  }
+  const probes = [];
+  const probeCount = options.probes ?? P.probes;
+  /** Local probes for the `count` models nearest the camera that hold copper, glass or glaze. */
+  function captureProbes(count = probeCount) {
+    const cam = camera.getWorldPosition(new THREE.Vector3());
+    const holders = new Map();
+    scene.children.forEach((h) => {
+      if (h === sky.mesh || h === snow.group || h.isLight) return;
+      const meshes = probeTargets(h).filter((m) => !m.material?.userData?.probe);
+      if (meshes.length) holders.set(h, meshes);
+    });
+    const ranked = [...holders.entries()]
+      .map(([h, meshes]) => ({ meshes, d: new THREE.Box3().setFromObject(h).distanceToPoint(cam) }))
+      .sort((a, b) => a.d - b.d).slice(0, count);
+    for (const r of ranked) {
+      try { probes.push(captureProbe(renderer, scene, r.meshes, { size: P.probeSize, intensity: N.env.probeIntensity, hide: hideInCapture })); } catch (e) { console.warn('[lighting] probe capture failed', e); }
+    }
+    return probes.length;
+  }
+
+  // ---------- emissives, bulb-string glows and warm lights ----------
+  const glowOf = new Map(); // bulbs_ mesh -> its glows
+  function addBulbGlows(root) {
+    const G = N.glow.bulbs;
+    root.traverse((o) => {
+      if (!o.isMesh || glowOf.has(o)) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      const bulb = mats.find((m) => /^bulb_(warm|cold)/i.test(m?.name || '') || m?.userData?.bulb);
+      if (!bulb && !/^bulbs_/i.test(o.name)) return;
+      const cold = /cold/i.test(bulb?.name || '');
+      const color = cold ? N.emissive.cold.color : N.emissive.warm.color;
+      glowOf.set(o, bulbStrings(o).map((st) => shading.add({ a: st.a, b: st.b, color, intensity: G.intensity, reach: G.reach, tag: 'bulbs' })));
+    });
+  }
+  const emissives = tuneEmissives(scene, N, { lite });
+  addBulbGlows(scene);
+  // LEGACY: re-tune lights the engine placed before this module ran (main.js now calls placeLights)
+  const adopted = options.adoptEngineLights === true
+    ? adoptEngineLights(scene, N, { shadowed: P.shadows ? P.shadowedLights : 0, focus: camera.getWorldPosition(new THREE.Vector3()) })
+    : [];
+  const placed = [];
+  function placeLights(spots, opts = {}) {
+    const r = placeWarmLights(scene, spots, N, { lite, budget: P.lightBudget, shadowed: P.shadows ? P.shadowedLights : 0, ...opts });
+    r.glows = (r.bounces || []).map((b) => shading.add(b));
+    placed.push(r);
+    return r;
+  }
+  function tune(root) {
+    const r = tuneEmissives(root, N, { lite });
+    r.bulbs.forEach((m) => emissives.bulbs.add(m));
+    r.windows.forEach((m) => emissives.windows.add(m));
+    addBulbGlows(root);
+    return r;
+  }
+
+  // ---------- snow ----------
+  const snow = createSnow({ layers: P.snowLayers, camera, renderer });
+  add(snow.group);
+  hideInCapture.push(snow.group);
+  let snowTarget = 0, snowMix = 0;
+  const wind = new THREE.Vector2(), windOffset = new THREE.Vector2();
+  let lastT = null;
+
+  // ---------- post: render -> bloom -> grade (AgX, sRGB, vignette, grain) ----------
+  const size = renderer.getSize(new THREE.Vector2());
+  const pr = renderer.getPixelRatio();
+  const W = Math.max(2, size.x * pr), H = Math.max(2, size.y * pr);
+  const target = new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, samples: P.msaa });
+  const composer = new EffectComposer(renderer, target);
+  // the composer's pixel ratio can be capped below the canvas's (adaptive quality); the grade pass
+  // upsamples to the canvas
+  let prCap = Infinity, prWanted = pr;
+  const setPR = composer.setPixelRatio.bind(composer);
+  composer.setPixelRatio = (v) => { prWanted = v; setPR(Math.min(v, prCap)); };
+  composer.setPixelRatio(pr);
+  const renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
+  const bloom = new ScaledBloomPass(new THREE.Vector2(W, H), N.bloom.strength, N.bloom.radius, N.bloom.threshold, P.bloomScale);
+  bloom.highPassUniforms.smoothWidth.value = N.bloom.knee;
+  function bloomLook(half) {
+    const B = half ? { ...N.bloom, ...N.bloomHalf } : N.bloom;
+    bloom.compositeMaterial.uniforms.bloomFactors.value = B.factors.slice();
+    base.bloom = B.strength;
+  }
+  // clamp what feeds the bloom (by the brightest channel, keeping hue) so a specular glint on copper
+  // or glaze enters no brighter than a bulb, and a few glint pixels cannot outshine a string of bulbs
+  const hp = bloom.materialHighPassFilter;
+  hp.fragmentShader = hp.fragmentShader.replace(
+    'vec4 texel = texture2D( tDiffuse, vUv );',
+    `vec4 texel = texture2D( tDiffuse, vUv ); texel.rgb *= min( 1.0, ${N.bloom.clamp.toFixed(2)} / max( max( texel.r, max( texel.g, texel.b ) ), 1e-4 ) );`,
+  );
+  hp.needsUpdate = true;
+  composer.addPass(bloom);
+  const grade = new GradePass({ exposure: N.exposure, punch: N.punch, vignette: N.vignette, grain: P.grain ? N.grain : 0 });
+  grade.exposureFrom = renderer;
+  composer.addPass(grade);
+  composer.setSize(size.x || 256, size.y || 256);
+
+  // ---------- per frame ----------
+  let frame = 0;
+  const base = {
+    hemi: N.hemi.intensity,
+    moon: N.moon.lightIntensity,
+    stars: N.sky.starIntensity,
+    clouds: P.clouds ? N.sky.clouds : 0,
+    moonDisc: sky.uniforms.uMoonColor.value.clone(),
+    bloom: N.bloom.strength,
+    bloomRadius: N.bloom.radius,
+  };
+  bloomLook(P.bloomScale < 1);
+
+  // ---------- adaptive quality (full only) ----------
+  // Measured in wall-clock time after the first captures. If the median frame is slower than
+  // ~55 fps, step down once per window: 1) MSAA 4x -> 2x, 2) composer pixel ratio <= 1.5,
+  // 3) bloom at half resolution (with the half-resolution bloom weights). Never steps back up.
+  const adaptive = (options.adaptive ?? P.adaptive) && !lite;
+  const quality = { level: 0, msaa: P.msaa, pixelRatioCap: null, bloomScale: P.bloomScale };
+  const ft = new Float32Array(240);
+  let ftN = 0, ftAll = 0, sinceStep = 0;
+  function stepDown() {
+    quality.level++;
+    if (quality.level === 1 && P.msaa > 2) {
+      quality.msaa = 2;
+      for (const rt of [composer.renderTarget1, composer.renderTarget2]) { rt.samples = 2; rt.dispose(); }
+    } else if (quality.level <= 2 && prWanted > 1.5) {
+      quality.level = 2;
+      prCap = 1.5;
+      quality.pixelRatioCap = 1.5;
+      composer.setPixelRatio(prWanted);
+    } else if (quality.level <= 3 && bloom.scale > 0.5) {
+      quality.level = 3;
+      bloom.setScale(0.5);
+      quality.bloomScale = 0.5;
+      bloomLook(true);
+    } else {
+      quality.level = 4; // nothing left to give here; main.js offers the lite market
+    }
+    console.info('[lighting] adaptive quality', JSON.stringify(quality));
+  }
+  function stats() {
+    const n = Math.min(ftN, ft.length);
+    const a = Array.from(ft.slice(0, n)).sort((x, y) => x - y);
+    const q = (p) => (n ? +a[Math.min(n - 1, Math.floor(p * n))].toFixed(2) : null);
+    return { frames: ftAll, window: n, p50: q(0.5), p95: q(0.95), p99: q(0.99), fps: n ? +(1000 / q(0.5)).toFixed(1) : null, ...quality };
+  }
+  const snowFog = new THREE.Color(N.snow.fogColor);
+
+  let lastWall = null;
+  const _cam = new THREE.Vector3();
+  function update(dt = 0.016, t = 0) {
+    frame++;
+    const rawDt = Math.max(dt || 0, 0);
+    dt = Math.min(rawDt, 0.1);
+    const st = lastT == null ? 0 : Math.max(0, t - lastT); // scene time step (0 under reduced motion)
+    lastT = t;
+    // wall-clock step: the snow blend and the refresh timer run in real time, so a slow machine
+    // (dt clamped to 0.1 s) still fades the weather in over ~2 s
+    const now = performance.now();
+    const wdt = lastWall == null ? 0 : (now - lastWall) / 1000;
+    lastWall = now;
+    wall += wdt;
+    if (frame > 10 && wdt > 0) {
+      ft[ftN++ % ft.length] = wdt * 1000;
+      ftAll++;
+      if (adaptive && quality.level < 4 && ++sinceStep >= 150 && ftN >= 150 && frame > 200) {
+        const s = stats();
+        if (s.p50 > 18.2) { stepDown(); ftN = 0; }
+        sinceStep = 0;
+      }
+    }
+
+    // snow blend: 0 clear night .. 1 snowing
+    snowMix = damp(snowMix, snowTarget, 1.4, Math.max(rawDt, wdt));
+    if (Math.abs(snowMix - snowTarget) < 0.001) snowMix = snowTarget;
+    const k = snowMix;
+    scene.fog.density = THREE.MathUtils.lerp(fogBase.density, N.snow.fogDensity, k);
+    scene.fog.color.lerpColors(fogBase.color, snowFog, k);
+    scene.background.copy(scene.fog.color);
+    sky.uniforms.uFogColor.value.copy(scene.fog.color);
+    sky.uniforms.uOvercast.value = k * 0.85;
+    sky.uniforms.uStars.value = base.stars * (1 - k * (1 - N.snow.starsLeft));
+    sky.uniforms.uClouds.value = P.clouds ? THREE.MathUtils.lerp(base.clouds, N.snow.clouds, k) : 0;
+    sky.uniforms.uTime.value = t;
+    hemi.intensity = base.hemi * THREE.MathUtils.lerp(1, N.snow.hemiBoost, k);
+    moonLight.intensity = base.moon * THREE.MathUtils.lerp(1, N.snow.moonDim, k);
+    bloom.strength = base.bloom * (1 + 0.15 * k);
+    bloom.radius = base.bloomRadius + 0.12 * k; // snowy air scatters more
+
+    // wind: a steady drift with slow gusts, integrated in scene time
+    const g = 1 + N.snow.gust * (0.6 * Math.sin(t * 0.21) + 0.4 * Math.sin(t * 0.53 + 1.7));
+    wind.set(N.snow.wind[0] * g, N.snow.wind[1] * (0.7 + 0.3 * Math.sin(t * 0.17)));
+    windOffset.addScaledVector(wind, st);
+    snow.uniforms.uFall.value = N.snow.fall;
+    if (k > 0 && frame % 30 === 1) feedSnowLights();
+    snow.update({ t, windOffset, fog: scene.fog, opacity: k });
+
+    // local glows nearest the camera into the shared uniform (the camera moves slowly)
+    if (frame % 15 === 1) shading.update(camera.getWorldPosition(_cam));
+
+    if (frame === 3) {
+      if (captureAt === 3) {
+        try { captureEnvironment(); } catch (e) { console.warn('[lighting] environment capture failed', e); }
+      }
+      if (probeCount > 0) captureProbes();
+    } else if (frame === captureAt) {
+      updater ? updater.start(envPos) : captureEnvironment();
+    }
+    if (envRefresh && updater && !updater.busy && wall >= nextRefresh) {
+      updater.start(envPos);
+      nextRefresh = wall + N.env.refresh;
+    }
+    if (updater?.busy) updater.step();
+  }
+
+  const _wp = new THREE.Vector3(), _cp = new THREE.Vector3();
+  function feedSnowLights() {
+    camera.getWorldPosition(_cp);
+    const all = [];
+    scene.traverse((o) => { if ((o.isPointLight || o.isSpotLight) && o.visible && o.intensity > 0) all.push(o); });
+    const near = all.map((o) => ({ o, d: o.getWorldPosition(_wp).distanceToSquared(_cp), position: o.getWorldPosition(new THREE.Vector3()) }))
+      .sort((a, b) => a.d - b.d).slice(0, 4)
+      .map((e) => ({ position: e.position, intensity: e.o.intensity * 0.012 }));
+    snow.setWarmLights(near);
+  }
+
+  function setSnow(on) {
+    const next = on ? 1 : 0;
+    if (next === snowTarget) return;
+    snowTarget = next;
+    // re-capture reflections once the weather has settled (~2.5 s; full market only)
+    if (envCapture && frame > 3) nextRefresh = wall + 2.5;
+  }
+
+  function dispose() {
+    added.forEach((o) => o.removeFromParent());
+    placed.forEach((r) => r.dispose());
+    snow.dispose();
+    sky.mesh.geometry.dispose();
+    sky.material.dispose();
+    synthRT.dispose();
+    updater?.dispose();
+    probes.forEach((p) => p.dispose());
+    scene.environment = null;
+    shading.restore();
+    bloom.dispose();
+    grade.dispose();
+    composer.dispose?.();
+    target.dispose();
+    fogPatch.restore();
+    scene.fog = null;
+    disposers.forEach((f) => f());
+  }
+
+  return {
+    composer,
+    update,
+    setSnow,
+    dispose,
+    // helpers for the engine
+    placeLights,
+    tune,
+    captureEnvironment,
+    captureProbes,
+    fitShadow,
+    stats,
+    quality,
+    // parts, for tuning from the console or a test page
+    settings: N,
+    profile: P,
+    lite,
+    sky,
+    hemi,
+    moonLight,
+    bloom,
+    grade,
+    shading,
+    probes,
+    renderPass,
+    emissives,
+    adoptedLights: adopted,
+    get snow() { return snowTarget === 1; },
+    get snowAmount() { return snowMix; },
+  };
+}
+
+export default createLighting;

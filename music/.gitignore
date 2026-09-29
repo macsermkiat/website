@@ -1,0 +1,6 @@
+# third-party sample libraries (fetched by fetch_samples.sh, ~1 GB)
+.samples/
+# render cache and large intermediates
+.cache/
+out/*.wav
+__pycache__/

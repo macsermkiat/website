@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Night lighting test</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #03060f; color: #e8dcc4; font: 14px/1.4 system-ui, sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  #hud { position: fixed; left: 12px; bottom: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+  #hud button, #hud a { background: rgba(10,14,30,.75); color: inherit; border: 1px solid rgba(255,210,150,.35); border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer; text-decoration: none; }
+  #info { position: fixed; left: 12px; top: 10px; opacity: .8; font-size: 12px; }
+  body.shot #hud, body.shot #info { display: none; }
+</style>
+</head>
+<body>
+<div id="info"></div>
+<div id="hud">
+  <button id="snow" type="button">Snow: off</button>
+  <a id="lite" href="#">Lite: off</a>
+  <a id="mode" href="#">Show stand-in lighting</a>
+</div>
+<script type="module">
+// Lighting test bench: the Blender-built reference stall on a plain ground plane, framed like the
+// Cycles preview (review/reference/gluehwein_preview.png).
+//   ?lite=1       lite profile            ?snow=1   snow on
+//   ?mode=before  the engine's stand-in lighting (site/src/lighting-fallback.js) for comparison
+//   ?shot=1       hide the HUD (screenshots)   ?glb=<url>  another model   ?view=wide  wider camera
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { createLighting, NIGHT } from './index.js';
+import { createLighting as standinLighting } from '../lighting-fallback.js';
+
+const q = new URLSearchParams(location.search);
+const lite = q.get('lite') === '1';
+const before = q.get('mode') === 'before';
+if (q.get('shot') === '1') document.body.classList.add('shot');
+// ?set=moon.lightIntensity:0.2,env.intensity:0 overrides settings (tuning experiments)
+for (const kv of (q.get('set') || '').split(',').filter(Boolean)) {
+  const [path, raw] = kv.split(':');
+  const keys = path.split('.');
+  let o = NIGHT;
+  keys.slice(0, -1).forEach((k) => (o = o[k]));
+  o[keys.at(-1)] = raw.startsWith('0x') ? parseInt(raw, 16) : Number(raw);
+}
+const info = (t) => (document.getElementById('info').textContent = t);
+
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, lite ? 1.25 : 1.75));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.setSize(innerWidth, innerHeight, false);
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+// the Cycles camera: Blender (-3.4,-5.6,1.9) looking at (0.1,0,1.45), 32 mm lens on a 36 mm sensor
+const camera = new THREE.PerspectiveCamera(35.1, innerWidth / innerHeight, 0.1, 600);
+const view = q.get('view');
+const wide = view === 'wide';
+camera.position.set(...(wide ? [-7.5, 3.2, 12] : view === 'sky' ? [6, 1.4, 6] : [-3.4, 1.9, 5.6]));
+const target = new THREE.Vector3(...(wide ? [0.1, 1.6, 0] : view === 'sky' ? [4.7, 3.6, -3.8] : [0.1, 1.45, 0]));
+if (view === 'sky') camera.fov = 60;
+camera.lookAt(target);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.copy(target);
+controls.enableDamping = true;
+
+// ---------- ground: a plain plane of packed, slightly trodden snow ----------
+function groundTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const img = g.createImageData(256, 256);
+  let s = 5;
+  const R = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const blobs = Array.from({ length: 40 }, () => [R() * 256, R() * 256, 10 + R() * 40]);
+  for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) {
+    let v = 0;
+    for (const [bx, by, r] of blobs) {
+      const dx = Math.min(Math.abs(x - bx), 256 - Math.abs(x - bx)), dy = Math.min(Math.abs(y - by), 256 - Math.abs(y - by));
+      v += Math.exp(-(dx * dx + dy * dy) / (r * r));
+    }
+    const n = 0.72 + 0.2 * Math.min(1, v) + (R() - 0.5) * 0.1; // roughness: trodden patches are glossier
+    const i = (y * 256 + x) * 4;
+    img.data[i] = 255; img.data[i + 1] = Math.round((1 - 0.45 * Math.min(1, v)) * 255); img.data[i + 2] = 0; img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(8, 8);
+  return t;
+}
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(80, 80).rotateX(-Math.PI / 2),
+  new THREE.MeshStandardMaterial({ color: 0xbfc5cf, roughness: 1, roughnessMap: groundTexture(), metalness: 0 }),
+);
+ground.name = 'ground';
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ---------- the stall ----------
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const glbUrl = q.get('glb') || '/review/reference/gluehwein_stall_web.glb';
+info(`loading ${glbUrl}…`);
+const gltf = await loader.loadAsync(glbUrl);
+const stall = gltf.scene;
+stall.name = 'stall_gluehwein';
+stall.userData.kind = 'section';
+scene.add(stall);
+stall.traverse((o) => {
+  if (!o.isMesh) return;
+  o.castShadow = !lite;
+  o.receiveShadow = !lite;
+  // the reference glb predates the naming contract (gltf-transform palettised the bulb material):
+  // name its bulbs the way the contract says so the lighting treats them like any stall's
+  if (o.material?.emissive && o.material.emissiveIntensity > 1 && o.material.emissive.getHex() !== 0) {
+    o.name = 'bulbs_0';
+    o.material.name = 'bulb_warm';
+    o.castShadow = false;
+  }
+});
+
+// light_ empties where the carpenter's stalls carry them (the reference glb has none yet):
+// light_0 inside under the roof ridge, light_1 under the front eave
+const empties = [
+  ['light_0', [0, 2.3, -0.1]],
+  ['light_1', [0, 2.35, 1.95]],
+].map(([name, p]) => { const e = new THREE.Object3D(); e.name = name; e.position.set(...p); stall.add(e); return e; });
+scene.updateMatrixWorld(true);
+
+// ---------- lighting ----------
+let lighting;
+if (before) {
+  const L = standinLighting({ scene, renderer, camera, lite });
+  // the engine's stand-in light placement: one warm point light per empty (engine/lights.js values)
+  empties.forEach((e) => e.add(new THREE.PointLight(0xffb46b, 14, 11, 2)));
+  stall.traverse((o) => { if (o.name === 'bulbs_0') { o.material.emissive.set(1, 0.6, 0.26); o.material.emissiveIntensity = 5.5; } });
+  lighting = { ...L, update: L.update, setSnow: L.setSnow };
+} else {
+  lighting = createLighting({
+    scene, renderer, camera, lite,
+    options: { shadowCenter: [0, 0, 0.5], shadowRadius: 6, envCapture: q.get('capture') === '1', envCapturePosition: [0.2, 1.4, 2.4] },
+  });
+  const only = q.get('lights'); // e.g. ?lights=0 keeps just light_0
+  lighting.placeLights(empties.filter((e, i) => only == null || only.split('').includes(String(i))).map((obj) => ({ obj, kind: 'section', id: 'gluehwein' })), {
+    focus: target, shadowed: lite ? 0 : 2,
+  });
+}
+window.lighting = lighting;
+window.scene = scene;
+
+// ---------- HUD ----------
+const snowBtn = document.getElementById('snow');
+let snowOn = false;
+function setSnow(on) {
+  snowOn = on;
+  lighting.setSnow(on);
+  snowBtn.textContent = `Snow: ${on ? 'on' : 'off'}`;
+}
+snowBtn.onclick = () => setSnow(!snowOn);
+const link = (k, v) => { const u = new URL(location.href); v == null ? u.searchParams.delete(k) : u.searchParams.set(k, v); return u.href; };
+document.getElementById('lite').textContent = `Lite: ${lite ? 'on' : 'off'}`;
+document.getElementById('lite').href = link('lite', lite ? null : '1');
+document.getElementById('mode').textContent = before ? 'Show new lighting' : 'Show stand-in lighting';
+document.getElementById('mode').href = link('mode', before ? null : 'before');
+if (q.get('snow') === '1') setSnow(true);
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight, false);
+  lighting.composer.setPixelRatio?.(renderer.getPixelRatio());
+  lighting.composer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+// ---------- loop ----------
+// ?t=<seconds> starts the clock there (snow already fallen in for screenshots)
+const timer = new THREE.Timer();
+let T = Number(q.get('t')) || 0, frames = 0;
+if (T && !before) { for (let i = 0; i < 40; i++) lighting.update(0.1, T - 4 + i * 0.1); }
+function frame() {
+  timer.update();
+  const dt = Math.min(timer.getDelta(), 0.1);
+  T += dt;
+  controls.update();
+  lighting.update(dt, T);
+  lighting.composer.render(dt);
+  frames++;
+  if (frames === 6) {
+    window.__ready = true;
+    const r = renderer.info.render;
+    info(`${before ? 'stand-in lighting' : 'lighting/index.js'} · ${lite ? 'lite' : 'full'} · ${r.calls} calls · ${r.triangles} tris`);
+  }
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+@import './fonts.css';
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 18px; line-height: 1.6; margin: 0; padding: 24px 16px 64px; }
+a { color: var(--gold); }
+a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.skip { position: absolute; left: 16px; top: -60px; background: var(--gold); color: var(--gold-ink); padding: 8px 14px; border-radius: 8px; font-weight: 700; }
+.skip:focus { top: 12px; }
+.masthead, main, footer { max-width: 68ch; margin: 0 auto; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(32px, 6vw, 48px); line-height: 1.05; margin: 0 0 8px; }
+h1 span { color: var(--gold); }
+.intro p { margin: 0 0 8px; color: var(--muted); }
+.to3d { margin: 0 0 16px; }
+nav ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+nav a { display: inline-block; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; color: var(--ink); }
+nav a span { color: var(--muted); font-size: .85em; }
+nav a:hover { border-color: var(--gold); }
+section { border-top: 1px solid var(--line); padding: 28px 0 8px; margin-top: 28px; }
+.eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin: 0; }
+h2 { font-family: var(--display); font-size: 32px; line-height: 1.1; margin: 4px 0 14px; }
+h3 { font-family: var(--display); font-size: 22px; margin: 22px 0 0; }
+h3 + p em { color: var(--gold); font-style: normal; font-size: 15px; }
+ul { padding-left: 1.2em; }
+li { margin: 4px 0; }
+.note { font-size: 15px; color: var(--muted); }
+mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-radius: 4px; padding: 0 4px; font-size: .8em; }
+footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 12px; color: var(--muted); font-size: 15px; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --bg: #fbf7ef; --surface: #f1eadc; --ink: #1d1824; --muted: #5d566a; --line: #dcd2c0; --gold: #8a5a0e; --gold-ink: #fff; color-scheme: light; }
+}
+.formac { color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; padding: 1px 6px; font-size: .88em; font-style: italic; }

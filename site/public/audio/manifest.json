@@ -1,0 +1,71 @@
+{
+  "title": "Lanterns After Closing",
+  "composer": "Nachtmarkt music writer (original composition)",
+  "bpm": 66.0,
+  "timeSignature": "3/4",
+  "key": "G minor",
+  "sampleRate": 44100,
+  "duration": 269.221791,
+  "loopStart": 44.845465,
+  "loopEnd": 219.390907,
+  "stems": {
+    "sax": "ballad-sax.mp3",
+    "piano": "ballad-piano.mp3",
+    "bass": "ballad-bass.mp3",
+    "drums": "ballad-drums.mp3",
+    "room": "ballad-room.mp3"
+  },
+  "mix": "ballad-mix.mp3",
+  "events": "ballad-events.json",
+  "form": "32-bar AABA in 3/4: head (1-32), tenor chorus (33-64), piano half-chorus (65-80), out head from the bridge (81-96) with ritardando and a rubato fermata; the loop is bars 17-80",
+  "sections": [
+    {
+      "name": "head",
+      "bar": 1,
+      "t": 1.209
+    },
+    {
+      "name": "head bridge",
+      "bar": 17,
+      "t": 44.845
+    },
+    {
+      "name": "tenor chorus",
+      "bar": 33,
+      "t": 88.482
+    },
+    {
+      "name": "piano half-chorus",
+      "bar": 65,
+      "t": 175.755
+    },
+    {
+      "name": "out head",
+      "bar": 81,
+      "t": 219.391
+    },
+    {
+      "name": "fermata",
+      "bar": 96,
+      "t": 261.672
+    }
+  ],
+  "ending": {
+    "start": 219.390907,
+    "fermata": 261.672,
+    "musicEnds": 266.322,
+    "howTo": "To finish the tune instead of looping, let playback run on past loopEnd to the end of the file: the out head (bars 81-96) follows seamlessly and ends on a fermata."
+  },
+  "decodedDuration": 269.270204,
+  "stemsEnd": null,
+  "durationNote": "duration is the rendered length; an MP3 decoder (Chromium, libmpg123) returns decodedDuration, which is longer by the encoder's final-frame padding (silence).",
+  "license": {
+    "composition": "Original composition for this site (all rights with the site owner)",
+    "recording": {
+      "sax, room, mix": "Share-alike: must be offered under CC BY-SA 3.0, because they contain the MusyngKite tenor samples (CC BY-SA 3.0, via gleitz/midi-js-soundfonts)",
+      "piano": "Attribution: Salamander Grand Piano by Alexander Holm (CC BY 3.0)",
+      "bass, drums": "No conditions (CC0 sources)",
+      "credit": "Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: MusyngKite soundfont via gleitz/midi-js-soundfonts (CC BY-SA 3.0). Bass: Karoryfer Meatbass (CC0). Drums: Virtuosity Drums by Versilian Studios (CC0). Recording: CC BY-SA 3.0."
+    }
+  }
+}

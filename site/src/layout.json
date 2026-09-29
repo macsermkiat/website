@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "about": "Single source of placement for the market. Owner: architect. pos is [x, z] in metres in three.js space (Y-up, square centred on the origin, the home view looks from +Z toward -Z). rotY is radians about +Y; at rotY 0 an asset's front faces +Z. Assets live in site/public/models/ (the engine loads <name>.lite.glb for the lite market). Asset names follow the files the carpenter exports (stall_*.glb, deco_<goods>.glb); the ride builder's files are assumed to be bandstand.glb, riesenrad.glb and karussell.glb.",
+  "camera": {
+    "home": {"pos": [3, 9, 33], "target": [0, 3.4, -3], "fov": 42}
+  },
+  "places": [
+    {"id": "square", "kind": "scenery", "asset": "square.glb", "label": "Marktplatz", "pos": [0, 0], "rotY": 0},
+    {"id": "town", "kind": "scenery", "asset": "town.glb", "label": "Altstadt", "pos": [0, 0], "rotY": 0},
+    {"id": "tree", "kind": "scenery", "asset": "tree.glb", "label": "Christbaum", "pos": [6.5, -15], "rotY": 0.3},
+    {"id": "gluehwein", "kind": "section", "section": "about", "asset": "stall_gluehwein.glb", "label": "Glühwein", "pos": [-7.4, -1.4], "rotY": 0.42},
+    {"id": "bratwurst", "kind": "section", "section": "writing", "asset": "stall_bratwurst.glb", "label": "Bratwurst", "pos": [-12.8, 2.6], "rotY": 0.8},
+    {"id": "bierstand", "kind": "section", "section": "projects", "asset": "stall_bier.glb", "label": "Bier vom Fass", "pos": [7.4, -1.4], "rotY": -0.42},
+    {"id": "buecherstand", "kind": "section", "section": "reading", "asset": "stall_buecher.glb", "label": "Bücher", "pos": [12.8, 2.6], "rotY": -0.8},
+    {"id": "bandstand", "kind": "landmark", "section": "music", "asset": "bandstand.glb", "label": "Musikpavillon", "pos": [0, -5], "rotY": 0},
+    {"id": "riesenrad", "kind": "landmark", "section": "big-questions", "asset": "riesenrad.glb", "label": "Riesenrad", "pos": [-22, -17], "rotY": 0.65},
+    {"id": "karussell", "kind": "landmark", "section": "contact", "asset": "karussell.glb", "label": "Karussell", "pos": [19, -12], "rotY": -0.6},
+    {"id": "deco-lebkuchen", "kind": "deco", "goods": "lebkuchen", "asset": "deco_lebkuchen.glb", "label": "Lebkuchen", "pos": [-21.2, -3.5], "rotY": 1.53},
+    {"id": "deco-mandeln", "kind": "deco", "goods": "mandeln", "asset": "deco_mandeln.glb", "label": "Gebrannte Mandeln", "pos": [-21.0, 3.4], "rotY": 1.6},
+    {"id": "deco-kerzen", "kind": "deco", "goods": "kerzen", "asset": "deco_kerzen.glb", "label": "Kerzen", "pos": [-20.6, 10.3], "rotY": 1.66},
+    {"id": "deco-spielzeug", "kind": "deco", "goods": "spielzeug", "asset": "deco_spielzeug.glb", "label": "Holzspielzeug", "pos": [21.1, -3.4], "rotY": -1.55},
+    {"id": "deco-schmuck", "kind": "deco", "goods": "schmuck", "asset": "deco_schmuck.glb", "label": "Christbaumschmuck", "pos": [21.0, 3.5], "rotY": -1.6},
+    {"id": "deco-kaese", "kind": "deco", "goods": "kaese", "asset": "deco_kaese.glb", "label": "Käse", "pos": [20.5, 10.2], "rotY": -1.67},
+    {"id": "deco-crepes", "kind": "deco", "goods": "crepes", "asset": "deco_crepes.glb", "label": "Crêpes", "pos": [-9.5, -21.2], "rotY": 0.05},
+    {"id": "deco-maroni", "kind": "deco", "goods": "maroni", "asset": "deco_maroni.glb", "label": "Heiße Maroni", "pos": [-3.3, -21.8], "rotY": -0.03},
+    {"id": "deco-kartoffelpuffer", "kind": "deco", "goods": "puffer", "asset": "deco_puffer.glb", "label": "Kartoffelpuffer", "pos": [14.2, -21.0], "rotY": -0.08}
+  ]
+}
