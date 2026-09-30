@@ -29,19 +29,28 @@ export const NIGHT = {
     // and the cobbles get a cool grazing light and long soft shadows instead of pure backlight.
     // Deliberately not the disc's direction (a moon that low would silhouette every stall front).
     lightDirection: [-0.62, 0.72, 0.3],
-    angularRadius: 0.03, // radians; ~2.5x the real moon, for the miniature look
-    discIntensity: 4.2, // HDR, so the disc blooms
+    // Round 2 (Codex: "reduce glare and moon dominance"): the disc from 0.03 to 0.02 rad (~1.7x the
+    // real moon; it was the brightest, biggest thing in the home view), 4.2 -> 2.8 so it blooms only at
+    // its core, and a halo of 0.3 (was 0.55), which had lit a wide pale disc of sky over the town
+    angularRadius: 0.02,
+    discIntensity: 2.8,
     halo: 0x5d6fa8,
-    haloStrength: 0.55,
+    haloStrength: 0.3,
     lightColor: 0x9ab0f0,
     lightIntensity: 0.36,
   },
 
-  hemi: { sky: 0x4a5c90, ground: 0x14161c, intensity: 0.38 },
+  // Round 2: the ground colour is the warm bounce off the lit square (was a cold near-black #14161c).
+  // It lifts what faces sideways and down (the crowd's coats and faces, the town's facades, the
+  // underside of eaves) toward warm grey, while what faces up (roofs, cobbles) keeps the cool sky fill,
+  // so the night is not flattened: the tops stay blue, the fronts get a little of the market's light
+  hemi: { sky: 0x4a5c90, ground: 0x3a2c22, intensity: 0.4 },
 
   fog: {
     color: 0x0a1630,
-    density: 0.0135,
+    // Round 2: 0.0135 -> 0.0115, so the facades 50-60 m out keep their timbering and windows (the
+    // transmittance there goes from 0.58 to 0.67) while the church and the far town still sink into haze
+    density: 0.0115,
     // height fog: thicker in the first metres above the cobbles
     mist: 1.1, // extra density multiplier at ground level
     mistHeight: 3.2, // metres over which the mist thins out
@@ -94,18 +103,39 @@ export const NIGHT = {
     // The warm pool on the cobbles around the stall front: a one-sided glow where the front fill hangs,
     // clipped above `ceiling` m over the base, so it lights the ground only (Cycles: warm grey beside
     // the stall, h4 l.27; pass 3: blue, h250, in the stall's moon shadow)
-    spill: { intensity: 11, reach: 8, out: 0.8, up: 0.4, ceiling: 0.2 },
+    // Round 2: 11 -> 7.5 and reach 8 -> 6 m: from the home view the pools around the four section
+    // stalls were the brightest ground in the frame, bright ovals that read as glare
+    spill: { intensity: 7.5, reach: 6, out: 0.8, up: 0.4, ceiling: 0.2 },
+    // Round 2: a sign lamp over every stall's slot_sign (lights.js signRect / signFixture): a bar lamp
+    // on two arms, `out` m in front of the board and `up` m over its top edge, `span` of the board's
+    // width (at most 2 x maxHalf m). Its light is a one-sided line glow along the bar, clipped from
+    // `below` m under the board to just under the lamp, so it lights the board and the fascia around it
+    // but not the roof. Deco stalls get `decoScale` of it and a lower slot priority.
+    // a light_ past the 2 real lights a stall may have (the Bücherstand's counter lamp): a small glow
+    lamp: { intensity: 2.5, reach: 1.3 },
+    sign: { intensity: 1.5, reach: 1.1, out: 0.3, up: 0.1, below: 0.08, span: 0.75, maxHalf: 1.0, decoScale: 0.6, fixture: true, fixtureEmissive: 2.2, color: [1.0, 0.74, 0.45] },
   },
+
+  // Round 2 (Codex: "lift crowd and facade detail without flattening the night"): the town wash
+  // (shading.js). Walls of the town ring (world radius past r0, full past r1; the market, the deco
+  // rows and the Ferris wheel all sit inside 30 m) get a warm diffuse light, `facing` of it only on
+  // walls that face the square, falling off over `height` m up the facade: the market's glow and the
+  // street lamps below. Irradiance, linear; 0 turns it off.
+  town: { color: [1.0, 0.74, 0.5], intensity: 0.22, r0: 36, r1: 46, height: 9, facing: 0.7 },
 
   // faint cool rim on edges that face the moon, for figures and posts in front of the stalls.
   // It is added as radiance, not multiplied by albedo (the crowd's coats are albedo 0.01-0.07), and
   // only on dark materials: it fades out between albedo `dark[0]` and `dark[1]`, so wood walls stay
   // near-black on their moon side as in Cycles while the coats keep their outline
-  rim: { color: 0x9fb4ff, strength: 0.06, power: 1.6, dark: [0.07, 0.16] },
+  // round 2: 0.06 -> 0.09, so the crowd reads against the dark cobbles from the home view (still dark materials only)
+  rim: { color: 0x9fb4ff, strength: 0.09, power: 1.6, dark: [0.07, 0.16] },
 
   // Emissives the lighting owns: bulbs_ (bulb_warm / bulb_cold) and window_warm.
   emissive: {
-    warm: { color: [1.0, 0.62, 0.3], intensity: 6 },
+    // Round 2: 6 -> 4.8. Entered, a stall's bulbs are 2-3 m from the camera and fill 15-20 px each;
+    // at 6 their white cores and halos were the glare the Codex judge saw close up (and they washed the
+    // sign board above them). 4.8 keeps a warm-white core that still blooms.
+    warm: { color: [1.0, 0.62, 0.3], intensity: 4.8 },
     cold: { color: [0.62, 0.76, 1.0], intensity: 5.0 },
     window: 1.5,
   },
@@ -116,6 +146,7 @@ export const NIGHT = {
     color: [1.0, 0.6, 0.3], // linear: the Cycles previews' light colour (nmlib/render.py)
     frontColor: [1.0, 0.7, 0.36], // a little paler than the interior, so the cobbles in front read cream, not pink
     interiorShadow: 0.95, // near-opaque: no light through the walls
+    perModel: 2, // real lights per model at most (BUILD.md); a stall's further light_ empties become glows
     // The static cube shadow of an interior light: the kernel is wide (a lamp has a size), and taken
     // with 12 taps rather than three's 5, so light through a hairline gap between wall planks spreads
     // into a faint soft band instead of a sharp dashed streak across the ground
@@ -185,9 +216,11 @@ export const PROFILES = {
     envCapture: true,
     probes: 6, // local reflection probes for the nearest models with copper, glass or glaze
     probeSize: 128,
-    glows: 24, // local glows evaluated per fragment (stall interiors first, then bulb strings)
+    glows: 28, // local glows evaluated per fragment (stall interiors first, then bulb strings)
     adaptive: true, // step down MSAA, then composer pixel ratio, then bloom resolution if slow
     lightBudget: 14,
+    // the place the visitor enters borrows up to this many unshadowed lights for its unlit light_ spots
+    focusLights: 2,
     shadowedLights: 4, // interior lights of the section stalls nearest the view (static shadow maps)
     snowLayers: [
       // near: larger soft flakes, mid, far: fine dust. At most 3 cm and softness 0.45: the engine's
@@ -211,9 +244,11 @@ export const PROFILES = {
     envCapture: false,
     probes: 2,
     probeSize: 64,
-    glows: 12,
+    // 16 (was 12): the four section signs' lamps are glows too (round 2)
+    glows: 16,
     adaptive: false,
     lightBudget: 4,
+    focusLights: 2,
     shadowedLights: 0,
     snowLayers: [
       { count: 1200, box: 14, size: [0.0185, 0.03], soft: 0.45 },

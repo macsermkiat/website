@@ -36,7 +36,7 @@ from nmlib import state  # noqa: E402
 TWO_PI = 2 * math.pi
 ATLAS_DIR = os.path.join(REPO, "blender", "out", "vendor")
 MODELS = os.path.join(REPO, "site", "public", "models")
-REVIEW = os.path.join(REPO, "review", "round-1", "vendor")
+REVIEW = os.path.join(REPO, "review", "round-2", "vendor")
 _REG = None
 LITE = {"on": False}
 # Two random streams. `rng` is the layout stream: where goods stand, their sizes and which book is which.
@@ -606,9 +606,8 @@ def material(key):
 # ============================================================ prop sets
 # where an act_ node's origin sits, by kind, when it is not the base the item rests on
 PIVOTS = {
-    "sausage": "centre: middle of the sausage, long axis along the node's X, so the engine can turn it on the "
-               "grill without it jumping (a base pivot would swing it round its underside)",
-    "grill": "the fire bowl's foot on the hearth plate (act_grill); the hook of the swing (act_grill_swing)",
+    "grill": "act_grill: on the deck of the stall's grill opening, under the fire bowl's centre (the grill's "
+             "base); act_grill_swing: the hook the grate hangs from",
     "lid": "hinge at the back rim of the kettle; rotating X negative opens it",
     "tap": "base of the handle on top of the faucet; rotating X tips the handle forward",
     "effect": "the point where steam or smoke starts",
@@ -745,7 +744,14 @@ AO_FULL, AO_LITE = 512, 256                   # per-set AO atlas (occlusion text
 def export_set(name, lite_mode, items=None):
     from nmlib import export as nexport
     out = name + (".lite" if lite_mode else "")
-    rep = nexport.export_glb(out, texture_size=TEX_LITE if lite_mode else TEX_FULL,
+    size = TEX_LITE if lite_mode else TEX_FULL
+    if name.startswith("prop_books"):
+        # the books atlas is 2048 px wide and taller than that; the optimiser fits textures inside a square,
+        # so raise the limit to keep its full width (lite: 512 px wide)
+        with open(os.path.join(ATLAS_DIR, "regions.json")) as f:
+            bh = json.load(f)["books"].get("height", 2048)
+        size = int(size * bh / 2048)
+    rep = nexport.export_glb(out, texture_size=size,
                              externalize=(lambda n: n.startswith(SHARED_TEX), tex_uri(lite_mode)))
     path = os.path.join(MODELS, out + ".glb")
     mats = split_book_materials(path)

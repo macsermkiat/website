@@ -210,8 +210,12 @@ def fascia(part, sl, h=0.14, th=0.028, tint=None, band=None):
 
 def snow_cap(part, sl, thick=0.05, lip=0.05, nx=None, ns=None, edge_in=0.07, seed=0.0, cover=1.0,
              ridge_clear=0.24, patch_scale=1.4, base=0.03, courses=None, butt_gap=0.024, ridges=None,
-             ridge_cover=0.012, ridge_soft=0.05):
+             ridge_cover=0.012, ridge_soft=0.05, drifts=0):
     """Thin snow on a slope with a soft lip curling over the eave.
+
+    drifts:      number of heavier drifts along the eave (full builds only): snow that slid down
+                 and piled against the lip, lumpy mounds 0.2-0.5 m long bulging over the edge,
+                 so a long straight roof edge does not read as one ruled strip (80 tris each).
 
     courses:     (expo, first_butt) of the shingle courses under the snow (hut passes these for
                  shingle roofs). The snow then lies in one strip per course, each strip sinking
@@ -344,6 +348,33 @@ def snow_cap(part, sl, thick=0.05, lip=0.05, nx=None, ns=None, edge_in=0.07, see
     loose = [v for v in bm.verts if not v.link_faces]
     bmesh.ops.delete(bm, geom=loose, context='VERTS')
     part.from_bmesh(bm, grain=0, smooth=True)
+    if drifts and not lite:
+        _eave_drifts(part, sl, a0, a1, drifts, thick, base, seed)
+
+
+def _eave_drifts(part, sl, a0, a1, n, thick, base, seed):
+    """Lumpy snow mounds slid down against the eave lip (see snow_cap(drifts=))."""
+    import bmesh
+    import random
+    R = random.Random(int(seed * 1000) + 17)
+    span = a1 - a0
+    for k in range(n):
+        # spread along the eave with jitter, never in the last 0.2 m at the gable ends
+        a = a0 + 0.2 + (span - 0.4) * (k + R.uniform(0.2, 0.8)) / n
+        half = R.uniform(0.1, 0.25)
+        bm = bmesh.new()
+        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=1.0)
+        ph = R.uniform(0, 100)
+        for v in bm.verts:
+            p = v.co.copy()
+            lump = 1.0 + 0.22 * noise.noise(p * 1.7 + Vector((ph, seed, 0))) + 0.08 * noise.noise(p * 4.1)
+            # flat underside (it rests on the roof), rounded top, long along the eave
+            z = p.z if p.z > 0 else p.z * 0.25
+            v.co = Vector((p.x * half * lump, p.y * R.uniform(0.95, 1.05) * 0.1 * lump,
+                           z * (thick * 1.4 + 0.012) * lump))
+        c = sl.point(a, 0.04 + R.uniform(0.0, 0.05), base * 0.5 + thick * 0.35)
+        M = Matrix.Translation(c) @ sl.basis() @ Euler((0, 0, R.uniform(-0.08, 0.08))).to_matrix().to_4x4()
+        part.from_bmesh(bm, M, grain=0, smooth=True)
 
 
 # ------------------------------------------------------------------ decoration

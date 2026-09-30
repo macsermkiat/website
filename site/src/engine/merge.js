@@ -110,6 +110,8 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
     lift(pivot) { for (const m of meshesOf(pivot)) { setRange(m, false); m.visible = true; } },
     /** Put it back once it is home again. */
     settle(pivot) { for (const m of meshesOf(pivot)) { m.visible = false; setRange(m, true); } },
+    /** Leave a mesh out of the merged mesh for good (its own mesh is then drawn, or hidden, by its owner). */
+    drop(m) { if (!owner.has(m)) return; setRange(m, false); owner.delete(m); },
   };
 }
 
@@ -128,7 +130,7 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
 // Emissive materials (windows, embers) are only merged with the very same material object, because the
 // lighting module and the actions change those materials while the market runs.
 
-const SKIP = /^(snow_|bulbs_|musician_|lighting_|engine_|action_|effect_|band_pick_|pool_|merged_)/i;
+const SKIP = /^(snow_|bulbs_|musician_|lighting_|engine_|action_|effect_|item_|open_|band_pick_|pool_|merged_)/i;
 const skipNode = (o) => SKIP.test(o.name || '') || o.userData.live || o.userData.pickProxy;
 const ANCHOR = /^(rot_|gondola_|horse_|instrument_)/i;
 const ATTRS = ['position', 'normal', 'uv', 'uv1', 'uv2', 'tangent', 'color'];

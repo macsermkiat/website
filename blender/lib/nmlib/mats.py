@@ -514,7 +514,7 @@ SIMPLE = {
     "bulb_warm":     ((1.0, 0.86, 0.62), 0.3, 0.0, (1.0, 0.64, 0.30), 6.0, 1.0),
     "bulb_cold":     ((0.85, 0.92, 1.0), 0.3, 0.0, (0.75, 0.85, 1.0), 6.0, 1.0),
     "wire":          ((0.02, 0.02, 0.018), 0.45, 0.0, None, 0.0, 1.0),
-    "glass":         ((0.85, 0.92, 0.92), 0.04, 0.0, None, 0.0, 0.22),
+    "glass":         ((0.85, 0.92, 0.92), 0.04, 0.0, None, 0.0, 0.14),
     "fir":           ((0.030, 0.085, 0.035), 0.72, 0.0, None, 0.0, 1.0),
     "brass":         ((0.78, 0.56, 0.26), 0.32, 1.0, None, 0.0, 1.0),
     "copper":        ((0.80, 0.42, 0.26), 0.30, 1.0, None, 0.0, 1.0),
@@ -526,6 +526,7 @@ SIMPLE = {
     "fabric_white":  ((0.70, 0.68, 0.64), 0.85, 0.0, None, 0.0, 1.0),
     "fabric_green":  ((0.03, 0.12, 0.06), 0.85, 0.0, None, 0.0, 1.0),
     "lamp_glass":    ((1.0, 0.85, 0.6), 0.1, 0.0, (1.0, 0.7, 0.4), 4.0, 1.0),
+    "bookcloth":     ((0.80, 0.78, 0.74), 0.78, 0.0, None, 0.0, 1.0),   # book spines; colour via tint
 }
 
 
@@ -562,21 +563,49 @@ KIT_VARIANTS = {
     # emit: a faint warm emissive copy of the base colour (emissiveTexture = the colour map) that
     # stands in for the eave bulbs and the fire right beside the hood: the engine's bulbs glow but
     # light nothing, and no site light reaches a hood face that looks up and out under the eave
-    "iron_matte": ("iron", dict(metal=0.35, color_gain=2.1, emit=(0.2, 0.14, 0.08))),
+    "iron_matte": ("iron", dict(metal=0.35, color_gain=1.7, emit=(0.12, 0.08, 0.045))),
+    # painted trim that faces out and down under the eaves (bargeboards, carved valances, a
+    # gable star board): the plain paint kit with a faint warm emissive copy of its colour
+    # (emissiveTexture = the shared paint colour map, so it costs no texture bytes). Under the
+    # site's moonlight a red bargeboard facing down goes near-black; this keeps it red.
+    "paint_glow": ("paint", dict(emit=(0.13, 0.09, 0.07))),
+    # old copper sheet (small roofs, hoods): the iron kit's dents, streaks and pitting with a
+    # copper-brown, part-oxidised colour (its own small colour copy), metal x0.6. Replaces the
+    # flat untextured 'copper' on architecture, which renders as a salmon plane in three.js.
+    "copper_old": ("iron", dict(metal=0.6, color_gain=1.35, tint=(1.25, 0.66, 0.42))),
 }
+# Variants whose emission is a stand-in for light the engine does not cast (bulbs, fire). Cycles
+# previews switch it off (standin_emission(False)), so the render stays the lighting target.
+STANDIN_EMIT = {"iron_matte", "paint_glow", "rauten"}
 
 
-def _variant_color(key, base, gain):
-    """Path of the lighter base-colour copy of kit `base` for variant `key` (made on demand)."""
+def standin_emission(on=True):
+    """Switch the emissive stand-ins (materials flagged nm_standin_emit) on or off. Call it
+    with False before a Cycles preview render; the glb export keeps them on."""
+    n = 0
+    for m in bpy.data.materials:
+        if m.get("nm_standin_emit") and m.node_tree:
+            for nd in m.node_tree.nodes:
+                if nd.type == 'BSDF_PRINCIPLED':
+                    nd.inputs["Emission Strength"].default_value = 1.0 if on else 0.0
+                    n += 1
+    return n
+
+
+def _variant_color(key, base, gain, tint=None):
+    """Path of the lighter (and optionally tinted) base-colour copy of kit `base` for variant
+    `key` (made on demand)."""
     path = os.path.join(state.KIT_DIR, f"kit_{key}_color.png")
     stamp = path + ".version"
-    tag = f"{KIT_VERSION}:{gain}"
+    tag = f"{KIT_VERSION}:{gain}:{tint}"
     if os.path.exists(path) and os.path.exists(stamp) and open(stamp).read().strip() == tag:
         return path
     from PIL import Image
     srgb = np.asarray(Image.open(kit_path(base, "color")).convert("RGB")).astype(np.float32) / 255.0
     lin = np.where(srgb <= 0.04045, srgb / 12.92, ((srgb + 0.055) / 1.055) ** 2.4)
     x = lin * gain
+    if tint is not None:
+        x = x * np.asarray(tint, np.float32)
     lin = np.where(x < 0.6, x, 0.6 + 0.4 * (1.0 - np.exp(-(x - 0.6) / 0.4)))     # soft shoulder
     out = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(lin, 1 / 2.4) - 0.055)
     Image.fromarray(np.clip(out * 255.0 + 0.5, 0, 255).astype(np.uint8)).save(path)
@@ -594,7 +623,7 @@ def kit_variant_material(key):
         name = f"kit_{key}_color"
         img = bpy.data.images.get(name)
         if img is None:
-            img = bpy.data.images.load(_variant_color(key, base, opts["color_gain"]))
+            img = bpy.data.images.load(_variant_color(key, base, opts["color_gain"], opts.get("tint")))
             img.name = name
             img.colorspace_settings.name = "sRGB"
         for n in nt.nodes:
@@ -620,6 +649,8 @@ def kit_variant_material(key):
         mul.inputs[1].default_value = opts["metal"]
         nt.links.new(mul.outputs[0], bsdf.inputs["Metallic"])
     m["nm_kit"] = base
+    if key in STANDIN_EMIT:
+        m["nm_standin_emit"] = True
     return m
 
 
@@ -627,7 +658,7 @@ def kit_variant_material(key):
 # Generated with numpy (no bake), written to blender/out/kit/<key>.png and embedded in the glb
 # of the stall that uses them. Each is a tiling texture mapped in metres like the kit tiles
 # (see geo.TILE for the metres one repeat covers).
-PATTERN_VERSION = "p1"
+PATTERN_VERSION = "p2"  # p2: deeper blue (the p1 blue washed to pale grey-blue in three.js)
 
 
 def _rauten_pixels(res=256, n=4):
@@ -637,7 +668,7 @@ def _rauten_pixels(res=256, n=4):
     y, x = np.mgrid[0:res, 0:res].astype(np.float32) + 0.5
     u, v = x / res * n, y / res * n
     chk = (np.floor(u + v) + np.floor(u - v)) % 2.0
-    blue = np.array([0.012, 0.26, 0.68], np.float32)       # light Bavarian blue (sRGB ~ 30,140,215)
+    blue = np.array([0.004, 0.14, 0.50], np.float32)       # Bavarian blue (sRGB ~ 12,105,188)
     white = np.array([0.83, 0.84, 0.80], np.float32)
     rng = np.random.default_rng(7)
     mott = rng.normal(0, 1, (res // 8, res // 8)).astype(np.float32)
@@ -653,7 +684,7 @@ PATTERNS = {
     # the pennants hanging right beside them (the engine's bulbs glow but light nothing), so the
     # blue and white read at night under the hemisphere light alone; exported as
     # emissiveTexture = the pattern, emissiveFactor = the colour below
-    "rauten": (_rauten_pixels, 0.62, (0.26, 0.21, 0.15)),
+    "rauten": (_rauten_pixels, 0.62, (0.22, 0.20, 0.17)),
 }
 
 
@@ -707,6 +738,8 @@ def pattern_material(key):
         mul.inputs[7].default_value = (*emit, 1)
         L.new(mul.outputs[2], bsdf.inputs["Emission Color"])
         bsdf.inputs["Emission Strength"].default_value = 1.0
+        if key in STANDIN_EMIT:
+            m["nm_standin_emit"] = True
     return m
 
 

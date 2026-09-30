@@ -1,18 +1,19 @@
 """Bratwurst stand (section: Writing).
 
 A low, broad, sooty hut: dark-stained overlapping lap siding blackened above the grill, a
-board-and-batten roof, a riveted sheet-iron chimney hood over an iron firebox set into the
-left of the counter, a stovepipe with a rain cap through the roof, a firewood stack under a
-lean-to on the right, and a black board "Bratwurst" with cream letters on the front slope.
+board-and-batten roof, a riveted sheet-iron chimney hood over the grill end of the counter, a
+stovepipe with a rain cap through the roof, a firewood stack under a lean-to on the right, and a
+black board "Bratwurst" with cream letters on the front slope.
 
-The fire itself is the vendor's: prop_wurst_counter (at slot_counter) stands its Schwenkgrill
-fire bowl, coals and swinging grate on the firebox's hearth plate (top 2.6 cm above the counter,
-the bowl at x -0.9 from the slot). The firebox therefore has no grate or coals of its own, so
-the two never double up or z-fight.
+The grill is the vendor's (round 2): prop_wurst_counter at slot_counter stands its Schwenkgrill on
+the counter under the hood. The stall has no firebox, grate, hearth plate or coals of its own;
+the counter runs the full width, scorched and ash-dusted under the hood (the fire bowl sits at
+x -0.9 from slot_counter, under the hood centre GX = -0.95).
 
     /home/claude/tools/bpy-venv/bin/python blender/stalls/bratwurst.py [--no-render] [--no-lite]
 Outputs site/public/models/stall_bratwurst.glb and stall_bratwurst.lite.glb.
-Extra node: smoke_origin (empty at the stovepipe top).
+Extra nodes: smoke_origin (empty at the stovepipe top), slot_grill (empty on the counter top under
+the hood centre: where the grill stands; the clear space under the hood skirt is 1.76 - 1.05 = 0.71 m).
 """
 import math
 import os
@@ -32,9 +33,10 @@ from nmlib.geo import Part  # noqa: E402
 NAME = "stall_bratwurst"
 W, D = 3.9, 2.5
 EAVE, RIDGE = 2.62, 3.5
-GRILL_X0, GRILL_X1 = -1.75, -0.15          # grill section of the counter
-GX = (GRILL_X0 + GRILL_X1) / 2
-HEARTH_Z = 0.026                           # top of the hearth plate above the counter (vendor's bowl seat)
+GRILL_X0, GRILL_X1 = -1.75, -0.15          # grill end of the counter, under the hood
+GX = (GRILL_X0 + GRILL_X1) / 2             # hood centre
+BOWL_X = -0.9                              # the vendor's fire bowl (x from slot_counter, which is at x 0)
+HOOD_D = 0.80                              # hood depth (front to back)
 
 
 def soot_shade():
@@ -55,53 +57,45 @@ def soot_shade():
     return f
 
 
-def iron_shade(gy0, gy1):
-    """Iron: temper colours (straw, bronze, blue) in bands around the fire, ash-grey burnt
-    metal right at the coals, soot on the hood skirt and lip, sooty stovepipe top."""
-    STRAW, BRONZE, BLUE = (1.0, 0.80, 0.50), (0.85, 0.55, 0.52), (0.50, 0.58, 0.95)
-
-    def lerp(a, b, t):
-        return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
-
-    bowl = Vector((-0.9, (gy0 + gy1) / 2))                # the vendor's fire bowl on the plate
+def hood_shade(hc, gw):
+    """Hood soot: heaviest on the skirt and its rolled lip where the smoke first hits, a
+    heat-blued and straw band just above the skirt, soot again toward the stovepipe. Only the
+    base colour: the hood's faint emissive stand-in keeps it readable in the browser."""
+    STRAW, BLUE = (1.0, 0.82, 0.55), (0.55, 0.62, 1.0)
 
     def f(p):
-        near_x = GRILL_X0 - 0.08 <= p.x <= GRILL_X1 + 0.08
-        near_y = gy0 - 0.08 <= p.y <= gy1 + 0.08
-        if near_x and near_y and abs(p.z - (COUNTER_TOP + HEARTH_Z - 0.008)) < 0.012:
-            # hearth plate: burnt pale under the bowl, temper rings outward
-            d = (Vector((p.x, p.y)) - bowl).length
-            if d < 0.24:
-                return (0.80, 0.77, 0.73)
-            if d < 0.36:
-                return lerp((0.80, 0.77, 0.73), STRAW, (d - 0.24) / 0.12)
-            if d < 0.5:
-                return lerp(STRAW, BRONZE, (d - 0.36) / 0.14)
-            if d < 0.7:
-                return lerp(BRONZE, BLUE, (d - 0.5) / 0.2)
-            return lerp(BLUE, (0.9, 0.9, 0.9), min(1.0, (d - 0.7) / 0.2))
-        if near_x and near_y and 0.7 < p.z < 1.2:
-            d = abs(p.z - (COUNTER_TOP - 0.02))           # distance from the coal bed
-            if d < 0.05:
-                c = (0.78, 0.74, 0.70)                    # burnt, ash-dusted
-            elif d < 0.12:
-                c = lerp((0.78, 0.74, 0.70), STRAW, (d - 0.05) / 0.07)
-            elif d < 0.2:
-                c = lerp(STRAW, BRONZE, (d - 0.12) / 0.08)
-            elif d < 0.3:
-                c = lerp(BRONZE, BLUE, (d - 0.2) / 0.1)
-            else:
-                c = lerp(BLUE, (1.0, 1.0, 1.0), min(1.0, (d - 0.3) / 0.2))
-            return c
-        if near_x and 1.7 < p.z < 2.7:                    # hood: soot heaviest at the skirt
-            t = max(0.0, min(1.0, (p.z - 1.74) / 0.8))
-            k = 0.8 + 0.2 * t                             # (light: the hood must read in the browser)
-            blue = max(0.0, 1.0 - abs(p.z - 1.95) / 0.2) * 0.5
-            return (k * (1 - 0.35 * blue), k * (1 - 0.25 * blue), k)
-        if p.z > 2.6 and abs(p.x - GX) < 0.3:              # stovepipe: soot toward the top
-            k = 1.0 - 0.5 * max(0.0, min(1.0, (p.z - 3.0) / 1.2))
-            return (k, k, k)
-        return 1.0
+        if p.z > 2.6:                                   # stovepipe: soot toward the top
+            if abs(p.x - hc.x) < 0.3:
+                k = 0.75 - 0.4 * max(0.0, min(1.0, (p.z - 3.0) / 1.2))
+                return (k, k, k)
+            return 1.0
+        if p.z < 1.7 or abs(p.x - hc.x) > gw / 2 + 0.3:
+            return 1.0
+        t = max(0.0, min(1.0, (p.z - 1.76) / 0.84))      # 0 skirt bottom .. 1 hood top
+        k = 0.38 + 0.32 * t - 0.12 * max(0.0, t - 0.75) / 0.25
+        # heat tint band just above the skirt seam
+        hb = max(0.0, 1.0 - abs(p.z - 1.97) / 0.09)
+        sb = max(0.0, 1.0 - abs(p.z - 2.1) / 0.07)
+        c = [k] * 3
+        for i in range(3):
+            c[i] *= (1 - 0.45 * hb) + 0.45 * hb * BLUE[i]
+            c[i] *= (1 - 0.35 * sb) + 0.35 * sb * STRAW[i]
+        # streaks: smoke runs up the hood faces in soft vertical bands
+        c = [ci * (0.9 + 0.1 * math.sin(p.x * 31.0 + p.y * 17.0) ** 2) for ci in c]
+        return tuple(c)
+    return f
+
+
+def scorch_shade(bowl, hood_x0, hood_x1):
+    """Counter under the hood: charred round the vendor's fire bowl, ash-grey dusting and soot
+    fading out to the ends of the hood."""
+    def f(p):
+        d = math.hypot(p.x - bowl[0], (p.y - bowl[1]) * 1.3)
+        char = math.exp(-(d / 0.42) ** 2)
+        under = 1.0 if hood_x0 < p.x < hood_x1 else math.exp(-((min(abs(p.x - hood_x0), abs(p.x - hood_x1))) / 0.2) ** 2)
+        k = 1.0 - 0.72 * char - 0.22 * under
+        ash = 0.25 * math.exp(-((d - 0.5) / 0.14) ** 2)   # a ring of pale ash round the char
+        return (k + ash * 0.9, k + ash * 0.88, k + ash * 0.85)
     return f
 
 
@@ -122,68 +116,30 @@ def build(lite):
             front_posts=[-W / 2 + 0.05, W / 2 - 0.05], shelves=(1.4, 1.8))
     h.roofp.shade = sh
     yF = h.yF
-    h.build_carcass(lower_top=lambda c: 0.78 if GRILL_X0 - 0.05 < c < GRILL_X1 + 0.05 else COUNTER_TOP - 0.07)
-    h.build_counter(x0=GRILL_X1 + 0.02)
-    # counter under the grill: brick-coloured dark wood box front, the grill sits on it
+    gw = GRILL_X1 - GRILL_X0
+    hc = Vector((GX, yF + 0.45, 0))                      # hood centre (plan)
+    counter_y = yF - h.counter_over + h.counter_depth / 2
+    bowl = (BOWL_X, counter_y)
+    h.build_carcass()
+    # one continuous counter; the grill end under the hood is scorched round the vendor's bowl
+    h.build_counter(extra_shade=scorch_shade(bowl, GRILL_X0 - 0.08, GRILL_X1 + 0.08))
     h.build_shelves()
     h.build_roof(cover="boards")
-    h.build_snow()
+    h.build_snow(drifts=3)
 
-    # ------------------------------------------------------------ grill set into the counter
-    # firebox and hood: lighter sheet iron with a faint warm glow from the bulbs and the fire
-    # (kit variant iron_matte); the stovepipe, struts and fittings stay plain forged iron (h.iron)
+    # ------------------------------------------------------------ chimney hood + stovepipe
+    # sheet iron (kit variant iron_matte: lighter, less metallic, with a faint warm emissive
+    # stand-in for the fire and bulbs beside it); stovepipe, struts and fittings are plain iron
     iron = h.part("hood", "iron_matte")
-    gy0, gy1 = yF - 0.22, yF + 0.38
-    iron.shade = h.iron.shade = iron_shade(gy0, gy1)
-    gcy = (gy0 + gy1) / 2
-    gw, gd = GRILL_X1 - GRILL_X0, gy1 - gy0
-    R = state.rng
-    # firebox: iron trough with thick walls, a rolled rim on top
-    for (cx, cy, sx, sy) in ((GX, gy0, gw, 0.04), (GX, gy1, gw, 0.04),
-                             (GRILL_X0, gcy, 0.04, gd), (GRILL_X1, gcy, 0.04, gd)):
-        iron.box((cx, cy, COUNTER_TOP - 0.1), (sx, sy, 0.24), bevel=0.004)
-    iron.box((GX, gcy, COUNTER_TOP - 0.2), (gw, gd, 0.02))
-    rim = [(GRILL_X0, gy0, COUNTER_TOP + 0.022), (GRILL_X1, gy0, COUNTER_TOP + 0.022),
-           (GRILL_X1, gy1, COUNTER_TOP + 0.022), (GRILL_X0, gy1, COUNTER_TOP + 0.022),
-           (GRILL_X0, gy0, COUNTER_TOP + 0.022)]
-    iron.tube(rim, 0.016, tseg=6 if not lite else 4)
-    # front apron and legs down to the floor
-    iron.box((GX, gy0 - 0.03, 0.62), (gw + 0.04, 0.02, 0.62))
-    for x in (GRILL_X0 + 0.05, GRILL_X1 - 0.05):
-        iron.box((x, gy0 - 0.01, 0.35), (0.06, 0.06, 0.7))
-    # draught door on the apron, with rivets round the apron edge
-    iron.box((GX, gy0 - 0.045, 0.55), (0.4, 0.012, 0.22))
-    iron.cyl((GX + 0.16, gy0 - 0.06, 0.55), 0.015, 0.015, 0.03, seg=8, rot=(math.pi / 2, 0, 0))
-    if not lite:
-        for i in range(14):
-            x = GRILL_X0 + 0.02 + i * (gw - 0.04) / 13
-            for z in (0.34, 0.9):
-                iron.sphere((x, gy0 - 0.041, z), 0.011, seg=6, rings=4)
-    # hearth plate: a heavy iron fire plate closing the firebox, its top HEARTH_Z above the
-    # counter, where the vendor's fire bowl stands (burnt pale in the middle by iron_shade)
-    iron.box((GX, gcy, COUNTER_TOP + HEARTH_Z - 0.008), (gw - 0.03, gd - 0.03, 0.016), bevel=0.003,
-             segs=(8 if not lite else 2, 3 if not lite else 1, 1))
-    # ash and a few cinders spilt on the plate round the edges, where the bowl is raked out
-    ash = Part("bratwurst_ash", "ash", var=0.18)
-    for k in range(26 if not lite else 6):
-        x = R.uniform(GRILL_X0 + 0.08, GRILL_X1 - 0.08)
-        y = R.uniform(gy0 + 0.06, gy1 - 0.06)
-        if abs(x - (-0.9)) < 0.3 and abs(y - gcy) < 0.3:        # under the vendor's bowl: keep clear
-            continue
-        ash.ico((x, y, COUNTER_TOP + HEARTH_Z + 0.002), R.uniform(0.02, 0.05), subd=1 if not lite else 0,
-                scale=(1.5, 1.0, 0.18), smooth=True)
-    h.extra.append(ash)
-
-    # ------------------------------------------------------------ hood + stovepipe
-    hc = Vector((GX, yF + 0.45, 0))
-    r0, r1 = frustum(iron, hc, gw + 0.16, gd + 0.2, 0.34, 0.34, 1.9, 2.6, closed=True, smooth=False)
+    iron.shade = h.iron.shade = hood_shade(hc, gw)
+    r0, r1 = frustum(iron, hc, gw + 0.16, HOOD_D, 0.34, 0.34, 1.9, 2.6, closed=True, smooth=False)
     # straight skirt, rolled lip around its lower edge
-    frustum(iron, hc, gw + 0.16, gd + 0.2, gw + 0.16, gd + 0.2, 1.76, 1.9, closed=True, smooth=False)
+    frustum(iron, hc, gw + 0.16, HOOD_D, gw + 0.16, HOOD_D, 1.76, 1.9, closed=True, smooth=False)
     lip = [Vector(p) + Vector((0, 0, -0.14)) for p in r0] + [Vector(r0[0]) + Vector((0, 0, -0.14))]
     iron.tube(lip, 0.016, tseg=6)
     # riveted seams: two rows round the skirt, one up each corner of the hood
     if not lite:
-        sx, sy = (gw + 0.16) / 2, (gd + 0.2) / 2
+        sx, sy = (gw + 0.16) / 2, HOOD_D / 2
         for z in (1.8, 1.875):
             for i in range(16):
                 x = hc.x - sx + 0.05 + i * (2 * sx - 0.1) / 15
@@ -213,7 +169,7 @@ def build(lite):
     for a in range(3):
         ang = a * 2 * math.pi / 3
         h.iron.box((hc.x + 0.1 * math.cos(ang), hc.y + 0.1 * math.sin(ang), pipe_top + 0.07),
-                 (0.012, 0.012, 0.16), bevel=0)
+                   (0.012, 0.012, 0.16), bevel=0)
     # flashing collar where the pipe meets the roof
     h.iron.cyl((hc.x, hc.y, RIDGE - 0.02 - abs(hc.y) * math.tan(h.pitch) + 0.03), 0.2, 0.13, 0.08, seg=16)
     smoke = (hc.x, hc.y, pipe_top + 0.3)
@@ -272,27 +228,27 @@ def build(lite):
     h.markers(sign_pos=tuple(sign_c + Vector((0, -0.05, 0))),
               lights=[(0.6, 0.0, 2.1), (GX, yF - 0.3, 1.5)], cam_dist=3.5, cam_h=1.75)
     export.empty("smoke_origin", smoke)
+    export.empty("slot_grill", (BOWL_X, counter_y, COUNTER_TOP))
     return h.finish()
 
 
 def preview(objs):
-    """The vendor's shipped counter set (Schwenkgrill on the hearth plate, sausages, rolls) at
-    slot_counter, the fire's glow, soft sign lamps and a neighbour's glow."""
+    """The vendor's shipped counter set (Schwenkgrill, sausages, rolls) at slot_counter, the
+    fire's glow, the two gooseneck sign lamps and a neighbour's glow."""
     yF = -D / 2
-    gy0, gy1 = yF - 0.22, yF + 0.38
-    gcy = (gy0 + gy1) / 2
+    cy = yF - 0.22 + 0.3                                   # counter centre line (slot_counter y)
     props = render.import_glb(os.path.join(state.MODELS_DIR, "prop_wurst_counter.glb"), at="slot_counter")
     render.lights_at_markers(energy=90)
-    # the fire in the vendor's bowl (x -0.9 from the slot): glow up into the hood and onto the front
-    render.add_light("env_ember", 'POINT', (-0.9, gcy, COUNTER_TOP + 0.2), 30, (1.0, 0.36, 0.08), size=0.18)
-    render.add_light("env_ember_front", 'POINT', (-0.9, gy0 - 0.25, COUNTER_TOP + 0.15), 14, (1.0, 0.4, 0.12),
+    # the fire in the vendor's bowl: glow up into the hood and onto the front
+    render.add_light("env_ember", 'POINT', (BOWL_X, cy, COUNTER_TOP + 0.2), 30, (1.0, 0.36, 0.08), size=0.18)
+    render.add_light("env_ember_front", 'POINT', (BOWL_X, cy - 0.45, COUNTER_TOP + 0.15), 14, (1.0, 0.4, 0.12),
                      size=0.3)
     render.add_light("env_fill", 'AREA', (0.4, 0.2, 2.3), 160, size=2.0)
-    # the two gooseneck sign lamps: wide, soft spots aimed at the middle of the board
-    sign_mid = (0.45, -0.58, 3.5)
+    # the two gooseneck sign lamps: tight spots from the lamp heads onto the board, so the hotspot
+    # lands on the lettering and not on the roof snow in front of it
     for x in (-0.1, 1.0):
-        render.add_light("env_signlamp", 'SPOT', (x, -0.95, 3.86), 40, size=0.12, spot_size=math.radians(115),
-                         spot_blend=1.0, target=(x * 0.5 + 0.22, sign_mid[1], sign_mid[2] - 0.08))
+        render.add_light("env_signlamp", 'SPOT', (x, -0.9, 3.83), 22, size=0.05, spot_size=math.radians(62),
+                         spot_blend=0.6, target=(x * 0.6 + 0.18, -0.58, 3.52))
     render.add_light("env_neighbour", 'POINT', (-5.0, -1.5, 2.6), 150, size=0.6)
     if not props:
         print("[bratwurst] preview without the vendor's props")

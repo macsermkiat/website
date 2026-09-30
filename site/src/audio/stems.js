@@ -14,7 +14,7 @@
 // Featuring raises one player and lowers the others (stems only; the mix cannot be taken apart).
 // Visual levels come from analysers on the stems, or from the note list in `events` while the mix plays.
 import * as THREE from 'three';
-import { audioContext } from './context.js';
+import { audioContext, output } from './context.js';
 import { songPlan } from './songplan.js';
 
 const PLAYERS = ['sax', 'piano', 'bass', 'drums'];
@@ -110,7 +110,7 @@ export function createStemsBand({ manifest, positions, getCamera, lite }) {
     master.gain.value = 0;
     const comp = AC.createDynamicsCompressor();
     comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 2; comp.attack.value = 0.02; comp.release.value = 0.3;
-    master.connect(comp); comp.connect(AC.destination);
+    master.connect(comp); comp.connect(output());
   }
 
   function panner(pos) {

@@ -1,11 +1,10 @@
-// Actions at the four section stalls: pour a mug, pull a pint, Prost, turn the sausages,
-// a sausage in a bun, and pull a book. They work on the act_ nodes of the real glbs and of the stand-ins.
+// The panel buttons of the four section stalls: pour a mug, pull a pint, Prost, turn the sausages, a sausage in
+// a bun, and pick a book. Each drives the same code as clicking the item itself (actions/items/*); a stand-in
+// stall without those items falls back to the prototype's versions made here.
 import * as THREE from 'three';
-import { act, acts, counterLocal, toLocal, worldOf, longAxis, findNode, createWorldTag } from './util.js';
+import { act, acts, counterLocal, toLocal, worldOf } from './util.js';
 import { createEmitter } from './effects.js';
-import { viewFor } from '../engine/market.js';
-import inventory from 'virtual:market-inventory';
-import { actionHint, actionNote, toastLines, crowdLine } from '../content.js';
+import { actionHint, actionNote, toastLines, crowdLine, itemHint as writerItemHint } from '../content.js';
 
 const MUG = new THREE.MeshStandardMaterial({ name: 'action_mug', color: 0xa3162c, roughness: 0.35 });
 const WINE = new THREE.MeshStandardMaterial({ name: 'action_wine', color: 0x4a0612, roughness: 0.1, emissive: 0x1a0205 });
@@ -31,10 +30,10 @@ function newMug() {
 }
 
 export function createStallActions(ctx) {
-  const { market, anim, say, sfx, crowdSay, scene, lite } = ctx;
-  const bookTag = createWorldTag(ctx.overlay, 'booktag');
+  const { market, anim, say, sfx, crowdSay, scene, items } = ctx;
+  const H = items.handlers;
   const P = market.places;
-  const counts = { mugs: 0, pints: 0, wurst: 0 };
+  const counts = { mugs: 0, pints: 0 };
   const emitters = [];
 
   // ---------- Glühwein ----------
@@ -47,9 +46,11 @@ export function createStallActions(ctx) {
     const pos = src ? worldOf(glueh, src).add(new THREE.Vector3(0, src === pot ? 0.55 : 0, 0)) : worldOf(glueh, [c.x + 1.3, c.y + 0.55, c.z - 0.05]);
     steam = createEmitter(scene, pos, { color: 0xf2eee8, n: 10, rise: 1.6, spread: 0.25, scale: 0.7, opacity: 0.35 });
     emitters.push(steam);
+    H.setPotSteam?.(steam);
   }
   const poured = [];
-  function pourMug() {
+  /** A stand-in stall has no mugs of its own: a new mug is poured and set on the counter (the prototype's way). */
+  function pourNewMug() {
     if (!glueh) return;
     const c = counterLocal(glueh);
     const pot = act(glueh, 'act_pot') || act(glueh, 'act_ladle');
@@ -69,6 +70,10 @@ export function createStallActions(ctx) {
     counts.mugs++;
     say(actionNote('glueh', 'pour', `Cups poured tonight: <b>${counts.mugs}</b>. Red wine, cinnamon, clove and orange. Careful, it's hot.`, { n: counts.mugs }));
   }
+  function pourMug() {
+    if (H.mugsReady && H.pourNext()) { if (steam) steam.boost = 1; return; }
+    pourNewMug();
+  }
   function prost(id) {
     sfx('clink');
     const p = P[id];
@@ -81,7 +86,8 @@ export function createStallActions(ctx) {
   const bier = P.bier;
   let pintBusy = false;
   const pints = [];
-  function pullPint() {
+  /** A stand-in stall has no glasses of its own: a glass appears under the middle tap (the prototype's way). */
+  function pullNewPint() {
     if (!bier || pintBusy) return;
     pintBusy = true;
     const c = counterLocal(bier);
@@ -121,255 +127,43 @@ export function createStallActions(ctx) {
       say(actionNote('bier', 'pint', `Pints pulled tonight: <b>${counts.pints}</b>. A Helles, with a proper head of foam.`, { n: counts.pints }, { done: true }));
     });
   }
+  const pullPint = () => (H.beerReady ? H.pullPint() : pullNewPint());
+  const prostBier = () => { if (H.beerReady) H.prostBier(); else prost('bier'); };
+  const prostGlueh = () => { prost('glueh'); if (H.mugsReady) H.prostMugs(); };
 
   // ---------- Bratwurst ----------
-  const wurst = P.wurst;
-  let smoke = null, grillFlare = 0, grillLight = null, grillMats = [], swing = null;
-  const sausageState = [];
-  if (wurst) {
-    const grill = act(wurst, 'act_grill') || findNode(wurst, /grill|coals|ember/i, { mesh: true });
-    // a Schwenkgrill: the grate hangs from a tripod and swings a little
-    const sw = act(wurst, 'act_grill_swing');
-    if (sw) swing = { node: sw, q0: sw.quaternion.clone(), e: new THREE.Euler(), q: new THREE.Quaternion() };
-    const c = counterLocal(wurst);
-    const smokeSrc = act(wurst, 'act_smoke') || findNode(wurst, /^smoke/i) || grill;
-    const sp = smokeSrc ? worldOf(wurst, smokeSrc).add(new THREE.Vector3(0, smokeSrc === grill ? 0.12 : 0, 0)) : worldOf(wurst, [c.x, c.y + 0.25, c.z - 0.05]);
-    smoke = createEmitter(scene, sp, { color: 0xbab4bc, n: 16, rise: 3.2, spread: 0.9, scale: 1.5, opacity: 0.28 });
-    emitters.push(smoke);
-    if (grill) {
-      grill.traverse((o) => {
-        if (!o.isMesh) return;
-        o.material = o.material.clone();
-        o.material.userData.baseEmissive = o.material.emissiveIntensity || 1;
-        if (o.material.emissive && o.material.emissive.getHex() === 0) o.material.emissive.set(0xff5a14);
-        grillMats.push(o.material);
-      });
-    }
-    if (!lite) {
-      grillLight = new THREE.PointLight(0xff5a1a, 4, 5, 2);
-      grillLight.name = 'engine_grill_light';
-      grillLight.position.copy(toLocal(wurst, sp)).add(new THREE.Vector3(0, 0.2, 0.3));
-      wurst.holder.add(grillLight);
-    }
-    for (const s of acts(wurst, 'act_sausage')) sausageState.push({ node: s, q0: s.quaternion.clone(), y0: s.position.y, axis: longAxis(s), angle: 0 });
-  }
-  const _q = new THREE.Quaternion();
   function turnSausages() {
-    if (!wurst) return;
-    sausageState.forEach((s, i) => {
-      const a0 = s.angle;
-      s.angle += Math.PI;
-      anim.add(0.55, (k) => {
-        s.node.quaternion.copy(s.q0).multiply(_q.setFromAxisAngle(s.axis, a0 + k * Math.PI));
-        s.node.position.y = s.y0 + Math.sin(k * Math.PI) * 0.06;
-      }, null, i * 0.07);
-    });
-    grillFlare = 1.6;
+    if (H.sausagesReady) return H.turnAll();
     sfx('sizzle');
-    counts.wurst++;
-    say(actionNote('wurst', 'turn', ['Turned. Nicely browned on this side.', 'The coals flare up and the smoke drifts over the crowd.', 'Almost ready. Mustard or ketchup?'][(counts.wurst - 1) % 3], { n: counts.wurst - 1 }));
+    say(actionNote('wurst', 'turn', 'Turned. Nicely browned on this side.', { n: 0 }));
   }
   function bun() {
+    if (H.rollsReady && H.bunNext()) return;
     sfx('sizzle');
     say(actionNote('wurst', 'bun', 'One Bratwurst im Brötchen with mustard. <em>That will be 4 euros.</em>'));
-    if (wurst) crowdSay(crowdLine('wurst', 'bun', 'Smells good!'), wurst.center.clone().setY(0), 9);
+    if (P.wurst) crowdSay(crowdLine('wurst', 'bun', 'Smells good!'), P.wurst.center.clone().setY(0), 9);
   }
 
   // ---------- Bücherstand ----------
-  // Mac's books (reading.md) are on named spines, so clicking a spine gives that book. The vendor printed the
-  // five titles on real spines in the middle of the lower shelf and names every book (bookInfo); a book of
-  // Mac's with no printed spine gets a free spine near the middle of the view, wearing a red paper band.
-  // Every other spine is the bookseller's stock, and says which book it is.
-  const booksPlace = P.books;
-  const bookNodes = acts(booksPlace, 'act_book_');
-  const picks = ctx.books;
-  const pickOf = booksPlace ? titledSpines(bookNodes, picks) : new Map();
-  const untitled = picks.map((_, i) => i).filter((i) => ![...pickOf.values()].includes(i));
-  const banded = booksPlace ? chooseSpines(booksPlace, bookNodes.filter((n) => !pickOf.has(n)), untitled.length) : [];
-  banded.forEach((n, k) => { pickOf.set(n, untitled[k]); const b = paperBand(n); if (b) b.name = `band_pick_${untitled[k]}`; });
-  // the spine the bookseller pulls for each book (the first volume of a set)
-  const spineFor = picks.map((_, i) => [...pickOf.entries()].filter(([, j]) => j === i).map(([n]) => n).sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }))[0] || null);
-  const featured = spineFor.filter(Boolean);
-  const where = banded.length ? 'His picks wear a red paper band.' : 'His five stand together in the middle of the lower shelf.';
-  const bookBase = new Map();
-  const bookQ = new Map();
-  const busy = new Set();
-  let bookIdx = 0;
-  let pulled = null; // the book standing out of the shelf: { n, set, left }
-  let inFlight = null, retractPending = false; // a book on its way out, and whether it should go straight back
-  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
-  function pullBook(node) {
-    // the button lets the bookseller choose: Mac's books in turn
-    let i, n = node;
-    if (node) i = pickOf.has(node) ? pickOf.get(node) : -1;
-    else { i = bookIdx++ % picks.length; n = spineFor[i] || (bookNodes.length ? bookNodes[(Math.random() * bookNodes.length) | 0] : null); }
-    sfx('page');
-    if (i >= 0) {
-      const b = picks[i];
-      const fallback = `<b>${esc(b[0])}</b>${b[1] ? ' · ' + esc(b[1]) : ''}${b[2] ? '<br>' + esc(b[2]) : ''}`;
-      say(`${actionNote('books', 'book', fallback, { title: b[0], author: b[1], note: b[2] })}<br><em>Click another spine to keep browsing.</em>`);
-    } else {
-      const b = n && bookInfo(n);
-      const what = b ? `<b>${esc(b.title)}</b>${b.author ? ' · ' + esc(b.author) : ''}. ` : '';
-      say(actionNote('books', 'other', `${what}A secondhand copy from the bookseller’s stock, not one of Mac’s. <em>${where}</em>`, b ? { title: b.title, author: b.author } : {}));
-    }
-    if (!booksPlace || !n || busy.has(n)) return;
-    if (pulled?.n === n) { pulled.left = BOOK_HOLD; return; }
-    if (pulled) putBack();
-    if (!bookBase.has(n)) bookBase.set(n, n.position.clone());
-    const p0 = bookBase.get(n);
-    // out toward the front of the stall, in the book's own parent frame
-    const holderQ = booksPlace.holder.getWorldQuaternion(new THREE.Quaternion());
-    // half out and up, its top tipped toward the customer, the way a bookseller shows a book: from the front
-    // a straight pull alone barely changes the picture
-    const worldOut = new THREE.Vector3(0, 0.075, 0.17).applyQuaternion(holderQ);
-    const parentQ = n.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
-    const parentScale = n.parent.getWorldScale(new THREE.Vector3());
-    const out = worldOut.applyQuaternion(parentQ).divide(parentScale);
-    const tipAxis = new THREE.Vector3(1, 0, 0).applyQuaternion(holderQ).applyQuaternion(parentQ).normalize();
-    if (!bookQ.has(n)) bookQ.set(n, n.quaternion.clone());
-    const q0 = bookQ.get(n);
-    const tip = new THREE.Quaternion();
-    busy.add(n);
-    booksPlace.merge?.lift(n); // out of the merged shelf mesh while it moves
-    const set = (k) => {
-      n.position.copy(p0).addScaledVector(out, k);
-      n.quaternion.copy(q0).premultiply(tip.setFromAxisAngle(tipAxis, 0.3 * k));
-    };
-    // The book stays out while it is being read: until the next book is pulled, or BOOK_HOLD seconds of market
-    // time (so a paused or slow frame never puts it back before it has been seen; reduced motion keeps it too).
-    inFlight = n;
-    retractPending = false;
-    anim.add(0.45, set, () => {
-      inFlight = null;
-      pulled = { n, set, left: BOOK_HOLD };
-      if (retractPending) { retractPending = false; putBack(); }
-    });
-    // a paper tag with its title above the book while it stands out
-    const title = i >= 0 ? picks[i][0] : bookInfo(n)?.title;
-    if (title) bookTag.show(title, n);
-  }
-  /** Put the pulled book back and take its tag away (the panel closed, or the view went home). */
-  function retract() {
-    bookTag.hide();
-    if (pulled) putBack();
-    else if (inFlight) retractPending = true;
-  }
-  function putBack() {
-    if (!pulled) return;
-    const { n, set } = pulled;
-    pulled = null;
-    bookTag.hide();
-    anim.add(0.45, (k) => set(1 - k), () => { booksPlace.merge?.settle(n); busy.delete(n); });
-  }
+  const banded = market.places.books ? !!market.places.books.root.getObjectByName('band_pick_0') : false;
 
   return {
-    glueh: { hint: actionHint('glueh', 'Pour a cup of Glühwein, then raise it with the crowd.'), acts: [{ key: 'pour', label: 'Pour a cup', fn: pourMug }, { key: 'prost', label: 'Prost!', fn: () => prost('glueh') }] },
-    bier: { hint: actionHint('bier', 'Pull a pint from the middle tap.'), acts: [{ key: 'pint', label: 'Pull a pint', fn: pullPint }, { key: 'prost', label: 'Prost!', fn: () => prost('bier') }] },
-    wurst: { hint: actionHint('wurst', 'Turn the sausages on the grill.'), acts: [{ key: 'turn', label: 'Turn the sausages', fn: turnSausages }, { key: 'bun', label: 'One in a bun, please', fn: bun }] },
-    books: { hint: actionHint('books', 'Click any spine on the shelves, or let the bookseller choose.') + (banded.length ? ' <em>Mac’s picks wear a red paper band.</em>' : ''), acts: [{ key: 'book', label: 'Pick a book for me', fn: () => pullBook(null) }] },
-    pullBook,
-    retract,
-    /** The spine for each of Mac's books, in reading.md order (for tests and the curious). */
-    featuredBooks: featured,
-    bookOf: (node) => (pickOf.has(node) ? picks[pickOf.get(node)][0] : null),
-    /** The book standing out of the shelf, if any (for tests). */
-    pulledBook: () => pulled?.n || null,
+    glueh: { hint: actionHint('glueh', 'Pour a cup of Glühwein, then raise it with the crowd.') + itemHint('glueh'), acts: [{ key: 'pour', label: 'Pour a cup', fn: pourMug }, { key: 'prost', label: 'Prost!', fn: prostGlueh }] },
+    bier: { hint: actionHint('bier', 'Pull a pint from the middle tap.') + itemHint('bier'), acts: [{ key: 'pint', label: 'Pull a pint', fn: pullPint }, { key: 'prost', label: 'Prost!', fn: prostBier }] },
+    wurst: { hint: actionHint('wurst', 'Turn the sausages on the grill.') + itemHint('wurst'), acts: [{ key: 'turn', label: 'Turn the sausages', fn: turnSausages }, { key: 'bun', label: 'One in a bun, please', fn: bun }] },
+    books: { hint: actionHint('books', 'Click any spine on the shelves, or let the bookseller choose.') + (banded ? ' <em>Mac’s picks wear a red paper band.</em>' : ''), acts: [{ key: 'book', label: 'Pick a book for me', fn: () => H.pickBook?.() }] },
     update(dt, t, still) {
-      if (pulled && (pulled.left -= dt) <= 0) putBack();
-      if (ctx.camera) bookTag.update(ctx.camera);
-      grillFlare *= Math.exp(-dt * 1.2);
-      if (smoke) smoke.base = 0.28 + grillFlare * 0.1;
-      for (const m of grillMats) m.emissiveIntensity = m.userData.baseEmissive * (1 + (still ? 0 : Math.sin(t * 13) * 0.08 + Math.sin(t * 7.1) * 0.06) + grillFlare * 1.2);
-      if (grillLight) grillLight.intensity = 4 + (still ? 0 : Math.sin(t * 13) * 0.6 + Math.sin(t * 7.1) * 0.5) + grillFlare * 6;
       emitters.forEach((e) => e.update(dt, still));
-      if (swing && !still) {
-        const a = Math.sin(t * 1.15) * (0.035 + grillFlare * 0.05);
-        swing.e.set(a, 0, Math.sin(t * 0.8 + 1) * 0.02);
-        swing.node.quaternion.copy(swing.q0).multiply(swing.q.setFromEuler(swing.e));
-      }
     },
   };
 }
 
-// What each act_ book is: the vendor's node extras { title, author } (GLTFLoader puts them in userData), else
-// the vendor's items.json, keyed by node name (the lite glbs carry no extras, but their books have the same names).
-const norm = (t) => String(t || '').toLowerCase().normalize('NFC').replace(/[^\p{L}\p{N}]+/gu, '');
-export function bookInfo(n) {
-  const u = n.userData || {};
-  if (u.title) return { title: String(u.title), author: u.author ? String(u.author) : '' };
-  const it = inventory.items?.[n.name];
-  return it?.title ? { title: String(it.title), author: it.author ? String(it.author) : '' } : null;
-}
-
-/** Map spine node -> index into `picks` for spines whose printed title is one of Mac's books. */
-function titledSpines(nodes, picks) {
-  const out = new Map();
-  const wanted = picks.map((b) => norm(b[0]));
-  for (const n of nodes) {
-    const t = norm(bookInfo(n)?.title);
-    if (!t) continue;
-    // "The Feynman Lectures on Physics, Vol. II" is still the Feynman lectures
-    const i = wanted.findIndex((w) => w && (w === t || (w.length > 5 && t.includes(w)) || (t.length > 5 && w.includes(t))));
-    if (i >= 0) out.set(n, i);
-  }
-  return out;
-}
-
-/** A book standing on a shelf (not lying on the counter). */
-function onShelf(place, n) {
-  for (let o = n.parent; o && o !== place.root; o = o.parent) if (/counter/i.test(o.name || '')) return false;
-  return true;
-}
-
-/**
- * Pick `count` spines for Mac's books: shelf books nearest the middle of the bookshop's view, at least
- * 0.3 m apart, then in order along the shelves (left to right, top shelf first), so the list reads as it stands.
- */
-function chooseSpines(place, nodes, count) {
-  if (!nodes.length || !count) return [];
-  const view = viewFor(place);
-  const ray = new THREE.Ray(view.pos, view.target.clone().sub(view.pos).normalize());
-  // not behind the bookseller: skip spines within 0.5 m (sideways, as seen from the view) of the vendor's spot
-  const vendor = place.nodes.slots.slot_vendor?.getWorldPosition(new THREE.Vector3());
-  const side = (p) => {
-    if (!vendor) return Infinity;
-    const a = new THREE.Vector2(vendor.x - view.pos.x, vendor.z - view.pos.z).normalize();
-    const b = new THREE.Vector2(p.x - view.pos.x, p.z - view.pos.z);
-    return Math.abs(a.x * b.y - a.y * b.x);
-  };
-  const cands = nodes.filter((n) => onShelf(place, n)).map((n) => ({ n, p: n.getWorldPosition(new THREE.Vector3()) })).filter((c) => side(c.p) > 0.5);
-  cands.forEach((c) => { c.d = ray.distanceToPoint(c.p); });
-  cands.sort((a, b) => a.d - b.d);
-  const chosen = [];
-  for (const c of cands) {
-    if (chosen.length >= count) break;
-    if (chosen.every((o) => o.p.distanceTo(c.p) > 0.3)) chosen.push(c);
-  }
-  const right = new THREE.Vector3(Math.cos(place.ry), 0, -Math.sin(place.ry));
-  chosen.sort((a, b) => (Math.abs(a.p.y - b.p.y) > 0.15 ? b.p.y - a.p.y : a.p.dot(right) - b.p.dot(right)));
-  return chosen.map((c) => c.n);
-}
-
-const BOOK_HOLD = 9; // seconds a pulled book stands out before the bookseller puts it back
-
-const BAND = new THREE.MeshStandardMaterial({ name: 'action_book_band', color: 0xb3342a, roughness: 0.72 });
-/** A paper band round the lower part of a book (like a bookshop's belly band), as a child of its pivot. */
-function paperBand(pivot) {
-  pivot.updateMatrixWorld(true);
-  const inv = new THREE.Matrix4().copy(pivot.matrixWorld).invert();
-  const box = new THREE.Box3(), tmp = new THREE.Box3();
-  pivot.traverse((m) => {
-    if (!m.isMesh) return;
-    if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
-    box.union(tmp.copy(m.geometry.boundingBox).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld)));
-  });
-  if (box.isEmpty()) return null;
-  const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
-  const h = Math.min(0.05, size.y * 0.24);
-  const band = new THREE.Mesh(new THREE.BoxGeometry(size.x + 0.004, h, size.z + 0.004), BAND);
-  band.position.set(c.x, box.min.y + size.y * 0.4, c.z);
-  band.castShadow = false;
-  pivot.add(band);
-  return band;
+/** A line under the hint saying the goods themselves can be clicked (the writer can set it as `item_hint:`). */
+function itemHint(id) {
+  const fallback = {
+    glueh: 'Or click a mug to have it filled, or a wine bottle to read its label.',
+    bier: 'Or click a glass to fill it at the tap; click two full glasses to clink them.',
+    wurst: 'Or click a sausage to turn it, or a roll to have one put in it.',
+  }[id];
+  return fallback ? ` <em>${writerItemHint(id, fallback)}</em>` : '';
 }

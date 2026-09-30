@@ -19,7 +19,7 @@ import { syntheticEnvironment, createEnvUpdater, probeTargets, captureProbe } fr
 import { installShading, bulbStrings } from './shading.js';
 import { createSnow } from './snow.js';
 import { GradePass } from './grade.js';
-import { placeWarmLights, adoptEngineLights, tuneEmissives } from './lights.js';
+import { placeWarmLights, adoptEngineLights, tuneEmissives, retargetLight } from './lights.js';
 
 export { NIGHT, PROFILES } from './settings.js';
 export { placeWarmLights, tuneEmissives } from './lights.js';
@@ -92,6 +92,10 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     pointShadowTaps: N.warm.shadowMap?.taps ?? 5,
   });
   shading.setRim(new THREE.Vector3(...N.moon.skyDirection), new THREE.Color(N.rim.color), N.rim.strength, N.rim.power, N.rim.dark);
+  if (N.town) {
+    const T = N.town;
+    shading.setTownWash(new THREE.Color().setRGB(...T.color), T.intensity, T.r0, T.r1, T.height, T.facing);
+  }
 
   // ---------- sky ----------
   const sky = createSky(N, { clouds: P.clouds });
@@ -203,11 +207,16 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     ? adoptEngineLights(scene, N, { shadowed: P.shadows ? P.shadowedLights : 0, focus: camera.getWorldPosition(new THREE.Vector3()) })
     : [];
   const placed = [];
+  const allSpots = [], allViews = [];
+  const clipOf = new Map(); // light -> its interior clip entry (shading.js)
   function placeLights(spots, opts = {}) {
     const r = placeWarmLights(scene, spots, N, { lite, budget: P.lightBudget, shadowed: P.shadows ? P.shadowedLights : 0, ...opts });
     r.glows = (r.interiors || []).map((g) => shading.add(g));
+    (r.fixtures || []).forEach((f) => scene.add(f));
+    allSpots.push(...(r.spots || []));
+    allViews.push(...(r.views || []));
     // unshadowed interior lights (lite) are clipped to their stall's interior box
-    r.clipEntries = (r.clips || []).map((c) => shading.addClip(c)).filter(Boolean);
+    r.clipEntries = (r.clips || []).map((c) => { const e = shading.addClip(c); if (e) clipOf.set(c.light, e); return e; }).filter(Boolean);
     const dispose = r.dispose;
     r.dispose = () => { r.glows.forEach((g) => shading.remove(g)); r.clipEntries.forEach((c) => shading.removeClip(c)); dispose(); };
     shading.update(camera.getWorldPosition(_cam));
@@ -217,6 +226,93 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     console.info(`[lighting] placed ${r.lights.length} lights (${r.lights.filter((l) => l.castShadow).length} shadowed, ${r.clipEntries.length} clipped to their stall), ${r.pools.length} pools, glows ${JSON.stringify(tags)}`);
     return r;
   }
+  // ---------- the entered place gets the lights (Codex round 1, fix 3) ----------
+  // When the visitor enters a place (the camera settles at its cam_view, or the engine calls
+  // focusPlace(id)), its light_ spots that have no real light borrow one: unshadowed lights are moved
+  // from the least important, farthest models (deco before landmark before section; far before near),
+  // up to P.focusLights. On the lite market that is how the bandstand, the wheel and the carousel get a
+  // real light when entered, and a section stall gets its front fill. Leaving puts every light back.
+  // The count of point and spot lights never changes, so no material recompiles; lights fade in.
+  const moved = new Map(); // light -> its home spot
+  const fades = new Map(); // light -> intensity it fades up to
+  let focusId = null, focusExplicit = false;
+  const DONATE = { deco: 3, lamp: 3, strings: 3, other: 3, ground: 3, landmark: 2, tree: 2, section: 1 };
+  const ofPlace = (s, id) => s.id === id || s.holder?.userData?.place === id || s.holder?.userData?.entry?.place === id;
+  function glowHow(id) {
+    const interior = allSpots.find((s) => s.id === id && !s.front && s.light);
+    const how = interior ? (interior.light.castShadow ? 'lit' : 'unshadowed') : 'only';
+    for (const g of shading.glows) if (g.tag === 'interior' && g.id === id) { g.how = how; g.intensity = N.glow.interior[how]; }
+  }
+  function moveLight(L, s) {
+    const prev = L.userData.spot;
+    const old = clipOf.get(L);
+    if (old) { shading.removeClip(old); clipOf.delete(L); }
+    const { target, clip } = retargetLight(L, s, N, { lite });
+    if (clip) { const e = shading.addClip(clip); if (e) clipOf.set(L, e); }
+    if (prev && prev !== s) prev.light = null;
+    s.light = L;
+    L.intensity = 0;
+    fades.set(L, target);
+    if (prev) glowHow(prev.id);
+    glowHow(s.id);
+  }
+  /** Give the place `id` (a place id such as 'glueh', or a layout id) the real lights; null gives them back. */
+  function focusPlace(id, { auto = false } = {}) {
+    if (!auto) focusExplicit = id != null;
+    id = id || null;
+    if (id === focusId) return focusId;
+    for (const [L, home] of moved) moveLight(L, home);
+    moved.clear();
+    focusId = id;
+    if (id) {
+      const mine = allSpots.filter((s) => ofPlace(s, id));
+      if (mine.length) {
+        const center = mine[0].holder.getWorldPosition(new THREE.Vector3());
+        const room = Math.max(0, (N.warm.perModel ?? 2) - mine.filter((s) => s.light).length);
+        const need = mine.filter((s) => !s.light).sort((a, b) => (a.lk !== a.kind) - (b.lk !== b.kind) || a.front - b.front).slice(0, Math.min(P.focusLights ?? 2, room));
+        const donors = allSpots
+          .filter((s) => s.light && !s.light.castShadow && !ofPlace(s, id) && s.light.parent)
+          .sort((a, b) => (DONATE[b.lk] ?? 3) - (DONATE[a.lk] ?? 3) || b.pos.distanceTo(center) - a.pos.distanceTo(center));
+        for (const s of need) {
+          const wantSpot = s.front && !lite;
+          let i = donors.findIndex((d) => !!d.light.isSpotLight === wantSpot);
+          if (i < 0) i = donors.findIndex((d) => !d.light.isSpotLight);
+          if (i < 0) break;
+          const d = donors.splice(i, 1)[0];
+          moved.set(d.light, d);
+          moveLight(d.light, s);
+        }
+      }
+    }
+    shading.update(camera.getWorldPosition(_cam));
+    console.info(`[lighting] focus ${focusId || 'none'} (${moved.size} lights moved)`);
+    return focusId;
+  }
+  // the entered place, from the camera: at (or near) a place's cam_view, looking toward its cam_target
+  // Only once the camera has settled (moved < 5 cm since the last check), so a flight that passes near
+  // another place's view on its way does not move lights; "near" is within 1.5 m, or 12 % of the
+  // distance from cam_view to cam_target for the far views of the rides (the engine may dolly in a bit).
+  const _va = new THREE.Vector3(), _vb = new THREE.Vector3(), _vd = new THREE.Vector3(), _vc = new THREE.Vector3();
+  const _vLast = new THREE.Vector3(1e9, 0, 0);
+  function enteredPlace() {
+    camera.getWorldPosition(_vc);
+    const settled = _vc.distanceTo(_vLast) < 0.05;
+    _vLast.copy(_vc);
+    if (!settled) return focusId;
+    camera.getWorldDirection(_vd);
+    let best = null, bs = Infinity;
+    for (const v of allViews) {
+      if (!v.view.parent) continue;
+      v.view.getWorldPosition(_va);
+      (v.target || v.holder).getWorldPosition(_vb);
+      const span = Math.max(1, _va.distanceTo(_vb));
+      const d = _vc.distanceTo(_va);
+      const look = _vd.dot(_vb.sub(_vc).normalize());
+      if (d < Math.max(1.5, 0.12 * span) && look > 0.9 && d < bs) { bs = d; best = v.holder.userData?.place || v.id; }
+    }
+    return best;
+  }
+
   function tune(root) {
     const r = tuneEmissives(root, N, { lite });
     r.bulbs.forEach((m) => emissives.bulbs.add(m));
@@ -352,8 +448,15 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   const snowFog = new THREE.Color(N.snow.fogColor);
 
   let lastWall = null;
+  // a camera override for screenshots and tuning (shoot-market.mjs "@cam="): applied every frame after
+  // the engine's camera rig has run, so any view of the market can be framed; null hands the camera back
+  let camOverride = null;
+  function debugCamera(pos, target) {
+    camOverride = pos ? { pos: new THREE.Vector3(...pos), target: new THREE.Vector3(...target) } : null;
+  }
   function update(dt = 0.016, t = 0) {
     frame++;
+    if (camOverride) { camera.position.copy(camOverride.pos); camera.lookAt(camOverride.target); camera.updateMatrixWorld(); }
     const rawDt = Math.max(dt || 0, 0);
     dt = Math.min(rawDt, 0.1);
     const st = lastT == null ? 0 : Math.max(0, t - lastT); // scene time step (0 under reduced motion)
@@ -403,6 +506,15 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
 
     if (P.shadows && moonShadowEvery > 1 && frame % moonShadowEvery === 0) moonLight.shadow.needsUpdate = true;
 
+    // the entered place gets the lights (unless the engine sets it with focusPlace)
+    if (!focusExplicit && frame % 10 === 5 && allViews.length && (P.focusLights ?? 0) > 0) {
+      const id = enteredPlace();
+      if (id !== focusId) focusPlace(id, { auto: true });
+    }
+    for (const [L, want] of fades) {
+      L.intensity = damp(L.intensity, want, 3, Math.max(rawDt, wdt));
+      if (Math.abs(L.intensity - want) < 0.01 * want) { L.intensity = want; fades.delete(L); }
+    }
     // local glows nearest the camera into the shared uniform (the camera moves slowly)
     if (frame % 15 === 1) shading.update(camera.getWorldPosition(_cam));
 
@@ -479,6 +591,10 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     dispose,
     // helpers for the engine
     placeLights,
+    focusPlace,
+    debugCamera,
+    get focus() { return focusId; },
+    get focusMoves() { return [...moved.keys()].map((L) => ({ light: L.name, place: L.userData.spot?.id, from: moved.get(L).id })); },
     tune,
     captureEnvironment,
     refreshEnvironment,

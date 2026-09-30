@@ -182,6 +182,10 @@ WINE_LABELS = [
      "f8f6ee", "2a2a2a", "8aa84a", "modern"),
     ("wl_riesling_eiswein", "Weingut Eiszapfen", "Riesling Eiswein", "edelsüß · 0,375 l", "Rheingau", "2018",
      "eef3f6", "1a2a3a", "7aa0c0", "crest"),
+    ("wl_weissherbst_baden", "Winzerkeller Lichterglanz", "Spätburgunder", "Weißherbst · Rosé", "Baden", "2023",
+     "fbeee8", "5a1a24", "d87a8a", "classic"),
+    ("wl_riesling_nahe", "Weingut Rauhreif", "RIESLING", "Auslese", "Nahe", "2020",
+     "f6f1e4", "2a2a22", "b8922e", "modern"),
 ]
 
 
@@ -309,6 +313,40 @@ def g_wurst_sign(w, h, seed):
     return t
 
 
+def g_lk_tin(w, h, seed):
+    """Lid of a round Elisenlebkuchen tin (Blechdose): deep red with a gold rim, a star wreath and lettering."""
+    t = Tex(w, h, hexc("8e1b1d"), 0.4)
+    yy, xx = np.mgrid[0:h, 0:w].astype(float)
+    r = np.hypot(xx - w / 2, yy - h / 2) / (min(w, h) / 2)
+    gold = hexc("d8b048")
+    t.paint(smooth(0.9, 0.93, r), gold, 0.3, 1.0)
+    t.paint(smooth(0.8, 0.81, r) * smooth(0.84, 0.83, r), gold, 0.3, 1.0)
+    for k in range(16):
+        a = 2 * np.pi * k / 16
+        cx, cy = w / 2 + 0.7 * w / 2 * np.cos(a), h / 2 + 0.7 * h / 2 * np.sin(a)
+        t.paint(smooth(4.5, 3.0, np.hypot(xx - cx, yy - cy)), gold, 0.3, 1.0)
+    rows = [("Nürnberger", "fellsc", h * 0.1, None, (w / 2, h * 0.34), "mm"),
+            ("Elisen", "fraktur", h * 0.2, 700, (w / 2, h * 0.5), "mm"),
+            ("Lebkuchen", "fellsc", h * 0.1, None, (w / 2, h * 0.66), "mm")]
+    t.paint(text_mask(w, h, rows), hexc("f4e2a8"), 0.35, 0.6)
+    return t
+
+
+def g_deco_tags(w, h, seed):
+    """Eight small kraft price tags (a 4 x 2 grid), hand-lettered: one strip of U per tag."""
+    t = Tex(w, h, hexc("c8a070"), 0.9)
+    t.col = mix(t.col, t.col * 0.86, fbm(h, w, 10, seed) * 0.5)
+    tags = [("Herz", "3 €"), ("100 g", "3,50"), ("Kerze", "ab 4 €"), ("Stück", "2 €"), ("Kugel", "5 €"),
+            ("100 g", "2,90"), ("Tüte", "4 €"), ("6 Stück", "5 €")]
+    rows = []
+    for i, (a, b) in enumerate(tags):
+        cx, cy = (i % 4 + 0.5) * w / 4, (i // 4 + 0.5) * h / 2
+        rows.append((a, "caveat", fit_size(a, "caveat", h * 0.13, 600, w * 0.2), 600, (cx, cy - h * 0.09), "mm"))
+        rows.append((b, "caveat", fit_size(b, "caveat", h * 0.2, 700, w * 0.21), 700, (cx, cy + h * 0.09), "mm"))
+    t.paint(text_mask(w, h, rows), hexc("2a1a10"), 0.9)
+    return t
+
+
 def main_specs():
     """[(name, w, h, generator)] added to the main atlas."""
     R = []
@@ -325,4 +363,6 @@ def main_specs():
     add("bookmarks", 192, 256, g_bookmarks)
     add("towel", 128, 128, g_towel)
     add("wurst_sign", 256, 192, g_wurst_sign)
+    add("lk_tin", 192, 192, g_lk_tin)
+    add("deco_tags", 256, 128, g_deco_tags)
     return R

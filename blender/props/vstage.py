@@ -6,7 +6,7 @@ import os
 
 import bpy
 
-from vlib import ATLAS_DIR, state, world_bbox
+from vlib import ATLAS_DIR, MODELS, state, world_bbox
 
 # the vendor's own working files (AO maps, preview PNGs) live under blender/out/vendor/, never in the shared
 # blender/out/renders/, where the carpenter's deco.py writes deco_<key>.png for the empty stalls
@@ -200,3 +200,48 @@ def frame_cam(ps, lens=35, elev=0.33, margin=1.12, aspect=16 / 9):
     return (loc, (c.x, c.y, c.z - top), lens)
 
 
+
+
+def stall_scene(ps, stall_glb, extra_lights=()):
+    """Render-only: the carpenter's shipped stall glb with this set at its slot (the slot_ empty named by
+    ps.slot), the stall's light_ empties lit as warm Cycles point lights, a soft fill from the visitor's side.
+    Returns the slot's world position (the set origin), for shot(..., origin=)."""
+    from mathutils import Vector
+    from nmlib import render
+    env = state.env_collection()
+    for o in list(env.all_objects):                          # drop the plain-counter stage and its lights
+        bpy.data.objects.remove(o, do_unlink=True)
+    render.night_scene(ground_size=30)
+    objs = render.import_glb(os.path.join(MODELS, stall_glb), at=(0, 0, 0))
+    bpy.context.view_layer.update()
+    slot = next((o for o in objs if o.name.split(".")[0] == ps.slot), None)
+    if slot is None:
+        raise RuntimeError(f"{stall_glb} has no {ps.slot}")
+    origin = slot.matrix_world.translation.copy()
+    ps.objs[ps.name].location = origin
+    bpy.context.view_layer.update()
+    n = 0
+    for o in objs:
+        if o.name.startswith("light_"):
+            render.add_light(f"env_{o.name}", 'POINT', tuple(o.matrix_world.translation), 70, (1.0, 0.72, 0.45),
+                             size=0.2)
+            n += 1
+    render.add_light("env_fill", 'AREA', tuple(origin + Vector((-0.4, -1.6, 0.8))), 40, (1.0, 0.72, 0.48), size=1.4,
+                     rot=(math.radians(62), 0, math.radians(-15)))
+    for L in extra_lights:
+        name, kind, loc, *rest = L
+        render.add_light(name, kind, tuple(origin + Vector(loc)), *rest)
+    print(f"[props] staged {ps.name} in {stall_glb} at {tuple(round(v, 3) for v in origin)} with {n} stall lights")
+    return origin
+
+
+def shot_at(cam, origin, out_jpg, samples=128, res=(1920, 1080), png_name=None):
+    """Like shot(), with the camera given relative to a full 3D origin (the set's slot in a stall scene)."""
+    from mathutils import Vector
+    from nmlib import render
+    loc, tgt, lens = cam
+    render.camera(tuple(origin + Vector(loc)), tuple(origin + Vector(tgt)), lens=lens, dof=None)
+    os.makedirs(RENDERS, exist_ok=True)
+    png = os.path.join(RENDERS, (png_name or os.path.basename(out_jpg).replace(".jpg", "")) + ".png")
+    render.render(png, samples=samples, res=res, jpeg=out_jpg, jpeg_width=1280)
+    return png

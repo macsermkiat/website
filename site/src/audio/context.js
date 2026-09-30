@@ -11,6 +11,27 @@ export function audioContext() {
   return AC;
 }
 
+// Everything the market plays (the band and the stall sounds) goes through one output gain, so the mute
+// button silences all of it at once.
+let out = null;
+let muted = false;
+export function output() {
+  const ac = audioContext();
+  if (!out) {
+    out = ac.createGain();
+    out.gain.value = muted ? 0 : 1;
+    out.connect(ac.destination);
+  }
+  return out;
+}
+
+/** Mute or unmute every sound (band and stall sounds). Works before the context exists. */
+export function setMuted(on) {
+  muted = !!on;
+  if (out) out.gain.setTargetAtTime(muted ? 0 : 1, out.context.currentTime, 0.03);
+}
+export const isMuted = () => muted;
+
 export function hasContext() {
   return !!AC;
 }

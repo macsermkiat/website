@@ -16,7 +16,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "lib"))
 
 from nmlib import bake, export, mats, render, state  # noqa: E402
 
-REVIEW = os.path.join(state.REPO, "review", "round-1", "carpenter")
+ROUND = os.environ.get("NM_ROUND", "2")
+REVIEW = os.path.join(state.REPO, "review", f"round-{ROUND}", "carpenter")
 
 
 def args():
@@ -30,6 +31,16 @@ def args():
     ap.add_argument("--cam", default=None, help="x,y,z,tx,ty,tz,lens debug camera")
     a, _ = ap.parse_known_args(sys.argv[1:])
     return a
+
+
+def vendor_props(pairs):
+    """Import the vendor's shipped prop glbs [(name, slot), ...] into the preview (render-only),
+    so the Cycles preview shows the stall as the site assembles it. Returns True when at least
+    one set was found (callers fall back to simple stand-ins otherwise)."""
+    got = []
+    for name, slot in pairs:
+        got += render.import_glb(os.path.join(state.MODELS_DIR, name + ".glb"), at=slot)
+    return bool(got)
 
 
 def is_hidden_for_ao(o):
@@ -83,6 +94,9 @@ def run(name, build, preview=None, seed=1, externalize="kit"):
         if preview and not a.no_render:
             render.night_scene()
             cam = preview(objs)
+            # the emissive stand-ins (paint_glow, iron_matte, rauten) stand in for light the
+            # engine does not cast; the Cycles preview has that light, so switch them off
+            mats.standin_emission(False)
             if a.cam:
                 v = [float(t) for t in a.cam.split(",")]
                 render.camera(v[0:3], v[3:6], lens=v[6] if len(v) > 6 else 35)

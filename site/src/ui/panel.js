@@ -3,7 +3,7 @@ import { SECTIONS, ORDER, panelActions } from '../content.js';
 
 const $ = (id) => document.getElementById(id);
 
-export function createPanel({ actionsFor, onOpen, onClose, playButtonLabel }) {
+export function createPanel({ actionsFor, itemsFor, onOpen, onClose, playButtonLabel }) {
   const panel = $('panel'), body = $('pBody'), actionsBox = $('pActions'), title = $('pTitle'), eyebrow = $('pEyebrow');
   const announce = $('announce');
   let current = null;
@@ -51,6 +51,29 @@ export function createPanel({ actionsFor, onOpen, onClose, playButtonLabel }) {
         box.appendChild(b);
       }
       actionsBox.append(box, note);
+      // the goods one by one, for the keyboard and screen readers (the same as clicking them in the market)
+      const list = itemsFor?.(id) || [];
+      if (list.length) {
+        const d = document.createElement('details');
+        d.className = 'goods';
+        const sum = document.createElement('summary');
+        sum.textContent = `The goods, one by one (${list.length})`;
+        const ul = document.createElement('div');
+        ul.className = 'goodslist';
+        ul.setAttribute('role', 'group');
+        ul.setAttribute('aria-label', `Goods at the ${S.name}`);
+        for (const it of list) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'btn small';
+          b.textContent = it.label;
+          b.dataset.item = it.name;
+          b.addEventListener('click', it.fn);
+          ul.appendChild(b);
+        }
+        d.append(sum, ul);
+        actionsBox.appendChild(d);
+      }
     }
     body.querySelectorAll('a[href^="http"]').forEach((a) => { a.target = '_blank'; a.rel = 'noopener'; });
     panel.hidden = false;

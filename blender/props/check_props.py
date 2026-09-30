@@ -23,7 +23,7 @@ FAIL (exit 1):
 WARN (listed, exit 0): lite versions above 38 % of the full triangles (target about a third).
 
     python3 blender/props/check_props.py --notes   also rewrites the budget tables in
-                                                   review/round-1/vendor/NOTES.md from the current glbs
+                                                   review/round-2/vendor/NOTES.md from the current glbs
 """
 import json
 import os
@@ -46,10 +46,10 @@ SECTION_SETS = ["prop_gluehwein_counter", "prop_gluehwein_shelf", "prop_gluehwei
                 "prop_books_counter"]
 DECO_KEYS = ["lebkuchen", "mandeln", "kerzen", "spielzeug", "schmuck", "kaese", "crepes", "maroni", "puffer"]
 NO_AO = ("vendor_glass", "flame", "lamp_glow", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade")
-BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served)_\d+$")
+BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|sausage)_\d+$|^act_grill$")
 HEADROOM, SECTION_TRIS, SECTION_MB, DECO_TRIS = 2000, 60000, 3.0, 20000
 LITE_RATIO = 0.38
-NOTES = os.path.join(REPO, "review", "round-1", "vendor", "NOTES.md")
+NOTES = os.path.join(REPO, "review", "round-2", "vendor", "NOTES.md")
 SEAT = os.path.join(HERE, "seat_check.mjs")
 
 fails, warns = [], []
@@ -135,7 +135,10 @@ def check_geometry(name, r):
         return
     if size[1] > 0.5 + 1e-3:
         fail(f"{name} is {size[1]:.3f} m deep (> 0.5)")
-    if lo[2] < -0.002:
+    floor = r.get("grill_seat", {}).get("floor_z")
+    if floor is not None and lo[2] < floor - 0.002:
+        fail(f"{name} reaches {lo[2]:.3f} m, below the grill opening's deck at {floor:.3f}")
+    elif floor is None and lo[2] < -0.002:
         fail(f"{name} reaches {lo[2]:.3f} m below its slot")
     if hi[2] > 1.15 + 1e-3:
         fail(f"{name} is {hi[2]:.3f} m tall (front opening is 1.15)")
@@ -259,8 +262,12 @@ def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite
 def main():
     with open(os.path.join(MODELS, "props.json")) as f:
         pj = json.load(f)
-    if set(pj) - {"about", "sets"}:
-        fail(f"props.json has extra top-level keys {sorted(set(pj) - {'about', 'sets'})}")
+    if set(pj) - {"about", "sets", "by_set"}:
+        fail(f"props.json has extra top-level keys {sorted(set(pj) - {'about', 'sets', 'by_set'})}")
+    by = pj.get("by_set", {})
+    if {e.get("set") for e in pj.get("sets", [])} != set(by) or any(
+            by[e["set"]] != {k: e[k] for k in ("slot", "stall", "model", "lite", "asset")} for e in pj.get("sets", [])):
+        fail("props.json by_set does not mirror the sets list")
     sets = {e["set"]: e for e in pj["sets"]}
     with open(os.path.join(MODELS, "items.json")) as f:
         items = json.load(f)["items"]

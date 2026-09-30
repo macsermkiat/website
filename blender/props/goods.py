@@ -265,6 +265,23 @@ def willi(m, M, glass_col=C("eef4f0"), n=None, lo=7):
     return inner, 0.2058, 0.0365
 
 
+def weizen(m, M, glass_col=C("eef4f0"), n=None, lo=7):
+    """0.5 l Weizenglas, 25 cm: a narrow waist low down, a tall tulip belly, thin walls on a heavy foot.
+    Returns (inner profile, rim z, outer rim radius)."""
+    M = M or Matrix()
+    n = seg(n or 12, lo)
+    outer = [(0.0, 0.0), (0.03, 0.0), (0.032, 0.006), (0.027, 0.025), (0.024, 0.06), (0.03, 0.12), (0.038, 0.19),
+             (0.0385, 0.225), (0.035, 0.248)]
+    rim = [(0.0352, 0.2505), (0.0338, 0.2512), (0.0327, 0.2498)]
+    inner = [(0.0329, 0.248), (0.0364, 0.225), (0.0358, 0.19), (0.0282, 0.12), (0.0218, 0.06), (0.0, 0.028)]
+    if lite():
+        outer = [outer[i] for i in (0, 1, 3, 4, 6, 8)]
+        rim = [rim[1]]
+        inner = [inner[i] for i in (0, 2, 4, 5)]
+    m.lathe(outer + rim + inner, n, "sw_vgloss", M, glass_col, "glass")
+    return inner, 0.2512, 0.0352
+
+
 def mass(m, M, glass_col=C("eef4f0"), n=None, lo=7):
     """1 l Maßkrug, 21 cm: thick dimpled glass (4.5 mm walls, 2 cm base) with a handle.
     Returns (inner profile, rim z, outer rim radius)."""
@@ -287,9 +304,10 @@ def mass(m, M, glass_col=C("eef4f0"), n=None, lo=7):
 
 
 def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foam", spill=0.0, seed=0.0, dome=None):
-    """Beer up to `level` (m) in m, and in foam_m a separate foam head: a band rising from the beer along
-    the inner wall, then a lumpy, domed cap that swells over the rim (covering the rim edge) with an
-    uneven, cauliflower outline, and an optional drip down the outside at angle `spill` (radians)."""
+    """Beer up to `level` (m) in m, and in foam_m a separate foam head: a creamy band rising from the beer
+    along the inner wall, then a lumpy, softly domed crown that stays inside the rim and swells only a
+    couple of millimetres over its edge, and, when `spill` (radians) is given, a run of foam over the rim
+    and down the outside ending in a bead."""
     from mathutils import noise
     inner, rim_z, rim_r = glass
     n = seg(14, 7)
@@ -305,31 +323,37 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
     for z in (zb + 0.004, zb + (level - zb) * 0.5, level):
         prof.append((r_at(z) - 0.0008, z))
     prof.append((0.0, level))
-    m.lathe(prof, n, "sw_wet", M, beer_col, "beer")
+    m.lathe(prof, seg(12, 6), "sw_wet", M, beer_col, "beer")
     ri = r_at(rim_z - 0.003)
-    # the foam's side against the glass, from the beer up to just under the rim
-    foam_m.lathe([(r_at(level) - 0.0006, level - 0.002), (ri - 0.0004, rim_z - 0.003)], n, region_foam, M,
-                 C("e8dcc4"), "atlas")
-    # the cap: rings from the overhanging edge in to the crown; heights domed and lumpy
-    dome = dome if dome is not None else rim_r * 0.5
-    rings = [(ri - 0.0004, -0.003, 0.0), (rim_r + 0.0024, 0.0006, 0.22), (rim_r + 0.003, 0.004, 0.5),
-             (rim_r * 0.9, 0.0, 0.72), (rim_r * 0.6, 0.0, 0.9), (rim_r * 0.26, 0.0, 0.99)]
+    cream = C("f3e6c8")
+    # the foam's side against the glass, from the beer up to just under the rim: a denser, darker cream
+    # where it meets the beer (the bubbles are finer and wetter there)
+    foam_m.lathe([(r_at(level) - 0.0006, level - 0.002), (r_at(level + 0.004) - 0.0005, level + 0.004),
+                  (ri - 0.0004, rim_z - 0.003)], n, region_foam, M, C("e6d2a6"), "atlas")
+    # the crown: rings from the rim in to the top. (radius, height over the rim, lump weight)
+    dome = dome if dome is not None else min(0.02, rim_r * 0.36)
+    rings = [(ri - 0.0004, -0.003, 0.0), (rim_r - 0.0005, 0.0025, 0.4), (rim_r + 0.0012, 0.0065, 0.8),
+             (rim_r * 0.93, 0.35, 1.0), (rim_r * 0.74, 0.66, 1.0), (rim_r * 0.5, 0.86, 1.0),
+             (rim_r * 0.24, 0.97, 0.8)]
     if lite():
-        rings = [rings[0], rings[1], rings[3], rings[5]]
-    verts, faces, uvs = [], [], []
+        rings = [rings[0], rings[2], rings[4], rings[6]]
+    verts, faces, uvs, cols = [], [], [], []
     reg = vlib.R(region_foam)
-    for i, (rr, dz, k) in enumerate(rings):
+    for i, (rr, hz, lw) in enumerate(rings):
         for j in range(n):
             a = TWO_PI * j / n
-            p = Vector((math.cos(a) * 3.1, math.sin(a) * 3.1, seed + i * 0.37))
-            lump = noise.noise(p) * 0.5 + noise.noise(p * 2.3 + Vector((seed, 0, 0))) * 0.25
-            r = rr * (1.0 + (0.06 * lump if i >= 1 else 0.0))
-            z = rim_z + dz + dome * (k * k * 0.25 + k * 0.75 if k else 0.0) * (i > 0) + (0.005 * lump if i >= 2 else 0.0)
+            p = Vector((math.cos(a) * 2.6, math.sin(a) * 2.6, seed + i * 0.41))
+            lump = noise.noise(p) * 0.6 + noise.noise(p * 2.7 + Vector((seed, 0, 0))) * 0.3
+            r = rr * (1.0 + 0.045 * lump * lw)
             if i == 0:
-                z = rim_z + dz
+                z = rim_z + hz
+            elif i <= 2:
+                z = rim_z + hz + 0.0015 * lump
+            else:
+                z = rim_z + 0.0065 + (dome - 0.0065) * hz + 0.0028 * lump * lw
             verts.append((r * math.cos(a), r * math.sin(a), z))
     top = len(verts)
-    verts.append((0.0, 0.0, rim_z + dome + 0.001 + 0.0015 * noise.noise(Vector((seed, 1.3, 0.2)))))
+    verts.append((0.0, 0.0, rim_z + dome + 0.0012 * noise.noise(Vector((seed, 1.3, 0.2)))))
     R = len(rings)
     for i in range(R - 1):
         for j in range(n):
@@ -340,12 +364,23 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
     ext = rim_r * 1.1
     for f in faces:
         uvs.append([reg.uv(0.5 + verts[i][0] / (2 * ext), 0.5 + verts[i][1] / (2 * ext)) for i in f])
-    foam_m.add(verts, faces, uvs, M, jit(WHITE, 0.02), "atlas", True)
+    foam_m.add(verts, faces, uvs, M, jit(cream, 0.02), "atlas", True)
     if spill and not lite():
-        # a slow drip of foam over the rim and a little way down the outside
+        # a run of foam over the rim and down the outside, thinning, ending in a bead
         c, s_ = math.cos(spill), math.sin(spill)
-        foam_m.sphere(0.006, 8, 5, region_foam, M @ T((rim_r + 0.001) * c, (rim_r + 0.001) * s_, rim_z - 0.008, rz=spill),
-                      WHITE, "atlas", scale=(0.55, 1.1, 2.0))
+        pts, radii = [], []
+        for k in range(7):
+            t = k / 6
+            out = rim_r + 0.0025 + 0.0012 * math.sin(math.pi * min(1.0, t * 1.6))
+            z = rim_z + 0.004 - 0.052 * t ** 1.3
+            if k == 0:
+                out = rim_r - 0.001
+            pts.append((out * c - 0.002 * t * s_, out * s_ + 0.002 * t * c, z))
+            radii.append(0.0042 * (1 - 0.45 * t) + 0.0006)
+        foam_m.tube(pts, 0.004, 5, region_foam, M, cream, "atlas", radii=radii)
+        b = pts[-1]
+        foam_m.sphere(0.0036, 6, 4, region_foam, M @ T(b[0] + 0.0008 * c, b[1] + 0.0008 * s_, b[2] - 0.002), cream,
+                      "atlas", scale=(1.0, 1.0, 1.25))
 
 
 # ------------------------------------------------------------------ barrels

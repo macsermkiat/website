@@ -22,6 +22,8 @@ import { createPerfMeter } from './perf.js';
 import { mergeStatic, mergeAcross, instancePools, instanceRiders } from './engine/merge.js';
 import { createGovernor } from './governor.js';
 import { counterLocal } from './actions/util.js';
+import { showPlainFallback } from './ui/fallback.js';
+import { setupMute } from './ui/mute.js';
 
 const $ = (id) => document.getElementById(id);
 const warnings = [];
@@ -34,9 +36,11 @@ function inSeason() {
   return (m === 10 && day >= 20) || m === 11 || (m === 0 && day <= 6);
 }
 
-function fail(msg) {
+function fail(msg, { plain = true } = {}) {
   $('loadingText').textContent = msg;
   $('loadingBar').parentElement.hidden = true;
+  // no 3D here: the text of every section is shown in place of the market (the same content as plain.html)
+  if (plain) showPlainFallback(msg);
 }
 
 async function boot() {
@@ -52,8 +56,8 @@ async function boot() {
   qBtn.addEventListener('click', () => switchQuality(!lite));
   document.documentElement.dataset.quality = lite ? 'lite' : 'full';
 
-  if (!quality.info.webgl) {
-    fail('This browser cannot show 3D graphics (WebGL is off). The text version has everything.');
+  if (!quality.info.webgl || params.has('nowebgl')) {
+    fail('This browser cannot show 3D graphics (WebGL is off), so here is the market as text.');
     return;
   }
 
@@ -63,7 +67,7 @@ async function boot() {
   try {
     renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
   } catch (e) {
-    fail('This browser cannot show 3D graphics (WebGL is off). The text version has everything.');
+    fail('This browser cannot show 3D graphics (WebGL is off), so here is the market as text.');
     return;
   }
   // pixel ratio capped at 1.5 on the full market (a 4K laptop screen at 2x is four times the fragments)
@@ -71,6 +75,9 @@ async function boot() {
   renderer.setPixelRatio(PR);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setSize(stage.clientWidth, stage.clientHeight, false);
+  // an accessible name from the start (bindKeyboard adds the keys once the market is up)
+  renderer.domElement.setAttribute('role', 'img');
+  renderer.domElement.setAttribute('aria-label', "Mac's Nachtmarkt: a 3D Christmas market at night. The places are also listed as buttons below the market.");
   stage.insertBefore(renderer.domElement, overlay);
 
   const scene = new THREE.Scene();
@@ -112,14 +119,7 @@ async function boot() {
 
   // the lighting module brings its own falling snow; the engine's flakes are only for the stand-in lighting
   const ownSnow = lightingSource === 'lighting' && lighting.raw && 'snowAmount' in lighting.raw;
-  // Under snow the lighting module thickens the fog; past about 0.017 the stall lights and bulbs drown in it.
-  // The engine asks for no more than that (a request to the lighting designer: once settings.js agrees, this
-  // does nothing).
-  const snowSettings = lighting.raw?.settings?.snow;
-  if (snowSettings && Number(snowSettings.fogDensity) > SNOW_FOG_MAX) snowSettings.fogDensity = SNOW_FOG_MAX;
-  // Flakes: the nearest layer drew as big out-of-focus discs in front of the market; the engine asks for
-  // smaller, crisper ones (a request to the lighting designer, like the fog cap; see capFlakes).
-  capFlakes(scene);
+  // (The snow fog and flake caps the engine used to apply now live in the lighting module's settings.js.)
   const snowfall = ownSnow ? { set() {}, update() {} } : createSnowfall(scene, { lite });
   // keep walkers off the stalls (from the layout, so the deco stalls count before their models arrive)
   const avoid = (x, z) => {
@@ -139,7 +139,7 @@ async function boot() {
   // dark ground. Come in closer and lower, so the four section stalls and the bandstand fill the upper part.
   const phoneHome = stage.clientWidth < 600 && stage.clientHeight > stage.clientWidth * 0.9;
   const rig = createCameraRig({ camera, dom: renderer.domElement, home: phoneHome ? PHONE_HOME : home, motion });
-  let panel;
+  let panel, openedFor = null;
   const actions = createActions({
     market, scene, lite, motion, audio, rig, camera, overlay,
     books: bookPicks(),
@@ -184,14 +184,17 @@ async function boot() {
   }
   panel = createPanel({
     actionsFor: (id) => actions.get(id),
+    itemsFor: (id) => goodsList(id),
     playButtonLabel: playLabel,
     onOpen: (id) => {
-      // a book pulled at the Bücherstand goes back, and its title tag with it, when another place opens
-      if (id !== 'books') actions.retractBook();
+      // an open book, a bottle being shown or a raised glass goes back when another place opens
+      if (id !== openedFor) actions.retract();
+      openedFor = id;
+      decoCaption(null);
       key?.follow(market.places[id]);
       requestAnimationFrame(() => panelShift());
     },
-    onClose: () => { actions.retractBook(); key?.follow(null); panelShift(); },
+    onClose: () => { actions.retract(); openedFor = null; key?.follow(null); panelShift(); },
   });
   // Opening a place from the buttons under the market: bring the market back into view first.
   // On a phone the panel is a bottom sheet: bring the market to the top of the screen, so the part above the
@@ -206,11 +209,53 @@ async function boot() {
   buildPlaceNav(openPlace, (id) => picking?.highlight(id));
 
   picking = createPicking({
-    dom: renderer.domElement, camera, market, overlay, outline,
+    dom: renderer.domElement, camera, market, overlay, outline, items: actions.items,
+    current: () => panel.current,
     labelFor: (id) => `${SECTIONS[id]?.name} · ${SECTIONS[id]?.sub}`,
     onPick: (id) => { if (actions.rides.riding?.place?.id === id) return; openPlace(id); },
-    onBook: (node) => { if (panel.current !== 'books') openPlace('books'); actions.pullBook(node); },
+    // an item on a counter or shelf: its own action, opening its stall first if the panel is elsewhere
+    onItem: (item) => {
+      if (item.placeId && market.places[item.placeId] && panel.current !== item.placeId) openPlace(item.placeId);
+      actions.items.click(item);
+      focusItem(item);
+    },
+    // a deco stall: fly to its close-up (it opens no panel)
+    onDeco: (id) => openDeco(id),
   });
+  // the deco stall's name under its close-up, and a hint that its goods can be looked at
+  const caption = document.createElement('p');
+  caption.className = 'decocap';
+  caption.hidden = true;
+  stage.appendChild(caption);
+  function decoCaption(d) {
+    caption.hidden = !d;
+    if (d) caption.textContent = `${d.entry.label || d.id}. Point at the goods to look closer; Reset view to go back.`;
+  }
+  /** Come in close to where a clicked item's little scene plays out (the glass under the tap, the ladle over
+   *  the mug, the sausage on the grill), keeping the direction the visitor looks from. */
+  const ITEM_NEAR = 1.7;
+  function focusItem(item) {
+    const at = actions.items.focusOf(item);
+    if (!at || rig.riding) return;
+    const dir = camera.position.clone().sub(at);
+    const dist = dir.length();
+    if (dist < ITEM_NEAR * 1.15) return; // already close: no flight for a neighbour
+    dir.y = Math.max(dir.y, dist * 0.25);
+    const pos = at.clone().addScaledVector(dir.normalize(), ITEM_NEAR);
+    const target = at.clone();
+    // a phone's panel is a sheet over the lower half: the item sits in the upper part of the picture
+    if (camera.aspect < 1) { target.y -= ITEM_NEAR * 0.2; pos.y -= ITEM_NEAR * 0.2; }
+    rig.flyTo({ pos, target, near: 1 });
+  }
+
+  function openDeco(id) {
+    const d = market.decos[id];
+    if (!d) return;
+    if (actions.rides.riding) actions.rides.endRide(true);
+    panel.close();
+    rig.flyTo(viewFor(d));
+    decoCaption(d);
+  }
 
   // ---------- fewer draw calls ----------
   // Now that the lights are placed and the actions hold their nodes, the static meshes of every model are merged
@@ -257,11 +302,13 @@ async function boot() {
   function resetView() {
     actions.rides.endRide(true);
     panel.close();
-    actions.retractBook();
+    actions.retract();
+    decoCaption(null);
     key?.follow(null);
     rig.flyTo(null);
   }
   $('reset').addEventListener('click', resetView);
+  const mute = setupMute($('mute'), audio);
   bindKeyboard({
     canvas: renderer.domElement, order: ORDER, openPlace, rig, resetView,
     closePanel: () => panel.close(),
@@ -412,6 +459,7 @@ async function boot() {
     instancePools(more.pools, scene);
     for (const p of added.placed) { try { lighting.raw?.tune?.(p.holder); } catch (e) { warn(`lighting.tune failed: ${e?.message || e}`); } }
     added.snow.forEach((o) => (o.visible = snowOn));
+    actions.items.addPlaced(added.placed);
     if (params.get('merge') !== '0') compact(added.placed);
     picking.refresh();
     report.lights.realtime = lightInfo.lights.length;
@@ -424,6 +472,25 @@ async function boot() {
     return added.placed.length;
   }).catch((e) => { warn(`deferred models: ${e?.message || e}`); return 0; });
 
+  /** The panel's list of goods for a stall: each clickable item once, with a number when names repeat. */
+  function goodsList(id) {
+    const featured = new Set(actions.featuredBooks);
+    const list = actions.items.of(id).filter((it) => it.clickable && !['tap', 'lid', 'kettle', 'pot', 'served'].includes(it.kind))
+      .filter((it) => it.kind !== 'book' || featured.has(it.node) || /counter/i.test(it.info.where || ''));
+    const seen = {};
+    const total = {};
+    for (const it of list) total[it.label] = (total[it.label] || 0) + 1;
+    return list.map((it) => {
+      seen[it.label] = (seen[it.label] || 0) + 1;
+      const label = total[it.label] > 1 ? `${it.label} (${seen[it.label]})` : it.label;
+      return { name: it.node.name, label: label.replace(/, (full and steaming|upside down to dry)$/, (m) => m), fn: () => actions.items.click(it) };
+    });
+  }
+  function itemCounts() {
+    const out = {};
+    for (const it of actions.items.all()) { const k = `${it.placeId}:${it.kind}`; out[k] = (out[k] || 0) + 1; }
+    return out;
+  }
   const report = {
     quality: { lite, source: quality.source, reasons: quality.detected.reasons, gpu: quality.info.renderer },
     layout: market.layout.fromFile ? 'layout.json' : 'BUILD.md fallback',
@@ -433,6 +500,9 @@ async function boot() {
     models: market.report,
     lights: { realtime: lightInfo.lights.length, pools: lightInfo.pools.length, cap: lightInfo.cap, places: lightInfo.lights.map(placeOfLight) },
     books: { merged: market.merges.books || null, featured: actions.featuredBooks.map((n) => n.name) },
+    items: itemCounts(),
+    bindings: market.bindings,
+    contract: market.contract,
     merges: { ...merges },
     lod: crowd.lod,
     deferred: market.deferred,
@@ -466,8 +536,22 @@ async function boot() {
     /** Resolves when the after-first-frame work is done (LOD figures, deferred models). */
     settled: () => Promise.all([lodReady, deferredReady]).then(([lod, deferred]) => ({ lod, deferred })),
     featuredBooks: () => actions.featuredBooks.map((n) => n.name),
-    pulledBook: () => actions.pulledBook()?.name || null,
-    bookAt: (x, y) => picking.bookAt(x, y),
+    /** The items (tests): click one by node name as a visitor would, read an item's state. */
+    items: () => itemCounts(),
+    clickItem(name, { focus = false } = {}) { const it = actions.items.all().find((i) => i.node.name === name); if (!it) throw new Error(`no item ${name}`); picking.setEnabled(true); if (it.placeId && market.places[it.placeId] && panel.current !== it.placeId) openPlace(it.placeId); const r = actions.items.click(it); if (focus) focusItem(it); return r; },
+    item: (name) => { const it = actions.items.all().find((i) => i.node.name === name); if (!it) return null; const n = it.node; return { name: n.name, kind: it.kind, label: it.label, busy: it.busy, position: n.getWorldPosition(new THREE.Vector3()).toArray().map((v) => +v.toFixed(4)), quaternion: n.getWorldQuaternion(new THREE.Quaternion()).toArray().map((v) => +v.toFixed(4)), visible: n.visible }; },
+    /** Fly in close to an item as its click would (tests take the close-up before clicking). */
+    focusOn(name) { const it = actions.items.all().find((i) => i.node.name === name); if (it) focusItem(it); },
+    handlers: actions.items.handlers,
+    openedBook: () => actions.items.handlers.openedBook?.() || null,
+    itemAt: (x, y) => picking.itemAt(x, y),
+    pickAt: (x, y) => picking.at(x, y),
+    hoverAt(x, y) { renderer.domElement.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, pointerType: 'mouse', bubbles: true })); },
+    get hoveredItem() { return actions.items.hovered?.node.name || null; },
+    /** Draw exactly one frame now (tests: a pose set with advance() while frozen). */
+    renderFrame() { composer.render(0.016); },
+    muted: () => audio.muted,
+    openDeco,
     /** Client point over the middle of a scene object (tests aim clicks with it). */
     screenPoint(name) {
       const o = scene.getObjectByName(name);
@@ -505,28 +589,11 @@ async function boot() {
   document.documentElement.dataset.ready = 'true';
 }
 
-const SNOW_FOG_MAX = 0.017;
 // the home view on a phone (see phoneHome in boot)
-const PHONE_HOME = { position: [0.8, 5.0, 19.5], target: [0, 2.7, -4] };
+// (x shifted by a metre and a half so the string-light pole in front of the bandstand is not on the centre line)
+const PHONE_HOME = { position: [2.3, 5.0, 19.5], target: [0.6, 2.7, -4] };
 // the full market holds back one real light for each ride until the ride's model arrives
 const DEFERRED_LIGHTS = 2;
-
-/**
- * Snowflakes: the lighting module's nearest layer drew flakes up to 5 cm across and 90 % soft, so in front of
- * the camera they read as grey discs. The engine asks for at most FLAKE_MAX_SIZE metres and FLAKE_MAX_SOFT
- * softness (a request to the lighting designer: once snow.js / settings.js agree, this changes nothing).
- */
-const FLAKE_MAX_SIZE = 0.03, FLAKE_MAX_SOFT = 0.45;
-function capFlakes(scene) {
-  scene.traverse((o) => {
-    const u = o.isPoints && o.material?.name === 'lighting_snow' && o.material.uniforms;
-    if (!u?.uSizeMax) return;
-    const k = Math.min(1, FLAKE_MAX_SIZE / u.uSizeMax.value);
-    u.uSizeMax.value *= k;
-    u.uSizeMin.value *= k;
-    if (u.uSoft && u.uSoft.value > FLAKE_MAX_SOFT) u.uSoft.value = FLAKE_MAX_SOFT;
-  });
-}
 
 /**
  * The lite market's close-up key light. Its four real lights sit inside the section stalls, so in a close-up
@@ -606,5 +673,5 @@ function sceneStats(scene) {
 
 boot().catch((err) => {
   console.error('[market] could not start', err);
-  fail('The market could not open in this browser. The text version has everything.');
+  fail('The market could not open in this browser, so here is the market as text.');
 });

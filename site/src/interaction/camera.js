@@ -31,6 +31,7 @@ export function createCameraRig({ camera, dom, home, motion }) {
       const v = view || HOME;
       controls.autoRotate = false;
       controls.enabled = true;
+      controls.minDistance = v.near ?? 3; // an item close-up may come nearer than a stall view
       ride = null;
       flight = { t: motion.reduced ? 1 : 0, fromP: camera.position.clone(), fromT: controls.target.clone(), toP: v.pos.clone(), toT: v.target.clone() };
       if (motion.reduced) rig.update(0);

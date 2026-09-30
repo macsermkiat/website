@@ -3,6 +3,7 @@
 import { createStemsBand } from './stems.js';
 import { createGenerativeBand } from './generative.js';
 import { sfx, setMusicState } from './sfx.js';
+import { setMuted, isMuted } from './context.js';
 
 export function createAudio({ manifest, positions, getCamera, lite, warn }) {
   const samplesUrl = `${import.meta.env.BASE_URL}fallback/samples.json`;
@@ -39,7 +40,11 @@ export function createAudio({ manifest, positions, getCamera, lite, warn }) {
     },
     stop() { band.stop(); },
     feature(name) { band.feature(name); },
-    sfx,
+    /** Stall sounds; silent while muted (no AudioContext is started for them either). */
+    sfx: (name, ...a) => { if (!isMuted()) sfx(name, ...a); },
+    /** The mute button: silences the band and the stall sounds together. */
+    get muted() { return isMuted(); },
+    setMuted,
     update(dt) {
       if (!band.playing) {
         for (const k in levels) levels[k] *= Math.exp(-dt * 3);

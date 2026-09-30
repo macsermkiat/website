@@ -21,7 +21,7 @@ from mathutils import Euler, Matrix, Vector  # noqa: E402
 import pipeline  # noqa: E402
 from hut import COUNTER_TOP, Hut  # noqa: E402
 from nmlib import carpentry as cp  # noqa: E402
-from nmlib import render, state  # noqa: E402
+from nmlib import mats, render, state  # noqa: E402
 
 # key: sign text, width, walls, trim colour, valance, sign style, roof, extras
 VARIANTS = {
@@ -36,6 +36,7 @@ VARIANTS = {
                    font="fell_italic", roof="shingles", roof_tint="walnut"),
     "spielzeug": dict(text="Holzspielzeug", W=3.2, wall="batten", wall_tint="pine", trim="blue", accent="red",
                       valance=("step", None), sign="crest", board=("rect", "blue", "cream"),
+                      board_tint=(0.36, 0.40, 0.52),     # round 2: a deep navy board (was mid blue)
                       font="alegreya_sc", roof="shingles", roof_tint="shingle", awning="blue"),
     "schmuck": dict(text="Christbaumschmuck", W=3.4, wall="vertical", wall_tint="oak", trim="green",
                     accent="gold", valance=("scallop", "star"), sign="crest", board=("arch", "cream", "green"),
@@ -73,7 +74,7 @@ def build_variant(key, lite):
             wall=v["wall"], wall_tint=v["wall_tint"], frame_tint="walnut" if v["wall_tint"] != "walnut" else "dark",
             roof=v["roof"], roof_tint=v["roof_tint"], inner_tint="pine", counter_tint="oak",
             counter_depth=0.5, counter_over=0.2, shelves=(1.4, 1.8), bulb_spacing=0.22,
-            wall_band=v.get("wall_band"), plank_w=0.15, plank_bevel=0.0, shingle_size=(0.26, 0.19),
+            wall_band=v.get("wall_band"), plank_w=0.15, plank_bevel=0.0, shingle_size=(0.29, 0.2),
             bulb_detail=(6, 4))
     yF = h.yF
     P = h.paint
@@ -136,6 +137,7 @@ def build_variant(key, lite):
         sh = 0.56 if shape != "banner" else 0.6
         sign_c = Vector((0, ys, z_roof + sh / 2 + 0.12))
         cp.sign(P, P, v["text"], fnt, sign_c, sw, sh, depth=0.045, board_band=board_band, text_band=text_band,
+                tint=v.get("board_tint"),
                 frame_band=accent if accent not in (board_band, text_band) else None, board_shape=shape,
                 text_size=sh * 0.8, max_fill=0.9 if shape != "banner" else 0.76, text_depth=0.014, resolution=1,
                 text_bevel=0.0, text_dy=-0.03 if shape == "arch" else 0.0)
@@ -153,7 +155,7 @@ def build_variant(key, lite):
         e = sl.point(0, 0)
         sign_c = Vector((0, e.y - 0.035, ez - 0.02))
         cp.sign(P, P, v["text"], fnt, sign_c, sw, sh, depth=0.032, board_band=board_band, text_band=text_band,
-                frame_band=accent if shape == "rect" and accent not in (board_band, text_band) else None,
+                tint=v.get("board_tint"), frame_band=accent if shape == "rect" and accent not in (board_band, text_band) else None,
                 board_shape=shape, text_size=sh * 0.82, max_fill=0.86 if shape != "banner" else 0.74,
                 text_depth=0.014, resolution=1, text_bevel=0.0)
         lamp_x = (-sw * 0.28, sw * 0.28)
@@ -201,6 +203,7 @@ def main():
                                  spot_blend=1.0, target=t)
             render.add_light("env_neighbour", 'POINT', (-4.2, -1.4, 2.6), 120, size=0.6)
             render.camera((-3.0, -5.2, 2.15), (0.1, -0.5, 2.2), lens=30)
+            mats.standin_emission(False)
             png = os.path.join(state.OUT_DIR, "renders", f"{name}.png")
             render.render(png, samples=a.samples, res=(840, 600))
             renders.append((png, VARIANTS[key]["text"]))

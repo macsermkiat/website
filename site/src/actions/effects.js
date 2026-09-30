@@ -29,6 +29,7 @@ export function createEmitter(scene, pos, { color, n, rise, spread, scale, opaci
   }
   const em = {
     pos, base: opacity, boost: 0,
+    dispose() { for (const p of arr) { p.s.removeFromParent(); p.s.material.dispose(); } arr.length = 0; },
     update(dt, still) {
       em.boost *= Math.exp(-dt * 0.8);
       const op = em.base * (1 + em.boost);

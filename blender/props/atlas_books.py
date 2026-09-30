@@ -14,7 +14,8 @@ import numpy as np
 import vendor_atlas as va
 from vendor_atlas import Tex, fbm, fit_size, hexc, mix, shape_mask, smooth, text_mask
 
-COVER_W, COVER_H = 160, 232
+COVER_W, COVER_H = 160, 232          # the five reading-list books
+GCOVER_W, GCOVER_H = 128, 184        # the rest of the stock (the books atlas grows taller to hold them all)
 
 # Named books: spine region key -> (display title, author, subtitle for the cover)
 NAMED_META = {
@@ -41,7 +42,51 @@ FULL_AUTHOR = {
     "Kafka": "Franz Kafka", "Dawkins": "Richard Dawkins", "Eliot": "T. S. Eliot", "Nagel": "Thomas Nagel",
     "Damasio": "Antonio Damasio", "Spinoza": "Baruch de Spinoza", "Schopenhauer": "Arthur Schopenhauer",
 }
-FULL_AUTHOR_BY_TITLE = {"Surfaces and Essences": "Douglas R. Hofstadter and Emmanuel Sander"}
+FULL_AUTHOR_BY_TITLE = {
+    "Surfaces and Essences": "Douglas R. Hofstadter and Emmanuel Sander",
+    # round 2 stock
+    "Sapiens": "Yuval Noah Harari", "The Gene": "Siddhartha Mukherjee", "The Double Helix": "James D. Watson",
+    "On the Origin of Species": "Charles Darwin", "Chaos": "James Gleick", "The Information": "James Gleick",
+    "Surely You're Joking, Mr. Feynman!": "Richard P. Feynman", "The Black Swan": "Nassim Nicholas Taleb",
+    "Superforecasting": "Philip E. Tetlock and Dan Gardner", "The Signal and the Noise": "Nate Silver",
+    "How to Read a Book": "Mortimer J. Adler and Charles Van Doren",
+    "Zen and the Art of Motorcycle Maintenance": "Robert M. Pirsig", "Man's Search for Meaning": "Viktor E. Frankl",
+    "Der Mythos des Sisyphos": "Albert Camus", "Die Blechtrommel": "Günter Grass", "Der Name der Rose": "Umberto Eco",
+    "Das Parfum": "Patrick Süskind", "Momo": "Michael Ende", "Die unendliche Geschichte": "Michael Ende",
+    "Der Vorleser": "Bernhard Schlink", "Effi Briest": "Theodor Fontane",
+    "Die Leiden des jungen Werthers": "Johann Wolfgang von Goethe", "Die Physiker": "Friedrich Dürrenmatt",
+    "Homo faber": "Max Frisch", "Im Westen nichts Neues": "Erich Maria Remarque",
+    "Emil und die Detektive": "Erich Kästner", "Die Räuber": "Friedrich Schiller",
+    "Nathan der Weise": "Gotthold Ephraim Lessing", "Der Schimmelreiter": "Theodor Storm",
+    "Narziß und Goldmund": "Hermann Hesse", "Das Glasperlenspiel": "Hermann Hesse",
+    "Berlin Alexanderplatz": "Alfred Döblin", "Pride and Prejudice": "Jane Austen", "Middlemarch": "George Eliot",
+    "One Hundred Years of Solitude": "Gabriel García Márquez", "Invisible Cities": "Italo Calvino",
+    "Ficciones": "Jorge Luis Borges", "The Little Prince": "Antoine de Saint-Exupéry",
+    "A Christmas Carol": "Charles Dickens", "Dune": "Frank Herbert", "Foundation": "Isaac Asimov",
+    "Solaris": "Stanisław Lem", "The Left Hand of Darkness": "Ursula K. Le Guin", "Frankenstein": "Mary Shelley",
+    "Elements": "Euclid", "What Is Mathematics?": "Richard Courant and Herbert Robbins",
+    "A Mathematician's Apology": "G. H. Hardy", "How to Solve It": "George Pólya",
+    "Proofs from THE BOOK": "Martin Aigner and Günter M. Ziegler",
+    "The Art of Computer Programming": "Donald E. Knuth",
+    "Structure and Interpretation of Computer Programs": "Harold Abelson and Gerald Jay Sussman",
+    "The Visual Display of Quantitative Information": "Edward R. Tufte",
+    "The Elements of Statistical Learning": "Trevor Hastie, Robert Tibshirani and Jerome Friedman",
+    "Information Theory, Inference and Learning Algorithms": "David J. C. MacKay",
+    "Statistical Rethinking": "Richard McElreath", "The Lady Tasting Tea": "David Salsburg",
+    "Das geheime Leben der Bäume": "Peter Wohlleben", "Silent Spring": "Rachel Carson",
+    "The Human Condition": "Hannah Arendt", "Sein und Zeit": "Martin Heidegger",
+    "Phänomenologie des Geistes": "Georg Wilhelm Friedrich Hegel", "The Republic": "Plato",
+    "Nicomachean Ethics": "Aristotle", "Leviathan": "Thomas Hobbes", "Essais": "Michel de Montaigne",
+    "Pensées": "Blaise Pascal", "Tao Te Ching": "Laozi", "The Periodic Table": "Primo Levi",
+    "The Blind Watchmaker": "Richard Dawkins", "Scale": "Geoffrey West",
+    "Algorithms to Live By": "Brian Christian and Tom Griffiths", "Our Mathematical Universe": "Max Tegmark",
+    "Anathem": "Neal Stephenson", "Stoner": "John Williams", "The Remains of the Day": "Kazuo Ishiguro",
+    "Austerlitz": "W. G. Sebald", "The Three-Body Problem": "Liu Cixin", "Thinking in Systems": "Donella H. Meadows",
+    "Pale Blue Dot": "Carl Sagan", "The Divine Comedy": "Dante Alighieri", "The Odyssey": "Homer",
+    "Don Quixote": "Miguel de Cervantes", "War and Peace": "Leo Tolstoy",
+    "The Brothers Karamazov": "Fyodor Dostoevsky", "To the Lighthouse": "Virginia Woolf",
+    "Nineteen Eighty-Four": "George Orwell", "Brave New World": "Aldous Huxley",
+}
 
 
 def book_meta(spine_key):
@@ -247,5 +292,5 @@ def books_specs():
         spec = va.generic_spine(i, title, author, kind, rng)
         add(f"spine_g{i}", 48, 304, va.g_spine(spec))
         full = FULL_AUTHOR_BY_TITLE.get(title, FULL_AUTHOR.get(author, author))
-        add(f"cover_g{i}", COVER_W, COVER_H, g_cover(spec, (title, full, None), f"g{i}"))
+        add(f"cover_g{i}", GCOVER_W, GCOVER_H, g_cover(spec, (title, full, None), f"g{i}"))
     return R

@@ -207,6 +207,19 @@ export function buildContent() {
       ? { ...w, name: w.name || f?.name || '', sub: w.sub || f?.sub || '', title: w.title || f?.title || '', fromWriter: true }
       : { ...f, fromWriter: false };
   }
+  // The Bücherstand's shelf: the books the 3D shelf features (front matter `books:`) are listed in the panel and
+  // on the text page too, when the body's own list did not ship (a note for Mac shares its block), so the text
+  // version carries everything the market shows.
+  const bk = sections.books;
+  if (bk && Array.isArray(bk.meta?.books) && bk.meta.books.length) {
+    const first = typeof bk.meta.books[0] === 'string' ? bk.meta.books[0] : bk.meta.books[0]?.title;
+    if (first && !bk.html.includes(esc(first).replace(/&amp;/g, '&')) && !bk.html.includes(esc(first))) {
+      const li = bk.meta.books.map((b) => (typeof b === 'string' ? { title: b } : b)).filter((b) => b?.title)
+        .map((b) => `<li><em>${esc(b.title)}</em>${b.author ? ` · ${esc(b.author)}` : ''}${b.note ? `. ${esc(b.note)}` : ''}</li>`).join('');
+      bk.html += `\n<h3>On the shelf in the market</h3>\n<ul class="shelf-list">${li}</ul>\n`;
+      bk.shelfAdded = true;
+    }
+  }
   // the writer's `order:` (1-7) sets the order of the place buttons and the plain page, when every section has one
   const nums = SECTION_ORDER.map((id) => Number(sections[id]?.meta?.order));
   const order = nums.every((n) => Number.isFinite(n))
@@ -303,6 +316,32 @@ export function audioCredit(inv = buildInventory()) {
   return lines.join(' ');
 }
 
+/**
+ * Every third-party asset from the repository's CREDITS.md, with its source URL and licence, as a collapsible
+ * list for the footer of both pages. Only the tables are taken (one per role); the roles' prose stays in the file.
+ */
+export function assetCredits(file = path.join(REPO, 'CREDITS.md')) {
+  if (!fs.existsSync(file)) return '';
+  const md = fs.readFileSync(file, 'utf8');
+  const parts = [];
+  for (const sec of md.split(/^## /m).slice(1)) {
+    const heading = sec.split('\n')[0].trim();
+    const tables = [];
+    let cur = [];
+    for (const line of sec.split('\n').slice(1)) {
+      if (/^\s*\|/.test(line)) cur.push(line);
+      else if (cur.length) { tables.push(cur.join('\n')); cur = []; }
+    }
+    if (cur.length) tables.push(cur.join('\n'));
+    if (!tables.length) continue;
+    const html = tables.map((t) => marked.parse(t, { async: false, gfm: true })).join('');
+    parts.push(`<h3>${esc(heading)}</h3>${html}`);
+  }
+  if (!parts.length) return '';
+  const body = parts.join('').replace(/<a href="(https?:[^"]+)"/g, '<a href="$1" rel="noopener"');
+  return `<details class="credits-all"><summary>Credits: every third-party asset, with its source and licence</summary>${body}<p><a href="${CREDITS_URL}">CREDITS.md</a> in the repository has the notes behind each entry.</p></details>`;
+}
+
 export function plainHtml(content) {
   const { sections, order } = content;
   const nav = order
@@ -325,6 +364,23 @@ export function plainHtml(content) {
   return { nav, body, intro };
 }
 
+/**
+ * What still waits for Mac in content/*.md: [[Mac: ...]] notes, and claims marked for checking
+ * (<!-- check --> comments and [check] tags). A production build leaves the notes out and hides the markers;
+ * STRICT_CONTENT=1 (the release gate) stops the build while any of either is left.
+ */
+export function contentGate(dir = CONTENT_DIR) {
+  const left = [];
+  for (const f of listFiles(dir).filter((f) => f.endsWith('.md'))) {
+    const src = fs.readFileSync(path.join(dir, f), 'utf8');
+    const notes = (src.match(/\[\[[\s\S]+?\]\]/g) || []).length;
+    const checks = (src.match(/<!--\s*check\b[\s\S]*?-->/gi) || []).length + (src.match(/\[(?:check|verify|todo|mac to check)(?::[^\]]*)?\]/gi) || []).length;
+    if (notes || checks) left.push({ file: f, notes, checks });
+  }
+  const parts = left.map((l) => `${l.file}: ${[l.notes && `${l.notes} note${l.notes > 1 ? 's' : ''}`, l.checks && `${l.checks} check marker${l.checks > 1 ? 's' : ''}`].filter(Boolean).join(', ')}`);
+  return { left, message: left.length ? `content still waiting for Mac: ${parts.join('; ')}` : '' };
+}
+
 const V_CONTENT = 'virtual:market-content';
 const V_INV = 'virtual:market-inventory';
 
@@ -339,17 +395,10 @@ export default function marketPlugin() {
     },
     buildStart() {
       if (!isBuild) return;
-      // The writer's [[Mac: ...]] placeholders. A build leaves them out (see NOTES_MODE); say how many are
-      // left, and stop the build when STRICT_CONTENT=1.
-      const left = [];
-      for (const f of listFiles(CONTENT_DIR).filter((f) => f.endsWith('.md'))) {
-        const n = (fs.readFileSync(path.join(CONTENT_DIR, f), 'utf8').match(/\[\[[\s\S]+?\]\]/g) || []).length;
-        if (n) left.push(`${f}: ${n}`);
-      }
-      if (!left.length) return;
-      const msg = `content placeholders still to fill: ${left.join(', ')}`;
-      if (process.env.STRICT_CONTENT === '1') this.error(`${msg} (STRICT_CONTENT=1 stops the build)`);
-      else this.warn(`${msg} (${NOTES_MODE === 'hide' ? 'left out of this build: their paragraphs and list items do not ship' : 'shown as notes, CONTENT_NOTES=show'})`);
+      const r = contentGate();
+      if (!r.left.length) return;
+      if (process.env.STRICT_CONTENT === '1') this.error(`${r.message} (STRICT_CONTENT=1 stops the build)`);
+      else this.warn(`${r.message} (${NOTES_MODE === 'hide' ? 'left out of this build: their paragraphs and list items do not ship' : 'shown as notes, CONTENT_NOTES=show'})`);
     },
     resolveId(id) {
       if (id === V_CONTENT || id === V_INV) return '\0' + id;
@@ -373,13 +422,13 @@ export default function marketPlugin() {
           const site = content.sections.site;
           const tagline = site?.meta?.tagline ? `<p>${esc(site.meta.tagline)}</p>` : site && !site.fromWriter ? site.html : '';
           const hint = site?.meta?.ui?.hint;
-          let out = html.replace('<!--TAGLINE-->', tagline).replace('<!--AUDIO_CREDIT-->', audioCredit());
+          let out = html.replace('<!--TAGLINE-->', tagline).replace('<!--AUDIO_CREDIT-->', audioCredit()).replace('<!--ASSET_CREDITS-->', assetCredits());
           if (site?.meta?.description) out = out.replace(/(<meta name="description" content=")[^"]*"/, `$1${esc(site.meta.description)}"`);
           if (hint) out = out.replace(/(<p class="hint" id="hint">)[\s\S]*?(<\/p>)/, `$1${esc(hint)} Keyboard: Tab reaches the places below, or press 1–7.$2`);
           return out;
         }
         const { nav, body, intro } = plainHtml(content);
-        return html.replace('<!--PLAIN_NAV-->', nav).replace('<!--PLAIN_BODY-->', body).replace('<!--PLAIN_INTRO-->', intro).replace('<!--AUDIO_CREDIT-->', audioCredit());
+        return html.replace('<!--PLAIN_NAV-->', nav).replace('<!--PLAIN_BODY-->', body).replace('<!--PLAIN_INTRO-->', intro).replace('<!--AUDIO_CREDIT-->', audioCredit()).replace('<!--ASSET_CREDITS-->', assetCredits());
       },
     },
     configureServer(server) {

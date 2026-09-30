@@ -24,8 +24,6 @@ jobs:
         working-directory: site
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -39,7 +37,8 @@ jobs:
         uses: actions/configure-pages@v5
       # Notes for Mac ([[Mac: ...]] in content/*.md) never ship: the build leaves out every paragraph and list
       # item that holds one. Repository variables (Settings > Secrets and variables > Actions > Variables):
-      #   STRICT_CONTENT=1    fail the build while any note is left (a release gate)
+      #   STRICT_CONTENT=1    fail the build while any note or check marker (<!-- check -->, [check]) is left
+      #                       (a release gate)
       #   CONTENT_NOTES=show  publish the notes as marked gaps (only for a private preview; off unless set)
       # GITHUB_REPOSITORY (set by Actions) points the footer's "All credits" link at this repository.
       - run: npm run build
@@ -47,6 +46,9 @@ jobs:
           STRICT_CONTENT: ${{ vars.STRICT_CONTENT || '0' }}
           CONTENT_NOTES: ${{ vars.CONTENT_NOTES || 'hide' }}
           PAGES_BASE: ${{ steps.pages.outputs.base_path }}/
+      # Download budgets (docs/BUILD.md), counting every external texture: the first load of each market must stay
+      # under its aim (25 MB full, 8 MB lite). Per-asset budgets are reported for the roles that own the models.
+      - run: npm run budget -- --strict
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist

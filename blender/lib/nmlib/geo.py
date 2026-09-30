@@ -27,7 +27,9 @@ BAND_LEN = 1.0             # metres along the board per U unit
 BAND_PAD = 6 / 1024        # UV padding inside a band against bleeding
 
 # Tiling textures: metres covered by one texture repeat.
-TILE = {"wood": 1.0, "oak": 1.0, "iron": 0.5, "iron_matte": 0.5, "rauten": 0.26}
+TILE = {"wood": 1.0, "oak": 1.0, "iron": 0.5, "iron_matte": 0.5, "copper_old": 0.5, "rauten": 0.26}
+# materials mapped into the paint atlas bands (band=...)
+BAND_MATS = {"paint", "paint_glow"}
 
 # Named tints (linear multipliers of the light neutral kit wood).
 TINTS = {
@@ -61,7 +63,7 @@ class Part:
     def __init__(self, name, mat, shade=None, smooth=False, tint=None, var=0.08, bevel=None):
         self.name = name
         self.mat = mat                      # material key, see nmlib.mats
-        self.kind = "band" if mat == "paint" else ("tile" if mat in TILE else "flat")
+        self.kind = "band" if mat in BAND_MATS else ("tile" if mat in TILE else "flat")
         self.shade = shade
         self.smooth = smooth
         self.default_tint = tint

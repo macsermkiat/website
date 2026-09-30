@@ -31,8 +31,8 @@ BARREL_H, R_END, R_BELLY = 0.98, 0.33, 0.39
 
 def half_barrel(staves, hoops, cx, cy, lite):
     """Front half of a standing barrel (faces -Y) made of separate staves plus iron hoops."""
-    n = 7 if lite else 11
-    rings = 5 if lite else 9
+    n = 7 if lite else 9          # round 2: 9 staves x 7 rings (was 11 x 9) for vendor headroom
+    rings = 5 if lite else 7
     gap = 0.012
     for k in range(n):
         t0 = math.pi + math.pi * k / n
@@ -86,7 +86,7 @@ def build(lite):
     h.build_shelves()
     RA = h.part("rauten", "rauten", var=0.03)      # dedicated two-colour lozenge texture
     h.build_roof(cover="shingles", fascia_part=RA)
-    h.build_snow()
+    h.build_snow(drifts=3)
     P = h.paint
 
     # ------------------------------------------------------------ barrel front
@@ -129,9 +129,12 @@ def build(lite):
     ys = -0.42
     z_roof = RIDGE - abs(ys) * math.tan(h.pitch) + 0.05
     sign_c = Vector((0, ys, z_roof + 0.42))
+    # warm cream board, deep navy Fraktur (the blue band darkened by its tint): the round-1
+    # white board with mid-blue letters picked up the sky and read at low contrast in three.js
     cp.sign(P, P, "Bier vom Fass", state.font("fraktur_bold"), sign_c, 2.5, 0.52, depth=0.045,
-            board_band="white", text_band="blue", frame_band="blue", board_shape="arch", text_size=0.3,
-            max_fill=0.84, text_depth=0.012, text_dy=-0.05)
+            board_band="cream", text_band="blue", frame_band="blue", board_shape="arch", text_size=0.3,
+            max_fill=0.84, text_depth=0.014, text_dy=-0.05, text_tint=(0.22, 0.24, 0.36), text_bevel=0.0,
+            resolution=1)
     h.sign_lamps((-0.7, 0.7), ys - 0.03, sign_c.z + 0.28)
     # Rauten strip under the sign and two small flags on poles
     RA.box((0, ys - 0.03, sign_c.z - 0.3), (2.5, 0.03, 0.1), grain=0, uv_off=RAUTEN_UV)
@@ -151,7 +154,8 @@ def build(lite):
 
     # ------------------------------------------------------------ wreath of fir with bulbs in the opening
     cp.fir_garland(h.fir, h.beads, (-W / 2 + 0.1, yF - 0.07, 2.2), (W / 2 - 0.1, yF - 0.07, 2.2), sag=0.1,
-                   radius=0.04, bead_bands=("ornament_gold",), bead_every=0.22)
+                   radius=0.04, bead_bands=("ornament_gold",), bead_every=0.28,
+                   tufts_per_m=None if lite else 34)
     h.eave_bulbs(sides=True)
     h.interior_bulbs(xs=(-1.2, 0.0, 1.2), z=2.3)
     h.markers(sign_pos=tuple(sign_c + Vector((0, -0.06, 0))),
@@ -162,6 +166,9 @@ def build(lite):
 def preview(objs):
     env = state.env_collection()
     yF = -D / 2
+    if pipeline.vendor_props([("prop_bier_counter", "slot_counter"), ("prop_bier_back", "slot_shelf_1"),
+                              ("prop_bier_shelf", "slot_shelf_2")]):
+        return _lights_and_camera()
     glass = Part("env_beer", "brass")
     foam = Part("env_foam", "fabric_white")
     for i, x in enumerate((-1.6, -1.35, -1.1, 0.9, 1.15, 1.4, 1.65)):
@@ -170,6 +177,10 @@ def preview(objs):
         foam.cyl((x, y, COUNTER_TOP + 0.195), 0.047, 0.045, 0.03, seg=14)
     for p in (glass, foam):
         p.finish(env)
+    return _lights_and_camera()
+
+
+def _lights_and_camera():
     render.lights_at_markers(energy=110)
     render.add_light("env_fill", 'AREA', (0, 0.2, 2.5), 280, size=2.6)
     for x in (-0.7, 0.7):   # the two sign lamps

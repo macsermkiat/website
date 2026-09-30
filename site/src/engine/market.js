@@ -9,6 +9,10 @@ import { addStandinGoods } from './standinGoods.js';
 import { placeInstruments } from './instruments.js';
 import { mergeActMeshes } from './merge.js';
 
+const LIGHT_CAP = { section: 2, deco: 1 };
+const isInProp = (o, root) => { for (let x = o.parent; x && x !== root; x = x.parent) if (x.userData?.propFile) return true; return false; };
+const ITEM_RE = /^act_(book|glass|mug|bottle|wineglass|roll|sausage)_/i;
+
 async function pool(items, n, fn) {
   const out = new Array(items.length);
   let i = 0;
@@ -33,7 +37,11 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
 
   const market = {
     layout, placed: [], places: {}, bulbMaterials: [], snow: [], rides: [], lightSpots: [], mixers: [], propCount: 0, instrumentCount: 0,
-    hotRoots: [], merges: {}, deferred: later.map((e) => e.id), report: [],
+    hotRoots: [], decoRoots: [], decos: {}, merges: {}, deferred: later.map((e) => e.id), report: [],
+    // bindings that did not resolve exactly (layout.json assets, props.json sets): reported, never guessed
+    bindings: [...layout.bindings],
+    // other breaks of the BUILD.md contract found while loading (too many light_ markers)
+    contract: [],
   };
 
   /** Load entries (four at a time) and add them to the scene. */
@@ -65,7 +73,7 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
     }
     scene.updateMatrixWorld(true);
     const elsewhere = all.filter((e) => !entries.includes(e));
-    market.propCount += await placeProps(placed.map((p) => ({ ...p, nodes: scanNodes(p.root) })), { lite, manager, warn, elsewhere });
+    market.propCount += await placeProps(placed.map((p) => ({ ...p, nodes: scanNodes(p.root) })), { lite, manager, warn, elsewhere, bindings: market.bindings });
     market.instrumentCount += await placeInstruments(placed, scanNodes, { lite, manager, warn });
     scene.updateMatrixWorld(true);
     return placed;
@@ -83,7 +91,13 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
       p.nodes = nodes;
       bulbs.push(...lightBulbs(nodes, { lite }));
       snow.push(...nodes.snow);
-      nodes.lights.forEach((obj) => spots.push({ obj, kind: p.entry.kind, id: p.entry.id }));
+      // BUILD.md: at most 2 light_ markers per section stall and 1 per deco stall, props included. The stall's
+      // own markers come first; any over the cap (a prop set's lamp, say) is reported and left to its glowing bulb.
+      const cap = LIGHT_CAP[p.entry.kind];
+      const own = nodes.lights.filter((o) => !isInProp(o, p.root)), fromProps = nodes.lights.filter((o) => isInProp(o, p.root));
+      const lightList = cap ? [...own, ...fromProps].slice(0, cap) : nodes.lights;
+      for (const o of nodes.lights) if (!lightList.includes(o)) market.contract.push({ id: p.entry.id, light: o.name, problem: `more than ${cap} light_ markers in a ${p.entry.kind} stall (BUILD.md); ${o.name} is not lit.` });
+      lightList.forEach((obj) => spots.push({ obj, kind: p.entry.kind, id: p.entry.id }));
       const rides = nodes.rots.length || nodes.gondolas.length || nodes.horses.length ? makeRides(nodes) : null;
       if (rides) market.rides.push(rides);
       if (p.root.userData.animations?.length) {
@@ -96,11 +110,17 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
         const size = box.getSize(new THREE.Vector3());
         const center = new THREE.Vector3(p.holder.position.x, THREE.MathUtils.clamp(size.y * 0.45, 1.6, 9), p.holder.position.z);
         const place = { id: p.entry.place, entry: p.entry, holder: p.holder, root: p.root, nodes, rides, center, ry: p.holder.rotation.y, source: p.source, radius: Math.max(size.x, size.z) / 2 };
-        // the bookshop's spines: one merged mesh per shelf instead of one draw per book
-        const merge = mergeActMeshes(p.root, /^act_book_/i);
+        // the goods (the bookshop's spines, the mugs, glasses, bottles, sausages and rolls): one merged mesh per
+        // set and look instead of one draw each; an item leaves it while it moves or its look changes
+        const merge = mergeActMeshes(p.root, ITEM_RE);
         if (merge) { place.merge = merge; market.merges[place.id] = { books: merge.count, meshes: merge.groups.length }; }
         market.places[p.entry.place] = place;
         market.hotRoots.push(p.holder);
+      }
+      if (p.entry.kind === 'deco') {
+        // deco stalls open no panel, but a click flies to their close-up and their goods can be looked at
+        market.decoRoots.push(p.holder);
+        market.decos[p.entry.id] = { id: p.entry.id, entry: p.entry, holder: p.holder, root: p.root, nodes, ry: p.holder.rotation.y, center: p.holder.position.clone().setY(1.6) };
       }
       market.placed.push(p);
       market.report.push({ id: p.entry.id, place: p.entry.place || null, kind: p.entry.kind, source: p.source, file: p.file, deferred: later.includes(p.entry) || undefined });

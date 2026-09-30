@@ -40,7 +40,9 @@ def _gltf_output_group():
 
 
 def ao_targets(objs):
-    return [o for o in objs if o.type == 'MESH' and o.get("nm_mat") in AO_MATS]
+    from . import mats
+    keys = AO_MATS | set(mats.KIT_VARIANTS) | set(mats.PATTERNS)
+    return [o for o in objs if o.type == 'MESH' and o.get("nm_mat") in keys]
 
 
 def _islands(bm, uvl):

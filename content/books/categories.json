@@ -1,0 +1,321 @@
+{
+  "categories": [
+    {
+      "key": "physics",
+      "label_en": "Physics and the Universe",
+      "label_de": "Physik & Kosmos",
+      "books": [
+        {
+          "title": "The Many Hidden Worlds of Quantum Mechanics",
+          "author": "Sean Carroll",
+          "slug": "the-many-hidden-worlds-of-quantum-mechanics"
+        },
+        {
+          "title": "The Biggest Ideas in the Universe",
+          "author": "Sean Carroll",
+          "slug": "the-biggest-ideas-in-the-universe"
+        },
+        {
+          "title": "Quanta and Fields",
+          "author": "Sean Carroll",
+          "slug": "quanta-and-fields"
+        },
+        {
+          "title": "Chaos",
+          "author": "James Gleick",
+          "slug": "chaos"
+        },
+        {
+          "title": "Reality Is Not What It Seems",
+          "author": "Carlo Rovelli",
+          "slug": "reality-is-not-what-it-seems"
+        },
+        {
+          "title": "On the Origin of Time",
+          "author": "Thomas Hertog",
+          "slug": "on-the-origin-of-time"
+        },
+        {
+          "title": "Mysteries of Modern Physics: Time",
+          "author": "Sean Carroll",
+          "slug": "mysteries-of-modern-physics-time"
+        },
+        {
+          "title": "Something Deeply Hidden",
+          "author": "Sean Carroll",
+          "slug": "something-deeply-hidden"
+        },
+        {
+          "title": "The Order of Time",
+          "author": "Carlo Rovelli",
+          "slug": "the-order-of-time"
+        },
+        {
+          "title": "Infinite Powers",
+          "author": "Steven Strogatz",
+          "slug": "infinite-powers"
+        }
+      ]
+    },
+    {
+      "key": "lives",
+      "label_en": "Lives in Science and Industry",
+      "label_de": "Lebensgeschichten",
+      "books": [
+        {
+          "title": "Elon Musk",
+          "author": "Walter Isaacson",
+          "slug": "elon-musk"
+        },
+        {
+          "title": "The Making of the Atomic Bomb",
+          "author": "Richard Rhodes",
+          "slug": "the-making-of-the-atomic-bomb"
+        },
+        {
+          "title": "The Meaning of it All",
+          "author": "Richard P. Feynman",
+          "slug": "the-meaning-of-it-all"
+        },
+        {
+          "title": "Einstein",
+          "author": "Walter Isaacson",
+          "slug": "einstein"
+        },
+        {
+          "title": "Surely You're Joking, Mr. Feynman!",
+          "author": "Richard P. Feynman",
+          "slug": "surely-youre-joking-mr-feynman"
+        },
+        {
+          "title": "What Do You Care What Other People Think?",
+          "author": "Richard P. Feynman and Ralph Leighton",
+          "slug": "what-do-you-care-what-other-people-think"
+        }
+      ]
+    },
+    {
+      "key": "mind",
+      "label_en": "Mind and Body",
+      "label_de": "Geist & Körper",
+      "books": [
+        {
+          "title": "The Laws of Human Nature",
+          "author": "Robert Greene",
+          "slug": "the-laws-of-human-nature"
+        },
+        {
+          "title": "Man's Search for Meaning",
+          "author": "Viktor E. Frankl",
+          "slug": "mans-search-for-meaning"
+        },
+        {
+          "title": "Grit",
+          "author": "Angela Duckworth",
+          "slug": "grit"
+        },
+        {
+          "title": "How to Be Bold",
+          "author": "Ranjay Gulati",
+          "slug": "how-to-be-bold"
+        },
+        {
+          "title": "The Courage to Be Happy",
+          "author": "Ichiro Kishimi and Fumitake Koga",
+          "slug": "the-courage-to-be-happy"
+        },
+        {
+          "title": "The Courage to Be Disliked",
+          "author": "Ichiro Kishimi and Fumitake Koga",
+          "slug": "the-courage-to-be-disliked"
+        },
+        {
+          "title": "Ultra-Processed People",
+          "author": "Chris van Tulleken",
+          "slug": "ultra-processed-people"
+        },
+        {
+          "title": "Breath",
+          "author": "James Nestor",
+          "slug": "breath"
+        },
+        {
+          "title": "The Almanack of Naval Ravikant",
+          "author": "Eric Jorgenson",
+          "slug": "the-almanack-of-naval-ravikant"
+        }
+      ]
+    },
+    {
+      "key": "people",
+      "label_en": "People and Conversation",
+      "label_de": "Menschen & Gespräche",
+      "books": [
+        {
+          "title": "Unreasonable Hospitality",
+          "author": "Will Guidara",
+          "slug": "unreasonable-hospitality"
+        },
+        {
+          "title": "Six-Minute X-Ray",
+          "author": "Chase Hughes",
+          "slug": "six-minute-x-ray"
+        },
+        {
+          "title": "Set Boundaries, Find Peace",
+          "author": "Nedra Glover Tawwab",
+          "slug": "set-boundaries-find-peace"
+        },
+        {
+          "title": "Cues",
+          "author": "Vanessa Van Edwards",
+          "slug": "cues"
+        },
+        {
+          "title": "Captivate",
+          "author": "Vanessa Van Edwards",
+          "slug": "captivate"
+        },
+        {
+          "title": "How to Know a Person",
+          "author": "David Brooks",
+          "slug": "how-to-know-a-person"
+        },
+        {
+          "title": "Crucial Conversations",
+          "author": "Joseph Grenny et al.",
+          "slug": "crucial-conversations"
+        },
+        {
+          "title": "The Next Conversation",
+          "author": "Jefferson Fisher",
+          "slug": "the-next-conversation"
+        },
+        {
+          "title": "Supercommunicators",
+          "author": "Charles Duhigg",
+          "slug": "supercommunicators"
+        },
+        {
+          "title": "Influence",
+          "author": "Robert B. Cialdini",
+          "slug": "influence"
+        },
+        {
+          "title": "Never Split the Difference",
+          "author": "Chris Voss and Tahl Raz",
+          "slug": "never-split-the-difference"
+        },
+        {
+          "title": "Unf*ck Your Boundaries",
+          "author": "Faith G. Harper",
+          "slug": "unf-ck-your-boundaries"
+        },
+        {
+          "title": "How to Win Friends & Influence People",
+          "author": "Dale Carnegie",
+          "slug": "how-to-win-friends-and-influence-people"
+        },
+        {
+          "title": "Stop Walking on Eggshells",
+          "author": "Randi Kreger and Paul T. Mason",
+          "slug": "stop-walking-on-eggshells"
+        }
+      ]
+    },
+    {
+      "key": "decisions",
+      "label_en": "Risk, Decisions and Markets",
+      "label_de": "Risiko & Entscheidungen",
+      "books": [
+        {
+          "title": "Quit",
+          "author": "Annie Duke",
+          "slug": "quit"
+        },
+        {
+          "title": "Poor Charlie’s Almanack",
+          "author": "Charles T. Munger",
+          "slug": "poor-charlies-almanack"
+        },
+        {
+          "title": "The Misbehavior of Markets",
+          "author": "Benoit Mandelbrot and Richard L Hudson",
+          "slug": "the-misbehavior-of-markets"
+        },
+        {
+          "title": "Antifragile",
+          "author": "Nassim Nicholas Taleb",
+          "slug": "antifragile"
+        },
+        {
+          "title": "The Black Swan",
+          "author": "Nassim Nicholas Taleb",
+          "slug": "the-black-swan"
+        },
+        {
+          "title": "Algorithms to Live By",
+          "author": "Brian Christian and Tom Griffiths",
+          "slug": "algorithms-to-live-by"
+        },
+        {
+          "title": "Framers",
+          "author": "Kenneth Cukier et al.",
+          "slug": "framers"
+        },
+        {
+          "title": "Think Again",
+          "author": "Adam Grant",
+          "slug": "think-again"
+        },
+        {
+          "title": "Calling Bullshit",
+          "author": "Carl T. Bergstrom and Jevin D. West",
+          "slug": "calling-bullshit"
+        },
+        {
+          "title": "Thinking, Fast and Slow",
+          "author": "Daniel Kahneman",
+          "slug": "thinking-fast-and-slow"
+        },
+        {
+          "title": "The Book of Why",
+          "author": "Judea Pearl and Dana Mackenzie",
+          "slug": "the-book-of-why"
+        }
+      ]
+    },
+    {
+      "key": "craft",
+      "label_en": "Craft, Habits and Work",
+      "label_de": "Handwerk & Gewohnheit",
+      "books": [
+        {
+          "title": "The Pragmatic Programmer",
+          "author": "David Thomas and Andrew Hunt",
+          "slug": "the-pragmatic-programmer"
+        },
+        {
+          "title": "Clean Code",
+          "author": "Robert C. Martin",
+          "slug": "clean-code"
+        },
+        {
+          "title": "Deep Work",
+          "author": "Cal Newport",
+          "slug": "deep-work"
+        },
+        {
+          "title": "Atomic Habits",
+          "author": "James Clear",
+          "slug": "atomic-habits"
+        },
+        {
+          "title": "Ultralearning",
+          "author": "Scott H. Young",
+          "slug": "ultralearning"
+        }
+      ]
+    }
+  ]
+}

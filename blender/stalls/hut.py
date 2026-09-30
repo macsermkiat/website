@@ -229,7 +229,8 @@ class Hut:
                 self.wood.box((at, c, z0 + h / 2), (0.012, w, h), tint=self.inner_tint, var=0.05, grain=2, bevel=0)
             pos += w
 
-    def build_counter(self, x0=None, x1=None, brackets=4, front_band=None, wear=0.5, grid=0.16):
+    def build_counter(self, x0=None, x1=None, brackets=4, front_band=None, wear=0.5, grid=0.16,
+                      extra_shade=None):
         """Counter top exactly at COUNTER_TOP, overhanging to the front, on brackets.
         Oak kit boards; the front board has a rounded, worn nosing, and the top and lip carry a
         vertex grid shaded by counter_wear (darkened front edge where hands rest)."""
@@ -240,7 +241,16 @@ class Hut:
         y_front = y_front0 = yF - self.counter_over
         y_back = y_front + self.counter_depth
         C = self.counter
-        C.shade = counter_wear(y_front, x0, x1, strength=wear, seed=len(self.key))
+        cw = counter_wear(y_front, x0, x1, strength=wear, seed=len(self.key))
+        if extra_shade is None:
+            C.shade = cw
+        else:                                        # e.g. scorch under a grill (multiplied in)
+            def C_shade(p, cw=cw, ex=extra_shade):
+                a, b = cw(p), ex(p)
+                a = (a, a, a) if isinstance(a, (int, float)) else a
+                b = (b, b, b) if isinstance(b, (int, float)) else b
+                return tuple(a[i] * b[i] for i in range(3))
+            C.shade = C_shade
         L = x1 - x0 + 0.06
         nx = max(2, int(L / (0.3 if state.lite() else grid)))       # wear-grid columns
         # three thick boards along X; the front one is split lengthwise into a grid for the wear
@@ -278,8 +288,10 @@ class Hut:
         self.shelf_y = yb - depth / 2
 
     def build_roof(self, cover=None, deck=True, barge=True, ridge_cap=True, fascia_band=None,
-                   barge_band=None, fascia_part=None):
-        """fascia_part: a Part for the fascia boards instead of paint/frame (e.g. a pattern)."""
+                   barge_band=None, fascia_part=None, barge_part=None):
+        """fascia_part: a Part for the fascia boards instead of paint/frame (e.g. a pattern).
+        barge_part: a paint-band Part for painted bargeboards instead of self.paint (e.g. a
+        'paint_glow' trim Part that keeps them readable under the site's moonlight)."""
         cover = cover or self.roof
         self.roof = cover
         self.battens = []
@@ -296,8 +308,8 @@ class Hut:
                     B = sl.basis()
                     for a in (sl.a0 - 0.015, sl.a1 + 0.015):
                         p = sl.point(a, sl.L / 2, -0.01)
-                        self.paint.mbox(Matrix.Translation(p) @ B, (0.03, sl.L + 0.02, 0.18), grain=1,
-                                        band=barge_band)
+                        (barge_part or self.paint).mbox(Matrix.Translation(p) @ B, (0.03, sl.L + 0.02, 0.18),
+                                                        grain=1, band=barge_band)
                 else:
                     cp.barge_boards(self.frame, sl, tint=self.frame_tint)
             if fascia_part is not None:
@@ -365,7 +377,8 @@ class Hut:
             bot = Vector((x, y, z))
             self.wire.tube([top, bot], 0.004, tseg=4)
             self.wire.cyl(bot + Vector((0, 0, -0.02)), 0.02, 0.018, 0.05, seg=10)
-            self.bulbs.sphere(bot + Vector((0, 0, -0.09)), 0.045, seg=12, rings=8, scale=(1, 1, 1.3))
+            self.bulbs.sphere(bot + Vector((0, 0, -0.09)), 0.045, seg=10 if not state.lite() else 6,
+                              rings=6 if not state.lite() else 4, scale=(1, 1, 1.3))
 
     def sign_lamps(self, xs, y, z_top, reach=0.3):
         """Gooseneck lamps above a sign: iron arm reaching forward, a small shade, a bulb."""

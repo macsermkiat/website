@@ -40,7 +40,9 @@ import * as THREE from 'three';
 
 const LIT = ['standard', 'physical', 'lambert', 'phong', 'toon'];
 const KEYS = ['lights_pars_begin', 'lights_fragment_begin', 'lights_fragment_end', 'lights_physical_pars_fragment', 'shadowmap_pars_fragment'];
-const HEADER = 3; // vec4s: [glowCount, rimStrength, rimPower, clipCount], [rimDir, darkLo], [rimColor, darkHi]
+// vec4s: [glowCount, rimStrength, rimPower, clipCount], [rimDir, darkLo], [rimColor, darkHi],
+// [town wash colour × intensity, -], [wash inner radius, outer radius, height falloff, facing share]
+const HEADER = 5;
 // vec4s per clip: [light world pos, fade], [box centre, cos yaw], [half size, sin yaw],
 // [front extra, front cut, roof slope, ridge z] (box frame; the roof is a tent whose ridge is the box top)
 const CLIP = 4;
@@ -52,7 +54,7 @@ export function installShading({ maxGlows = 16, maxClips = 4, minRoughness = 0.3
   const CLIP0 = HEADER + maxGlows * 3;
   const size = CLIP0 + Math.max(1, maxClips) * CLIP;
   const data = new Float32Array(size * 4);
-  data.set([0, 0, 3, 0, 0, 1, 0, 0.07, 0, 0, 0, 0.16]); // no rim until setRim (the dark band must not be empty)
+  data.set([0, 0, 3, 0, 0, 1, 0, 0.07, 0, 0, 0, 0.16, 0, 0, 0, 0, 1e4, 1e4 + 1, 1, 0]); // no rim or town wash until set
 
   THREE.ShaderChunk.lights_pars_begin = saved.lights_pars_begin + /* glsl */ `
 uniform vec4 lightingGlow[ ${size} ];
@@ -118,6 +120,22 @@ float lightingClip( vec3 lightView, vec3 posView ) {
     float cosT = dot( gn, dl * inversesqrt( max( d2, 1e-6 ) ) );
     float ndl = ga.w > 0.0 ? clamp( cosT * 0.6 + 0.4, 0.0, 1.0 ) : max( cosT, 0.0 );
     glowIrr += gc.rgb * ( band * win * win * ndl / ( d2 + 0.12 ) );
+  }
+  // town wash: the facades of the town ring (world radius past lightingGlow[4].x) catch the market's
+  // glow and their own street lamps: warm light on walls that face the square, strongest at street
+  // level and fading up the facade, so the timbering and doors read while the roofs and upper storeys
+  // stay in the blue night
+  {
+    vec4 tw = lightingGlow[ 3 ];
+    vec4 tp = lightingGlow[ 4 ];
+    float rr = length( gp.xz );
+    float town = smoothstep( tp.x, tp.y, rr );
+    if ( town > 0.0 ) {
+      float vert = 1.0 - gn.y * gn.y;
+      float facing = clamp( dot( normalize( gn.xz + 1e-5 ), -gp.xz / max( rr, 1e-3 ) ), 0.0, 1.0 );
+      float lift = exp( -max( gp.y, 0.0 ) / tp.z );
+      glowIrr += tw.rgb * ( town * vert * lift * ( 1.0 - tp.w + tp.w * facing ) );
+    }
   }
   // moon rim: a faint cool sheen on grazing edges that face the moon. It is added as radiance, not
   // multiplied by the albedo, the way wool and skin catch light at grazing angles, so near-black
@@ -238,6 +256,10 @@ float lightingClip( vec3 lightView, vec3 posView ) {
       data.set([data[0], strength, power, data[3], d.x, d.y, d.z, dark[0], color.r, color.g, color.b, dark[1]], 0);
     },
     setRimStrength(s) { data[1] = s; },
+    /** The town wash: colour (linear Color) × intensity, from radius r0 (0) to r1 (full), height falloff, facing share. */
+    setTownWash(color, intensity, r0, r1, height, facing) {
+      data.set([color.r * intensity, color.g * intensity, color.b * intensity, 0, r0, r1, height, facing], 12);
+    },
     /** Write the glows nearest `from` (a Vector3) into the shared uniform. */
     update(from, gain = 1) {
       const ranked = glows

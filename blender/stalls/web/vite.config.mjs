@@ -14,5 +14,5 @@ export default {
   resolve: { alias: [{ find: /^three$/, replacement: `${three}/build/three.module.js` },
                      { find: /^three\/(.*)$/, replacement: `${three}/$1` }] },
   optimizeDeps: { noDiscovery: true, include: [] },
-  server: { port: 4395, strictPort: true, fs: { allow: [repo] } },
+  server: { port: +(process.env.NM_SHOT_PORT || 4397), strictPort: true, fs: { allow: [repo] } },
 };

@@ -132,6 +132,12 @@ const empties = [
   ['light_0', [0, 2.3, -0.1]],
   ['light_1', [0, 2.35, 1.95]],
 ].map(([name, p]) => { const e = new THREE.Object3D(); e.name = name; e.position.set(...p); stall.add(e); return e; });
+// slot_sign on the painted "Glühwein" board below the counter (the lighting finds the board's edges
+// by casting rays at it) and cam_view / cam_target where the carpenter's stalls carry them
+[['slot_sign', [0.3, 0.62, 1.0]], ['cam_view', [0, 1.8, 4.85]], ['cam_target', [0, 1.4, 0.9]]].forEach(([name, p]) => {
+  const e = new THREE.Object3D(); e.name = name; e.position.set(...p); stall.add(e);
+});
+if (q.get('sign') === '0') stall.getObjectByName('slot_sign').name = 'no_sign';
 scene.updateMatrixWorld(true);
 
 // ---------- lighting ----------

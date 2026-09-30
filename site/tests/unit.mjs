@@ -1,8 +1,14 @@
-// Unit checks that need no browser: the GPU classes behind the lite-market choice, and the ballad's road map.
+// Unit checks that need no browser: the GPU classes behind the lite-market choice, the ballad's road map, the
+// strict content gate, the asset credits and the download budgets.
 // Usage: node tests/unit.mjs
 import { readFileSync } from 'node:fs';
 import { gpuTier, detectLite } from '../src/quality.js';
 import { songPlan } from '../src/audio/songplan.js';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { contentGate, assetCredits } from '../plugins/market.js';
+import { readGlb, budget } from '../scripts/budget.mjs';
 
 let failed = 0;
 const check = (name, ok, detail = '') => { if (!ok) failed++; console.log(ok ? '  ok  ' : '  FAIL', name, detail ? `(${detail})` : ''); };
@@ -60,6 +66,21 @@ if (manifest.alternates?.length) {
 }
 check('segments join up with no gap', road.every((s, i) => i === 0 || Math.abs(road[i - 1].to - s.from) < 1e-6 || (Math.abs(road[i - 1].to - plan.loopEnd) < 1e-6 && (Math.abs(s.from - plan.loopStart) < 1e-6 || Math.abs(s.from - plan.loopEnd) < 1e-6))));
 check('the song is about ten minutes before it rests and starts again', plan.length > 480 && plan.length < 720, `${plan.length.toFixed(0)} s`);
+
+// ---------- content gate, credits, budgets ----------
+{
+  const dir = mkdtempSync(path.join(tmpdir(), 'nm-content-'));
+  writeFileSync(path.join(dir, 'a.md'), 'A line. <!-- check -->\n\nAnother [check: the year].\n');
+  writeFileSync(path.join(dir, 'b.md'), 'All confirmed.\n');
+  const g = contentGate(dir);
+  check('the strict content gate counts <!-- check --> comments and [check] tags', g.left.length === 1 && g.left[0].checks === 2 && /check marker/.test(g.message), g.message);
+  const credits = assetCredits();
+  check('asset credits from CREDITS.md carry source URLs and licences', /<details class="credits-all"/.test(credits) && /href="https:\/\/github\.com\/mrdoob\/three\.js"/.test(credits) && /MIT/.test(credits));
+  const b = budget();
+  const glb = readGlb(new URL('../public/models/deco_lebkuchen.glb', import.meta.url).pathname);
+  check('budget: a glb\'s external textures are counted with it', glb.images.length > 0 && b.rows.find((r) => r.id === 'deco-lebkuchen').full.textures > 0, glb.images.join(' '));
+  check('budget: both first loads are under their aims', !b.totals.full.over && !b.totals.lite.over, `${(b.totals.full.firstLoad / 1e6).toFixed(2)} / ${(b.totals.lite.firstLoad / 1e6).toFixed(2)} MB`);
+}
 
 console.log(failed ? `\n${failed} unit checks failed` : '\nall unit checks passed');
 process.exit(failed ? 1 : 0);

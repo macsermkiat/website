@@ -61,6 +61,12 @@ export function actionHint(id, fallback) {
   return typeof h === 'string' && h.trim() ? esc(h) : fallback;
 }
 
+/** The writer's line about clicking the goods themselves (`item_hint:` in the front matter), or the fallback. */
+export function itemHint(id, fallback) {
+  const h = meta(id).item_hint;
+  return typeof h === 'string' && h.trim() ? esc(h) : fallback;
+}
+
 /**
  * The note shown after an action. The writer's notes are keyed by action label; a list rotates with {n}.
  * Templates: {n}, {title}, {author}, {note}, {play}. `fallback` is prototype HTML.

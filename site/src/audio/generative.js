@@ -1,7 +1,7 @@
 // Fallback band: the prototype's live-written ballad (prototype/audio.js), used when the recorded stems
 // are missing or cannot play. Same sound; packaged as a module with the scene hooks passed in.
 import * as THREE from 'three';
-import { audioContext, noiseBuffer, impulse } from './context.js';
+import { audioContext, noiseBuffer, impulse, output } from './context.js';
 
 export function createGenerativeBand({ samplesUrl, bandPos, getCamera }) {
   const bpm = 60, SPB = 60 / bpm, SW = 0.6;
@@ -35,7 +35,7 @@ export function createGenerativeBand({ samplesUrl, bandPos, getCamera }) {
     const hi = AC.createBiquadFilter(); hi.type = 'highshelf'; hi.frequency.value = 7000; hi.gain.value = -2.5;
     const sh = AC.createWaveShaper(); sh.curve = sat(1.3); sh.oversample = '2x';
     const comp = AC.createDynamicsCompressor(); comp.threshold.value = -18; comp.knee.value = 14; comp.ratio.value = 2.5; comp.attack.value = 0.02; comp.release.value = 0.3;
-    master.connect(lo); lo.connect(hi); hi.connect(sh); sh.connect(comp); comp.connect(AC.destination);
+    master.connect(lo); lo.connect(hi); hi.connect(sh); sh.connect(comp); comp.connect(output());
     bandBus = AC.createGain(); bandDist = AC.createGain(); bandPan = AC.createStereoPanner();
     bandBus.connect(bandPan); bandPan.connect(bandDist); bandDist.connect(master);
     revIn = AC.createGain(); const rev = AC.createConvolver(); rev.buffer = impulse(3.2); const revOut = AC.createGain(); revOut.gain.value = 0.9;

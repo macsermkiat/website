@@ -8,11 +8,12 @@ Cycles previews.
 Outputs
     site/public/models/prop_<set>.glb, prop_<set>.lite.glb, shared prop_tex_*.webp
     site/public/models/props.json      {"sets": [{set, stall, slot, model, lite, asset}]} (the engine's form)
+                                       + "by_set": {set: {slot, stall, model, lite, asset}}
     site/public/models/items.json      every act_ node -> display name (books: title, author, cover)
     blender/out/props_report.json      triangles, bytes, bounding boxes, pivots, items per set
     blender/out/vendor/renders/*.png   the preview PNGs (deco frames as prop_deco_<key>.png; never the shared
                                        blender/out/renders/, where the carpenter's deco.py writes deco_<key>.png)
-    review/round-1/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
+    review/round-2/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
                                        and the deco contact sheet (built only from the vendor's own frames)
 """
 import argparse
@@ -57,7 +58,7 @@ def args():
     ap.add_argument("--samples", type=int, default=128)
     ap.add_argument("--res", default="1920x1080")
     ap.add_argument("--render-only", default=None, help="comma list: render previews only for these sets")
-    ap.add_argument("--shots", default="wide,hero", help="section previews to render: wide, hero or both")
+    ap.add_argument("--shots", default="wide,hero", help="section previews to render: wide, hero, stall (in the stall glb)")
     ap.add_argument("--sheet-only", action="store_true", help="only rebuild the deco contact sheet from the frames")
     a, _ = ap.parse_known_args(sys.argv[1:])
     return a
@@ -73,17 +74,25 @@ def build_variant(name, d, lite, ao):
 
 
 def render_previews(name, d, ps, a, res):
-    """Section sets: a wide shot and a close-up. Deco sets: one framed shot (also the contact-sheet tile)."""
-    top = vstage.preview_scene(ps, d["kind"], d.get("width", 3.0))
+    """Section sets: a wide shot and a close-up. Deco sets: one framed shot (also the contact-sheet tile).
+    A set with "in_stall" is also shot standing in the carpenter's shipped stall glb ("stall" shots)."""
     if d.get("section"):
-        if "wide" in a.shots:
-            # the wide shot frames the whole set (goods fill the width); "cam_fixed" keeps a hand-set camera
-            cam = d["cam"] if d.get("cam_fixed") else vstage.frame_cam(ps, lens=28, elev=WIDE_ELEV[d["kind"]],
-                                                                        margin=1.04)
-            vstage.shot(cam, top, os.path.join(vlib.REVIEW, f"{name}.jpg"), a.samples, res)
-        if d.get("hero") and "hero" in a.shots:
-            vstage.shot(d["hero"], top, os.path.join(vlib.REVIEW, f"{name}_hero.jpg"), a.samples, res)
+        if {"wide", "hero"} & set(a.shots.split(",")):
+            top = vstage.preview_scene(ps, d["kind"], d.get("width", 3.0))
+            if "wide" in a.shots:
+                # the wide shot frames the whole set (goods fill the width); "cam_fixed" keeps a hand-set camera
+                cam = d["cam"] if d.get("cam_fixed") else vstage.frame_cam(ps, lens=28, elev=WIDE_ELEV[d["kind"]],
+                                                                            margin=1.04)
+                vstage.shot(cam, top, os.path.join(vlib.REVIEW, f"{name}.jpg"), a.samples, res)
+            if d.get("hero") and "hero" in a.shots:
+                vstage.shot(d["hero"], top, os.path.join(vlib.REVIEW, f"{name}_hero.jpg"), a.samples, res)
+        if d.get("in_stall") and "stall" in a.shots:
+            # last: the stall scene replaces the plain counter (the set is moved to the stall's slot)
+            origin = vstage.stall_scene(ps, d["in_stall"], d.get("stall_lights", ()))
+            for tag, cam in d.get("stall_cams", {}).items():
+                vstage.shot_at(cam, origin, os.path.join(vlib.REVIEW, f"{name}_{tag}.jpg"), a.samples, res)
         return None
+    top = vstage.preview_scene(ps, d["kind"], d.get("width", 3.0))
     key = name.replace("prop_deco_", "")
     # the frame PNG is named after the prop set (prop_deco_<key>.png) in the vendor's own render folder
     return vstage.shot(vstage.frame_cam(ps, lens=32), top, os.path.join(vlib.REVIEW, f"deco_{key}.jpg"),
@@ -122,6 +131,7 @@ def main():
             if rep_lite is None and "lite" in reports.get(name, {}):
                 r["lite"] = reports[name]["lite"]
             r["items"] = ps.items
+            r.update(getattr(ps, "report_extra", {}))
             want = a.render_only is None or name in a.render_only.split(",")
             if not a.no_render and want:
                 png = render_previews(name, d, ps, a, res)
@@ -152,7 +162,7 @@ def deco_contact_sheet(sets):
         print(f"[props] contact sheet not rebuilt, frames missing: {[os.path.basename(p) for p in missing]}")
         return
     out = os.path.join(vlib.REVIEW, "deco_goods_contact_sheet.jpg")
-    render.contact_sheet(frames, out, cols=3, tile=(416, 234), title="Deco stall goods (vendor, round 1 pass 3)")
+    render.contact_sheet(frames, out, cols=3, tile=(416, 234), title="Deco stall goods (vendor, round 2)")
     print(f"[props] wrote {out}")
 
 
@@ -169,11 +179,12 @@ def shrink_shared_textures():
         if not os.path.exists(path):
             continue
         im = Image.open(path)
-        if max(im.size) <= size:
+        if im.size[0] <= size:
             continue
         before = os.path.getsize(path)
-        im.resize((size, size), Image.LANCZOS).save(path, "WEBP", quality=82, method=6)
-        print(f"[props] {fn}: {im.size[0]} -> {size} px, {before / 1e3:.0f} -> {os.path.getsize(path) / 1e3:.0f} kB")
+        new = (size, round(im.size[1] * size / im.size[0]))          # keep the aspect (the books atlas is tall)
+        im.resize(new, Image.LANCZOS).save(path, "WEBP", quality=82, method=6)
+        print(f"[props] {fn}: {im.size} -> {new} px, {before / 1e3:.0f} -> {os.path.getsize(path) / 1e3:.0f} kB")
 
 
 def write_props_json(sets):
@@ -185,8 +196,10 @@ def write_props_json(sets):
         lst.append({"set": name, "stall": stall, "slot": d["slot"], "model": f"{name}.glb",
                     "lite": f"{name}.lite.glb", "asset": STALL_ASSET.get(stall, f"deco_{key}.glb")})
     out = {"about": "Vendor prop sets. Each glb's root node is the set origin: parent it to the named slot_ empty "
-                    "of the stall (layout.json id in 'stall', stall file in 'asset').",
-           "sets": lst}
+                    "of the stall (layout.json id in 'stall', stall file in 'asset'). 'sets' is the list the engine "
+                    "reads; 'by_set' is the same data keyed by set name ({set: {slot, stall, model, lite, asset}}).",
+           "sets": lst,
+           "by_set": {e["set"]: {k: e[k] for k in ("slot", "stall", "model", "lite", "asset")} for e in lst}}
     path = os.path.join(vlib.MODELS, "props.json")
     with open(path, "w") as f:
         json.dump(out, f, indent=1, ensure_ascii=False)
@@ -202,8 +215,8 @@ def write_items_json(sets, reports):
             items[node] = {"set": name, "stall": sets[name]["stall"], **data}
     out = {"about": "Display names for the vendor's act_ nodes (node names are unique across all prop sets; the "
                     "full and the lite glb of a set carry the same act_ nodes at the same places). 'pivot' says "
-                    "where the node's origin is: 'base' is the point the item rests on; sausages turn about "
-                    "their centre. Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV "
+                    "where the node's origin is: 'base' is the point the item rests on (sausages too: their "
+                    "'turn_axis' gives the long axis's height above the base, for turning them on the grate). Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV "
                     "rect [u_min, v_min, u_max, v_max] in glTF texture space (origin top-left, as three.js samples glTF "
                     "textures) in prop_tex_books_color.webp.",
            "items": dict(sorted(items.items(), key=lambda kv: (kv[1]["set"], kv[0])))}

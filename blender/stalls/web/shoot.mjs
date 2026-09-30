@@ -1,9 +1,10 @@
 // three.js screenshots of the carpenter's stalls under the site's lighting (Playwright + SwiftShader).
-//   node blender/stalls/web/shoot.mjs [--out review/round-1/carpenter/web] [--only stall_bier,...]
+//   node blender/stalls/web/shoot.mjs [--out review/round-2/carpenter/web] [--only stall_bier,...]
 //        [--ao both|on|off] [--lite] [--w 1280 --h 720] [--props prop_a@slot_counter,prop_b@slot_shelf_1]
 //        [--signspot] [--home] [--tag name] [--cam x,y,z,tx,ty,tz,lens]
 //   --home   frame the stall from layout.json's home camera, the stall placed where layout.json puts it
-// Starts its own Vite server (blender/stalls/web/vite.config.mjs) on port 4395.
+// Starts its own Vite server (blender/stalls/web/vite.config.mjs) on port NM_SHOT_PORT (default 4397;
+// the lighting designer's tools use 4395).
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -17,7 +18,7 @@ const HERE = import.meta.dirname;
 const REPO = path.resolve(HERE, '../../..');
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
-const OUT = path.resolve(REPO, opt('--out', 'review/round-1/carpenter/web'));
+const OUT = path.resolve(REPO, opt('--out', 'review/round-2/carpenter/web'));
 const W = +opt('--w', 1280), H = +opt('--h', 720);
 const AO = opt('--ao', 'both');
 const lite = args.includes('--lite');
@@ -42,7 +43,7 @@ const vite = path.join(REPO, 'site/node_modules/vite/bin/vite.js');
 const server = spawn(process.execPath, [vite, '--config', path.join(HERE, 'vite.config.mjs')], { cwd: REPO, stdio: ['ignore', 'pipe', 'pipe'] });
 await new Promise((res, rej) => {
   const t = setTimeout(() => rej(new Error('vite did not start')), 60000);
-  const ok = (d) => { if (String(d).includes('4395') || String(d).includes('localhost')) { clearTimeout(t); res(); } };
+  const ok = (d) => { if (String(d).includes(String(process.env.NM_SHOT_PORT || 4397)) || String(d).includes('localhost')) { clearTimeout(t); res(); } };
   server.stdout.on('data', ok);
   server.stderr.on('data', (d) => { process.stderr.write(d); });
   server.on('exit', (c) => rej(new Error('vite exited ' + c)));
@@ -61,7 +62,7 @@ try {
       const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
       const page = await ctx.newPage();
       page.setDefaultTimeout(600000);
-      page.on('console', (m) => { if (m.type() === 'error') console.log(`  [${name}] ${m.text().slice(0, 300)}`); });
+      page.on('console', (m) => { if (m.type() === 'error' || process.env.NM_SHOT_DEBUG) console.log(`  [${name}] ${m.text().slice(0, 300)}`); });
       page.on('pageerror', (e) => console.log(`  [${name}] pageerror: ${e.message}`));
       let qs = `?shot=1&glb=${name}&cam=${cam}${ao === 'off' ? '&ao=0' : ''}${lite ? '&lite=1' : ''}`;
       if (props) qs += `&props=${props}`;
@@ -70,8 +71,8 @@ try {
         const pl = placeOf(name), c = layout.camera.home;
         qs += `&place=${pl.pos[0]},${pl.pos[1]},${pl.rotY}&home=${[...c.pos, ...c.target, c.fov].join(',')}`;
       }
-      await page.goto(`http://localhost:4395/blender/stalls/web/stall_shot.html${qs}`, { waitUntil: 'load' });
-      await page.waitForFunction(() => window.__ready === true, null, { timeout: 600000 });
+      await page.goto(`http://localhost:${process.env.NM_SHOT_PORT || 4397}/blender/stalls/web/stall_shot.html${qs}`, { waitUntil: 'load' });
+      await page.waitForFunction(() => window.__stallReady === true, null, { timeout: 600000 });
       await page.waitForTimeout(1000);
       const file = path.join(OUT, `${name}${lite ? '.lite' : ''}_three${tag ? '_' + tag : ''}${ao === 'off' ? '_noao' : ''}.png`);
       await page.screenshot({ path: file });

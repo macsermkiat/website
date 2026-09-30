@@ -16,6 +16,8 @@ shelf sets keep to x = +-0.925. A third knee brace under the upper shelf rises f
 at x = -0.015..0.015, so books standing across the middle of shelf 1 stay under 0.205 m (LOW_ZONES), and
 the reading-list block stands left of it. Each shelf has a 5 cm front lip at y = -0.14; spines stand just
 behind it. check_props' seat check fails if a book cuts into any of these.
+No title repeats anywhere on the stall: the counter has its own list and the two shelves draw from two
+disjoint shuffled halves of the remaining generic titles (shelf_pools); running out raises.
 The lamp has no light_ empty: the stall already has its two (light_0, light_1). Its bulb is emissive.
 """
 import math
@@ -44,6 +46,25 @@ NAMED_X = -0.52                     # where the reading-list block starts on she
 
 def spine_kinds():
     return {f"spine_g{i}": t[2] for i, t in enumerate(vendor_atlas.GENERIC_TITLES)}
+
+
+# the counter's own books (stacks and the row between bookends); the shelves never repeat them
+COUNTER_BOOKS = ["spine_g21", "spine_g4", "spine_g30", "spine_g8", "spine_g36", "spine_g2", "spine_g12",
+                 "spine_g13", "spine_g40", "spine_g0", "spine_g26", "spine_g44", "spine_g19"]
+
+
+def shelf_pools():
+    """Every generic title stands once on the whole stall: the stock minus the counter's books, shuffled
+    once (fixed seed, independent of the set being built) and split in two, one half per shelf."""
+    import random
+    keys = [k for k in spine_kinds() if k not in COUNTER_BOOKS]
+    random.Random(2026).shuffle(keys)
+    half = len(keys) // 2
+    return {"prop_books_shelf_1": keys[:half], "prop_books_shelf_2": keys[half:]}
+
+
+def title_len(spine):
+    return len(atlas_books.book_meta(spine)[0])
 
 
 def book(m, w, h, d, spine, kind, mat, M=None, page_col=C("efe6d0")):
@@ -114,13 +135,20 @@ def cover_uv_gltf(spine):
     return [round(u0, 5), round(1 - v1, 5), round(u1, 5), round(1 - v0, 5)]
 
 
-def fill_shelf(s, x0, x1, start, named=(), low=()):
+def fill_shelf(s, x0, x1, start, named=(), low=(), pool=None):
     """Books standing along the shelf from x0 to x1, with a horizontal stack; the named block left of the
-    middle. Standing books that reach into a `low` zone (x0, x1, h) are kept under h."""
+    middle. Standing books that reach into a `low` zone (x0, x1, h) are kept under h. Titles come from
+    `pool` in order, each once (a RuntimeError if the shelf needs more books than the pool holds)."""
     kinds = spine_kinds()
-    order = list(kinds)
-    rng.shuffle(order)
+    order = list(pool)
     idx, x, gi = start, x0, 0
+
+    def take():
+        nonlocal gi
+        if gi >= len(order):
+            raise RuntimeError(f"{s.name}: the shelf needs more than its {len(order)} titles; add stock")
+        gi += 1
+        return order[gi - 1]
     named = list(named)
     named_x = NAMED_X
 
@@ -148,21 +176,24 @@ def fill_shelf(s, x0, x1, start, named=(), low=()):
             base = x + 0.13
             z = 0.0
             for k in range(rng.randint(3, 5)):
-                reg = order[gi % len(order)]
-                gi += 1
                 w, h, d = rng.uniform(0.022, 0.04), rng.uniform(0.2, 0.25), rng.uniform(0.14, 0.18)
                 if x + h + 0.02 > x1:
                     break
+                reg = take()
                 add_book(s, idx, (base + rng.uniform(-0.01, 0.01), SPINE_Y, z), w, h, d, reg,
                          "paper" if kinds[reg] == "paper" else "hard", lying=True, rz=rng.uniform(-0.05, 0.05))
                 idx += 1
                 z += w
             x = base + 0.14
             continue
-        reg = order[gi % len(order)]
-        gi += 1
         w = rng.uniform(0.02, 0.045)
-        h = min(0.3, max(0.17, w * (304 / 48) * rng.uniform(0.85, 1.25)))
+        hk = rng.uniform(0.85, 1.25)
+        if x + w > x1:
+            break
+        reg = take()
+        if title_len(reg) > 24:
+            w = max(w, 0.032)          # a long title gets a spine wide enough to read
+        h = min(0.3, max(0.17, w * (304 / 48) * hk))
         if kinds[reg] == "leather":
             h = min(0.3, max(h, 0.22))
         h = cap(x + w / 2, w, h)
@@ -187,7 +218,7 @@ def bookend(m, M, col=C("8a6a3a"), side=1):
 
 def shelf_set(name, slot, start, named):
     s = vlib.PropSet(name, slot, "buecherstand", footprint=(2.08, 0.28))
-    fill_shelf(s, -SHELF_X + 0.012, SHELF_X - 0.012, start, named, LOW_ZONES.get(name, ()))
+    fill_shelf(s, -SHELF_X + 0.012, SHELF_X - 0.012, start, named, LOW_ZONES.get(name, ()), shelf_pools()[name])
     bookend(s.static, T(-SHELF_X, SPINE_Y, 0), side=1)
     bookend(s.static, T(SHELF_X, SPINE_Y, 0), side=-1)
     s.finish()
@@ -348,7 +379,8 @@ SETS = {
                                hero=((-0.36, -0.72, 0.17), (-0.36, 0.0, 0.14), 36)),
     "prop_books_shelf_2": dict(fn=lambda: shelf_set("prop_books_shelf_2", "slot_shelf_2", 100, ()),
                                slot="slot_shelf_2", stall="buecherstand", kind="shelf2", section=True, seed=52,
-                               width=2.1, cam=((0.35, -1.1, 0.25), (0.1, 0.0, 0.14), 32)),
+                               width=2.1, cam=((0.35, -1.1, 0.25), (0.1, 0.0, 0.14), 32),
+                               hero=((0.45, -0.72, 0.18), (0.45, 0.0, 0.14), 36)),
     "prop_books_counter": dict(fn=counter, slot="slot_counter", stall="buecherstand", kind="counter", section=True,
                                seed=53, width=2.2, cam=((-0.0, -1.95, 0.62), (0.0, 0.0, 0.1), 30),
                                hero=((0.2, -0.85, 0.42), (0.22, 0.0, 0.1), 36)),

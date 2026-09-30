@@ -42,9 +42,12 @@ def build(lite):
                   axis="x", at=yF + 0.03, pw=h.pw, tint="honey", var=0.12)
     h.build_counter()
     h.build_shelves()
-    h.build_roof(cover="shingles", barge_band="red")
-    # re-do shingles bigger for budget: build_roof used defaults; fine for a 3.4 m hut
-    h.build_snow()
+    # outward trim (bargeboards, carved valances, gable star board, finial) is painted in
+    # 'paint_glow': the paint kit plus a faint warm emissive copy of it, because under the site's
+    # moonlight a red board facing out and down under the eave goes near-black (round 1)
+    T = h.part("trim", "paint_glow", var=0.04)
+    h.build_roof(cover="shingles", barge_band="red", barge_part=T)
+    h.build_snow(drifts=3)
 
     P = h.paint
     # ---------------------------------------------------------- red star board in the gable
@@ -55,13 +58,13 @@ def build(lite):
              geo.star_polygon(-hw * 0.48, hw * 0.17, 0.08, 0.035, 5),
              geo.star_polygon(hw * 0.48, hw * 0.17, 0.08, 0.035, 5)]
     M = Matrix.Translation((0, yF + 0.02, star_z)) @ Euler((math.pi / 2, 0, 0)).to_matrix().to_4x4()
-    P.shape(outer, holes, depth=0.025, M=M, band="red")
+    T.shape(outer, holes, depth=0.025, M=M, band="red")
     # gold edging strips along the star board
     for s in (-1, 1):
         a = Vector((s * hw, yF - 0.002, star_z))
         b = Vector((0, yF - 0.002, star_z + hw))
-        P.slab(a, b, 0.035, 0.012, up=(0, -1, 0), band="gold")
-    P.box((0, yF - 0.004, star_z + 0.01), (2 * hw, 0.014, 0.035), band="gold")
+        T.slab(a, b, 0.035, 0.012, up=(0, -1, 0), band="gold")
+    T.box((0, yF - 0.004, star_z + 0.01), (2 * hw, 0.014, 0.035), band="gold")
 
     # ---------------------------------------------------------- front overhang: tie beam + lambrequin
     yO = yF - 0.47
@@ -71,24 +74,24 @@ def build(lite):
         a = Vector((s * (W / 2 - 0.05), yF + 0.02, 2.2))
         b = Vector((s * (W / 2 - 0.05), yO + 0.06, zt - 0.05))
         h.frame.slab(a, b, 0.08, 0.08, up=(1, 0, 0), tint="walnut")
-    cp.valance(P, -W / 2 - 0.1, W / 2 + 0.1, yO - 0.02, zt - 0.05, 0.16, 0.13, 9, style="scallop",
-               holes="star", band="red", depth=0.024)
-    P.box((0, yO - 0.036, zt - 0.02), (W + 0.26, 0.012, 0.035), band="gold")
+    cp.valance(T, -W / 2 - 0.1, W / 2 + 0.1, yO - 0.02, zt - 0.05, 0.16, 0.13, 9, style="scallop",
+               holes="star", band="red", depth=0.024, hole_r=0.056)
+    T.box((0, yO - 0.036, zt - 0.02), (W + 0.26, 0.012, 0.035), band="gold")
     # carved scalloped edge under each red bargeboard (front rakes)
     for sl in h.slopes:
         a_front = sl.a0 if sl.A.y > 0 else sl.a1
         Mv = Matrix.Translation(sl.point(a_front, 0.12, -0.10)) @ \
             Matrix((sl.U, sl.N, sl.A)).transposed().to_4x4()
-        cp.valance(P, 0, sl.L - 0.35, 0, 0, 0.06, 0.07, 10, style="scallop", depth=0.022,
+        cp.valance(T, 0, sl.L - 0.35, 0, 0, 0.06, 0.07, 10, style="scallop", depth=0.022,
                    band="red", M=Mv)
         # gold strip on the bargeboard
         p = sl.point(a_front - 0.018 * (1 if sl.A.y > 0 else -1), sl.L / 2, 0.03)
-        P.mbox(Matrix.Translation(p) @ sl.basis(), (0.012, sl.L, 0.03), grain=1, band="gold")
+        T.mbox(Matrix.Translation(p) @ sl.basis(), (0.012, sl.L, 0.03), grain=1, band="gold")
     # king post and gold star finial at the apex of the front rakes
     ap = Vector((0, yO - 0.03, RIDGE + 0.12))
     h.frame.box((0, yO - 0.03, RIDGE - 0.1), (0.09, 0.09, 0.55), tint="walnut")
     Ms = Matrix.Translation(ap + Vector((0, -0.05, 0.22))) @ Euler((math.pi / 2, 0, 0)).to_matrix().to_4x4()
-    P.shape(geo.star_polygon(0, 0, 0.2, 0.085, 8), depth=0.03, M=Ms, band="gold")
+    T.shape(geo.star_polygon(0, 0, 0.2, 0.085, 8), depth=0.03, M=Ms, band="gold")
 
     # ---------------------------------------------------------- red and gold posts, rails, stars
     for x in h.front_posts:
@@ -134,7 +137,10 @@ def build(lite):
 def preview(objs):
     env = state.env_collection()
     yF = -D / 2
-    # render-only stand-ins (the vendor ships the real goods)
+    if pipeline.vendor_props([("prop_gluehwein_counter", "slot_counter"), ("prop_gluehwein_shelf", "slot_shelf_1"),
+                              ("prop_gluehwein_wine", "slot_shelf_2")]):
+        return _lights_and_camera(yF)
+    # render-only stand-ins when the vendor's goods are missing
     pot = Part("env_pot", "copper")
     pot.lathe([(0.001, 0), (0.2, 0.0), (0.22, 0.03), (0.23, 0.28), (0.24, 0.3), (0.2, 0.31)], seg=32,
               M=Matrix.Translation((0.55, yF + 0.05, COUNTER_TOP)))
@@ -150,6 +156,10 @@ def preview(objs):
                        M=Matrix.Translation((x, D / 2 - 0.2, z)))
     for p in (pot, mugs):
         p.finish(env)
+    return _lights_and_camera(yF)
+
+
+def _lights_and_camera(yF):
     render.lights_at_markers(energy=110)
     render.add_light("env_fill", 'AREA', (0, 0.2, 2.45), 260, size=2.2, rot=(0, 0, 0))
     render.add_light("env_front", 'POINT', (-0.6, yF - 1.9, 2.4), 45, size=0.5)

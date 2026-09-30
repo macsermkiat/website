@@ -73,7 +73,50 @@ def cabinet(h, glass, xc, lite):
     # brass knobs and escutcheon
     for x in (mid - 0.04, mid + 0.04):
         h.extra_brass.sphere((x, y0 - 0.035, 1.15), 0.013, seg=8, rings=6)
+    cabinet_books(h, x0 + 0.035, x1 - 0.035, (y0 + y1) / 2 + 0.035, lite)
+    # a small warm bulb under the cabinet top lights the spines behind the glass
+    h.wire.cyl((xc, (y0 + y1) / 2, zt - 0.05), 0.012, 0.012, 0.03, seg=8)
+    h.bulbs.sphere((xc, (y0 + y1) / 2, zt - 0.085), 0.022, seg=8 if not lite else 5, rings=6 if not lite else 3,
+                   scale=(1, 1, 1.3))
     return (xc, (y0 + y1) / 2 + 0.01, 0.62 + 0.011)
+
+
+# cloth and leather bindings (linear RGB tints of the 'bookcloth' material)
+BINDINGS = [(0.30, 0.035, 0.03), (0.04, 0.14, 0.07), (0.035, 0.06, 0.19), (0.20, 0.09, 0.035),
+            (0.50, 0.31, 0.09), (0.66, 0.58, 0.42), (0.035, 0.035, 0.035), (0.17, 0.025, 0.06),
+            (0.035, 0.16, 0.16), (0.36, 0.16, 0.05)]
+
+
+def cabinet_books(h, xa, xb, yc, lite):
+    """Low-poly book spines behind the cabinet glass (the vendor's props fill the counter and
+    back shelves, not the cabinets): the upper three shelves full, the bottom shelf with a lying
+    stack at each end, its middle left free at slot_cabinet_<l|r>."""
+    if not hasattr(h, "books"):
+        h.books = h.part("books", "bookcloth", var=0.12)
+    B, R = h.books, state.rng
+    drop = ("-z", "+y")                      # never seen: the underside and the back
+    for z, room in ((1.05, 0.40), (1.48, 0.40), (1.9, 0.23)):
+        zt = z + 0.011
+        x = xa + R.uniform(0.0, 0.02)
+        while x < xb - 0.03:
+            bw = R.uniform(0.022, 0.055)
+            bh = min(room - 0.02, R.uniform(0.17, 0.29))
+            bd = R.uniform(0.14, 0.2)
+            lean = 0.0
+            if R.random() < 0.08 and x + bw + 0.06 < xb:
+                lean = R.uniform(0.12, 0.22)          # a leaning book: it rests on its neighbour
+            cx = x + bw / 2 + bh * math.sin(lean) / 2
+            B.box((cx, yc - (0.2 - bd) / 2, zt + bh * math.cos(lean) / 2), (bw - 0.003, bd, bh),
+                  rot=(0, lean, 0), tint=R.choice(BINDINGS), bevel=0, drop=drop, grain=2)
+            x += bw + (bh * math.sin(lean) if lean else 0.0)
+    zt = 0.62 + 0.011
+    for xe in (xa + 0.13, xb - 0.13):                 # lying stacks on the bottom shelf
+        zz = zt
+        for k in range(R.randint(3, 5)):
+            t = R.uniform(0.025, 0.045)
+            B.box((xe + R.uniform(-0.01, 0.01), yc, zz + t / 2), (0.22, 0.16, t), rot=(0, 0, R.uniform(-0.1, 0.1)),
+                  tint=R.choice(BINDINGS), bevel=0, drop=drop, grain=0)
+            zz += t
 
 
 def bay_window(h, glass, lite):
@@ -160,7 +203,9 @@ def build(lite):
             counter_tint="walnut", plank_w=0.13, bulb_spacing=0.21, counter_depth=0.55, counter_over=0.2,
             front_posts=[-W / 2 + 0.05, W / 2 - 0.05])
     h.extra_brass = h.part("brass", "brass", var=0.02)
-    h.extra_copper = h.part("copper", "copper", var=0.05)
+    # old copper sheet (iron kit dents and streaks, copper-brown colour, metal 0.6): the flat
+    # 'copper' material rendered as a salmon plane in three.js (round 1)
+    h.extra_copper = h.part("copper", "copper_old", var=0.05)
     glass = h.part("glass", "glass", var=0.0)
     yF = h.yF
     P = h.paint
@@ -169,7 +214,7 @@ def build(lite):
     h.build_counter(x0=-xin + 0.02, x1=xin - 0.02, brackets=3)
     h.build_shelves(x0=-xin + 0.05, x1=xin - 0.05, band=None)
     h.build_roof(cover="shingles", fascia_band="cream", barge_band="cream")
-    h.build_snow()
+    h.build_snow(drifts=3)
     # cream trim: corner boards, rails, counter lip
     for x in (h.x0 + 0.05, h.x1 - 0.05):
         for y in (yF + 0.0, h.yB - 0.0):
@@ -213,14 +258,13 @@ def build(lite):
 def preview(objs):
     env = state.env_collection()
     yF = -D / 2
+    if pipeline.vendor_props([("prop_books_shelf_1", "slot_shelf_1"), ("prop_books_shelf_2", "slot_shelf_2"),
+                              ("prop_books_counter", "slot_counter")]):
+        return _lights_and_camera(yF)
     books = Part("env_books", "paint", var=0.1)
     bands = ["red", "green", "blue", "black", "cream", "red", "gold"]
     R = state.rng
     shelves = [(z, D / 2 - 0.2, -1.0, 1.0) for z in (1.38, 1.78)]
-    xc = W / 2 - 0.1 - CAB_W / 2
-    for cx in (-xc, xc):
-        for z in (0.633, 1.063, 1.493, 1.913):
-            shelves.append((z, yF - CAB_D / 2 + 0.06, cx - 0.27, cx + 0.27))
     for z, y, xa, xb in shelves:
         x = xa
         while x < xb - 0.03:
@@ -238,6 +282,10 @@ def preview(objs):
                       rot=(0, 0, R.uniform(-0.2, 0.2)))
             zz += t
     books.finish(env)
+    return _lights_and_camera(yF)
+
+
+def _lights_and_camera(yF):
     render.lights_at_markers(energy=100)
     render.add_light("env_fill", 'AREA', (0, 0.2, 2.5), 200, size=2.0)
     render.add_light("env_lantern", 'POINT', (W / 2 + 0.03, yF - 0.3, 1.95), 30, size=0.08)

@@ -1,6 +1,6 @@
 // Stall sounds, synthesised live as in the prototype: clink, pour, sizzle, page, chime, whoosh.
 // They have their own bus straight to the output and are never faded with the music.
-import { audioContext, noiseBuffer, impulse } from './context.js';
+import { audioContext, noiseBuffer, impulse, output } from './context.js';
 
 let bus = null, rev = null, crackleBuf = null, until = 0;
 let isMusicPlaying = () => false;
@@ -15,7 +15,7 @@ function ensure() {
   bus = AC.createGain(); bus.gain.value = 0.8;
   const lo = AC.createBiquadFilter(); lo.type = 'highshelf'; lo.frequency.value = 8000; lo.gain.value = -3;
   const comp = AC.createDynamicsCompressor(); comp.threshold.value = -20; comp.knee.value = 12; comp.ratio.value = 3; comp.attack.value = 0.005; comp.release.value = 0.25;
-  bus.connect(lo); lo.connect(comp); comp.connect(AC.destination);
+  bus.connect(lo); lo.connect(comp); comp.connect(output());
   rev = AC.createGain(); rev.gain.value = 0.22;
   const conv = AC.createConvolver(); conv.buffer = impulse(1.4);
   rev.connect(conv); conv.connect(bus);

@@ -11,7 +11,7 @@ const { chromium } = pw.default || pw;
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
-const OUT = path.resolve(opt('--out', '../review/round-1/lighting/raw'));
+const OUT = path.resolve(opt('--out', '../review/round-2/lighting/raw'));
 const ONLY = opt('--only', 'all');
 const W = +opt('--w', 1280), H = +opt('--h', 720);
 // --var name='?query' adds a one-off variant (tuning experiments)

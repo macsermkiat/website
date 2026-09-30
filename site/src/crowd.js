@@ -479,6 +479,19 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
    * Does a person at `pos` stand between a close camera and what it looks at? Anyone in front of the camera,
    * nearer than the target, inside a cone of about 35 degrees round the sight line (body or head).
    */
+  /**
+   * In a stall's close-up (the camera within 12 m of what it looks at), anyone standing between the camera and
+   * the stall inside the picture, even at its edge, steps out, so no half figure is cut by the frame.
+   */
+  function inCloseUp(pos, from, dir, len) {
+    if (len > 12) return false;
+    rel.set(pos.x - from.x, 0, pos.z - from.z);
+    const d = rel.length();
+    if (d > len + 0.8 || d < 0.05) return false;
+    const fx = dir.x, fz = dir.z, fl = Math.hypot(fx, fz) || 1;
+    const cos = (rel.x * fx + rel.z * fz) / (d * fl);
+    return cos > Math.cos((46 * Math.PI) / 180);
+  }
   function blocks(pos, from, dir, len) {
     for (const y of [1.0, 1.6]) {
       probe.set(pos.x, pos.y + y, pos.z);
@@ -556,7 +569,7 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
       for (const p of crowd) {
         // Vendors stay: they are what a close-up looks at. Anyone else on the sight line, or on the line to a
         // vendor in view (the queue at the counter), steps out of the shot.
-        if (look) p.g.visible = p.vendor || !(seg < 20 && (blocks(p.g.position, camera.position, segDir, seg) || blocksVendor(p.g.position, camera.position)));
+        if (look) p.g.visible = p.vendor || !(seg < 20 && (blocks(p.g.position, camera.position, segDir, seg) || blocksVendor(p.g.position, camera.position) || inCloseUp(p.g.position, camera.position, segDir, seg)));
         if (lodOn) applyLod(p, _cp);
         if (p.lvl.mixer && !still && p.g.visible) p.lvl.mixer.update(dt);
         if (p.walk && !still) {

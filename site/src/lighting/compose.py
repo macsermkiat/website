@@ -1,19 +1,20 @@
-"""Make the review JPEGs from the raw screenshots (shoot.mjs / shoot-market.mjs).
+"""Make the round-2 review JPEGs from the raw screenshots (shoot.mjs / shoot-market.mjs).
 
     python3 site/src/lighting/compose.py   # from the repo root
+Env: RAW (this round's test-bench PNGs), MARKET (this round's market PNGs), BEFORE (the market PNGs
+with round 1's lighting). Every image is at most 1280 px wide (BUILD.md).
 """
 import os
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-RAW = os.environ.get('RAW') or os.path.join(ROOT, 'review/round-1/lighting/raw')
-PASS1 = os.environ.get('PASS1')  # the pass-1 'after' PNG, for the pass-1 vs pass-2 sheet
-PASS2 = os.environ.get('PASS2')  # a folder with the pass-2 'after.png' and 'lite.png', for the pass-3 sheets
-PASS2_MARKET = os.environ.get('PASS2_MARKET')  # a folder with the pass-2 market_home*.jpg
-PASS3 = os.environ.get('PASS3')  # a folder with the pass-3 'after.png' and 'lite.png', for the pass-4 sheets
-PASS3_MARKET = os.environ.get('PASS3_MARKET')  # a folder with the pass-3 market_home*.jpg
-OUT = os.path.join(ROOT, 'review/round-1/lighting')
+OUT = os.path.join(ROOT, 'review/round-2/lighting')
+RAW = os.environ.get('RAW') or os.path.join(OUT, 'raw')
+MARKET = os.environ.get('MARKET') or os.path.join(OUT, 'raw_market')
+BEFORE = os.environ.get('BEFORE') or os.path.join(OUT, 'raw_before')
+R1 = os.path.join(ROOT, 'review/round-1/lighting')
 REF = os.path.join(ROOT, 'review/reference/gluehwein_preview.png')
+MAXW = 1280
 
 
 def font(size):
@@ -27,102 +28,98 @@ def label(im, text, size=18):
     d = ImageDraw.Draw(im, 'RGBA')
     f = font(size)
     w = d.textlength(text, font=f)
-    d.rectangle((8, 8, 8 + w + 16, 8 + size + 12), fill=(0, 0, 0, 150))
+    d.rectangle((8, 8, 8 + w + 16, 8 + size + 12), fill=(0, 0, 0, 160))
     d.text((16, 13), text, font=f, fill=(245, 230, 205, 255))
     return im
 
 
-def load(name, size=None):
-    p = name if os.path.isabs(name) else os.path.join(RAW, name + '.png')
-    if not os.path.exists(p):
+def load(path, size=None, crop=None):
+    if not path or not os.path.exists(path):
         return None
-    im = Image.open(p).convert('RGB')
+    im = Image.open(path).convert('RGB')
+    if crop:
+        im = im.crop(crop)
     return im.resize(size, Image.LANCZOS) if size else im
 
 
-def grid(cells, cols, cell, out, q=88):
-    rows = (len(cells) + cols - 1) // cols
-    sheet = Image.new('RGB', (cell[0] * cols, cell[1] * rows), (8, 10, 18))
-    for i, (name, text) in enumerate(cells):
-        im = load(name, cell)
-        if im is None:
-            continue
-        sheet.paste(label(im, text, 16), ((i % cols) * cell[0], (i // cols) * cell[1]))
-    sheet.save(os.path.join(OUT, out), quality=q)
-    print('wrote', out, sheet.size)
+def save(im, name):
+    if im.width > MAXW:
+        im = im.resize((MAXW, round(im.height * MAXW / im.width)), Image.LANCZOS)
+    p = os.path.join(OUT, name)
+    im.save(p, quality=88)
+    print(name, im.size)
 
 
-def crops(cells, box, scale, out):
-    w, h = box[2] - box[0], box[3] - box[1]
-    sheet = Image.new('RGB', (w * scale * len(cells), h * scale), (8, 10, 18))
-    for i, (name, text) in enumerate(cells):
-        im = load(name)
-        if im is None:
-            continue
-        im = im.resize((1280, 720), Image.LANCZOS).crop(box).resize((w * scale, h * scale), Image.LANCZOS)
-        sheet.paste(label(im, text, 15), (i * w * scale, 0))
-    if sheet.width > 1280:  # the review contract: images at most 1280 px wide
-        sheet = sheet.resize((1280, round(sheet.height * 1280 / sheet.width)), Image.LANCZOS)
-    sheet.save(os.path.join(OUT, out), quality=92)
-    print('wrote', out, sheet.size)
-
-
-def save(name, out, text):
-    im = load(name)
-    if im is None:
+def grid(cells, cols, cell, name, size=18):
+    """cells: [(image or None, label)], laid out in `cols` columns of `cell` (w, h)."""
+    cells = [(im, t) for im, t in cells if im is not None]
+    if not cells:
         return
-    if im.width > 1280:
-        im = im.resize((1280, round(im.height * 1280 / im.width)), Image.LANCZOS)
-    label(im, text).save(os.path.join(OUT, out), quality=90)
-    print('wrote', out, im.size)
+    rows = (len(cells) + cols - 1) // cols
+    sheet = Image.new('RGB', (cell[0] * min(cols, len(cells)), cell[1] * rows), (12, 12, 16))
+    for i, (im, t) in enumerate(cells):
+        im = label(im.resize(cell, Image.LANCZOS), t, size)
+        sheet.paste(im, ((i % cols) * cell[0], (i // cols) * cell[1]))
+    save(sheet, name)
 
 
-# the side-by-side against the Cycles reference (two 640x360 halves) and a full-width stack
-grid([(REF, 'Cycles reference (AgX Punchy)'), ('after', 'three.js, lighting/index.js')], 2, (640, 360), 'side_by_side.jpg', 92)
-stack = [(REF, 'Cycles reference'), ('after', 'three.js: lighting/index.js (full)')]
-grid(stack, 1, (1280, 720), 'side_by_side_full.jpg', 90)
-grid([('before', 'Before: engine stand-in lighting'), ('after', 'After: lighting/index.js')], 2, (640, 360), 'before_after.jpg', 92)
-if PASS1:
-    grid([(REF, 'Cycles reference'), (PASS1, 'Pass 1'), ('after', 'Pass 2 (full)'), ('lite', 'Pass 2 (lite)')], 2, (640, 360), 'pass1_vs_pass2.jpg', 92)
-    crops([(REF, 'Cycles'), (PASS1, 'Pass 1'), ('after', 'Pass 2'), ('lite', 'Pass 2 lite')], (620, 350, 800, 470), 2, 'pot_closeup.jpg')
-    crops([(REF, 'Cycles'), (PASS1, 'Pass 1'), ('after', 'Pass 2')], (430, 200, 1030, 330), 1, 'bulbs_garland.jpg')
-if PASS2:
-    p2 = lambda n: os.path.join(PASS2, n + '.png')
-    grid([(REF, 'Cycles reference'), (p2('after'), 'Pass 2 (full)'), ('after', 'Pass 3 (full)'), ('lite', 'Pass 3 (lite)')], 2, (640, 360), 'pass2_vs_pass3.jpg', 92)
-    # the ground left of the stall: dashed streaks and the pale strip at the wall base (pass 2) against pass 3
-    crops([(REF, 'Cycles'), (p2('after'), 'Pass 2: streaks, strip'), ('after', 'Pass 3')], (0, 540, 480, 720), 1, 'ground_artifacts.jpg')
-    # the counter top on lite: rows of dots (pass 2, no MSAA) against pass 3 (2x MSAA)
-    crops([(p2('lite'), 'Pass 2 lite: dots'), ('lite', 'Pass 3 lite')], (460, 425, 700, 485), 3, 'lite_counter.jpg')
-    # the fascia and bulbs: pass 2 lit the board behind the bulbs to lightness 0.44 (Cycles 0.26)
-    crops([(REF, 'Cycles'), (p2('after'), 'Pass 2'), ('after', 'Pass 3')], (430, 200, 1030, 330), 1, 'bulbs_garland.jpg')
-    # the moon-side wall: near-black in Cycles; pass 2's rim lit it blue
-    crops([(REF, 'Cycles'), (p2('after'), 'Pass 2'), ('after', 'Pass 3')], (300, 300, 480, 620), 1, 'left_wall.jpg')
-if PASS2_MARKET:
-    m2 = lambda n: os.path.join(PASS2_MARKET, n + '.jpg')
-    grid([(m2('market_home'), 'Pass 2, full'), ('market', 'Pass 3, full'), (m2('market_home_snow'), 'Pass 2, snow'), ('market_snow', 'Pass 3, snow')], 2, (640, 360), 'market_pass2_vs_pass3.jpg', 90)
-if PASS3:
-    p3 = lambda n: os.path.join(PASS3, n + '.png')
-    grid([(REF, 'Cycles reference'), (p3('after'), 'Pass 3 (full)'), ('after', 'Pass 4 (full)'), ('lite', 'Pass 4 (lite)')], 2, (640, 360), 'pass3_vs_pass4.jpg', 92)
-    # lite: the unshadowed interior light shone through the walls onto the barge boards, the eave, the
-    # plank edges and the ground (pass 3); pass 4 clips it to the stall's interior
-    crops([(p3('lite'), 'Pass 3 lite: leak'), ('lite', 'Pass 4 lite: clipped'), ('after', 'Pass 4 full')], (230, 20, 500, 700), 1, 'lite_leak.jpg')
-    crops([(REF, 'Cycles'), (p3('lite'), 'Pass 3 lite'), ('lite', 'Pass 4 lite')], (460, 240, 960, 480), 1, 'lite_interior.jpg')
-    # the bulb row and the lambrequin: pass 3 bloomed wider (17-21 px) and lit the lambrequin to 0.35
-    crops([(REF, 'Cycles'), (p3('after'), 'Pass 3'), ('after', 'Pass 4')], (430, 200, 1030, 330), 1, 'bulbs_garland.jpg')
-    # the roof above the bulbs and the cobbles beside the stall: dark and blue in pass 3
-    crops([(REF, 'Cycles'), (p3('after'), 'Pass 3'), ('after', 'Pass 4')], (440, 100, 1280, 680), 1, 'roof_ground.jpg')
-if PASS3_MARKET:
-    m3 = lambda n: os.path.join(PASS3_MARKET, n + '.jpg')
-    grid([(m3('market_home'), 'Pass 3, full'), ('market', 'Pass 4, full'), (m3('market_home_lite'), 'Pass 3, lite'), ('market_lite', 'Pass 4, lite')], 2, (640, 360), 'market_pass3_vs_pass4.jpg', 90)
-save('capture', 'after_capture.jpg', 'Full, ?capture=1 (environment captured from the scene)')
-grid([('sky', 'Sky, full (bloom at full resolution)'), ('sky_lite', 'Sky, lite (half-resolution bloom, own weights)')], 2, (640, 360), 'bloom_full_vs_lite.jpg', 92)
-save('before', 'before.jpg', 'Before: engine stand-in lighting')
-save('after', 'after.jpg', 'After: lighting/index.js (full)')
-save('lite', 'after_lite.jpg', 'After: lite profile (4 lights, no shadows, interior light clipped to the stall)')
-save('snow', 'snow_on.jpg', 'setSnow(true)')
-save('sky', 'sky_moon_stars.jpg', 'Sky: gradient, stars, clouds, haloed moon')
-save('wide', 'wide.jpg', 'Wide: fog and ground mist')
-grid([('wide', 'snow off'), ('wide_snow', 'snow on'), ('snow_lite', 'snow on, lite'), ('snow', 'snow on, close')], 2, (640, 360), 'snow_toggle.jpg', 90)
-save('market', 'market_home.jpg', 'Market home view, full')
-save('market_snow', 'market_home_snow.jpg', 'Market home view, snow on')
-save('market_lite', 'market_home_lite.jpg', 'Market home view, lite')
+def main():
+    raw = lambda n: os.path.join(RAW, n + '.png')
+    mk = lambda n: os.path.join(MARKET, n + '.png')
+    bf = lambda n: os.path.join(BEFORE, n + '.png')
+    half = (640, 360)
+
+    # the test bench
+    after = load(raw('after'))
+    if after:
+        save(label(after.copy(), 'Round 2, full (test bench)'), 'after.jpg')
+    lite = load(raw('lite'))
+    if lite:
+        save(label(lite.copy(), 'Round 2, lite (test bench)'), 'after_lite.jpg')
+    r1 = load(os.path.join(R1, 'after.jpg'))
+    if r1:
+        save(label(r1.copy(), 'Round 1 (pass 4), full: before'), 'before.jpg')
+    grid([(load(REF), 'Cycles reference'), (r1, 'Round 1, full'), (after, 'Round 2, full'), (lite, 'Round 2, lite')],
+         2, half, 'side_by_side.jpg')
+    ref = load(REF)
+    if ref and after:
+        grid([(ref, 'Cycles reference'), (after, 'Round 2, full')], 2, half, 'side_by_side_pair.jpg')
+    # the sign lamp on the bench: board without and with it (crop around the "Glühwein" board)
+    box = (470, 440, 990, 700)
+    nosign = load(raw('nosign'), crop=box)
+    if nosign and after:
+        grid([(load(REF, crop=box), 'Cycles'), (nosign, 'No sign lamp'), (after.crop(box), 'Sign lamp')], 3, (426, 213), 'sign_lamp_bench.jpg', 14)
+    snow = load(raw('snow'))
+    if snow:
+        grid([(after, 'Snow off'), (snow, 'Snow on (setSnow(true))')], 2, half, 'snow_toggle.jpg')
+    if lite:
+        # the lite roof and gable (the round-1 leak) and the lite back wall
+        grid([(load(REF, crop=(250, 20, 650, 260)), 'Cycles'), (lite.crop((250, 20, 650, 260)), 'Lite: gable and eave')], 2, (640, 384), 'lite_gable.jpg')
+
+    # the market
+    pairs = [
+        ('market', 'Home view, full'),
+        ('market_lite', 'Home view, lite'),
+        ('market_snow', 'Home view, snow'),
+        ('glueh', 'Glühwein entered, full'),
+        ('wurst', 'Bratwurst entered, full'),
+        ('lite_glueh', 'Glühwein entered, lite'),
+        ('lite_band', 'Bandstand entered, lite'),
+    ]
+    for n, t in pairs:
+        a = load(mk(n))
+        if a:
+            save(label(a.copy(), f'Round 2: {t}'), f'market_{n}.jpg' if not n.startswith('market') else f'{n}.jpg')
+        b = load(bf(n))
+        if a and b:
+            grid([(b, f'Round 1: {t}'), (a, f'Round 2: {t}')], 2, half, f'before_after_{n}.jpg', 14)
+    # the signs from the home view: the Glühwein and Bratwurst stands at 2x
+    a, b = load(mk('market')), load(bf('market'))
+    crop = (230, 360, 590, 540)
+    if a:
+        cells = ([(b.crop(crop), 'Round 1: home view, left stalls (2x)')] if b else []) + [(a.crop(crop), 'Round 2: home view, left stalls (2x)')]
+        grid(cells, 1, (720, 360), 'home_signs.jpg', 14)
+
+
+if __name__ == '__main__':
+    main()

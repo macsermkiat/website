@@ -109,10 +109,22 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
   const lit = new Map(); // model id -> 'lit' (shadowed interior light) | 'unshadowed'
 
   let L0offset = null;
-  order.forEach((s, i) => {
+  // at most `perModel` real lights per model (BUILD.md: 2 per section stall). A third light_ in a stall,
+  // such as the reading lamp on the Bücherstand's counter prop, becomes a small local glow instead
+  // (no three.js light, no ground pool): Codex round 1 counted three markers there.
+  const perModel = new Map();
+  const extras = [];
+  let used = 0;
+  order.forEach((s) => {
     const ud = s.obj.userData || {};
     const K = N.warm[s.lk] || N.warm.other;
-    if (i < cap) {
+    const n = perModel.get(s.id) || 0;
+    if (n >= (N.warm.perModel ?? 2) && STALLS.has(s.kind)) { extras.push(s); return; }
+    // a prop's lamp in a stall that the budget cannot light: a small glow, not a pool on the ground
+    if (used >= cap && s.lk === 'lamp' && STALLS.has(s.kind)) { extras.push(s); return; }
+    if (used < cap) {
+      used++;
+      perModel.set(s.id, n + 1);
       const { holder, local } = s;
       const type = lampType(s, s.lk, local);
       const color = ud.color ? new THREE.Color(ud.color) : warm.clone();
@@ -196,6 +208,8 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
         L.position.copy(s.obj.worldToLocal(w));
         L0offset = null;
       }
+      L.userData.spot = s;
+      s.light = L;
       lights.push(L);
     } else {
       const m = new THREE.Mesh(poolGeo, poolMat);
@@ -207,16 +221,24 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
       m.raycast = () => {};
       scene.add(m);
       pools.push(m);
+      s.pool = m;
     }
   });
 
   // an interior glow for every section and deco stall (see settings.js glow.interior)
   const G = N.glow?.interior;
   const interiors = [];
+  const X = N.glow?.lamp;
+  if (X) {
+    for (const s of extras) {
+      interiors.push({ a: s.pos.clone(), color: warm.clone(), intensity: X.intensity, reach: X.reach, tag: 'lamp', priority: 0, id: s.id, how: 'lamp' });
+    }
+  }
   if (G) {
     for (const [id, list] of byModel) {
-      const s = list.find((x) => !x.front) || list[0];
-      if (!STALLS.has(s.lk)) continue;
+      // the stall's own interior light_ (not a prop's lamp, whose kind is 'lamp')
+      const s = list.find((x) => !x.front && x.lk === x.kind) || list.find((x) => !x.front) || list[0];
+      if (!STALLS.has(s.kind)) continue;
       const how = lit.get(id) || 'only';
       const base = s.holder.getWorldPosition(new THREE.Vector3()).y;
       const a = s.pos.clone();
@@ -237,18 +259,38 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
   // above `ceiling` m, so the walls, the sign and the counter do not get it): the warm pool that
   // Cycles' omnidirectional light_ marker spreads around the stall, which the front-fill spot, aimed
   // down at the front, cannot reach without lighting the sign and the lower front wall as well
+  // each stall's sign board (found once; used by the sign lamps below and to keep the roof glow off it)
+  const SG = N.glow?.sign;
+  const signRects = new Map();
+  if (SG) {
+    for (const [id, list] of byModel) {
+      const s = list[0];
+      if (!STALLS.has(s.kind)) continue;
+      const slot = findNode(s.holder, /^slot_sign/i);
+      if (!slot) continue;
+      try { const r = signRect(s.holder, slot, SG); if (r) signRects.set(id, r); } catch (e) { console.warn('[lighting] sign rect failed', e); }
+    }
+  }
   const E = N.glow?.eave, SP = N.glow?.spill;
   if (E || SP) {
     for (const [id, list] of byModel) {
-      const s = list.find((x) => x.front);
-      if (!s || !STALLS.has(s.lk)) continue;
+      const s = list.find((x) => x.front && x.lk === x.kind);
+      if (!s || !STALLS.has(s.kind)) continue;
       const out = new THREE.Vector3(0, 0, 1).transformDirection(s.holder.matrixWorld).setY(0).normalize();
       if (E) {
         const a = s.pos.clone().addScaledVector(out, E.out);
         a.y += E.up;
+        // a sign board on the fascia, right in front of this glow, would take most of it and wash out
+        // (round 1: the Glühwein board at 240/255 with pale pink letters): start the glow over its top
+        let floor = s.pos.y - E.below;
+        const sr = signRects.get(id);
+        if (sr) {
+          const top = sr.center.y + sr.height / 2;
+          if (top > floor && sr.center.distanceTo(a) < E.reach) floor = top + 0.03;
+        }
         interiors.push({
           a, color: frontWarm.clone(), intensity: E.intensity, reach: E.reach, oneSided: true,
-          floor: s.pos.y - E.below, tag: 'eave', priority: 0, id, how: 'eave',
+          floor, tag: 'eave', priority: 0, id, how: 'eave',
         });
       }
       if (SP) {
@@ -263,8 +305,58 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
     }
   }
 
+  // a sign lamp for every stall with a slot_sign: a short bar lamp on two arms just above the board,
+  // with a one-sided line glow along it (shading.js) clipped to the board's height band, so the
+  // painted letters read from the square and close up (settings.js glow.sign). The glow is not a
+  // three.js light, so the lite market's four real lights are untouched. The fixtures are added here
+  // (world space; `fixtures`), one merged mesh per stall.
+  const fixtures = [], signs = [];
+  if (SG) {
+    for (const [id, list] of byModel) {
+      const s = list[0];
+      const rect = signRects.get(id);
+      if (!rect) continue;
+      const section = s.kind === 'section';
+      const color = new THREE.Color().setRGB(...(SG.color || N.warm.frontColor));
+      // the lamp: `out` m in front of the board's face, `up` m over its top edge; the glow runs along
+      // the lamp's bar (a line light the width of the lamp)
+      const half = Math.min(rect.width * 0.5 * SG.span, SG.maxHalf ?? 0.9);
+      const lamp = rect.center.clone().addScaledVector(rect.normal, SG.out).addScaledVector(rect.up, rect.height / 2 + SG.up);
+      const a = lamp.clone().addScaledVector(rect.right, -half), b = lamp.clone().addScaledVector(rect.right, half);
+      const g = {
+        a, b, color, intensity: SG.intensity * (section ? 1 : SG.decoScale ?? 0.6), reach: SG.reach, oneSided: true,
+        floor: rect.center.y - rect.height / 2 - SG.below, ceiling: lamp.y - 0.02,
+        tag: 'sign', priority: section ? 1 : 0, id, how: 'sign',
+      };
+      interiors.push(g);
+      signs.push({ id, rect, lamp, half });
+      if (SG.fixture) fixtures.push(signFixture(rect, lamp, half, SG, color));
+    }
+    // one mesh for all the lamps of this placement (two draw calls, not two per stall)
+    if (fixtures.length > 1) {
+      const parts = fixtures.map((m) => { m.updateMatrix(); return m.geometry.applyMatrix4(m.matrix); });
+      const iron = mergeGeos(parts.map((g) => sub(g, 0))), lit = mergeGeos(parts.map((g) => sub(g, 1)));
+      const one = new THREE.Mesh(mergeGeos([iron, lit], true), fixtures[0].material);
+      Object.assign(one, { name: 'lighting_sign_lamps', castShadow: false, receiveShadow: false, raycast: () => {} });
+      one.userData.lightingFixture = true;
+      parts.forEach((g) => g.dispose());
+      fixtures.length = 0;
+      fixtures.push(one);
+    }
+  }
+
+  // cam_view / cam_target of each model, for finding the place the visitor has entered (index.js)
+  const views = [];
+  for (const [id, list] of byModel) {
+    const h = list[0].holder;
+    const v = findNode(h, /^cam_view/i), t = findNode(h, /^cam_target/i);
+    if (v) views.push({ id, holder: h, kind: list[0].lk, view: v, target: t });
+  }
+
   return {
-    lights, pools, cap, blockers,
+    lights, pools, cap, blockers, fixtures, signs, views,
+    /** Every light_ spot, with its model (`holder`), kind (`lk`), `front`, and `light` when it has one. */
+    spots: all,
     /** Clip boxes for the unshadowed interior lights ({ light, center, half, cos, sin, fade, front, cut }). */
     clips,
     /** Interior glows ({ a, color, intensity, reach, oneSided, floor }), one per stall; createLighting adds them. */
@@ -274,11 +366,193 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
     dispose() {
       lights.forEach((l) => { l.target?.removeFromParent(); l.removeFromParent(); l.dispose?.(); });
       pools.forEach((p) => p.removeFromParent());
+      fixtures.forEach((f) => { f.removeFromParent(); f.geometry.dispose(); });
       blockers.forEach((b) => { b.removeFromParent(); b.geometry.dispose(); });
       poolGeo.dispose();
       poolMat.dispose();
     },
   };
+}
+
+/**
+ * Move an unshadowed warm light to another light_ spot (the place the visitor has entered, or back
+ * home): reparent it to the spot's empty and give it that spot's colour, intensity, reach and aim.
+ * The number of point and spot lights in the scene stays the same, so no material recompiles. A point
+ * light serving a front spot hangs where the front fill would, at `pointFront` of the front strength.
+ * Returns { target, clip }: the intensity to fade up to, and a clip box when it becomes an unshadowed
+ * stall interior (null otherwise).
+ */
+export function retargetLight(L, s, N, { lite = false } = {}) {
+  const K = N.warm[s.lk] || N.warm.other;
+  const U = N.warm.unshadowed;
+  const ud = s.obj.userData || {};
+  const color = ud.color ? new THREE.Color(ud.color) : warmColor(N, s.front);
+  L.color.copy(color);
+  s.obj.add(L);
+  L.position.set(0, 0, 0);
+  s.holder.updateMatrixWorld(true);
+  let target = 0, clip = null;
+  if (s.front) {
+    const lift = K.frontLift ?? 0, outM = K.frontOut ?? 0;
+    const off = new THREE.Vector3(0, lift, outM).applyQuaternion(s.holder.getWorldQuaternion(new THREE.Quaternion()));
+    L.position.copy(s.obj.worldToLocal(s.obj.getWorldPosition(new THREE.Vector3()).add(off)));
+    L.distance = Number(ud.distance) || K.frontDistance || K.pointDistance;
+    if (L.isSpotLight) {
+      L.angle = K.frontAngle ?? 0.95; L.penumbra = K.frontPenumbra ?? 0.45;
+      L.target.position.copy(new THREE.Vector3(s.local.x, 0, s.local.z + (K.frontAim ?? 0.6)).applyMatrix4(s.holder.matrixWorld));
+      target = Number(ud.intensity) || K.front;
+    } else target = (Number(ud.intensity) || K.front || K.point) * (N.warm.pointFront ?? 0.7);
+  } else {
+    const type = lampType(s, s.lk, s.local);
+    if (L.isSpotLight) {
+      L.angle = 0.95; L.penumbra = 0.6;
+      const a = Array.isArray(ud.aim) ? ud.aim : [s.local.x, 0, s.local.z];
+      L.target.position.copy(new THREE.Vector3(...a).applyMatrix4(s.holder.matrixWorld));
+      L.distance = Number(ud.distance) || K.spotDistance;
+      target = Number(ud.intensity) || (type === 'spot' ? K.spot : K.point);
+    } else {
+      L.distance = Number(ud.distance) || K.pointDistance;
+      target = Number(ud.intensity) || K.point;
+      if (STALLS.has(s.lk) && U && !ud.distance) {
+        L.distance = Math.min(L.distance, U.distance);
+        target *= U.scale;
+        if (U.clip) {
+          try { const box = interiorBox(s.holder, s.pos, U.clip); if (box) clip = { light: L, ...box }; } catch (e) { console.warn('[lighting] interior clip failed', e); }
+        }
+        if (!clip) L.position.y -= U.drop / (s.obj.getWorldScale(new THREE.Vector3()).y || 1);
+      }
+    }
+  }
+  L.target?.updateMatrixWorld?.();
+  L.userData.spot = s;
+  L.userData.baseIntensity = target;
+  L.userData.front = !!s.front;
+  L.name = `lighting_${s.obj.name}`;
+  return { target, clip };
+}
+
+/** The first node under `root` whose name matches `re`. */
+function findNode(root, re) {
+  let hit = null;
+  root.traverse((o) => { if (!hit && re.test(o.name || '')) hit = o; });
+  return hit;
+}
+
+/**
+ * The painted board at a slot_sign empty, found by casting rays at it from in front (the stall's +Z):
+ * the surface the empty sits on, and how far it runs to either side and up and down at about the same
+ * depth. Returns { center, normal (out of the board), right, up, width, height } in world space, or a
+ * default 1.2 x 0.35 m board at the empty when nothing is hit.
+ */
+export function signRect(holder, slot, SG = {}) {
+  holder.updateMatrixWorld(true);
+  const P = slot.getWorldPosition(new THREE.Vector3());
+  const q = holder.getWorldQuaternion(new THREE.Quaternion());
+  const out = new THREE.Vector3(0, 0, 1).applyQuaternion(q).setY(0).normalize();
+  const up = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(up, out).normalize();
+  const meshes = [];
+  holder.traverse((o) => { if (o.isMesh && o.visible && !o.userData.shadowOnly && !/^bulbs_/i.test(o.name)) meshes.push(o); });
+  const rc = new THREE.Raycaster();
+  const back = out.clone().negate();
+  const depth = (du, dv) => {
+    rc.set(P.clone().addScaledVector(right, du).addScaledVector(up, dv).addScaledVector(out, 1.2), back);
+    rc.far = 2.0;
+    const h = rc.intersectObjects(meshes, false)[0];
+    return h ? h.distance : null;
+  };
+  // the board's own depth near the empty: of a few samples, the deepest within 3 cm of the nearest
+  // (raised letters stand 1-2 cm proud of the board; the wall behind it is further back than that)
+  const near = [[0, 0], [0.06, 0], [-0.06, 0], [0.12, 0], [-0.12, 0], [0, 0.04], [0, -0.04]].map(([u, v]) => depth(u, v)).filter((d) => d != null);
+  const dmin = near.length ? Math.min(...near) : null;
+  const d0 = dmin == null ? null : Math.max(...near.filter((d) => d < dmin + 0.03));
+  const fallback = { center: P.clone(), normal: out, right, up, width: SG.defaultWidth ?? 1.2, height: SG.defaultHeight ?? 0.35 };
+  if (d0 == null || d0 > 1.6) return fallback;
+  // walk out in small steps until the surface steps back: the board's edge is a step back in depth
+  // (its thickness, or the gap to the wall behind it). A surface at the same depth (within `depthTol`
+  // of the last, so a slightly tilted board is followed) moves the reference; anything proud of the
+  // board (raised letters, a frame) is walked over.
+  const tol = SG.depthTol ?? 0.008;
+  const extent = (fn, step, max) => {
+    let t = 0, last = d0;
+    while (t + step <= max) {
+      const d = fn(t + step);
+      if (d == null || d > last + tol) break;
+      if (d >= last - tol) last = d;
+      t += step;
+    }
+    return t;
+  };
+  const r = extent((t) => depth(t, 0), 0.02, 1.6), l = extent((t) => depth(-t, 0), 0.02, 1.6);
+  const cu = (r - l) / 2; // the board's middle across
+  const u = extent((t) => depth(cu, t), 0.015, 0.8), dn = extent((t) => depth(cu, -t), 0.015, 0.8);
+  const width = Math.max(0.3, r + l + 0.04), height = Math.max(0.15, u + dn + 0.02);
+  const center = P.clone().addScaledVector(out, 1.2 - d0).addScaledVector(right, cu).addScaledVector(up, (u - dn) / 2);
+  return { center, normal: out, right, up, width, height };
+}
+
+let fixtureMats = null;
+/**
+ * The sign lamp's fixture: a dark iron bar on two arms, with a warm lit strip under it (it blooms a
+ * little, so the light on the board has a source). One mesh, two materials.
+ */
+function signFixture(rect, lamp, half, SG, color) {
+  if (!fixtureMats) {
+    const iron = new THREE.MeshStandardMaterial({ color: 0x1b1714, metalness: 0.7, roughness: 0.45 });
+    iron.name = 'lighting_sign_lamp_iron';
+    const lit = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: new THREE.Color().setRGB(1, 0.72, 0.42), emissiveIntensity: SG.fixtureEmissive ?? 2.2 });
+    lit.name = 'lighting_sign_lamp_glow';
+    fixtureMats = [iron, lit];
+  }
+  const parts = [];
+  const bar = new THREE.BoxGeometry(half * 2 + 0.03, 0.024, 0.04); // the lamp's shade
+  const strip = new THREE.BoxGeometry(half * 2, 0.005, 0.022).translate(0, -0.0135, 0); // its lit underside
+  // two arms back to the board's top edge
+  const armLen = SG.out;
+  const arm = (x) => new THREE.BoxGeometry(0.01, 0.01, armLen).translate(x, -0.006, -armLen / 2);
+  const iron = mergeGeos([bar, arm(-half * 0.7), arm(half * 0.7)]);
+  const g = mergeGeos([iron, strip], true);
+  const m = new THREE.Mesh(g, fixtureMats);
+  m.name = 'lighting_sign_lamp';
+  const basis = new THREE.Matrix4().makeBasis(rect.right, rect.up, rect.normal);
+  m.quaternion.setFromRotationMatrix(basis);
+  m.position.copy(lamp);
+  m.castShadow = false;
+  m.receiveShadow = false;
+  m.raycast = () => {};
+  m.userData.lightingFixture = true;
+  return m;
+}
+
+/** The part of a grouped, non-indexed geometry that uses material `index`. */
+function sub(g, index) {
+  const grp = g.groups.find((x) => x.materialIndex === index);
+  const out = new THREE.BufferGeometry();
+  for (const k of ['position', 'normal', 'uv']) {
+    const a = g.attributes[k];
+    out.setAttribute(k, new THREE.Float32BufferAttribute(a.array.slice(grp.start * a.itemSize, (grp.start + grp.count) * a.itemSize), a.itemSize));
+  }
+  return out;
+}
+
+/** Merge non-indexed copies of box geometries; with `groups`, one material group per input. */
+function mergeGeos(list, groups = false) {
+  const pos = [], nor = [], uv = [];
+  const out = new THREE.BufferGeometry();
+  let start = 0;
+  list.forEach((g0, i) => {
+    const g = g0.index ? g0.toNonIndexed() : g0;
+    pos.push(...g.attributes.position.array);
+    nor.push(...g.attributes.normal.array);
+    if (g.attributes.uv) uv.push(...g.attributes.uv.array); else uv.push(...new Array(g.attributes.position.count * 2).fill(0));
+    const n = g.attributes.position.count;
+    if (groups) out.addGroup(start, n, i);
+    start += n;
+  });
+  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  out.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  return out;
 }
 
 /** The warm-light colour (linear), or the paler front-fill colour. */

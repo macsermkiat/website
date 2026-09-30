@@ -6,7 +6,6 @@ import * as THREE from 'three';
 import inventory from 'virtual:market-inventory';
 import { loadGlb } from './loader.js';
 import { liteVariant, modelExists } from '../layout.js';
-import { placeFor } from '../places.js';
 
 function rel(url) {
   return String(url).replace(/^(\.\/|\/)+/, '').replace(/^(site\/)?(public\/)?/, '').replace(/^models\//, '');
@@ -19,7 +18,7 @@ function normalise(json) {
     for (const s of specs) {
       const model = typeof s === 'string' ? s : s?.model || s?.glb || s?.file || s?.src;
       if (!model) continue;
-      out.push({ owner: String(owner), slot: String(slot).toLowerCase().startsWith('slot_') ? String(slot).toLowerCase() : `slot_${String(slot).toLowerCase()}`, model: rel(model), offset: s?.position || s?.offset || null, rotation: Number(s?.rotation ?? s?.ry) || 0, scale: Number(s?.scale) || 1 });
+      out.push({ set: s?.set || null, lite: s?.lite ? rel(s.lite) : null, asset: s?.asset ? rel(s.asset) : null, owner: String(owner), slot: String(slot).toLowerCase().startsWith('slot_') ? String(slot).toLowerCase() : `slot_${String(slot).toLowerCase()}`, model: rel(model), offset: s?.position || s?.offset || null, rotation: Number(s?.rotation ?? s?.ry) || 0, scale: Number(s?.scale) || 1 });
     }
   };
   const list = Array.isArray(json) ? json : Array.isArray(json?.sets) ? json.sets : Array.isArray(json?.props) ? json.props : null;
@@ -34,23 +33,36 @@ function normalise(json) {
   return out;
 }
 
-/** placed: [{ entry, root, nodes }]. Loads and parents props; never throws. */
-export async function placeProps(placed, { lite, manager, warn, elsewhere = [] }) {
+/**
+ * placed: [{ entry, root, nodes }]. Loads and parents props; never throws.
+ * Bindings are exact: a set's `stall` is a layout.json id, its `slot` a slot_ empty in that stall's model, its
+ * `model` and `lite` files in public/models, and its `asset` (when given) the file that stall is built from.
+ * Anything else is reported (warn + `bindings`), never guessed.
+ */
+export async function placeProps(placed, { lite, manager, warn, elsewhere = [], bindings = [] }) {
   const json = inventory.props;
   if (!json) return 0;
   const items = normalise(json);
   const cache = new Map();
   let n = 0;
+  const bad = (it, problem) => { bindings.push({ set: it.set || it.model, stall: it.owner, problem }); warn(`props.json: ${it.set || it.model}: ${problem}`); };
   await Promise.all(items.map(async (it) => {
-    const owns = (e, file) => e.id.toLowerCase() === it.owner.toLowerCase() || (e.place && e.place === placeFor(it.owner)) || (file && file.toLowerCase().includes(it.owner.toLowerCase()));
-    const target = placed.find((p) => owns(p.entry, p.file));
-    // a set for a stall loaded in the other batch (the lite market loads the deco stalls after its first frame)
-    if (!target && elsewhere.some((e) => owns(e, e.lite) || owns(e, e.model))) return;
-    if (!target) return warn(`props.json: no stall called "${it.owner}".`);
+    const owns = (e) => e.id === it.owner;
+    const target = placed.find((p) => owns(p.entry));
+    // a set for a stall loaded in the other batch (both markets load the deco stalls after the first frame)
+    if (!target && elsewhere.some(owns)) return;
+    if (!target) return bad(it, `no layout entry with id "${it.owner}".`);
+    if (it.asset && target.entry.model && it.asset !== target.entry.model) bad(it, `says stall "${it.owner}" is ${it.asset}, but layout.json builds it from ${target.entry.model}.`);
     const slot = target.nodes.slots[it.slot];
-    if (!slot) return warn(`props.json: ${it.owner} has no ${it.slot}.`);
-    const file = (lite && liteVariant(it.model)) || it.model;
-    if (!modelExists(file)) return warn(`props.json: ${file} is not in public/models.`);
+    if (!slot && target.source === 'standin') return; // a stand-in stall without that shelf
+    if (!slot) return bad(it, `${target.file} has no ${it.slot}.`);
+    let file = it.model;
+    if (lite) {
+      if (it.lite && modelExists(it.lite)) file = it.lite;
+      else if (it.lite) bad(it, `lite file ${it.lite} is not in public/models; the lite market loads ${it.model}.`);
+      else file = liteVariant(it.model) || it.model;
+    }
+    if (!modelExists(file)) return bad(it, `${file} is not in public/models.`);
     try {
       if (!cache.has(file)) cache.set(file, loadGlb(file, manager));
       const src = await cache.get(file);
@@ -60,10 +72,11 @@ export async function placeProps(placed, { lite, manager, warn, elsewhere = [] }
       obj.scale.multiplyScalar(it.scale);
       obj.name = obj.name || `prop_${file}`;
       obj.userData.propFile = file; // which file a set came from (for debugging and tests)
+      obj.userData.propSet = it.set || file.replace(/(\.lite)?\.glb$/, '');
       slot.add(obj);
       n++;
     } catch (e) {
-      warn(`props.json: could not load ${file} (${e?.message || e}).`);
+      bad(it, `could not load ${file} (${e?.message || e}).`);
     }
   }));
   return n;

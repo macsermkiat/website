@@ -135,7 +135,7 @@ function frame() {
   lighting.update(dt, T);
   lighting.composer.render(dt);
   if (++frames === 8) {
-    window.__ready = true;
+    window.__stallReady = true;
     const r = renderer.info.render;
     info(`${name}${lite ? '.lite' : ''} · ao ${q.get('ao') === '0' ? 'off' : 'on'} (${aoMaps}/${meshes} meshes) · ${spots.length} light_ · ${r.triangles} tris`);
     window.__info = { aoMaps, meshes, lights: spots.length, triangles: r.triangles };

@@ -687,6 +687,52 @@ GENERIC_TITLES = [
     ("The Feeling of What Happens", "Damasio", "paper"), ("Critique of Judgment", "Kant", "leather"),
     ("Ethik", "Spinoza", "leather"), ("Die Welt als Wille", "Schopenhauer", "leather"),
     ("Der Prozess", "Kafka", "cloth"),
+    # round 2: more stock, so no title stands twice anywhere on the stall (atlas_books.FULL_AUTHOR_BY_TITLE
+    # gives each new title's full author)
+    ("Sapiens", "Harari", "paper"), ("The Gene", "Mukherjee", "paper"), ("The Double Helix", "Watson", "paper"),
+    ("On the Origin of Species", "Darwin", "leather"), ("Chaos", "Gleick", "paper"),
+    ("The Information", "Gleick", "paper"), ("Surely You're Joking, Mr. Feynman!", "Feynman", "paper"),
+    ("The Black Swan", "Taleb", "paper"), ("Superforecasting", "Tetlock & Gardner", "paper"),
+    ("The Signal and the Noise", "Silver", "paper"), ("How to Read a Book", "Adler & Van Doren", "cloth"),
+    ("Zen and the Art of Motorcycle Maintenance", "Pirsig", "paper"),
+    ("Man's Search for Meaning", "Frankl", "paper"), ("Der Mythos des Sisyphos", "Camus", "cloth"),
+    ("Die Blechtrommel", "Grass", "cloth"), ("Der Name der Rose", "Eco", "cloth"), ("Das Parfum", "Süskind", "paper"),
+    ("Momo", "Ende", "cloth"), ("Die unendliche Geschichte", "Ende", "cloth"), ("Der Vorleser", "Schlink", "paper"),
+    ("Effi Briest", "Fontane", "cloth"), ("Die Leiden des jungen Werthers", "Goethe", "leather"),
+    ("Die Physiker", "Dürrenmatt", "paper"), ("Homo faber", "Frisch", "paper"),
+    ("Im Westen nichts Neues", "Remarque", "cloth"), ("Emil und die Detektive", "Kästner", "cloth"),
+    ("Die Räuber", "Schiller", "leather"), ("Nathan der Weise", "Lessing", "leather"),
+    ("Der Schimmelreiter", "Storm", "cloth"), ("Narziß und Goldmund", "Hesse", "cloth"),
+    ("Das Glasperlenspiel", "Hesse", "cloth"), ("Berlin Alexanderplatz", "Döblin", "cloth"),
+    ("Pride and Prejudice", "Austen", "cloth"), ("Middlemarch", "George Eliot", "cloth"),
+    ("One Hundred Years of Solitude", "García Márquez", "paper"), ("Invisible Cities", "Calvino", "paper"),
+    ("Ficciones", "Borges", "paper"), ("The Little Prince", "Saint-Exupéry", "cloth"),
+    ("A Christmas Carol", "Dickens", "leather"), ("Dune", "Herbert", "paper"), ("Foundation", "Asimov", "paper"),
+    ("Solaris", "Lem", "paper"), ("The Left Hand of Darkness", "Le Guin", "paper"),
+    ("Frankenstein", "Shelley", "cloth"), ("Elements", "Euclid", "leather"),
+    ("What Is Mathematics?", "Courant & Robbins", "cloth"), ("A Mathematician's Apology", "Hardy", "cloth"),
+    ("How to Solve It", "Pólya", "paper"), ("Proofs from THE BOOK", "Aigner & Ziegler", "cloth"),
+    ("The Art of Computer Programming", "Knuth", "cloth"),
+    ("Structure and Interpretation of Computer Programs", "Abelson & Sussman", "cloth"),
+    ("The Visual Display of Quantitative Information", "Tufte", "cloth"),
+    ("The Elements of Statistical Learning", "Hastie et al.", "cloth"),
+    ("Information Theory, Inference and Learning Algorithms", "MacKay", "cloth"),
+    ("Statistical Rethinking", "McElreath", "cloth"), ("The Lady Tasting Tea", "Salsburg", "paper"),
+    ("Das geheime Leben der Bäume", "Wohlleben", "paper"), ("Silent Spring", "Carson", "paper"),
+    ("The Human Condition", "Arendt", "paper"), ("Sein und Zeit", "Heidegger", "cloth"),
+    ("Phänomenologie des Geistes", "Hegel", "leather"), ("The Republic", "Plato", "leather"),
+    ("Nicomachean Ethics", "Aristotle", "leather"), ("Leviathan", "Hobbes", "leather"),
+    ("Essais", "Montaigne", "leather"), ("Pensées", "Pascal", "leather"), ("Tao Te Ching", "Laozi", "cloth"),
+    ("The Periodic Table", "Primo Levi", "paper"), ("The Blind Watchmaker", "Dawkins", "paper"),
+    ("Scale", "West", "paper"), ("Algorithms to Live By", "Christian & Griffiths", "paper"),
+    ("Our Mathematical Universe", "Tegmark", "paper"), ("Anathem", "Stephenson", "paper"),
+    ("Stoner", "John Williams", "paper"), ("The Remains of the Day", "Ishiguro", "paper"),
+    ("Austerlitz", "Sebald", "cloth"), ("The Three-Body Problem", "Liu", "paper"),
+    ("Thinking in Systems", "Meadows", "paper"), ("Pale Blue Dot", "Sagan", "paper"),
+    ("The Divine Comedy", "Dante", "leather"), ("The Odyssey", "Homer", "leather"),
+    ("Don Quixote", "Cervantes", "leather"), ("War and Peace", "Tolstoy", "cloth"),
+    ("The Brothers Karamazov", "Dostoevsky", "cloth"), ("To the Lighthouse", "Woolf", "paper"),
+    ("Nineteen Eighty-Four", "Orwell", "paper"), ("Brave New World", "Huxley", "paper"),
 ]
 
 
@@ -1110,8 +1156,9 @@ def region_specs():
     return R
 
 
-def pack(specs, size):
+def pack(specs, size, height=None):
     """Shelf packing, tallest first. Returns {name: (x, y, w, h)} of the inner rect (px, y down)."""
+    height = height or size
     order = sorted(specs, key=lambda s: (-(s[2]), -s[1]))
     x = y = row_h = 0
     out = {}
@@ -1119,7 +1166,7 @@ def pack(specs, size):
         W, H = w + 2 * PAD, h + 2 * PAD
         if x + W > size:
             x, y, row_h = 0, y + row_h, 0
-        if y + H > size:
+        if y + H > height:
             raise RuntimeError(f"atlas full at {name}")
         out[name] = (x + PAD, y + PAD, w, h)
         x += W
@@ -1136,13 +1183,19 @@ def normal_from_height(hgt, k):
     return n * 0.5 + 0.5
 
 
-def _render_atlas(specs, size, prefix, out):
-    """Pack, generate and save one atlas (<prefix>_color / _rm / _normal.png). Returns (regions, used px)."""
-    rects, used = pack(specs, size)
-    col = np.zeros((size, size, 3))
+def _render_atlas(specs, size, prefix, out, grow=False):
+    """Pack, generate and save one atlas (<prefix>_color / _rm / _normal.png). Returns (regions, used px).
+    grow=True: the atlas is `size` wide and as tall as it needs, in steps of 256 px (the books atlas)."""
+    if grow:
+        _, need = pack(specs, size, 1 << 15)
+        hgt = max(size, -(-need // 256) * 256)
+    else:
+        hgt = size
+    rects, used = pack(specs, size, hgt)
+    col = np.zeros((hgt, size, 3))
     col[:] = 0.5
-    rm = np.ones((size, size, 3))
-    nrm = np.zeros((size, size, 3))
+    rm = np.ones((hgt, size, 3))
+    nrm = np.zeros((hgt, size, 3))
     nrm[:] = (0.5, 0.5, 1.0)
     regions = {}
     for i, (name, w, h, gen) in enumerate(specs):
@@ -1155,7 +1208,7 @@ def _render_atlas(specs, size, prefix, out):
             padded = np.pad(src_, ((PAD, PAD), (PAD, PAD), (0, 0)), mode="edge")
             dst[y - PAD:y + h + PAD, x - PAD:x + w + PAD] = padded
         # UV rect with a half-texel inset (v up)
-        regions[name] = [(x + 0.5) / size, 1 - (y + h - 0.5) / size, (x + w - 0.5) / size, 1 - (y + 0.5) / size]
+        regions[name] = [(x + 0.5) / size, 1 - (y + h - 0.5) / hgt, (x + w - 0.5) / size, 1 - (y + 0.5) / hgt]
     to8 = lambda a: Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8))
     to8(col).save(os.path.join(out, f"{prefix}_color.png"))
     to8(rm).save(os.path.join(out, f"{prefix}_rm.png"))
@@ -1171,14 +1224,15 @@ def build(size=SIZE, out=OUT):
     specs = region_specs()
     regions, used = _render_atlas(specs, size, "atlas", out)
     bspecs = atlas_books.books_specs()
-    bregions, bused = _render_atlas(bspecs, size, "books", out)
+    bregions, bused = _render_atlas(bspecs, size, "books", out, grow=True)
     to8 = lambda a: Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8))
     # coal_glow has its own small texture pair (UV 0..1): base colour and the glow of the cracks
     cseed = 1000 + [s[0] for s in specs].index("coal") * 13
     to8(atlas_goods.g_coal(256, 256, cseed).col).save(os.path.join(out, "coal_color.png"))
     to8(atlas_goods.coal_emit(256, 256, cseed)).save(os.path.join(out, "coal_emit.png"))
     meta = {"size": size, "used_rows_px": used, "regions": regions,
-            "books": {"size": size, "used_rows_px": bused, "regions": bregions}}
+            "books": {"size": size, "height": max(size, -(-bused // 256) * 256), "used_rows_px": bused,
+                      "regions": bregions}}
     with open(os.path.join(out, "regions.json"), "w") as f:
         json.dump(meta, f, indent=0)
     print(f"[atlas] main: {len(regions)} regions, {used}px of {size}; books: {len(bregions)} regions, "

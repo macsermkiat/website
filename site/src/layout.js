@@ -1,7 +1,7 @@
 // Reads site/src/layout.json (owned by the architect) and turns it into a list of placements.
 // Anything the file leaves out, or the whole file when it is missing, comes from the BUILD.md layout.
 import inventory from 'virtual:market-inventory';
-import { PLACE_ORDER, SECTION_STALLS, placeFor, fileTokens } from './places.js';
+import { PLACE_ORDER, SECTION_STALLS, placeFor } from './places.js';
 
 // Vite resolves this at build time; an empty object when layout.json does not exist yet.
 const layoutFiles = import.meta.glob('./layout.json', { eager: true, import: 'default' });
@@ -11,29 +11,32 @@ const RAW = builtinLayout ? null : layoutFiles['./layout.json'] ?? null;
 
 export const HOME = { position: [3, 9, 33], target: [0, 2.2, -3] };
 
-/** The BUILD.md starting layout. `keys` are words used to find a model file for the entry. */
+/**
+ * The BUILD.md starting layout, used when layout.json is missing. `asset` is the exact file each role ships
+ * (the names layout.json uses); nothing is guessed from file names.
+ */
 export const FALLBACK_LAYOUT = [
-  { id: 'square', kind: 'ground', label: 'Market square', position: [0, 0, 0], rotation: 0, keys: ['square', 'ground', 'platz', 'marktplatz'] },
-  { id: 'town', kind: 'town', label: 'Town', position: [0, 0, 0], rotation: 0, keys: ['town', 'townring', 'town-ring', 'houses'] },
-  { id: 'church', kind: 'church', label: 'Church', position: [8, 0, -56], rotation: -0.1, keys: ['church', 'kirche'] },
-  { id: 'gluehwein', kind: 'section', place: 'glueh', label: 'Glühwein', position: [-7.4, 0, -1.4], rotation: 0.42, keys: ['gluehwein', 'glueh', 'glühwein'] },
-  { id: 'bratwurst', kind: 'section', place: 'wurst', label: 'Bratwurst', position: [-12.8, 0, 2.6], rotation: 0.8, keys: ['bratwurst', 'wurst'] },
-  { id: 'bierstand', kind: 'section', place: 'bier', label: 'Bier vom Fass', position: [7.4, 0, -1.4], rotation: -0.42, keys: ['bierstand', 'bier', 'beer'] },
-  { id: 'buecherstand', kind: 'section', place: 'books', label: 'Bücher', position: [12.8, 0, 2.6], rotation: -0.8, keys: ['buecherstand', 'buecher', 'bücherstand', 'books', 'bookshop'] },
-  { id: 'bandstand', kind: 'landmark', place: 'band', label: 'Bandstand', position: [0, 0, -5], rotation: 0, keys: ['bandstand', 'band'] },
-  { id: 'riesenrad', kind: 'landmark', place: 'ferris', label: 'Riesenrad', position: [-22, 0, -17], rotation: 0.65, keys: ['riesenrad', 'ferris', 'ferriswheel'] },
-  { id: 'karussell', kind: 'landmark', place: 'carousel', label: 'Karussell', position: [19, 0, -12], rotation: 0, keys: ['karussell', 'carousel'] },
-  { id: 'tree', kind: 'tree', label: 'Christmas tree', position: [6.5, 0, -15], rotation: 0, keys: ['tree', 'christmastree', 'christbaum', 'weihnachtsbaum'] },
-  { id: 'lebkuchen', kind: 'deco', label: 'Lebkuchen', position: [-21, 0, -3], rotation: Math.PI / 2, keys: ['lebkuchen'] },
-  { id: 'mandeln', kind: 'deco', label: 'Gebrannte Mandeln', position: [-21, 0, 3.5], rotation: Math.PI / 2, keys: ['mandeln', 'gebrannte-mandeln', 'almonds'] },
-  { id: 'kerzen', kind: 'deco', label: 'Kerzen', position: [-21, 0, 10], rotation: Math.PI / 2, keys: ['kerzen', 'candles'] },
-  { id: 'holzspielzeug', kind: 'deco', label: 'Holzspielzeug', position: [21, 0, -3], rotation: -Math.PI / 2, keys: ['holzspielzeug', 'spielzeug', 'toys'] },
-  { id: 'christbaumschmuck', kind: 'deco', label: 'Christbaumschmuck', position: [21, 0, 3.5], rotation: -Math.PI / 2, keys: ['christbaumschmuck', 'schmuck', 'ornaments'] },
-  { id: 'kaese', kind: 'deco', label: 'Käse', position: [21, 0, 10], rotation: -Math.PI / 2, keys: ['kaese', 'käse', 'cheese'] },
-  { id: 'crepes', kind: 'deco', label: 'Crêpes', position: [-9.5, 0, -21], rotation: 0, keys: ['crepes', 'crêpes'] },
-  { id: 'maroni', kind: 'deco', label: 'Heiße Maroni', position: [-3.5, 0, -21.5], rotation: 0, keys: ['maroni', 'heisse-maroni', 'chestnuts'] },
-  { id: 'kartoffelpuffer', kind: 'deco', label: 'Kartoffelpuffer', position: [14, 0, -21], rotation: 0, keys: ['kartoffelpuffer', 'puffer'] },
-  { id: 'strings', kind: 'strings', label: 'String lights', position: [0, 0, 0], rotation: 0, keys: ['strings', 'string-lights', 'stringlights', 'lamps', 'poles'] },
+  { id: 'square', kind: 'ground', label: 'Market square', position: [0, 0, 0], rotation: 0, asset: 'square.glb' },
+  { id: 'town', kind: 'town', label: 'Town', position: [0, 0, 0], rotation: 0, asset: 'town.glb' },
+  { id: 'church', kind: 'church', label: 'Church', position: [8, 0, -56], rotation: -0.1, asset: null },
+  { id: 'gluehwein', kind: 'section', place: 'glueh', label: 'Glühwein', position: [-7.4, 0, -1.4], rotation: 0.42, asset: 'stall_gluehwein.glb' },
+  { id: 'bratwurst', kind: 'section', place: 'wurst', label: 'Bratwurst', position: [-12.8, 0, 2.6], rotation: 0.8, asset: 'stall_bratwurst.glb' },
+  { id: 'bierstand', kind: 'section', place: 'bier', label: 'Bier vom Fass', position: [7.4, 0, -1.4], rotation: -0.42, asset: 'stall_bier.glb' },
+  { id: 'buecherstand', kind: 'section', place: 'books', label: 'Bücher', position: [12.8, 0, 2.6], rotation: -0.8, asset: 'stall_buecher.glb' },
+  { id: 'bandstand', kind: 'landmark', place: 'band', label: 'Bandstand', position: [0, 0, -5], rotation: 0, asset: 'bandstand.glb' },
+  { id: 'riesenrad', kind: 'landmark', place: 'ferris', label: 'Riesenrad', position: [-22, 0, -17], rotation: 0.65, asset: 'ferris.glb' },
+  { id: 'karussell', kind: 'landmark', place: 'carousel', label: 'Karussell', position: [19, 0, -12], rotation: 0, asset: 'carousel.glb' },
+  { id: 'tree', kind: 'tree', label: 'Christmas tree', position: [6.5, 0, -15], rotation: 0, asset: 'tree.glb' },
+  { id: 'lebkuchen', kind: 'deco', label: 'Lebkuchen', position: [-21, 0, -3], rotation: Math.PI / 2, asset: 'deco_lebkuchen.glb' },
+  { id: 'mandeln', kind: 'deco', label: 'Gebrannte Mandeln', position: [-21, 0, 3.5], rotation: Math.PI / 2, asset: 'deco_mandeln.glb' },
+  { id: 'kerzen', kind: 'deco', label: 'Kerzen', position: [-21, 0, 10], rotation: Math.PI / 2, asset: 'deco_kerzen.glb' },
+  { id: 'holzspielzeug', kind: 'deco', label: 'Holzspielzeug', position: [21, 0, -3], rotation: -Math.PI / 2, asset: 'deco_spielzeug.glb' },
+  { id: 'christbaumschmuck', kind: 'deco', label: 'Christbaumschmuck', position: [21, 0, 3.5], rotation: -Math.PI / 2, asset: 'deco_schmuck.glb' },
+  { id: 'kaese', kind: 'deco', label: 'Käse', position: [21, 0, 10], rotation: -Math.PI / 2, asset: 'deco_kaese.glb' },
+  { id: 'crepes', kind: 'deco', label: 'Crêpes', position: [-9.5, 0, -21], rotation: 0, asset: 'deco_crepes.glb' },
+  { id: 'maroni', kind: 'deco', label: 'Heiße Maroni', position: [-3.5, 0, -21.5], rotation: 0, asset: 'deco_maroni.glb' },
+  { id: 'kartoffelpuffer', kind: 'deco', label: 'Kartoffelpuffer', position: [14, 0, -21], rotation: 0, asset: 'deco_puffer.glb' },
+  { id: 'strings', kind: 'strings', label: 'String lights', position: [0, 0, 0], rotation: 0, asset: null },
 ];
 
 // ?missing=all or ?missing=stall_bier,ferris pretends those models were never shipped (to test the stand-ins)
@@ -42,27 +45,6 @@ const MISSING = (() => {
 })();
 const isMissing = (f) => MISSING.includes('all') || MISSING.some((m) => f.toLowerCase().replace(/(\.lite)?\.(glb|gltf)$/, '') === m.replace(/(\.lite)?\.(glb|gltf)$/, ''));
 const MODEL_FILES = (inventory.models || []).filter((f) => /\.(glb|gltf)$/i.test(f) && !isMissing(f));
-const IGNORE_TOKENS = ['prop', 'props', 'person', 'people', 'crowd', 'vendor'];
-
-/** Find a model in site/public/models by name words. Returns the full (non-lite) relative path or null. */
-export function findModelByKeys(keys) {
-  const want = keys.map((k) => k.toLowerCase().normalize('NFC').replace(/[\s_.]+/g, '-'));
-  const full = MODEL_FILES.filter((f) => !/\.lite\.glb$/i.test(f) && !f.split('/').some((p) => IGNORE_TOKENS.includes(p.toLowerCase())));
-  // exact base name first, then a matching word in the name
-  for (const k of want) {
-    const hit = full.find((f) => fileTokens(f).join('-') === k);
-    if (hit) return hit;
-  }
-  for (const k of want) {
-    const hit = full.find((f) => {
-      const t = fileTokens(f);
-      return !t.some((x) => IGNORE_TOKENS.includes(x)) && (t.includes(k) || t.join('-').endsWith('-' + k) || t.join('-').startsWith(k + '-'));
-    });
-    if (hit) return hit;
-  }
-  return null;
-}
-
 export function modelExists(rel) {
   return !!rel && MODEL_FILES.includes(rel);
 }
@@ -107,7 +89,7 @@ export function readRot(o) {
 }
 
 function readModel(o) {
-  for (const k of ['model', 'glb', 'file', 'src', 'url', 'asset', 'path', 'mesh']) {
+  for (const k of ['asset', 'model', 'glb', 'file', 'src', 'url', 'path', 'mesh']) {
     const v = o[k];
     if (typeof v === 'string' && /\.(glb|gltf)$/i.test(v)) return v;
     if (v && typeof v === 'object' && typeof (v.full || v.desktop || v.src) === 'string') return v.full || v.desktop || v.src;
@@ -159,7 +141,7 @@ function collectEntries(node, parentKey, out, depth = 0) {
     const model = readModel(node);
     const id = String(node.id ?? node.name ?? node.key ?? node.slug ?? parentKey ?? `item${out.length}`);
     const placeWord = node.place ?? node.section ?? node.opens ?? node.link ?? node.panel ?? null;
-    const place = placeFor(placeWord) || placeFor(id) || (model ? placeFor(fileTokens(model).join('-')) : null);
+    const place = placeFor(placeWord) || placeFor(id);
     const e = {
       id,
       label: node.label || node.title || node.sign || node.name || id,
@@ -219,16 +201,22 @@ export function resolveLayout() {
     entries = FALLBACK_LAYOUT.map((f) => ({ ...f }));
   }
 
+  // Exact bindings: each entry's asset is the file the owning role named (layout.json `asset`, or the BUILD.md
+  // layout's own names). The lite market takes `<name>.lite.glb` (the contract), or the entry's `lite` field.
+  // Nothing is guessed from file names: a binding to a file that is not there is reported, and that place
+  // gets a labelled stand-in.
+  const bindings = [];
+  const bad = (e, problem) => { bindings.push({ id: e.id, asset: e.model || null, problem, simulated: MISSING.length > 0 || undefined }); notes.push(`${e.id}: ${problem}`); };
   for (const e of entries) {
-    const bare = String(e.id).toLowerCase().replace(/^(deco|stall|place)[-_]/, '');
-    const fb = FALLBACK_LAYOUT.find((f) => (e.place && f.place === e.place) || f.id === e.id || f.id === bare || (e.goods && f.id === String(e.goods).toLowerCase()) || f.keys.includes(bare));
+    if (e.asset !== undefined && e.model === undefined) e.model = e.asset; // a BUILD.md fallback entry
+    const fb = FALLBACK_LAYOUT.find((f) => (e.place && f.place === e.place) || f.id === e.id);
     if (e.model && !modelExists(e.model)) {
-      const byName = findModelByKeys([fileTokens(e.model).join('-')]);
-      notes.push(`${e.id}: ${e.model} not found${byName ? `, using ${byName}` : ', using a stand-in'}.`);
-      e.model = byName;
+      bad(e, `${e.model} is not in site/public/models; using a stand-in.`);
+      e.model = null;
+    } else if (!e.model && e.kind !== 'strings' && e.kind !== 'church') {
+      bad(e, 'no asset named; using a stand-in.');
     }
-    if (!e.model) e.model = findModelByKeys([...(e.keys || []), e.id, ...(e.goods ? [`deco-${e.goods}`, e.goods] : []), ...(fb?.keys || []).flatMap((k) => (e.kind === 'deco' ? [`deco-${k}`, k] : [k]))]);
-    if (e.lite && !modelExists(e.lite)) e.lite = null;
+    if (e.lite && !modelExists(e.lite)) { if (e.model) bad(e, `lite asset ${e.lite} is not in site/public/models; the lite market loads ${e.model}.`); e.lite = null; }
     if (!e.lite) e.lite = liteVariant(e.model);
     if (!e.label && fb) e.label = fb.label;
     if (e.place && !SECTION_STALLS.includes(e.place) && e.kind === 'section') e.kind = 'landmark';
@@ -237,5 +225,5 @@ export function resolveLayout() {
   // interactive places first so they load first
   const rank = (e) => (e.place ? PLACE_ORDER.indexOf(e.place) : e.kind === 'ground' ? -1 : 50);
   entries.sort((a, b) => rank(a) - rank(b));
-  return { entries, home: readHome(RAW), notes, fromFile: !!RAW };
+  return { entries, home: readHome(RAW), notes, bindings, fromFile: !!RAW };
 }

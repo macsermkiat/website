@@ -7,7 +7,9 @@
 // 4. plain.html and the music credit on both pages
 // 5. every model missing (and layout.json ignored): stand-ins, no errors
 // Fails on any console error, failed request or HTTP error.
-// Usage: npm run build && node tests/smoke.mjs [--out ../review/round-1/engineer] [--port 4317] [--only shots,interact,audio,lite,phone,plain,missing]
+// 6. items: every book, glass, mug, bottle and sausage is its own clickable object; mid-animation screenshots,
+//    node movement and book identity asserted
+// Usage: npm run build && node tests/smoke.mjs [--out ../review/round-2/engineer] [--port 4317] [--only shots,items,interact,audio,lite,phone,plain,missing]
 import { spawn } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -18,9 +20,10 @@ const { chromium } = pw.default || pw;
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
-const OUT = path.resolve(opt('--out', '../review/round-1/engineer'));
+const OUT = path.resolve(opt('--out', '../review/round-2/engineer'));
 const PORT = +opt('--port', 4317);
 const ONLY = opt('--only', 'all');
+const READY_S = +opt('--ready', 300); // seconds a market may take to open (a loaded machine needs more)
 const DIST = opt('--dist', null); // serve a copy of dist/, so a rebuild during a long run cannot pull files from under it
 const run = (name) => ONLY === 'all' || ONLY.split(',').includes(name);
 const BASE = `http://localhost:${PORT}/website/`;
@@ -40,10 +43,10 @@ const errors = [];
 const log = (...a) => console.log('·', ...a);
 const results = [];
 const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); console.log(ok ? '  ok  ' : '  FAIL', name, detail ? `(${String(detail).slice(0, 140)})` : ''); };
-const LONG = 180000;
+const LONG = +opt('--long', 180) * 1000; // ms a click or wait may take (software GL on a busy machine: raise it)
 
-async function openPage(url, { reducedMotion = 'no-preference', viewport = { width: 1280, height: 860 }, before = null } = {}) {
-  const ctx = await browser.newContext({ viewport, reducedMotion, deviceScaleFactor: 1 });
+async function openPage(url, { reducedMotion = 'no-preference', viewport = { width: 1280, height: 860 }, before = null, touch = false } = {}) {
+  const ctx = await browser.newContext({ viewport, reducedMotion, deviceScaleFactor: 1, ...(touch ? { hasTouch: true, isMobile: true } : {}) });
   const page = await ctx.newPage();
   before?.(page);
   page.setDefaultTimeout(LONG);
@@ -58,7 +61,7 @@ async function openPage(url, { reducedMotion = 'no-preference', viewport = { wid
 
 async function waitReady(page) {
   const t0 = Date.now();
-  await page.waitForFunction(() => document.documentElement.dataset.ready === 'true' || /could not/.test(document.getElementById('loadingText')?.textContent || ''), null, { timeout: 300000 });
+  await page.waitForFunction(() => document.documentElement.dataset.ready === 'true' || /could not/.test(document.getElementById('loadingText')?.textContent || ''), null, { timeout: READY_S * 1000 });
   const ok = await page.evaluate(() => document.documentElement.dataset.ready === 'true');
   if (!ok) throw new Error('market did not start: ' + (await page.textContent('#loadingText')));
   log(`ready in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
@@ -77,6 +80,16 @@ const bytesAtReady = (page) => page.evaluate(() => {
 });
 const waitNote = (page, re) => page.waitForFunction((src) => new RegExp(src).test(document.getElementById('actNote')?.textContent || ''), re.source, { timeout: LONG }).then(() => true, () => false);
 const state = (page, k) => page.evaluate((k) => window.__market[k], k);
+/** A client point where a click would reach the named item (spiral search around its centre), or null. */
+const aimAt = (page, name, via = name) => page.evaluate(([name, via]) => {
+  const m = window.__market, c = m.screenPoint(via);
+  if (!c) return null;
+  for (let r = 0; r <= 16; r += 2) for (let a = 0; a < 12; a++) {
+    const x = c.x + Math.cos(a * Math.PI / 6) * r, y = c.y + Math.sin(a * Math.PI / 6) * r;
+    if (m.itemAt(x, y) === name) return { x, y };
+  }
+  return null;
+}, [name, via]);
 const shot = async (page, name, sel, { keepScroll = false } = {}) => {
   const file = path.join(OUT, name);
   // hold the last rendered frame so the capture does not wait behind a slow software-GL frame
@@ -128,7 +141,10 @@ try {
     check('full: the second light pass gives each ride its real light when it arrives', lp.includes('riesenrad') && lp.includes('karussell') && after.lights.realtime === 12, lp.join(' '));
     check('full: static meshes merged (fewer draw calls)', after.merges.after < after.merges.before * 0.75 && after.merges.row > 5 && after.merges.riders > 50, JSON.stringify(after.merges));
     check('full: under 800 meshes drawn in the home view', sceneNow.meshes < 800, JSON.stringify(sceneNow));
-    check('bookshop spines merged into a few meshes', report.books?.merged?.meshes > 0 && report.books.merged.books > 20, JSON.stringify(report.books));
+    check('shelf goods merged into a few meshes (books, mugs, glasses, bottles)', report.books?.merged?.meshes > 0 && report.books.merged.books > 20, JSON.stringify(report.books));
+    check('layout.json and props.json bindings all resolve exactly', (report.bindings || []).length === 0, JSON.stringify(report.bindings));
+    const ic = report.items || {};
+    check('clickable items found: books, glasses, mugs, bottles, sausages, rolls', ['books:book', 'bier:glass', 'glueh:mug', 'glueh:bottle', 'wurst:sausage', 'wurst:roll'].every((k) => ic[k] > 0), JSON.stringify(ic));
     await frames(page, 2);
     await shot(page, 'home_full.jpg');
     // Full quality on SwiftShader takes tens of seconds a frame, and clicks wait on frames to check the target.
@@ -158,13 +174,13 @@ try {
     // Mac's five spines are in clear view: nobody visible stands on the line from the camera to any of them
     const five = await page.evaluate(() => window.__market.featuredBooks().map((n) => ({ n, who: window.__market.blockers(n) })));
     check('Bücherstand view: all five of Mac\'s spines in clear view (the bookseller stands aside)', five.length === 5 && five.every((b) => !b.who.length), JSON.stringify(five));
-    const out = await page.evaluate(() => window.__market.pulledBook());
-    check('the pulled book stands out of the shelf when the picture is taken', out === five[0]?.n, `${out} vs ${five[0]?.n}`);
+    const out = await page.evaluate(() => window.__market.openedBook());
+    check('the chosen book is open in front of the counter when the picture is taken', out?.name === five[0]?.n && out.state === 'open', `${JSON.stringify(out)} vs ${five[0]?.n}`);
     await shot(page, 'panel_buecherstand.jpg');
     await go(() => window.__market.resetView());
     await frames(page, 1);
-    const tag = await page.evaluate(() => ({ pulled: window.__market.pulledBook(), tag: document.querySelector('.booktag').style.opacity }));
-    check('reset view puts the pulled book back and hides its title tag', tag.pulled === null && tag.tag === '0', JSON.stringify(tag));
+    const tag = await page.evaluate(() => ({ open: window.__market.openedBook(), visible: window.__market.item(window.__market.featuredBooks()[0])?.visible }));
+    check('reset view closes the open book and puts it back on the shelf', tag.open === null && tag.visible === true, JSON.stringify(tag));
     await go(() => { window.__market.openPlace('band'); window.__market.act('band', 'sax'); });
     await frames(page, 3);
     await shot(page, 'panel_bandstand.jpg');
@@ -172,6 +188,90 @@ try {
     await page.evaluate(() => window.__market.advance(4)); // let the snow settle in
     await frames(page, 2);
     await shot(page, 'home_full_snow.jpg', '#stage');
+    await ctx.close();
+  }
+
+  if (run('items')) {
+    // Mid-animation close-ups on the full market. The clock is driven by hand: freeze the picture, run the
+    // market forward with advance(), draw one frame, take it. Software GL needs tens of seconds per frame.
+    log('items: every book, glass, mug, bottle and sausage, clicked one by one (full market, mid-animation)');
+    const { ctx, page } = await openPage(`${BASE}?quality=full&snow=0`);
+    await waitReady(page);
+    const M = (fn, ...a) => page.evaluate(fn, ...a);
+    await M(() => window.__market.freeze(true));
+    await M(() => window.__market.settled());
+    const pose = async (name, fn, arg) => { await M(fn, arg); await M(() => window.__market.renderFrame()); await shot(page, name); await M(() => window.__market.freeze(true)); };
+    const at = (n) => M((n) => window.__market.item(n), n);
+    const moved = (a, b, eps = 0.01) => a.position.some((v, i) => Math.abs(v - b.position[i]) > eps) || a.quaternion.some((v, i) => Math.abs(v - b.quaternion[i]) > eps);
+
+    // Glühwein: the ladle fills a mug
+    await M(() => { window.__market.openPlace('glueh'); window.__market.advance(2.5); });
+    const lad0 = await at('act_ladle');
+    await M(() => { window.__market.focusOn('act_mug_2'); window.__market.advance(1.7); window.__market.clickItem('act_mug_2'); window.__market.advance(2.05); });
+    const lad1 = await at('act_ladle');
+    check('Glühwein: clicking a mug sends the ladle to it (the ladle node moves)', lad0 && lad1 && moved(lad0, lad1, 0.05), `${lad0?.position} -> ${lad1?.position}`);
+    check('Glühwein: the note names that mug', /blue mug/i.test(await note(page)), await note(page));
+    await pose('item_gluehwein_ladle.jpg', () => {});
+    await M(() => window.__market.advance(3));
+    check('Glühwein: the mug is full afterwards', (await M(() => window.__market.handlers.mugState('act_mug_2')))?.full === true);
+    // a wine bottle turns to show its label, with a tasting note
+    const b0 = await at('act_bottle_3');
+    await M(() => { window.__market.focusOn('act_bottle_3'); window.__market.advance(1.7); window.__market.clickItem('act_bottle_3'); window.__market.advance(1.3); });
+    const b1 = await at('act_bottle_3');
+    check('Glühwein: clicking a wine bottle turns it out to show its label (the node moves)', moved(b0, b1), `${b0.position} -> ${b1.position}`);
+    check('Glühwein: the bottle\'s own name and a tasting note', /Spätburgunder/.test(await note(page)) && /cherry|tannin/i.test(await note(page)), await note(page));
+    await pose('item_gluehwein_bottle.jpg', () => {});
+    await M(() => window.__market.resetView());
+
+    // Bierstand: the tap pours into the clicked glass; two full glasses clink
+    await M(() => { window.__market.openPlace('bier'); window.__market.advance(2.5); });
+    const g0 = await at('act_glass_2');
+    await M(() => { window.__market.focusOn('act_glass_2'); window.__market.advance(1.7); window.__market.clickItem('act_glass_2'); window.__market.advance(1.9); });
+    const gs = await M(() => window.__market.handlers.glassState('act_glass_2'));
+    const g1 = await at('act_glass_2');
+    check('Bierstand: clicking a glass carries it to the tap (the node moves)', moved(g0, g1), `${g0.position} -> ${g1.position}`);
+    check('Bierstand: mid-pour the beer is rising in that glass', gs && gs.level > 0.15 && gs.level < 0.98, JSON.stringify(gs));
+    await pose('item_bier_pouring.jpg', () => {});
+    await M(() => window.__market.advance(3));
+    check('Bierstand: the glass ends full, with its head', (await M(() => window.__market.handlers.glassState('act_glass_2')))?.full === true);
+    await M(() => { window.__market.focusOn('act_glass_0'); window.__market.advance(1.7); window.__market.clickItem('act_glass_0'); window.__market.advance(0.5); window.__market.clickItem('act_glass_2'); window.__market.advance(0.75); });
+    check('Bierstand: two full glasses clicked in turn clink (Prost)', /Prost/.test(await note(page)), await note(page));
+    await pose('item_bier_prost.jpg', () => {});
+    await M(() => { window.__market.advance(2); window.__market.resetView(); });
+
+    // Bratwurst: one sausage turns; a roll gets a sausage and mustard
+    await M(() => { window.__market.openPlace('wurst'); window.__market.advance(2.5); });
+    const s0 = await at('act_sausage_3');
+    await M(() => { window.__market.focusOn('act_sausage_3'); window.__market.advance(1.7); window.__market.clickItem('act_sausage_3'); window.__market.advance(0.28); });
+    const s1 = await at('act_sausage_3');
+    check('Bratwurst: clicking a sausage turns that sausage (its node rotates)', moved(s0, s1, 0.05), `${s0.quaternion} -> ${s1.quaternion}`);
+    const other = await at('act_sausage_4');
+    check('Bratwurst: its neighbour stays put', !moved(await at('act_sausage_4'), other));
+    await pose('item_wurst_turning.jpg', () => {});
+    await M(() => { window.__market.focusOn('act_roll_1'); window.__market.advance(1.7); window.__market.clickItem('act_roll_1'); window.__market.advance(1.4); });
+    check('Bratwurst: clicking a roll puts a sausage in it, with mustard', (await M(() => window.__market.handlers.bunCount())) === 1);
+    await pose('item_wurst_bun.jpg', () => window.__market.advance(0.3));
+    await M(() => window.__market.resetView());
+
+    // Bücherstand: a clicked book opens at the counter, showing its own title
+    await M(() => { window.__market.openPlace('books'); window.__market.advance(2.5); });
+    const five = await M(() => window.__market.featuredBooks());
+    await M((n) => { window.__market.clickItem(n); window.__market.advance(1.55); }, five[1]);
+    const mid = await M(() => window.__market.openedBook());
+    check('Bücherstand: the clicked book is opening, and it is that book', mid?.name === five[1] && /Gödel/.test(mid.title), JSON.stringify(mid));
+    await M(() => window.__market.advance(0.8));
+    check('Bücherstand: the note gives its title and author', /Gödel/.test(await note(page)) && /Hofstadter/.test(await note(page)), await note(page));
+    await pose('item_books_open.jpg', () => {});
+    await M(() => window.__market.resetView());
+
+    // a deco stall: fly to its close-up, hover an iced Lebkuchen heart
+    await M(() => { window.__market.openDeco('deco-lebkuchen'); window.__market.advance(2.5); });
+    const hearts = await M(() => Object.keys(window.__market.items()).filter((k) => k.startsWith('deco-lebkuchen')));
+    check('Lebkuchen stall: its goods are items (iced hearts)', hearts.length > 0, JSON.stringify(await M(() => window.__market.items())));
+    const h0 = await at('act_heart_1');
+    await M(() => { window.__market.focusOn('act_heart_1'); window.__market.advance(1.7); window.__market.clickItem('act_heart_1'); });
+    check('Lebkuchen heart: a click shows its icing text', /Für Dich/.test((await M(() => window.__market.handlers.decoDetail()))?.detail || ''), JSON.stringify(await M(() => window.__market.handlers.decoDetail())));
+    await pose('item_deco_lebkuchen.jpg', () => window.__market.advance(0.3));
     await ctx.close();
   }
 
@@ -184,15 +284,16 @@ try {
     check('Glühwein panel opens from the place buttons', (await state(page, 'panel')) === 'glueh');
     check('panel content comes from content/*.md or the fallback', (await page.textContent('#pBody')).length > 80);
     await page.click('#pActions [data-action="pour"]');
-    check('pour a mug', /poured tonight: 1/.test(await note(page)), await note(page));
+    await page.evaluate(() => window.__market.advance(4)); // the ladle's trip, without waiting on slow frames
+    check('pour a mug (the ladle fills one of the stall\'s own mugs)', await waitNote(page, /poured tonight: 1/), await note(page));
     await page.click('#pActions [data-action="prost"]');
     await page.waitForSelector('.bubble', { timeout: 20000 }).catch(() => {});
     check('Prost: the crowd raises a glass', (await page.locator('.bubble').count()) > 0);
 
     await page.click('#places button[data-place="bier"]');
     await page.click('#pActions [data-action="pint"]');
-    check('pull a pint (starts)', /Pouring/.test(await note(page)));
-    await page.evaluate(() => window.__market.advance(3)); // run the 2.3 s pour without waiting on slow frames
+    check('pull a pint (starts)', /Pouring/.test(await note(page)), await note(page));
+    await page.evaluate(() => window.__market.advance(5)); // run the pour without waiting on slow frames
     check('pull a pint (finishes)', await waitNote(page, /pulled tonight: 1/), await note(page));
     await page.click('#pActions [data-action="prost"]');
 
@@ -204,6 +305,17 @@ try {
     check('turn the sausages', /Turned|flare|Almost/.test(await note(page)), await note(page));
     await page.click('#pActions [data-action="bun"]');
     check('a sausage in a bun', /Brötchen/.test(await note(page)), await note(page));
+    await page.evaluate(() => window.__market.advance(2.5));
+    check('a sausage in a bun: one sits in a roll, with mustard', (await page.evaluate(() => window.__market.handlers.bunCount())) === 1);
+    // a single sausage, clicked in 3D: aim at its pixels and click it
+    const sAim = await aimAt(page, 'act_sausage_2');
+    if (sAim) {
+      const q0 = (await page.evaluate(() => window.__market.item('act_sausage_2'))).quaternion;
+      await page.mouse.click(sAim.x, sAim.y);
+      await page.evaluate(() => window.__market.advance(1));
+      const q1 = (await page.evaluate(() => window.__market.item('act_sausage_2'))).quaternion;
+      check('clicking one sausage in 3D turns that sausage (its node rotates)', q0.some((v, i) => Math.abs(v - q1[i]) > 0.05) && /turned/i.test(await note(page)), `${q0} -> ${q1}; ${await note(page)}`);
+    } else check('clicking one sausage in 3D turns that sausage (its node rotates)', false, 'no clear pixel on act_sausage_2');
 
     await page.click('#places button[data-place="books"]');
     await page.click('#pActions [data-action="book"]');
@@ -213,24 +325,33 @@ try {
     check('five named spines for the five books', spines.length === 5, spines.join(' '));
     await page.evaluate(() => window.__market.advance(4)); // finish the flight to the bookshop
     await frames(page, 2);
-    const aim = await page.evaluate((name) => {
-      const m = window.__market, c = m.screenPoint(name);
-      if (!c) return null;
-      for (let r = 0; r <= 12; r += 2) for (let a = 0; a < 8; a++) {
-        const x = c.x + Math.cos(a * Math.PI / 4) * r, y = c.y + Math.sin(a * Math.PI / 4) * r;
-        if (m.bookAt(x, y) === name) return { x, y };
-      }
-      return null;
-    }, spines[1]);
+    await page.evaluate(() => window.__market.resetView());
+    await page.click('#places button[data-place="books"]');
+    await page.evaluate(() => window.__market.advance(4));
+    await frames(page, 2);
+    const aim = await aimAt(page, spines[1]);
     if (aim) {
+      await page.mouse.move(aim.x, aim.y);
+      await frames(page, 3);
+      check('hovering a book lifts it and names it', (await page.evaluate(() => window.__market.hoveredItem)) === spines[1] && /Gödel/.test(await page.textContent('.tip')), await page.textContent('.tip'));
       await page.mouse.click(aim.x, aim.y);
-      check('clicking a named spine gives that book', /Hofstadter|Gödel/.test(await note(page)), await note(page));
-    } else check('clicking a named spine gives that book', false, `no clear pixel on ${spines[1]}`);
+      await page.evaluate(() => window.__market.advance(3));
+      const ob = await page.evaluate(() => window.__market.openedBook());
+      check('clicking a named spine opens that book, showing its own title', ob?.name === spines[1] && /Gödel/.test(ob.title) && /Hofstadter|Gödel/.test(await note(page)), `${JSON.stringify(ob)} ${await note(page)}`);
+      const again = await aimAt(page, spines[1], `open_${spines[1]}`); // a click on the open book itself
+      if (again) { await page.mouse.click(again.x, again.y); await page.evaluate(() => window.__market.advance(3)); }
+      check('clicking the open book again puts it back', (await page.evaluate(() => window.__market.openedBook())) === null);
+    } else check('clicking a named spine opens that book, showing its own title', false, `no clear pixel on ${spines[1]}`);
+    // a book from the bookseller's stock names itself too (items.json)
+    await page.evaluate(() => window.__market.clickItem('act_book_201'));
+    await page.evaluate(() => window.__market.advance(3));
+    const stock = await page.evaluate(() => window.__market.openedBook());
+    check('a stock book opens with its own title and author (items.json)', stock?.title === 'Siddhartha' && /Hesse/.test(await note(page)), `${JSON.stringify(stock)} ${await note(page)}`);
 
     await page.click('#pClose');
-    await frames(page, 1);
-    const tagOff = await page.evaluate(() => ({ pulled: window.__market.pulledBook(), tag: document.querySelector('.booktag').style.opacity }));
-    check('closing the panel puts the book back and hides its tag', tagOff.pulled === null && tagOff.tag === '0', JSON.stringify(tagOff));
+    await page.evaluate(() => window.__market.advance(3));
+    const tagOff = await page.evaluate(() => ({ open: window.__market.openedBook(), visible: window.__market.item('act_book_201').visible }));
+    check('closing the panel closes the book and puts it back', tagOff.open === null && tagOff.visible, JSON.stringify(tagOff));
 
     await page.click('#places button[data-place="band"]');
     check('lite: the player buttons say they move the spotlight', /Spotlight/.test(await page.textContent('#pActions [data-action="sax"]')));
@@ -362,6 +483,20 @@ try {
     check('phone: part of the market stays in view above the sheet', sheet.visible >= 0.3, JSON.stringify(sheet));
     await shot(page, 'phone_reduced_motion.jpg', null, { keepScroll: true });
     await ctx.close();
+    // a tap works like a click on the goods (touch screens have no hover)
+    const t = await openPage(`${BASE}?snow=0`, { reducedMotion: 'reduce', viewport: { width: 390, height: 844 }, touch: true });
+    await waitReady(t.page);
+    await t.page.click('#places button[data-place="wurst"]');
+    await frames(t.page, 2);
+    const tAim = await aimAt(t.page, 'act_sausage_5');
+    if (tAim) {
+      const q0 = (await t.page.evaluate(() => window.__market.item('act_sausage_5'))).quaternion;
+      await t.page.touchscreen.tap(tAim.x, tAim.y);
+      await frames(t.page, 2);
+      const q1 = (await t.page.evaluate(() => window.__market.item('act_sausage_5'))).quaternion;
+      check('phone: tapping a sausage turns it', q0.some((v, i) => Math.abs(v - q1[i]) > 0.05), `${q0} -> ${q1}`);
+    } else check('phone: tapping a sausage turns it', false, 'no clear pixel on act_sausage_5');
+    await t.ctx.close();
   }
 
   if (run('plain')) {
@@ -375,13 +510,26 @@ try {
     const want = (manifest.license?.credit || manifest.license?.recording?.credit || '').replace(/\s+/g, ' ').trim();
     const credit = { test: (t) => !!want && t.replace(/\s+/g, ' ').includes(want) };
     check('plain.html credits the music (the manifest\'s credit line)', credit.test(await page.textContent('#credits')), await page.textContent('#credits'));
+    check('plain.html lists every third-party asset with its source URL', (await page.locator('.credits-all a[href^="https://github.com/"]').count()) > 5);
+    check('plain.html carries the books the 3D shelf features', /Gödel, Escher, Bach/.test(await page.textContent('#books')), (await page.textContent('#books')).slice(0, 200));
     await shot(page, 'plain_html.jpg');
     await ctx.close();
+    // no WebGL: the page shows every section as text in place of the market
+    const { ctx: c3, page: p3 } = await openPage(`${BASE}?nowebgl`);
+    await p3.waitForSelector('.plainfallback section', { timeout: 60000 }).catch(() => {});
+    check('without WebGL the 3D page falls back to the text of all seven sections', (await p3.locator('.plainfallback section').count()) === 7);
+    await c3.close();
     const { ctx: c2, page: p2 } = await openPage(`${BASE}?quality=lite`);
     check('the 3D page links to plain.html', (await p2.locator('a[href="plain.html"]').count()) > 0);
     check('the 3D page credits the music in its footer', credit.test(await p2.textContent('footer #credits')), await p2.textContent('footer #credits'));
     const named = (want.match(/CC BY(-SA)? \d\.\d|CC0/g) || []).length;
     check('the credit links every licence it names', named > 0 && (await p2.locator('#credits a[rel="license"]').count()) >= named, `${named} named`);
+    check('the 3D page lists every third-party asset with its source URL', (await p2.locator('.credits-all a[href^="https://github.com/"]').count()) > 5);
+    check('the canvas has an accessible name', !!(await p2.locator('canvas').getAttribute('aria-label')));
+    await p2.waitForFunction(() => document.documentElement.dataset.ready === 'true', null, { timeout: LONG });
+    await p2.click('#mute');
+    check('mute covers the band and the stall sounds', await p2.evaluate(() => window.__market.muted()) && (await p2.getAttribute('#mute', 'aria-pressed')) === 'true');
+    await p2.click('#mute');
     await c2.close();
   }
 
@@ -392,6 +540,7 @@ try {
     const report = await page.evaluate(() => window.__market.report);
     check('missing glbs: every place is a stand-in', report.models.every((m) => m.source === 'standin'), JSON.stringify(report.models.filter((m) => m.source !== 'standin')));
     check('missing layout.json: the BUILD.md layout', report.layout === 'BUILD.md fallback', report.layout);
+    check('missing glbs are reported as bindings that did not resolve (nothing guessed)', report.bindings.length >= 10 && report.bindings.every((b) => /not in site\/public\/models|no asset/.test(b.problem)), JSON.stringify(report.bindings.slice(0, 3)));
     await page.click('#places button[data-place="glueh"]');
     await page.click('#pActions [data-action="pour"]');
     check('stand-ins keep the actions working', /poured tonight: 1/.test(await note(page)), await note(page));

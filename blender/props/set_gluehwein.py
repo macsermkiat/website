@@ -5,9 +5,9 @@ prop_gluehwein_counter  -> slot_counter of stall_gluehwein (origin on the counte
 prop_gluehwein_shelf    -> slot_shelf_1 of stall_gluehwein (origin on the lower back shelf, centred)
 prop_gluehwein_wine     -> slot_shelf_2 of stall_gluehwein (origin on the upper back shelf, centred)
 
-Clickable goods are their own nodes with the origin at their base: act_mug_0..12 (0-9 on the counter,
-10-12 spare on the shelf), act_bottle_0..9 (wine shelf) and act_bottle_12..17 (Glühwein shelf),
-act_wineglass_0..2. The back shelves are 0.3 m deep with a 5 cm front lip, so shelf goods keep to
+Clickable goods are their own nodes with the origin at their base: act_mug_0..15 (0-9 on the counter,
+10-15 spare on the shelf), act_bottle_0..11 (wine shelf) and act_bottle_12..17 (Glühwein shelf),
+act_wineglass_0..4. The back shelves are 0.3 m deep with a 5 cm front lip, so shelf goods keep to
 y -0.12..0.14.
 """
 import math
@@ -167,12 +167,16 @@ def counter():
 
 
 SHELF_BOTTLES = [
-    ("label_wine", C("1c3320"), "bordeaux", C("8a1a1a"), None, "Winzer-Glühwein, red"),
-    ("label_wine", C("1c3320"), "bordeaux", C("8a1a1a"), None, "Winzer-Glühwein, red"),
-    ("label_white", C("d8e4d0"), "schlegel", C("c8a040"), C("d8b048"), "White Glühwein from Riesling"),
-    ("label_berry", C("141a38"), "bordeaux", C("2a2a6a"), None, "Blueberry Glühwein"),
-    ("label_rum", C("5a3010"), "flask", C("1a1a1a"), C("6a2a08"), "Rum, for a Schuss"),
-    ("label_punsch", C("e0e8e0"), "schlegel", C("b0282a"), C("8a0a10"), "Kinderpunsch, alcohol-free"),
+    # label, glass, bottle, capsule, liquid, display name, extra item fields
+    ("label_wine", C("1c3320"), "bordeaux", C("8a1a1a"), None, "Winzer-Glühwein, red",
+     dict(grape="Dornfelder", region="Pfalz")),
+    ("label_wine", C("1c3320"), "bordeaux", C("8a1a1a"), None, "Winzer-Glühwein, red",
+     dict(grape="Dornfelder", region="Pfalz")),
+    ("label_white", C("d8e4d0"), "schlegel", C("c8a040"), C("d8b048"), "White Glühwein from Riesling",
+     dict(grape="Riesling", region="Mosel")),
+    ("label_berry", C("141a38"), "bordeaux", C("2a2a6a"), None, "Blueberry Glühwein", dict(fruit="Heidelbeere")),
+    ("label_rum", C("5a3010"), "flask", C("1a1a1a"), C("6a2a08"), "Rum, for a Schuss", {}),
+    ("label_punsch", C("e0e8e0"), "schlegel", C("b0282a"), C("8a0a10"), "Kinderpunsch, alcohol-free", {}),
 ]
 
 
@@ -180,11 +184,11 @@ def shelf():
     s = vlib.PropSet("prop_gluehwein_shelf", "slot_shelf_1", "gluehwein", footprint=(2.4, 0.3))
     m = s.static
     x = -1.12
-    for k, (lab, gcol, kind, foil, liq, name) in enumerate(SHELF_BOTTLES):
+    for k, (lab, gcol, kind, foil, liq, name, extra) in enumerate(SHELF_BOTTLES):
         idx = 12 + k
         node = s.node(f"act_bottle_{idx}", (x, 0.02 + rng.uniform(-0.03, 0.03), 0), rot=(0, 0, rng.uniform(-0.25, 0.25)))
         G.bottle(node, None, lab, gcol, kind, foil, liq, n=10)
-        s.item(f"act_bottle_{idx}", name, "bottle", where="Glühwein shelf")
+        s.item(f"act_bottle_{idx}", name, "bottle", where="Glühwein shelf", **extra)
         x += 0.1
     # spice jars in a row
     jars = [("jar_zimt", C("8a4b26"), "cinnamon"), ("jar_nelken", C("4a2412"), "almonds"),
@@ -213,78 +217,99 @@ def shelf():
             G.twine(m, [(0.5, by + 0.019 * math.cos(TWO_PI * j / n), 0.0222 + 0.019 * math.sin(TWO_PI * j / n))
                         for j in range(n + 1)])
     # a small bowl of star anise
-    G.bowl(m, T(0.7, 0.0, 0), r=0.07, h=0.035, seg_n=14)
+    G.bowl(m, T(0.66, 0.0, 0), r=0.07, h=0.035, seg_n=14)
     for k in range(4 if not lite() else 2):
-        G.star_anise(m, T(0.7 + drng.uniform(-0.035, 0.035), drng.uniform(-0.035, 0.035), 0.022 + k * 0.002,
+        G.star_anise(m, T(0.66 + drng.uniform(-0.035, 0.035), drng.uniform(-0.035, 0.035), 0.022 + k * 0.002,
                           rx=drng.uniform(-0.3, 0.3), rz=drng.uniform(0, 6)))
-    # spare mugs on the right, two rows
-    styles = ["red", "blue", "cream"]
-    for k, (x, y) in enumerate(((0.95, 0.06), (1.05, 0.06), (1.0, -0.05))):
-        mug(s, 10 + k, (x, y, 0), styles[k], where="spare, on the back shelf")
+    # spare mugs on the right: a back row of four classic mugs and a front row of three with a boot
+    styles = ["red", "blue", "cream", "green", "white", "bluestar"]
+    spots = [(0.82, 0.07), (0.93, 0.075), (1.04, 0.07), (0.86, -0.055), (0.97, -0.06), (1.09, -0.05)]
+    for k, (x, y) in enumerate(spots):
+        mug(s, 10 + k, (x, y, 0), styles[k], boot=k == 5, where="spare, on the back shelf")
     s.finish()
     return s
 
 
+# (label region, bottle, glass, capsule, wine, grape, region, vintage, producer, colour). Fictional estates.
 WINES = [
-    # label region, bottle, glass, capsule, display name
-    ("wl_riesling_mosel", "schlegel", C("35602c"), C("2a5a2a"),
-     "Riesling Kabinett feinherb, Mosel 2022 (Weingut am Laternenberg)"),
-    ("wl_riesling_rheingau", "schlegel", C("5a3410"), C("c8a040"),
-     "Riesling Spätlese, Rheingau 2021 (Weinhaus Glockenhof)"),
-    ("wl_riesling_pfalz", "schlegel", C("46662a"), C("c8ccd0"), "Riesling trocken, Pfalz 2023 (Kellerei Sternschnuppe)"),
-    ("wl_spaet_baden", "burgundy", C("1c2a18"), C("6a1020"),
-     "Spätburgunder trocken, Baden 2020 (Weingut Mondscheinhang)"),
-    ("wl_spaet_ahr", "burgundy", C("24301c"), C("141414"), "Spätburgunder, Ahr 2019 (Winzerhof Tannenleite)"),
-    ("wl_dornfelder_rh", "bordeaux", C("1a2a1a"), C("4a1a48"),
-     "Dornfelder halbtrocken, Rheinhessen 2022 (Weingut Schneehang)"),
-    ("wl_dornfelder_pfalz", "bordeaux", C("1e2c1c"), C("9a1a18"), "Dornfelder trocken, Pfalz 2021 (Kellerei Kerzenschein)"),
-    ("wl_silvaner_franken", "bocksbeutel", C("2e5a2a"), C("8a9a3a"),
-     "Silvaner Kabinett trocken in a Bocksbeutel, Franken 2022 (Weingut zum Weihnachtsstern)"),
-    ("wl_silvaner_rh", "schlegel", C("9ab488"), C("ece8e0"), "Silvaner trocken, Rheinhessen 2023 (Hof Nachtigallenruh)"),
-    ("wl_riesling_eiswein", "half", C("6a4012"), C("c8a040"), "Riesling Eiswein, Rheingau 2018 (Weingut Eiszapfen)"),
+    ("wl_riesling_mosel", "schlegel", C("35602c"), C("2a5a2a"), "Riesling Kabinett feinherb", "Riesling", "Mosel",
+     2022, "Weingut am Laternenberg", "white"),
+    ("wl_riesling_rheingau", "schlegel", C("5a3410"), C("c8a040"), "Riesling Spätlese", "Riesling", "Rheingau", 2021,
+     "Weinhaus Glockenhof", "white"),
+    ("wl_riesling_pfalz", "schlegel", C("46662a"), C("c8ccd0"), "Riesling trocken", "Riesling", "Pfalz", 2023,
+     "Kellerei Sternschnuppe", "white"),
+    ("wl_spaet_baden", "burgundy", C("1c2a18"), C("6a1020"), "Spätburgunder trocken", "Spätburgunder (Pinot Noir)",
+     "Baden", 2020, "Weingut Mondscheinhang", "red"),
+    ("wl_spaet_ahr", "burgundy", C("24301c"), C("141414"), "Spätburgunder", "Spätburgunder (Pinot Noir)", "Ahr", 2019,
+     "Winzerhof Tannenleite", "red"),
+    ("wl_dornfelder_rh", "bordeaux", C("1a2a1a"), C("4a1a48"), "Dornfelder halbtrocken", "Dornfelder", "Rheinhessen",
+     2022, "Weingut Schneehang", "red"),
+    ("wl_dornfelder_pfalz", "bordeaux", C("1e2c1c"), C("9a1a18"), "Dornfelder trocken", "Dornfelder", "Pfalz", 2021,
+     "Kellerei Kerzenschein", "red"),
+    ("wl_silvaner_franken", "bocksbeutel", C("2e5a2a"), C("8a9a3a"), "Silvaner Kabinett trocken, in a Bocksbeutel",
+     "Silvaner", "Franken", 2022, "Weingut zum Weihnachtsstern", "white"),
+    ("wl_silvaner_rh", "schlegel", C("9ab488"), C("ece8e0"), "Silvaner trocken", "Silvaner", "Rheinhessen", 2023,
+     "Hof Nachtigallenruh", "white"),
+    ("wl_riesling_nahe", "schlegel", C("3e5a26"), C("b8922e"), "Riesling Auslese", "Riesling", "Nahe", 2020,
+     "Weingut Rauhreif", "white"),
+    ("wl_weissherbst_baden", "burgundy", C("e6ece0"), C("d87a8a"), "Spätburgunder Weißherbst (rosé)",
+     "Spätburgunder (Pinot Noir)", "Baden", 2023, "Winzerkeller Lichterglanz", "rosé"),
+    ("wl_riesling_eiswein", "half", C("6a4012"), C("c8a040"), "Riesling Eiswein, 0.375 l", "Riesling", "Rheingau",
+     2018, "Weingut Eiszapfen", "white"),
 ]
+ROSE = C("e8a098")
 
 
 def wine():
-    """German reds and whites on the upper shelf: a row of bottles in a low rack, three glasses."""
+    """German reds, whites and a rosé on the upper shelf: eight bottles in a low rack, two standing in a straw-
+    packed crate, two on a closed wine box, and five wine glasses on a tray. Every bottle and glass is its
+    own node (act_bottle_0..11, act_wineglass_0..4) with its origin at its base."""
     s = vlib.PropSet("prop_gluehwein_wine", "slot_shelf_2", "gluehwein", footprint=(2.4, 0.3))
     m = s.static
-    # a low slatted rack the bottles stand in (a board with a front rail), and a wine crate as a riser
-    G.board(m, T(-0.5, 0.01, 0), 1.3, 0.2, 0.014, C("a8845c"))
-    m.box((1.3, 0.012, 0.04), T(-0.5, -0.085, 0.034), vlib.RW("wood"), C("8a6440"))
-    m.box((0.34, 0.2, 0.12), T(0.5, 0.015, 0.06), vlib.RW("wood"), C("b89266"), skip=("nz",))   # a closed wine box
-    x = -1.1
-    for i, (lab, kind, glass, cap, name) in enumerate(WINES):
-        on_crate = i >= 8
+    # a low slatted rack the bottles stand in (a board with a front rail)
+    G.board(m, T(-0.56, 0.01, 0), 1.18, 0.2, 0.014, C("a8845c"))
+    m.box((1.18, 0.012, 0.04), T(-0.56, -0.085, 0.034), vlib.RW("wood"), C("8a6440"))
+    # an open wine crate packed with straw, and a closed wine box as a riser
+    cx, bx = 0.2, 0.58
+    G.crate(m, T(cx, 0.02, 0), 0.3, 0.2, 0.1, C("b08a5c"))
+    m.box((0.27, 0.17, 0.004), T(cx, 0.02, 0.07), vlib.RW("straw"), C("e8d098"), faces={"pz": vlib.RW("straw")},
+          skip=("nz",))
+    m.box((0.34, 0.2, 0.12), T(bx, 0.015, 0.06), vlib.RW("wood"), C("b89266"), skip=("nz",))
+    x = -1.13
+    for i, (lab, kind, glass, cap, wname, grape, region, vint, prod, colour) in enumerate(WINES):
         w = 0.15 if kind == "bocksbeutel" else 0.1
-        if on_crate:
-            loc = (0.43 + (i - 8) * 0.13, 0.015, 0.12)
-        else:
+        if i < 8:
             x += w / 2
             loc = (x, 0.01 + rng.uniform(-0.01, 0.01), 0.014)
             x += w / 2 + 0.018
+        elif i < 10:
+            loc = (cx - 0.065 + (i - 8) * 0.13, 0.02 + rng.uniform(-0.02, 0.02), 0.012)
+        else:
+            loc = (bx - 0.07 + (i - 10) * 0.14, 0.015, 0.12)
         node = s.node(f"act_bottle_{i}", loc, rot=(0, 0, rng.uniform(-0.15, 0.15)))
-        G.bottle(node, None, lab, glass, kind, cap)
-        s.item(f"act_bottle_{i}", name, "bottle", where="wine shelf")
-    # an open wine crate packed with straw between the rack and the wine box, a few corks on the straw
-    G.crate(m, T(0.08, 0.02, 0), 0.3, 0.2, 0.1, C("b08a5c"))
-    m.box((0.27, 0.17, 0.004), T(0.08, 0.02, 0.084), vlib.RW("straw"), C("e8d098"), faces={"pz": vlib.RW("straw")},
-          skip=("nz",))
+        G.bottle(node, None, lab, glass, kind, cap, liquid=ROSE if colour == "rosé" else None, n=10)
+        s.item(f"act_bottle_{i}", f"{wname}, {region} {vint} ({prod})", "bottle", where="wine shelf",
+               wine=wname, grape=grape, region=region, vintage=vint, producer=prod, colour=colour,
+               country="Germany")
     if not lite():
-        for k in range(6):
-            m.box((0.012, 0.004, 0.08), T(0.08 + drng.uniform(-0.1, 0.1), 0.02 + drng.uniform(-0.06, 0.06), 0.09,
+        # straw tufts round the bottles in the crate
+        for k in range(8):
+            m.box((0.012, 0.004, 0.08), T(cx + drng.uniform(-0.12, 0.12), 0.02 + drng.uniform(-0.07, 0.07), 0.075,
                                              rx=drng.uniform(1.2, 1.9), rz=drng.uniform(0, 3)), "straw", C("e0c890"))
-    # three wine glasses on a small tray: a red, a white and a clean one
-    G.board(m, T(1.0, 0.0, 0), 0.34, 0.2, 0.012, C("6a4228"))
-    for k, (dx, dy, wcol, nm) in enumerate(((-0.1, -0.03, C("4a0612"), "Glass of Spätburgunder"),
-                                            (0.0, 0.04, C("e8d890"), "Glass of Riesling"),
-                                            (0.1, -0.02, None, "Clean wine glass"))):
-        g = s.node(f"act_wineglass_{k}", (1.0 + dx, dy, 0.012))
+    # five wine glasses on a tray: a red, a white, a rosé and two clean ones
+    tx = 0.98
+    G.board(m, T(tx, 0.01, 0), 0.4, 0.22, 0.012, C("6a4228"))
+    for k, (dx, dy, wcol, nm) in enumerate(((-0.13, -0.05, C("4a0612"), "Glass of Spätburgunder"),
+                                            (-0.04, 0.05, C("e8d890"), "Glass of Riesling"),
+                                            (0.05, -0.04, ROSE, "Glass of Weißherbst"),
+                                            (0.13, 0.055, None, "Clean wine glass"),
+                                            (0.145, -0.055, None, "Clean wine glass"))):
+        g = s.node(f"act_wineglass_{k}", (tx + dx, 0.01 + dy, 0.012))
         G.wine_glass(g, None, wcol)
         s.item(f"act_wineglass_{k}", nm, "wineglass")
     # a corkscrew and two corks
     if not lite():
-        m.box((0.11, 0.012, 0.008), T(0.75, -0.08, 0.004, rz=0.3), "steel", WHITE)
+        m.box((0.11, 0.012, 0.008), T(0.78, -0.08, 0.004, rz=0.3), "steel", WHITE)
         for dx in (0.0, 0.03):
             m.cyl(0.011, 0.011, 0.045, 8, "cinnamon", T(0.8 + dx, -0.1, 0.011, ry=math.pi / 2, rz=dx * 20),
                   C("d8b890"))

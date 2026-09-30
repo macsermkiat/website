@@ -14,7 +14,8 @@ export default defineConfig({
   root: site,
   base: '/',
   optimizeDeps: { entries: ['src/lighting/test.html'] },
-  server: { port: 4390, strictPort: true, fs: { allow: [repo] } },
+  // no live reload: screenshots must not be interrupted when a file is saved mid-shot
+  server: { port: 4390, strictPort: true, fs: { allow: [repo] }, hmr: false, watch: null },
   plugins: [{
     name: 'lighting-review-files',
     configureServer(server) {

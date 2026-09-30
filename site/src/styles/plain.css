@@ -32,3 +32,10 @@ footer .credits a { color: inherit; }
   :root:not([data-theme="dark"]) { --bg: #fbf7ef; --surface: #f1eadc; --ink: #1d1824; --muted: #5d566a; --line: #dcd2c0; --gold: #8a5a0e; --gold-ink: #fff; color-scheme: light; }
 }
 .formac { color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; padding: 1px 6px; font-size: .88em; font-style: italic; }
+.credits-all { margin-top: 10px; font-size: 14px; }
+.credits-all summary { cursor: pointer; }
+.credits-all table { border-collapse: collapse; width: 100%; margin: 8px 0 4px; font-size: 13px; }
+.credits-all th, .credits-all td { text-align: left; vertical-align: top; padding: 4px 8px 4px 0; border-top: 1px solid rgba(128, 128, 128, .35); }
+.credits-all h3 { font-size: 15px; margin: 12px 0 2px; }
+.credits-all a { word-break: break-all; color: inherit; }
+.shelf-list { columns: 2 16rem; }
