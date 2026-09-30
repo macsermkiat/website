@@ -1,0 +1,280 @@
+{
+ "source": "Mac's Audible library, chosen by Mac on 2026-09-30 (everything except Capital in the Twenty-First Century, Rich Dad Poor Dad and The Stock Market Outsider).",
+ "books": [
+  {
+   "title": "The Laws of Human Nature",
+   "full_title": "The Laws of Human Nature",
+   "author": "Robert Greene"
+  },
+  {
+   "title": "Man's Search for Meaning",
+   "full_title": "Man's Search for Meaning",
+   "author": "Viktor E. Frankl"
+  },
+  {
+   "title": "Unreasonable Hospitality",
+   "full_title": "Unreasonable Hospitality: The Remarkable Power of Giving People More than They Expect",
+   "author": "Will Guidara"
+  },
+  {
+   "title": "Grit",
+   "full_title": "Grit: The Power of Passion and Perseverance",
+   "author": "Angela Duckworth"
+  },
+  {
+   "title": "How to Be Bold",
+   "full_title": "How to Be Bold: The Surprising Science of Everyday Courage",
+   "author": "Ranjay Gulati"
+  },
+  {
+   "title": "The Courage to Be Happy",
+   "full_title": "The Courage to Be Happy: Discover the Power of Positive Psychology and Choose Happiness Every Day",
+   "author": "Ichiro Kishimi and Fumitake Koga"
+  },
+  {
+   "title": "The Courage to Be Disliked",
+   "full_title": "The Courage to Be Disliked: How to Free Yourself, Change Your Life, and Achieve Real Happiness",
+   "author": "Ichiro Kishimi and Fumitake Koga"
+  },
+  {
+   "title": "Six-Minute X-Ray",
+   "full_title": "Six-Minute X-Ray: Rapid Behavior Profiling",
+   "author": "Chase Hughes"
+  },
+  {
+   "title": "The Many Hidden Worlds of Quantum Mechanics",
+   "full_title": "The Many Hidden Worlds of Quantum Mechanics",
+   "author": "Sean Carroll"
+  },
+  {
+   "title": "Set Boundaries, Find Peace",
+   "full_title": "Set Boundaries, Find Peace: A Guide to Reclaiming Yourself",
+   "author": "Nedra Glover Tawwab"
+  },
+  {
+   "title": "Cues",
+   "full_title": "Cues: Master the Secret Language of Charismatic Communication",
+   "author": "Vanessa Van Edwards"
+  },
+  {
+   "title": "Captivate",
+   "full_title": "Captivate: The Science of Succeeding with People",
+   "author": "Vanessa Van Edwards"
+  },
+  {
+   "title": "How to Know a Person",
+   "full_title": "How to Know a Person: The Art of Seeing Others Deeply and Being Deeply Seen",
+   "author": "David Brooks"
+  },
+  {
+   "title": "Crucial Conversations",
+   "full_title": "Crucial Conversations (Third Edition): Tools for Talking When Stakes Are High",
+   "author": "Joseph Grenny et al."
+  },
+  {
+   "title": "Ultra-Processed People",
+   "full_title": "Ultra-Processed People: Why We Can't Stop Eating Food That Isn't Food",
+   "author": "Chris van Tulleken"
+  },
+  {
+   "title": "The Next Conversation",
+   "full_title": "The Next Conversation: Argue Less, Talk More",
+   "author": "Jefferson Fisher"
+  },
+  {
+   "title": "The Biggest Ideas in the Universe",
+   "full_title": "The Biggest Ideas in the Universe: Space, Time, and Motion",
+   "author": "Sean Carroll"
+  },
+  {
+   "title": "Quanta and Fields",
+   "full_title": "Quanta and Fields: The Biggest Ideas in the Universe",
+   "author": "Sean Carroll"
+  },
+  {
+   "title": "Supercommunicators",
+   "full_title": "Supercommunicators: How to Unlock the Secret Language of Connection",
+   "author": "Charles Duhigg"
+  },
+  {
+   "title": "Quit",
+   "full_title": "Quit: The Power of Knowing When to Walk Away",
+   "author": "Annie Duke"
+  },
+  {
+   "title": "Influence",
+   "full_title": "Influence, New and Expanded: The Psychology of Persuasion",
+   "author": "Robert B. Cialdini"
+  },
+  {
+   "title": "Chaos",
+   "full_title": "Chaos: Making a New Science",
+   "author": "James Gleick"
+  },
+  {
+   "title": "Never Split the Difference",
+   "full_title": "Never Split the Difference: Negotiating as if Your Life Depended on It",
+   "author": "Chris Voss and Tahl Raz"
+  },
+  {
+   "title": "The Pragmatic Programmer",
+   "full_title": "The Pragmatic Programmer: 20th Anniversary Edition, 2nd Edition: Your Journey to Mastery",
+   "author": "David Thomas and Andrew Hunt"
+  },
+  {
+   "title": "Poor Charlie’s Almanack",
+   "full_title": "Poor Charlie’s Almanack: The Essential Wit and Wisdom of Charles T. Munger",
+   "author": "Charles T. Munger"
+  },
+  {
+   "title": "Clean Code",
+   "full_title": "Clean Code: A Handbook of Agile Software Craftsmanship",
+   "author": "Robert C. Martin"
+  },
+  {
+   "title": "Deep Work",
+   "full_title": "Deep Work: Rules for Focused Success in a Distracted World",
+   "author": "Cal Newport"
+  },
+  {
+   "title": "The Misbehavior of Markets",
+   "full_title": "The Misbehavior of Markets: A Fractal View of Financial Turbulence",
+   "author": "Benoit Mandelbrot and Richard L Hudson"
+  },
+  {
+   "title": "Antifragile",
+   "full_title": "Antifragile: Things That Gain from Disorder",
+   "author": "Nassim Nicholas Taleb"
+  },
+  {
+   "title": "Reality Is Not What It Seems",
+   "full_title": "Reality Is Not What It Seems: The Journey to Quantum Gravity",
+   "author": "Carlo Rovelli"
+  },
+  {
+   "title": "The Black Swan",
+   "full_title": "The Black Swan, Second Edition: The Impact of the Highly Improbable: With a new section: \"On Robustness and Fragility\": Incerto, Book 2",
+   "author": "Nassim Nicholas Taleb"
+  },
+  {
+   "title": "On the Origin of Time",
+   "full_title": "On the Origin of Time: Stephen Hawking's Final Theory",
+   "author": "Thomas Hertog"
+  },
+  {
+   "title": "Elon Musk",
+   "full_title": "Elon Musk",
+   "author": "Walter Isaacson"
+  },
+  {
+   "title": "The Making of the Atomic Bomb",
+   "full_title": "Making of the Atomic Bomb: 25th Anniversary Edition",
+   "author": "Richard Rhodes"
+  },
+  {
+   "title": "Mysteries of Modern Physics: Time",
+   "full_title": "Mysteries of Modern Physics: Time",
+   "author": "Sean Carroll"
+  },
+  {
+   "title": "Algorithms to Live By",
+   "full_title": "Algorithms to Live By: The Computer Science of Human Decisions",
+   "author": "Brian Christian and Tom Griffiths"
+  },
+  {
+   "title": "The Meaning of it All",
+   "full_title": "The Meaning of it All: Thoughts of a Citizen-Scientist",
+   "author": "Richard P. Feynman"
+  },
+  {
+   "title": "Einstein",
+   "full_title": "Einstein: His Life and Universe",
+   "author": "Walter Isaacson"
+  },
+  {
+   "title": "The Almanack of Naval Ravikant",
+   "full_title": "The Almanack of Naval Ravikant: A Guide to Wealth and Happiness",
+   "author": "Eric Jorgenson"
+  },
+  {
+   "title": "Unf*ck Your Boundaries",
+   "full_title": "Unf*ck Your Boundaries: Build Better Relationships Through Consent, Communication, and Expressing Your Needs: The 5-minute Therapy Series",
+   "author": "Faith G. Harper"
+  },
+  {
+   "title": "Surely You're Joking, Mr. Feynman!",
+   "full_title": "Surely You're Joking, Mr. Feynman!",
+   "author": "Richard P. Feynman"
+  },
+  {
+   "title": "What Do You Care What Other People Think?",
+   "full_title": "What Do You Care What Other People Think?: Further Adventures of a Curious Character",
+   "author": "Richard P. Feynman and Ralph Leighton"
+  },
+  {
+   "title": "Something Deeply Hidden",
+   "full_title": "Something Deeply Hidden: Quantum Worlds and the Emergence of Spacetime",
+   "author": "Sean Carroll"
+  },
+  {
+   "title": "Framers",
+   "full_title": "Framers: Human Advantage in an Age of Technology and Turmoil",
+   "author": "Kenneth Cukier et al."
+  },
+  {
+   "title": "Atomic Habits",
+   "full_title": "Atomic Habits: An Easy & Proven Way to Build Good Habits & Break Bad Ones",
+   "author": "James Clear"
+  },
+  {
+   "title": "Think Again",
+   "full_title": "Think Again: The Power of Knowing What You Don't Know",
+   "author": "Adam Grant"
+  },
+  {
+   "title": "Breath",
+   "full_title": "Breath: The New Science of a Lost Art",
+   "author": "James Nestor"
+  },
+  {
+   "title": "Calling Bullshit",
+   "full_title": "Calling Bullshit: The Art of Skepticism in a Data-Driven World",
+   "author": "Carl T. Bergstrom and Jevin D. West"
+  },
+  {
+   "title": "The Order of Time",
+   "full_title": "The Order of Time",
+   "author": "Carlo Rovelli"
+  },
+  {
+   "title": "Infinite Powers",
+   "full_title": "Infinite Powers: How Calculus Reveals the Secrets of the Universe",
+   "author": "Steven Strogatz"
+  },
+  {
+   "title": "How to Win Friends & Influence People",
+   "full_title": "How to Win Friends & Influence People",
+   "author": "Dale Carnegie"
+  },
+  {
+   "title": "Thinking, Fast and Slow",
+   "full_title": "Thinking, Fast and Slow",
+   "author": "Daniel Kahneman"
+  },
+  {
+   "title": "Stop Walking on Eggshells",
+   "full_title": "Stop Walking on Eggshells: Taking Your Life Back When Someone You Care about Has Borderline Personality Disorder",
+   "author": "Randi Kreger and Paul T. Mason"
+  },
+  {
+   "title": "Ultralearning",
+   "full_title": "Ultralearning: Accelerate Your Career, Master Hard Skills and Outsmart the Competition",
+   "author": "Scott H. Young"
+  },
+  {
+   "title": "The Book of Why",
+   "full_title": "The Book of Why: The New Science of Cause and Effect",
+   "author": "Judea Pearl and Dana Mackenzie"
+  }
+ ]
+}
