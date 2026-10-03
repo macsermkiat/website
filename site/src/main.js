@@ -19,7 +19,7 @@ import { bindKeyboard, watchMotion } from './interaction/keyboard.js';
 import { createPanel, buildPlaceNav } from './ui/panel.js';
 import { SECTIONS, ORDER, bookPicks, phrases, taglineHtml } from './content.js';
 import { createPerfMeter } from './perf.js';
-import { mergeStatic, mergeAcross, instancePools, instanceRiders } from './engine/merge.js';
+import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders } from './engine/merge.js';
 import { createGovernor } from './governor.js';
 import { counterLocal } from './actions/util.js';
 import { showPlainFallback } from './ui/fallback.js';
@@ -264,6 +264,9 @@ async function boot() {
   const decoRow = new THREE.Group();
   decoRow.name = 'deco_row_merged';
   scene.add(decoRow);
+  const snowRow = new THREE.Group();
+  snowRow.name = 'snow_row_merged';
+  scene.add(snowRow);
   const riderSyncs = [];
   function compact(placed) {
     for (const p of placed) {
@@ -281,6 +284,14 @@ async function boot() {
     if (deco.length > 1) {
       try { const saved = mergeAcross(deco, decoRow); merges.row += saved; merges.after -= saved; } catch (e) { warn(`merge deco row: ${e?.message || e}`); }
     }
+    // the snow caps of these models: one mesh per look for all of them (the toggle then shows a few draws)
+    try {
+      const s = mergeSnow(placed.map((p) => p.root), snowRow);
+      if (s.added.length) {
+        market.snow = market.snow.filter((o) => !s.removed.includes(o)).concat(s.added);
+        merges.snow = (merges.snow || 0) + s.saved;
+      }
+    } catch (e) { warn(`merge snow caps: ${e?.message || e}`); }
   }
   if (params.get('merge') !== '0') compact(market.placed);
 
@@ -519,6 +530,8 @@ async function boot() {
     get riding() { return actions.rides.riding?.type || null; },
     get panel() { return panel.current; },
     get snow() { return snowOn; },
+    /** The snow caps (tests): how many snow_ entries the toggle drives, merged meshes among them, how many show. */
+    snowCaps: () => ({ entries: market.snow.length, merged: market.snow.filter((o) => o.userData.snow).length, visible: market.snow.filter((o) => o.visible).length, saved: merges.snow || 0 }),
     /** Hold the last rendered frame (tests take screenshots of it; software GL can take seconds per frame). */
     freeze(on = true) { frozen = !!on; if (!frozen) timer.reset?.(); },
     /** Run the market's clock forward without drawing (tests: see the wheel turn on a 1 fps software renderer). */

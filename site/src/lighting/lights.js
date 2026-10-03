@@ -55,9 +55,20 @@ function lampType(spot, kind, local) {
   const t = String(spot.obj.userData?.type || spot.obj.userData?.light || '').toLowerCase();
   if (t === 'spot' || t === 'point') return t;
   if (/spot/i.test(spot.obj.name)) return 'spot';
+  // round 2: a light_ very high on a landmark (the Ferris wheel's hub, 14.7 m) is a wash, not a stage spot
+  if (kind === 'landmark' && local && K_WASH.height && local.y > K_WASH.height) return 'point';
   // stage lights high on a landmark (the bandstand roof) point straight down
   if (kind === 'landmark' && local && local.y > 2.8) return 'spot';
   return 'point';
+}
+
+// round 2: a landmark's light_ above `washHeight` (the Ferris wheel's hub light) is a wide point wash
+// (warm.landmark.wash / washDistance) that lights the steel round it, as in the Cycles preview
+const K_WASH = { height: 8 };
+function isWash(s, K) {
+  if (s.lk !== 'landmark' || !s.local || !K.wash) return false;
+  K_WASH.height = K.washHeight ?? 8;
+  return s.local.y > K_WASH.height;
 }
 
 /** A spot's position in its model's frame; a point more than 0.9 m in front of the model is a front fill. */
@@ -83,6 +94,7 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
     Object.assign(e, localOf(e, inv));
     const K = N.warm[e.lk] || N.warm.other;
     e.front = e.local.z > 0.9 && !!K.front;
+    e.wash = isWash(e, K);
     return e;
   });
   // A model's first light is its interior (what makes a stall read warm), its front fill second.
@@ -91,7 +103,8 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
   const byModel = new Map();
   for (const s of all) (byModel.get(s.id) || byModel.set(s.id, []).get(s.id)).push(s);
   for (const list of byModel.values()) {
-    list.sort((a, b) => (a.front - b.front) || a.pos.distanceTo(focus) - b.pos.distanceTo(focus));
+    // a landmark's high wash (the Ferris wheel's hub light) comes first: it is what makes it read
+    list.sort((a, b) => (b.wash - a.wash) || (a.front - b.front) || a.pos.distanceTo(focus) - b.pos.distanceTo(focus));
     list.forEach((s, i) => (s.rank = Math.min(i, 1)));
   }
   const order = all.sort((a, b) => (PRIORITY[a.lk] ?? 3) - (PRIORITY[b.lk] ?? 3) || a.rank - b.rank
@@ -128,7 +141,7 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
       const { holder, local } = s;
       const type = lampType(s, s.lk, local);
       const color = ud.color ? new THREE.Color(ud.color) : warm.clone();
-      let distance = Number(ud.distance) || (type === 'spot' ? K.spotDistance : K.pointDistance);
+      let distance = Number(ud.distance) || (s.wash ? K.washDistance : type === 'spot' ? K.spotDistance : K.pointDistance);
       let L;
       if (type === 'spot') {
         L = new THREE.SpotLight(color, Number(ud.intensity) || K.spot, distance, 0.95, 0.6, 2);
@@ -152,7 +165,7 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
           L.target.position.copy(new THREE.Vector3(local.x, 0, local.z + (K.frontAim ?? 0.6)).applyMatrix4(holder.matrixWorld));
           scene.add(L.target);
         } else {
-          L = new THREE.PointLight(color, Number(ud.intensity) || (front ? K.front : K.point), front && !ud.distance ? K.frontDistance : distance, 2);
+          L = new THREE.PointLight(color, Number(ud.intensity) || (s.wash ? K.wash : front ? K.front : K.point), front && !ud.distance ? K.frontDistance : distance, 2);
         }
         if (front) L.userData.front = true;
       }
@@ -335,8 +348,8 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
     // one mesh for all the lamps of this placement (two draw calls, not two per stall)
     if (fixtures.length > 1) {
       const parts = fixtures.map((m) => { m.updateMatrix(); return m.geometry.applyMatrix4(m.matrix); });
-      const iron = mergeGeos(parts.map((g) => sub(g, 0))), lit = mergeGeos(parts.map((g) => sub(g, 1)));
-      const one = new THREE.Mesh(mergeGeos([iron, lit], true), fixtures[0].material);
+      const mats = fixtures[0].material;
+      const one = new THREE.Mesh(mergeGeos(mats.map((_, i) => mergeGeos(parts.map((g) => sub(g, i)))), true), mats);
       Object.assign(one, { name: 'lighting_sign_lamps', castShadow: false, receiveShadow: false, raycast: () => {} });
       one.userData.lightingFixture = true;
       parts.forEach((g) => g.dispose());
@@ -410,6 +423,9 @@ export function retargetLight(L, s, N, { lite = false } = {}) {
       L.target.position.copy(new THREE.Vector3(...a).applyMatrix4(s.holder.matrixWorld));
       L.distance = Number(ud.distance) || K.spotDistance;
       target = Number(ud.intensity) || (type === 'spot' ? K.spot : K.point);
+    } else if (isWash(s, K)) {
+      L.distance = Number(ud.distance) || K.washDistance;
+      target = Number(ud.intensity) || K.wash;
     } else {
       L.distance = Number(ud.distance) || K.pointDistance;
       target = Number(ud.intensity) || K.point;
@@ -498,20 +514,66 @@ let fixtureMats = null;
  */
 function signFixture(rect, lamp, half, SG, color) {
   if (!fixtureMats) {
-    const iron = new THREE.MeshStandardMaterial({ color: 0x1b1714, metalness: 0.7, roughness: 0.45 });
+    // dark bronze outside (darker than the board, with a soft sheen), a warm reflector inside
+    // and the lit tube, which blooms a little
+    const iron = new THREE.MeshStandardMaterial({ color: 0x3a3226, metalness: 0.6, roughness: 0.42, side: THREE.DoubleSide });
     iron.name = 'lighting_sign_lamp_iron';
-    const lit = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: new THREE.Color().setRGB(1, 0.72, 0.42), emissiveIntensity: SG.fixtureEmissive ?? 2.2 });
+    const warm = new THREE.Color().setRGB(1, 0.72, 0.42);
+    const lit = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: warm, emissiveIntensity: SG.fixtureEmissive ?? 2.2 });
     lit.name = 'lighting_sign_lamp_glow';
-    fixtureMats = [iron, lit];
+    const refl = new THREE.MeshStandardMaterial({ color: 0x2a2018, metalness: 0.2, roughness: 0.5, emissive: warm, emissiveIntensity: SG.reflectorEmissive ?? 0.35 });
+    refl.name = 'lighting_sign_lamp_reflector';
+    fixtureMats = [iron, lit, refl];
   }
-  const parts = [];
-  const bar = new THREE.BoxGeometry(half * 2 + 0.03, 0.024, 0.04); // the lamp's shade
-  const strip = new THREE.BoxGeometry(half * 2, 0.005, 0.022).translate(0, -0.0135, 0); // its lit underside
-  // two arms back to the board's top edge
-  const armLen = SG.out;
-  const arm = (x) => new THREE.BoxGeometry(0.01, 0.01, armLen).translate(x, -0.006, -armLen / 2);
-  const iron = mergeGeos([bar, arm(-half * 0.7), arm(half * 0.7)]);
-  const g = mergeGeos([iron, strip], true);
+  // round 2: a picture-light hood (round 1 had a flat 2.4 cm bar that read as a black line). Lamp-local
+  // frame: x along the board, y up, z out of the board toward the visitor; the tube sits at the origin.
+  // The hood's profile is an arc of radius r over the tube, from just behind the top round to a lip in
+  // front and below it, so it opens back and down onto the board.
+  const W = half + 0.015, r = SG.hoodRadius ?? 0.045, N = 8;
+  const a0 = (105 * Math.PI) / 180, a1 = (-35 * Math.PI) / 180;
+  const arc = (rad) => Array.from({ length: N + 1 }, (_, i) => { const t = a0 + ((a1 - a0) * i) / N; return [Math.cos(t), Math.sin(t), rad]; });
+  const sheet = (rad, inward) => {
+    const pos = [], nor = [];
+    const pts = arc(rad);
+    for (let i = 0; i < N; i++) {
+      const [c0, s0] = pts[i], [c1, s1] = pts[i + 1];
+      const q = [[-W, c0, s0], [W, c0, s0], [W, c1, s1], [-W, c1, s1]];
+      const order = inward ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2];
+      for (const k of order) {
+        const [x, c, sn] = q[k];
+        pos.push(x, sn * rad, c * rad);
+        nor.push(0, inward ? -sn : sn, inward ? -c : c);
+      }
+    }
+    return geo(pos, nor);
+  };
+  const caps = () => {
+    // end plates closing the hood's two ends (a fan from the tube's axis)
+    const pos = [], nor = [];
+    const pts = arc(r);
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < N; i++) {
+        const [c0, s0] = pts[i], [c1, s1] = pts[i + 1];
+        const tri = sx > 0 ? [[0, 0], [c0, s0], [c1, s1]] : [[0, 0], [c1, s1], [c0, s0]];
+        for (const [c, sn] of tri) { pos.push(sx * W, sn * r, c * r); nor.push(sx, 0, 0); }
+      }
+    }
+    return geo(pos, nor);
+  };
+  const outer = sheet(r, false), inner = sheet(r - 0.004, true);
+  const tube = new THREE.CylinderGeometry(0.007, 0.007, half * 2, 8, 1, true).rotateZ(Math.PI / 2).translate(0, 0.004, 0.004);
+  // two arms from the back of the hood down to the board's top edge, each with a small mounting plate
+  const arm = (x) => {
+    const from = new THREE.Vector3(x, r * 0.6, -r * 0.2), to = new THREE.Vector3(x, -SG.up + 0.02, -SG.out + 0.012);
+    const d = to.clone().sub(from), len = d.length();
+    const g = new THREE.BoxGeometry(0.012, 0.012, len);
+    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d.normalize()));
+    return g.translate((from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2);
+  };
+  const plate = (x) => new THREE.BoxGeometry(0.05, 0.04, 0.008).translate(x, -SG.up + 0.02, -SG.out + 0.006);
+  const ax = half * 0.7;
+  const iron = mergeGeos([outer, caps(), arm(-ax), arm(ax), plate(-ax), plate(ax)]);
+  const g = mergeGeos([iron, tube, inner], true);
   const m = new THREE.Mesh(g, fixtureMats);
   m.name = 'lighting_sign_lamp';
   const basis = new THREE.Matrix4().makeBasis(rect.right, rect.up, rect.normal);
@@ -522,6 +584,13 @@ function signFixture(rect, lamp, half, SG, color) {
   m.raycast = () => {};
   m.userData.lightingFixture = true;
   return m;
+}
+
+function geo(pos, nor) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  return g;
 }
 
 /** The part of a grouped, non-indexed geometry that uses material `index`. */
@@ -809,6 +878,50 @@ const isWindowMat = (m) => /^window_warm/i.test(m?.name || '');
  * userData.baseEmissive, so that is set too). Works on anything under `root`, so late-loaded
  * models can be tuned with lighting.tune(root). Returns { bulbs, windows } material sets.
  */
+/**
+ * Bulb bounce (round 2): a model that has a rot_wheel (the Ferris wheel) is covered in bulbs, which
+ * light its steel round them. Its opaque, non-emissive materials above B.minY m (or under rot_wheel)
+ * get a warm emissive equal to albedo x colour x strength, so the cream steel reads as lit by its own
+ * bulbs on full and lite alike, with no lights. Materials are cloned once per model, so a material
+ * the model shares with a booth at ground level keeps its own look there.
+ */
+export function bulbBounce(root, N) {
+  const B = N.emissive?.bounce;
+  const wheel = root.getObjectByName('rot_wheel');
+  if (!B || !wheel) return 0;
+  root.updateMatrixWorld(true);
+  const groundY = root.getWorldPosition(new THREE.Vector3()).y;
+  const under = new Set();
+  wheel.traverse((o) => under.add(o));
+  const clones = new Map(), box = new THREE.Box3(), c = new THREE.Vector3();
+  const warm = new THREE.Color().setRGB(...(B.color || [1, 0.7, 0.42]));
+  let n = 0;
+  root.traverse((o) => {
+    if (!o.isMesh || /^bulbs_/i.test(o.name) || /^bulbs_/i.test(o.parent?.name || '')) return;
+    if (!under.has(o)) {
+      box.setFromObject(o).getCenter(c);
+      if (c.y - groundY < (B.minY ?? 3)) return;
+    }
+    const one = (m) => {
+      if (!m || !m.emissive || m.transparent || m.opacity < 1 || isBulbMat(m) || isWindowMat(m)) return m;
+      if (m.emissiveMap || m.emissive.getHex() !== 0) return m;
+      if (clones.has(m)) return clones.get(m);
+      const k = /steel|metal|iron/i.test(m.name) && !/black/i.test(m.name) ? B.steel : B.other;
+      const q = m.clone();
+      q.name = m.name;
+      q.emissive.copy(m.color).multiply(warm);
+      q.emissiveMap = m.map || null;
+      q.emissiveIntensity = k;
+      q.userData.bulbBounce = k;
+      clones.set(m, q);
+      n++;
+      return q;
+    };
+    o.material = Array.isArray(o.material) ? o.material.map(one) : one(o.material);
+  });
+  return n;
+}
+
 export function tuneEmissives(root, N, { lite = false } = {}) {
   const bulbs = new Set(), windows = new Set();
   root.traverse((o) => {

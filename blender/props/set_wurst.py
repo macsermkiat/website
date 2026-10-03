@@ -52,6 +52,38 @@ def lump(m, M, r, region, col, mat, subd=1, rough=0.35, squash=0.7, seed=0.0):
     m.add(verts, faces, uvs, M, col, mat, False)
 
 
+def coal_lump(m, M, r, col, seed=0.0, hot_top=False, subd=1, rough=0.35, squash=0.7):
+    """A burning charcoal lump on the coal_glow material. Its faces map into the two halves of the coal maps
+    (atlas_goods.g_coal / coal_emit): the sides into a random window of the glowing left half (bright cracks,
+    ember glow), the upward faces into a window of the ash right half (grey, dark), unless `hot_top`. Each lump
+    gets its own windows, so the bed is a patchwork of bright, dull and ashy coals, not one stamped texture."""
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=subd, radius=r)
+    verts, faces, uvs = [], [], []
+    for v in bm.verts:
+        p = v.co.copy()
+        k = 1 + rough * noise.noise(p * (3.0 / r) + Vector((seed, seed * 1.7, 0)))
+        verts.append((p.x * k, p.y * k * 0.9, p.z * k * squash))
+    win = 0.16 + 0.1 * drng.random()                        # window size in UV
+    hu, hv = drng.uniform(0.0, 0.5 - win), drng.uniform(0.0, 1.0 - win)
+    au, av = drng.uniform(0.5, 1.0 - win), drng.uniform(0.0, 1.0 - win)
+    for f in bm.faces:
+        ids = [v.index for v in f.verts]
+        c = Vector((0, 0, 0))
+        for i in ids:
+            c += Vector(verts[i])
+        c /= len(ids)
+        e1 = Vector(verts[ids[1]]) - Vector(verts[ids[0]])
+        e2 = Vector(verts[ids[2]]) - Vector(verts[ids[0]])
+        nz = e1.cross(e2).normalized().z
+        top = nz > 0.55 and not hot_top
+        u0, v0 = (au, av) if top else (hu, hv)
+        faces.append(tuple(ids))
+        uvs.append([(u0 + win * (0.5 + 0.5 * verts[i][0] / r), v0 + win * (0.5 + 0.5 * verts[i][1] / r)) for i in ids])
+    bm.free()
+    m.add(verts, faces, uvs, M, col, "coal_glow", False)
+
+
 def chain(m, a, b, link=0.042, r=0.0028, mat="grill_iron", col=WHITE):
     a, b = Vector(a), Vector(b)
     d = b - a
@@ -150,15 +182,31 @@ def grill(s):
     coal = s.node("coals", (0, 0, zb), parent="act_grill")
     coal.lathe([(0.0, 0.05), (0.17 * k_, 0.05), (0.185 * k_, 0.062), (0.0, 0.066)], seg(20, 8),
                vlib.Reg([0.0, 0.0, 1.0, 1.0]), None, C("6a6560"), "coal_glow")
-    full = vlib.Reg([0.0, 0.0, 1.0, 1.0])
-    kn = 44 if not vlib.lite() else 12
+    # burning lumps: each its own patch of the glow map (bright cracks on the sides, ash on most tops);
+    # about one in five burns right through its top
+    kn = 40 if not vlib.lite() else 12
     for i in range(kn):
         rr = 0.18 * math.sqrt(drng.random())
         a = drng.uniform(0, TWO_PI)
         z = 0.058 + (0.18 - rr) * 0.12 + drng.uniform(0, 0.012)
-        ashy = drng.random() < 0.35
-        lump(coal, T(rr * math.cos(a), rr * math.sin(a), z, rz=drng.uniform(0, 6)), drng.uniform(0.02, 0.032),
-             full, jit(C("b0aca8") if ashy else WHITE, 0.15), "coal_glow", subd=1, seed=i * 1.3)
+        coal_lump(coal, T(rr * math.cos(a), rr * math.sin(a), z, rz=drng.uniform(0, 6)), drng.uniform(0.02, 0.032),
+                  jit(WHITE, 0.12), seed=i * 1.3, hot_top=drng.random() < 0.2)
+    # a few dead, grey coals near the rim (burnt out, no glow: plain atlas charcoal under ash) and a fine
+    # layer of pale ash drifted over the bed and against the bowl's wall
+    for i in range(6 if not vlib.lite() else 2):
+        a = drng.uniform(0, TWO_PI)
+        rr = drng.uniform(0.14, 0.17) * k_
+        lump(coal, T(rr * math.cos(a), rr * math.sin(a), 0.064 + drng.uniform(0, 0.006), rz=drng.uniform(0, 6)),
+             drng.uniform(0.016, 0.024), vlib.R("coal", sub=(0.55, 0.05, 0.95, 0.95)), jit(C("a8a49e"), 0.1),
+             "atlas", subd=1, seed=50 + i * 1.9)
+    coal.lathe([(0.15 * k_, 0.062), (0.18 * k_, 0.066), (0.19 * k_, 0.072), (0.186 * k_, 0.074)], seg(20, 8),
+               "sw_matte", None, C("8e8a84"), "atlas")
+    for i in range(7 if not vlib.lite() else 2):
+        a = drng.uniform(0, TWO_PI)
+        rr = 0.15 * math.sqrt(drng.random())
+        z = 0.058 + (0.18 - rr) * 0.12 + 0.03
+        lump(coal, T(rr * math.cos(a), rr * math.sin(a), z, rz=drng.uniform(0, 6)), drng.uniform(0.014, 0.022),
+             "sw_matte", jit(C("b4b0aa"), 0.08), "atlas", subd=1, rough=0.25, squash=0.22, seed=80 + i)
     # gallows: a square post from the deck on the left of the bowl, an arm over it, a hook
     post_top = 0.64 - fz
     px = -0.262
@@ -333,7 +381,7 @@ def counter():
             else:
                 y, z = (-0.052 + k * 0.026, 0.004) if k < 5 else (-0.039 + (k - 5) * 0.026, 0.004 + 2 * SAUSAGE_R - 0.004)
             G.sausage(m, Mt @ T(drng.uniform(-0.008, 0.008), y, z + SAUSAGE_R, rz=drng.uniform(-0.06, 0.06)),
-                      L=0.13, r=SAUSAGE_R, bend=0.005, dark=False, seed=40 + k)
+                      L=0.13, r=SAUSAGE_R, bend=0.005, dark=False, seed=40 + k, raw=True)
     # basket of rolls, stacked two deep, each roll its own node
     G.crate(m, T(bx, by, 0), 0.34, 0.26, 0.07, C("b48c5c"), slats=2)
     m.box((0.3, 0.22, 0.004), T(bx, by, 0.014), "towel", WHITE, faces={"pz": "towel"}, skip=("nz",))
@@ -402,6 +450,7 @@ SETS = {
                                in_stall="stall_bratwurst.glb",
                                # the coals' own glow does the work; a small ember light just over the bed lights the grate from below
                                stall_lights=(("env_ember", 'POINT', (-0.9, 0.0, 0.2), 6, (1.0, 0.36, 0.08), 0.15),),
+                               stall_dim={"in_stall_grill": 0.2},
                                stall_cams={"in_stall": ((-0.1, -2.5, 0.75), (-0.15, 0.1, 0.35), 26),
                                            "in_stall_grill": ((-0.55, -1.05, 0.42), (-0.88, 0.05, 0.32), 32)}),
 }

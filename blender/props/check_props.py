@@ -20,6 +20,9 @@ FAIL (exit 1):
 - seat check (blender/props/seat_check.mjs, node): no prop triangle cuts into its stall (counter,
   firebox, hearth plate, posts, braces, back boards) at its slot, and every set stays inside the y-range
   of the board it stands on (so nothing hangs past the counter's back edge)
+- full / lite bounds parity: every act_ node's subtree (the node and everything under it) has the same
+  world bounding box in the lite glb as in the full glb within 1 cm, and every named mesh node within 2 cm
+  (so a lite simplification that changes the shape, e.g. a foam head growing into a column, fails)
 WARN (listed, exit 0): lite versions above 38 % of the full triangles (target about a third).
 
     python3 blender/props/check_props.py --notes   also rewrites the budget tables in
@@ -49,6 +52,7 @@ NO_AO = ("vendor_glass", "flame", "lamp_glow", "coal_glow", "vendor_beer", "vend
 BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|sausage)_\d+$|^act_grill$")
 HEADROOM, SECTION_TRIS, SECTION_MB, DECO_TRIS = 2000, 60000, 3.0, 20000
 LITE_RATIO = 0.38
+ACT_BBOX_TOL, MESH_BBOX_TOL = 0.01, 0.02          # m: full vs lite bounds of act_ subtrees / mesh nodes
 NOTES = os.path.join(REPO, "review", "round-2", "vendor", "NOTES.md")
 SEAT = os.path.join(HERE, "seat_check.mjs")
 
@@ -181,6 +185,116 @@ def check_parity(name, js_full, js_lite):
         fail(f"{name}: {len(differ)} act_ node(s) carry other extras in lite (title/author/cover): {differ[:8]}")
 
 
+# ------------------------------------------------------------ full / lite bounds parity
+_CT_MAX = {5120: 127.0, 5121: 255.0, 5122: 32767.0, 5123: 65535.0}
+
+
+def _mat_mul(a, b):
+    return [[sum(a[i][k] * b[k][j] for k in range(4)) for j in range(4)] for i in range(4)]
+
+
+def _node_matrix(nd):
+    if "matrix" in nd:
+        m = nd["matrix"]
+        return [[m[c * 4 + r] for c in range(4)] for r in range(4)]
+    tx, ty, tz = nd.get("translation", [0, 0, 0])
+    x, y, z, w = nd.get("rotation", [0, 0, 0, 1])
+    sx, sy, sz = nd.get("scale", [1, 1, 1])
+    r = [[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+         [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+         [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]]
+    return [[r[0][0] * sx, r[0][1] * sy, r[0][2] * sz, tx], [r[1][0] * sx, r[1][1] * sy, r[1][2] * sz, ty],
+            [r[2][0] * sx, r[2][1] * sy, r[2][2] * sz, tz], [0, 0, 0, 1]]
+
+
+def _mesh_local_box(js, mi):
+    lo, hi = [1e9] * 3, [-1e9] * 3
+    for p in js["meshes"][mi]["primitives"]:
+        a = js["accessors"][p["attributes"]["POSITION"]]
+        mn, mx = a.get("min"), a.get("max")
+        if mn is None or mx is None:
+            continue
+        if a.get("normalized") and max(abs(v) for v in mn + mx) > 1.0:
+            k = _CT_MAX.get(a["componentType"], 1.0)
+            mn, mx = [v / k for v in mn], [v / k for v in mx]
+        lo = [min(l, v) for l, v in zip(lo, mn)]
+        hi = [max(h, v) for h, v in zip(hi, mx)]
+    return lo, hi
+
+
+def node_boxes(js):
+    """{node name: (own mesh world box or None, subtree world box or None)} in the glb's scene frame."""
+    nodes = js.get("nodes", [])
+    world, own, sub = {}, {}, {}
+
+    def walk(i, M):
+        nd = nodes[i]
+        W = _mat_mul(M, _node_matrix(nd))
+        lo, hi = [1e9] * 3, [-1e9] * 3
+        if "mesh" in nd:
+            ml, mh = _mesh_local_box(js, nd["mesh"])
+            if ml[0] < 1e8:
+                for cx in (ml[0], mh[0]):
+                    for cy in (ml[1], mh[1]):
+                        for cz in (ml[2], mh[2]):
+                            p = [W[r][0] * cx + W[r][1] * cy + W[r][2] * cz + W[r][3] for r in range(3)]
+                            lo = [min(a, b) for a, b in zip(lo, p)]
+                            hi = [max(a, b) for a, b in zip(hi, p)]
+                own[i] = (lo[:], hi[:])
+        for c in nd.get("children", []):
+            cl, ch = walk(c, W)
+            lo = [min(a, b) for a, b in zip(lo, cl)]
+            hi = [max(a, b) for a, b in zip(hi, ch)]
+        sub[i] = (lo, hi)
+        return lo, hi
+
+    ident = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+    roots = set(range(len(nodes))) - {c for nd in nodes for c in nd.get("children", [])}
+    for scene in js.get("scenes", [{"nodes": sorted(roots)}]):
+        for r in scene.get("nodes", []):
+            walk(r, ident)
+    out = {}
+    for i, nd in enumerate(nodes):
+        name = nd.get("name")
+        if not name or i not in sub:
+            continue
+        s = sub[i] if sub[i][0][0] < 1e8 else None
+        out[name] = (own.get(i), s)
+    return out
+
+
+def _box_diff(a, b):
+    return max(max(abs(x - y) for x, y in zip(a[0], b[0])), max(abs(x - y) for x, y in zip(a[1], b[1])))
+
+
+def check_bounds_parity(name, js_full, js_lite):
+    """The lite glb must keep the full glb's shapes: each act_ subtree within ACT_BBOX_TOL, each mesh node
+    within MESH_BBOX_TOL (glTF frame, metres). Returns the worst difference seen (for the summary)."""
+    bf, bl = node_boxes(js_full), node_boxes(js_lite)
+    worst, bad_act, bad_mesh = 0.0, [], []
+    for n in sorted(set(bf) & set(bl)):
+        (of, sf), (ol, sl) = bf[n], bl[n]
+        if is_act(n) and sf and sl:
+            d = _box_diff(sf, sl)
+            worst = max(worst, d)
+            if d > ACT_BBOX_TOL:
+                bad_act.append((n, d, sf, sl))
+        if of and ol:
+            d = _box_diff(of, ol)
+            worst = max(worst, d)
+            if d > MESH_BBOX_TOL:
+                bad_mesh.append((n, d, of, ol))
+    for n, d, f, l in bad_act[:6]:
+        fail(f"{name}: act_ subtree {n} bounds differ full/lite by {d * 100:.1f} cm "
+             f"(full max y {f[1][1]:.3f}, lite max y {l[1][1]:.3f})")
+    for n, d, f, l in bad_mesh[:6]:
+        fail(f"{name}: mesh {n} bounds differ full/lite by {d * 100:.1f} cm "
+             f"(full {['%.3f' % v for v in f[0] + f[1]]}, lite {['%.3f' % v for v in l[0] + l[1]]})")
+    if len(bad_act) + len(bad_mesh) > 12:
+        fail(f"{name}: {len(bad_act) + len(bad_mesh) - 12} more bounds mismatches not listed")
+    return worst
+
+
 def seat_check(sets):
     """Run seat_check.mjs on every set (full and lite) against its stall at its slot."""
     jobs = []
@@ -287,7 +401,7 @@ def main():
               if t.startswith("prop_tex_") and ".lite." not in t)
     tex_lite = sum(os.path.getsize(os.path.join(MODELS, t)) for t in os.listdir(MODELS)
                    if t.startswith("prop_tex_") and ".lite." in t)
-    per_stall, seen, rows = {}, {}, []
+    per_stall, seen, rows, bounds_worst = {}, {}, [], {}
     glb_full = glb_lite = 0
     print(f"{'set':24s} {'stall':14s} {'slot':13s} {'tris':>6s} {'lite':>5s} {'ratio':>5s} {'kB':>4s} {'lite':>4s}"
           f"  size x y z (m)")
@@ -314,6 +428,7 @@ def main():
             check_nodes(f"{name} ({variant})", js, nodes)
             check_ao(f"{name} ({variant})", js)
         check_parity(name, jss["full"], jss["lite"])
+        bounds_worst[name] = check_bounds_parity(name, jss["full"], jss["lite"])
         for n in glb_tools.node_names(jss["full"]):
             if is_act(n):
                 if n in seen:
@@ -327,6 +442,8 @@ def main():
         if ratio > LITE_RATIO:
             warn(f"{name}: lite has {ratio:.0%} of the full triangles (target about a third)")
         per_stall.setdefault(e["stall"], []).append((rf, rl, uris(paths[0])))
+    print("\nfull/lite bounds parity, worst difference per set (cm): "
+          + ", ".join(f"{n.replace('prop_', '')} {d * 100:.1f}" for n, d in bounds_worst.items()))
     stale = sorted(n for n, it in items.items() if it.get("set") in sets and n not in seen)
     if stale:
         fail(f"items.json lists {len(stale)} act_ node(s) no glb carries: {stale[:8]}")

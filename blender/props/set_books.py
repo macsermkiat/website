@@ -297,6 +297,8 @@ def cash_box(m, M):
             m.cyl(0.011, 0.011, 0.002, 10, "sw_metal", M @ T(dx, dy, 0), C("c8c8c8"))
     else:
         m.cyl(0.012, 0.012, 0.012, 6, "brass", M @ T(0.18, -0.02, 0), WHITE)
+        for dx, dy in ((0.21, 0.03), (0.16, 0.05)):
+            m.cyl(0.011, 0.011, 0.002, 6, "sw_metal", M @ T(dx, dy, 0), C("c8c8c8"))
 
 
 def price_card(m, M, k):

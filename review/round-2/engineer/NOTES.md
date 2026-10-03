@@ -30,6 +30,21 @@ load average of 15 to 18. The market owner should commit them; they are untracke
   - The lite light count is documented.
   - The Bücherstand's third light marker is resolved.
 
+## After the restart (3 October): snow caps merged, everything re-verified
+
+- **Snow caps** (`engine/merge.js` `mergeSnow`, called from `compact()` in `main.js`). The round 1 judges asked
+  for this: turning the snow on used to add one draw per `snow_` cap. Caps that do not ride on a moving body
+  are now merged across all the models of a load pass, in world space, into one mesh per look
+  (`snow_merged_*` in the `snow_row_merged` group). The snow toggle drives the merged meshes, and caps on a
+  gondola, a turning platform or an animated node keep their own meshes. On the lite market the toggle now drives
+  23 entries, three of them merged meshes, and snow on costs 27 fewer draws than before; `__market.snowCaps()` reports it, and the smoke run checks
+  that every cap shows with snow on and none with it off.
+- **Assets.** The newest exports on disk (the vendor's deco goods sets `prop_deco_*`, the carpenter's
+  Bücherstand and Bratwurst stalls, the ride builder's instruments, Riesenrad and Karussell, props.json and
+  items.json of 30 September 04:01) all bind exactly: `report.bindings` is empty. The deco goods sets carry no
+  `act_` nodes yet (only `rot_pyramid`), so the Lebkuchen hearts made in code stay.
+- The whole smoke suite was run again on this build, and every preview in this folder was retaken from it.
+
 ## Late in the round: Mac's bookshelf and the sausage axis
 
 - **Mac's bookshelf** (`plugins/market.js` `buildLibrary`, `actions/items/books.js`).
@@ -159,20 +174,20 @@ and every external texture it references, counted in full for that row.
 
 | | First load | Everything | Aim |
 |---|---|---|---|
-| Full market | 19.05 MB | 26.29 MB | 25 MB |
-| Lite market | 6.80 MB | 9.55 MB | 8 MB |
+| Full market | 19.20 MB | 25.86 MB | 25 MB |
+| Lite market | 7.00 MB | 9.61 MB | 8 MB |
 
-Site code, styles and fonts come to 1.29 MB.
+Site code, styles and fonts come to 1.34 MB.
 
 Over their per-asset budgets (full glb, props and textures):
 
 | Asset | Size | Budget | Triangles |
 |---|---|---|---|
-| gluehwein | 3.11 MB | 3 MB | 56.6k |
-| bierstand | 3.03 MB | 3 MB | 57.3k |
-| buecherstand | 5.47 MB | 3 MB | 39.3k (its spine and cover textures) |
-| bandstand with instruments and players | 2.12 MB | 2 MB | 67.3k, against a 50k budget |
-| each deco stall | 1.29–1.38 MB | 1 MB | under 20k |
+| gluehwein | 3.24 MB | 3 MB | 56.6k |
+| bierstand | 3.19 MB | 3 MB | 57.3k |
+| buecherstand | 5.60 MB | 3 MB | 39.4k (its spine and cover textures) |
+| bandstand with instruments and players | 1.97 MB | 2 MB | 66.8k, against a 50k budget |
+| each deco stall | 1.34–1.42 MB | 1 MB | under 20k |
 
 - Every deco stall counts the whole shared deco kit. In the market that kit loads once, which is why the
   first-load totals are well under their aims.

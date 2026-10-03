@@ -19,7 +19,7 @@ import { syntheticEnvironment, createEnvUpdater, probeTargets, captureProbe } fr
 import { installShading, bulbStrings } from './shading.js';
 import { createSnow } from './snow.js';
 import { GradePass } from './grade.js';
-import { placeWarmLights, adoptEngineLights, tuneEmissives, retargetLight } from './lights.js';
+import { placeWarmLights, adoptEngineLights, tuneEmissives, retargetLight, bulbBounce } from './lights.js';
 
 export { NIGHT, PROFILES } from './settings.js';
 export { placeWarmLights, tuneEmissives } from './lights.js';
@@ -315,6 +315,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
 
   function tune(root) {
     const r = tuneEmissives(root, N, { lite });
+    try { const n = bulbBounce(root, N); if (n) console.info(`[lighting] bulb bounce on ${n} materials of ${root.name || 'a model'}`); } catch (e) { console.warn('[lighting] bulb bounce failed', e); }
     r.bulbs.forEach((m) => emissives.bulbs.add(m));
     r.windows.forEach((m) => emissives.windows.add(m));
     addBulbGlows(root);

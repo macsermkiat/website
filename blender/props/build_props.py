@@ -88,8 +88,16 @@ def render_previews(name, d, ps, a, res):
                 vstage.shot(d["hero"], top, os.path.join(vlib.REVIEW, f"{name}_hero.jpg"), a.samples, res)
         if d.get("in_stall") and "stall" in a.shots:
             # last: the stall scene replaces the plain counter (the set is moved to the stall's slot)
+            import bpy
             origin = vstage.stall_scene(ps, d["in_stall"], d.get("stall_lights", ()))
+            # "stall_dim": {tag: factor} scales the stall's lamps and the fill for that shot only (the grill
+            # close-up is shot with the lamps turned down so the coal bed's own glow reads)
+            lamps = {o.name: o.data.energy for o in bpy.data.objects
+                     if o.type == 'LIGHT' and (o.name.startswith("env_light_") or o.name == "env_fill")}
             for tag, cam in d.get("stall_cams", {}).items():
+                k = d.get("stall_dim", {}).get(tag, 1.0)
+                for ln, e in lamps.items():
+                    bpy.data.objects[ln].data.energy = e * k
                 vstage.shot_at(cam, origin, os.path.join(vlib.REVIEW, f"{name}_{tag}.jpg"), a.samples, res)
         return None
     top = vstage.preview_scene(ps, d["kind"], d.get("width", 3.0))
@@ -99,7 +107,22 @@ def render_previews(name, d, ps, a, res):
                        a.samples, res, png_name=name)
 
 
+def guard_paths():
+    """Refuse to run if any output location is empty or falls outside the vendor's owned paths (a launch with
+    an empty path variable once wrote a log into /). Every path is derived from this file's location."""
+    repo = os.path.realpath(vlib.REPO or "")
+    if not repo or repo == "/" or not os.path.isfile(os.path.join(repo, "docs", "BUILD.md")):
+        raise SystemExit(f"[props] refusing to run: repo root {repo!r} is not the website repo")
+    owned = {"review": (vlib.REVIEW, "review/round-2/vendor"), "models": (vlib.MODELS, "site/public/models"),
+             "report": (os.path.dirname(REPORT), "blender/out"), "renders": (vstage.RENDERS, "blender/out/vendor/renders"),
+             "atlas": (vlib.ATLAS_DIR, "blender/out/vendor")}
+    for key, (path, rel) in owned.items():
+        if not path or os.path.realpath(path) != os.path.join(repo, rel):
+            raise SystemExit(f"[props] refusing to run: {key} output {path!r} is not {rel} inside {repo}")
+
+
 def main():
+    guard_paths()
     a = args()
     sets = all_sets()
     if a.sheet_only:

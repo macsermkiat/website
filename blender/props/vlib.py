@@ -535,12 +535,23 @@ def material(key):
         return m
     names = {"atlas": "vendor_atlas", "glaze": "vendor_glaze", "glass": "vendor_glass", "liquid": "vendor_liquid",
              "beer": "vendor_beer", "coal_glow": "coal_glow", "flame": "flame", "lamp": "lamp_glow",
-             "grill_iron": "grill_iron", "lamp_shade": "vendor_lamp_shade"}
+             "grill_iron": "grill_iron", "lamp_shade": "vendor_lamp_shade", "foam": "vendor_foam"}
     m = bpy.data.materials.new(names[key])
     m.use_nodes = True
     b = m.node_tree.nodes["Principled BSDF"]
     if key == "atlas":
         _atlas_nodes(m)
+    elif key == "foam":
+        # beer head: the atlas's bubbles and wet edge, plus a little subsurface scatter so light glows through
+        # the thin crown (Cycles previews) and a soft sheen (exported as KHR_materials_sheen) for the creamy
+        # velvet look the engine can show
+        _atlas_nodes(m, normal_strength=0.8)
+        for k, v in (("Subsurface Weight", 0.35), ("Subsurface Scale", 0.004), ("Sheen Weight", 0.35),
+                     ("Sheen Roughness", 0.4)):
+            if k in b.inputs:
+                b.inputs[k].default_value = v
+        if "Subsurface Radius" in b.inputs:
+            b.inputs["Subsurface Radius"].default_value = (1.0, 0.75, 0.45)
     elif key == "grill_iron":
         _atlas_nodes(m)
         # a whisper of emission so the engine's grill flare (which tints black emissive orange) leaves it dark

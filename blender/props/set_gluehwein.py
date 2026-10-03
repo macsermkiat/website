@@ -79,8 +79,9 @@ def copper_kettle(s, x, y):
     lid = s.node("act_pot_lid", hinge, parent="act_pot", rot=(-0.25, 0, 0))
     s.item("act_pot_lid", "Kettle lid", "lid")
     lid_prof = [(0.214, -0.004), (0.216, 0.0), (0.2, 0.02), (0.15, 0.05), (0.08, 0.068), (0.0, 0.075)]
-    lid.lathe(lid_prof, n, vlib.RW("copper"), T(0, -0.212, 0), WHITE, "atlas")
-    lid.lathe([(0.0, 0.07), (0.2, 0.014), (0.21, -0.002)], n, "copper", T(0, -0.212, 0), C("8a5a48"), "atlas")
+    nl = n if not lite() else 12            # a multiple of 4 keeps the lid's front and back edge where the full one has them
+    lid.lathe(lid_prof, nl, vlib.RW("copper"), T(0, -0.212, 0), WHITE, "atlas")
+    lid.lathe([(0.0, 0.07), (0.2, 0.014), (0.21, -0.002)], nl, "copper", T(0, -0.212, 0), C("8a5a48"), "atlas")
     lid.sphere(0.022, seg(10, 6), seg(6, 4), vlib.RW("wood"), T(0, -0.212, 0.09), C("5a3622"), scale=(1, 1, 0.8))
     lid.cyl(0.008, 0.012, 0.018, 8, "brass", T(0, -0.212, 0.07), WHITE)
     lid.box((0.04, 0.03, 0.006), T(0, -0.005, 0.0), "brass", WHITE)
@@ -106,8 +107,9 @@ def ladle(s, x, y):
             Vector((0.228, -0.046, 0.232)), Vector((0.236, -0.05, 0.25))]
     pts = G.spline(ctrl, 1 if lite() else 2)
     lad.tube(pts, 0.0055, seg(6, 4), "steel", None, WHITE, radii=[0.007 - 0.0022 * i / (len(pts) - 1) for i in range(len(pts))])
-    if not lite():
-        lad.torus(0.012, 0.0035, 8, 4, "steel", T(0.24, -0.052, 0.262, ry=1.2), WHITE)
+    # the hook at the handle's end (lite: a coarser one, so the ladle keeps its full reach)
+    lad.torus(0.012, 0.0035, 8 if not lite() else 6, 4 if not lite() else 3, "steel", T(0.24, -0.052, 0.262, ry=1.2),
+              WHITE)
 
 
 def mug(s, i, loc, style, boot=False, filled=False, upside_down=False, where="on the counter"):

@@ -17,12 +17,12 @@ def g_sausage(dark):
     (h px = its length), matching goods.sausage's loft. Browned skin with a sheen, diagonal
     char marks from the grate on two sides (turned once), blistered and darker tied ends."""
     def f(w, h, seed):
-        base = hexc("6e3216") if dark else hexc("8e4a22")
+        base = hexc("5a2610") if dark else hexc("7a3a18")
         t = Tex(w, h, base, 0.3)
         yy, xx = np.mgrid[0:h, 0:w].astype(float)
         brown = fbm(h, w, 22, seed)
-        t.col = mix(t.col, np.array(hexc("4a200c")), smooth(0.3, 0.85, brown) * 0.75)
-        t.col = mix(t.col, np.array(hexc("b8703a")), smooth(0.6, 0.95, fbm(h, w, 40, seed + 9)) * 0.35)
+        t.col = mix(t.col, np.array(hexc("38160a")), smooth(0.3, 0.85, brown) * 0.8)
+        t.col = mix(t.col, np.array(hexc("a8602e")), smooth(0.62, 0.95, fbm(h, w, 40, seed + 9)) * 0.3)
         # char marks: the grate bars cross the sausage at about 35 degrees. In UV they run diagonally
         # across the contact side (u ~ 0.25 and, after one turn, u ~ 0.75).
         marks = np.zeros((h, w))
@@ -33,11 +33,14 @@ def g_sausage(dark):
             band = np.clip(1 - du ** 2, 0, 1) ** 0.6
             ph = (yy + (xx - side * w) * 0.7) / spacing
             d = np.abs(ph - np.round(ph)) * spacing
-            marks = np.maximum(marks, smooth(11.0, 3.5, d) * band)
-            halo = np.maximum(halo, smooth(22.0, 8.0, d) * band)
-        marks *= 0.6 + 0.4 * fbm(h, w, 5, seed + 1)
-        t.paint(halo * 0.45, hexc("3a1808"), 0.4)
-        t.paint(marks, hexc("120804"), 0.6, height=-0.7)
+            marks = np.maximum(marks, smooth(13.0, 4.0, d) * band)
+            halo = np.maximum(halo, smooth(26.0, 9.0, d) * band)
+        marks *= 0.75 + 0.25 * fbm(h, w, 5, seed + 1)
+        t.paint(halo * 0.6, hexc("2a1006"), 0.4)
+        t.paint(marks, hexc("080403"), 0.7, height=-0.8)
+        # black char flecks where fat dripped and flared
+        fl = smooth(0.8, 0.9, fbm(h, w, 7, seed + 11))
+        t.paint(fl * 0.8, hexc("0c0604"), 0.75, height=-0.3)
         # blisters: small raised, glossier bubbles of fat in the skin
         d1, _, _ = voronoi(h, w, int(w * h / 900), seed + 3)
         sites = smooth(0.62, 0.78, fbm(h, w, 6, seed + 2))
@@ -56,51 +59,96 @@ def g_sausage(dark):
 
 
 def g_coal(w, h, seed):
-    """Charcoal: mostly matt black with grey-white ash on the upper faces; the cracks show orange."""
+    """Charcoal colour, two halves (goods map each coal face into one of them, set_wurst.coal_lump):
+    left half (u < 0.5) the burning sides: black char split by orange-red cracks;
+    right half (u >= 0.5) the ash-covered tops: grey-white ash over black, a few dull cracks."""
     t = Tex(w, h, hexc("121110"), 0.92)
+    yy, xx = np.mgrid[0:h, 0:w].astype(float)
+    right = smooth(w * 0.48, w * 0.52, xx)
     d1, d21, _ = voronoi(h, w, int(w * h / 260), seed)
     crack = smooth(1.8, 0.0, d21)
-    ash = smooth(0.4, 0.7, fbm(h, w, 12, seed + 1))
-    t.col = mix(t.col, np.array(hexc("6e6a66")), ash * 0.8)
-    t.col = mix(t.col, np.array(hexc("b8b4ae")), smooth(0.7, 0.9, fbm(h, w, 5, seed + 2)) * ash * 0.6)
-    hot = _hot(h, w, seed)
-    t.col = mix(t.col, np.array(hexc("7a2a0c")), crack * hot * 0.8)
+    ash = smooth(0.4, 0.7, fbm(h, w, 12, seed + 1)) * (0.25 + 0.75 * right)
+    ash = np.maximum(ash, right * 0.55)
+    t.col = mix(t.col, np.array(hexc("6e6a66")), ash * 0.85)
+    t.col = mix(t.col, np.array(hexc("c8c4be")), smooth(0.6, 0.9, fbm(h, w, 5, seed + 2)) * ash * 0.7)
+    hot = _hot(h, w, seed) * (1 - right) + 0.15 * right
+    t.col = mix(t.col, np.array(hexc("8a2a08")), crack * hot)
     t.height = -crack * 1.2 + np.clip(d1 / 10, 0, 1) * 0.6 + fbm(h, w, 3, seed + 3) * 0.3
     return t
 
 
 def _hot(h, w, seed):
-    """Which cracks glow: about a third of them, in patches."""
-    return smooth(0.4, 0.62, fbm(h, w, 34, seed + 6))
+    """How hot the burning half is: most of it, in patches, never fully dark."""
+    return 0.45 + 0.55 * smooth(0.3, 0.6, fbm(h, w, 34, seed + 6))
 
 
 def coal_emit(w, h, seed):
-    """Glow in the cracks (bright where the patch is hot) plus a dull ember glow over the hot patches that
-    the ash has not covered, so the bed reads as burning, not as black lumps with a few orange lines."""
+    """Glow. Left half: bright cracks and a red ember glow over the char between them (the burning sides).
+    Right half: the ash tops, dark, with only faint lines. (Coverage is measured into the build report.)"""
+    yy, xx = np.mgrid[0:h, 0:w].astype(float)
+    right = smooth(w * 0.48, w * 0.52, xx)
     d1, d21, _ = voronoi(h, w, int(w * h / 260), seed)
-    crack = smooth(2.6, 0.0, d21)
+    crack = smooth(3.2, 0.0, d21)
     hot = _hot(h, w, seed)
-    ash = smooth(0.4, 0.7, fbm(h, w, 12, seed + 1))
-    ember = smooth(0.35, 0.75, hot) * (1 - 0.8 * ash) * (0.55 + 0.45 * fbm(h, w, 8, seed + 7))
-    glow = np.clip(np.maximum(crack * (0.25 + hot) * 1.2, ember * 0.42), 0, 1)
+    ember = hot * (0.5 + 0.5 * fbm(h, w, 8, seed + 7))
+    glow_l = np.clip(np.maximum(crack * (0.55 + 0.6 * hot), ember * 0.5), 0, 1)
+    glow_r = crack * 0.12
+    glow = glow_l * (1 - right) + glow_r * right
     glow = ndimage.gaussian_filter(glow, 0.8)
-    return np.stack([glow, glow ** 1.5 * 0.45, glow ** 3 * 0.08], -1)
+    return np.stack([glow, glow ** 1.5 * 0.42, glow ** 3 * 0.07], -1)
 
 
 # ------------------------------------------------------------ beer
 def g_foam(w, h, seed):
-    """Beer head seen from above: packed bubbles of mixed size, creamy, slightly off-white."""
-    t = Tex(w, h, hexc("fbf5e6"), 0.62)
-    height = np.zeros((h, w))
+    """Beer head, two textures in one region (goods.beer_fill maps them):
+    - top three quarters (UV v 0.25..1): the dry crown seen from above. Packed bubbles of three sizes; the
+      larger ones show a darker rim, a bright highlight and a glossier skin; small craters where bubbles burst;
+      thin spots of the head look a little more amber (the beer showing through).
+    - bottom quarter (UV v 0..0.25): the wet edge against the glass. Darker, yellower cream, big glossy
+      bubbles pressed against the glass and short vertical lacing streaks."""
+    t = Tex(w, h, hexc("f6edd8"), 0.66)
     rng = np.random.default_rng(seed)
-    for n, cell in ((int(w * h / 28), 1.0), (int(w * h / 110), 1.0), (int(w * h / 600), 1.0)):
+    yy, xx = np.mgrid[0:h, 0:w].astype(float)
+    height = np.zeros((h, w))
+    gloss = np.zeros((h, w))
+    rim = np.zeros((h, w))
+    hl = np.zeros((h, w))
+    for n, k in ((int(w * h / 24), 0.0), (int(w * h / 90), 0.5), (int(w * h / 420), 1.0)):
         d1, d21, _ = voronoi(h, w, n, int(rng.integers(1 << 30)))
         r = np.sqrt(w * h / n) * 0.5
         bub = np.clip(1 - (d1 / r) ** 2, 0, 1) ** 0.5
         height = np.maximum(height, bub * (r / 4.0))
-        t.col = mix(t.col, np.array(hexc("e2d2b0")), smooth(1.2, 0.0, d21) * 0.25)
+        rim = np.maximum(rim, smooth(1.4, 0.0, d21) * (0.25 + 0.5 * k))
+        gloss = np.maximum(gloss, smooth(0.2, 0.7, bub) * k)
+        # highlight: a small bright spot up-left of each larger bubble's centre
+        hl = np.maximum(hl, smooth(0.35, 0.0, d1 / r) * k)
+    t.col = mix(t.col, np.array(hexc("d8c092")), rim * 0.55)
+    t.col = mix(t.col, np.array(hexc("fffaf0")), hl * 0.5)
+    thin = smooth(0.62, 0.82, fbm(h, w, 30, seed + 1))
+    t.col = mix(t.col, np.array(hexc("e8c888")), thin * 0.35)
+    burst = smooth(0.86, 0.95, noise(h, w, 5, seed + 2))
+    t.paint(burst * 0.6, hexc("c8a870"), 0.35, height=-1.2)
+    t.rough = 0.66 - gloss * 0.32 - burst * 0.2
     t.height = height
-    t.col = mix(t.col, np.array(hexc("efe3c4")), fbm(h, w, 40, seed + 1) * 0.3)
+    # the wet edge strip (image rows below 0.75 h)
+    band = yy >= h * 0.75
+    v = (yy - h * 0.75) / (h * 0.25)
+    wet = Tex(w, h, hexc("e4cf9e"), 0.3)
+    d1, d21, _ = voronoi(h, w, int(w * h / 160), seed + 5)
+    r = np.sqrt(w * h / (w * h / 160)) * 0.5
+    bub = np.clip(1 - (d1 / r) ** 2, 0, 1) ** 0.5
+    wet.col = mix(wet.col, np.array(hexc("c8a868")), smooth(1.6, 0.0, d21) * 0.6)
+    wet.col = mix(wet.col, np.array(hexc("fff4dc")), smooth(0.3, 0.0, d1 / r) * 0.45)
+    lace = smooth(0.55, 0.8, np.abs(np.sin(xx / w * 2 * math.pi * 23 + fbm(h, w, 12, seed + 6) * 4)))
+    lace *= smooth(0.0, 0.6, 1 - v)                 # streaks hang below the head (low v = the beer side)
+    wet.col = mix(wet.col, np.array(hexc("f2e4c0")), lace * 0.4)
+    wet.col = mix(wet.col, np.array(hexc("b89050")), smooth(0.35, 0.0, v) * 0.35)   # beer-wet foot of the head
+    wet.rough = 0.22 + 0.25 * (1 - bub) * (1 - smooth(0.3, 0.0, v))
+    wet.height = bub * r / 5.0 + lace * 0.4
+    t.col = np.where(band[..., None], wet.col, t.col)
+    t.rough = np.where(band, wet.rough, t.rough)
+    t.height = np.where(band, wet.height, t.height)
+    t.col = np.clip(t.col, 0, 1)
     t.hscale = 0.9
     return t
 

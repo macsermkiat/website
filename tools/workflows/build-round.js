@@ -296,7 +296,7 @@ function buildPrompt(key, pass, prev, fixes) {
 
 function judgePrompt(key, built) {
   const r = ROLES[key]
-  return `You are on the judging panel for Mac's 3D Nachtmarkt website (repo ${REPO}). Read ${REPO}/docs/BUILD.md for the contract. You are judging the work of the ${r.title}, round ${ROUND}. The builder reports:\n${JSON.stringify(built)}\n\nThe brief they were given:\n${r.brief}\n\nJudge strictly and independently. Evidence must come from the files themselves:
+  return `You are on the judging panel for Mac's 3D Nachtmarkt website (repo ${REPO}). Read ${REPO}/docs/BUILD.md for the contract. You are judging the work of the ${r.title}, round ${ROUND}. The builder reports:\n${JSON.stringify(built)}\n\nThe brief they were given:\n${r.brief}\n\nJudge strictly and independently, but economically: check what the checks need and no more. Evidence must come from the files themselves:
 - open the preview images with the Read tool and look at them;
 - run commands (e.g. gltf-transform inspect, node or python one-liners, npm run build) to verify counts, names, sizes and behaviour;
 - read the code or source.
@@ -315,11 +315,11 @@ const results = await pipeline(args.roles, async (key) => {
   let pass = START, built = null, fixes = [], history = []
   if (START > 1) { built = { summary: `Pass ${START - 1} was done earlier. Read review/round-${ROUND}/${key}/NOTES.md for what was built, and the current files.` }; fixes = [`Read review/round-${ROUND}/${key}/JUDGES.md (the Opus and Fable judges) and review/round-${ROUND}/CODEX_JUDGE.md (the Codex judge, whole market), and fix everything that concerns your role. The files on disk may hold a partly finished earlier pass; continue from them.`] }
   while (pass < START + MAX_PASSES) {
-    built = await agent(buildPrompt(key, pass, built, fixes), { label: `${key} · pass ${pass}`, phase: 'Build', schema: BUILD_SCHEMA, effort: 'high' })
+    built = await agent(buildPrompt(key, pass, built, fixes), { label: `${key} · pass ${pass}`, phase: 'Build', schema: BUILD_SCHEMA, effort: (args.builderEffort || {})[key] || 'high' })
     if (!built) { history.push({ pass, error: 'builder failed' }); break }
     const verdicts = (await parallel([
-      () => agent(judgePrompt(key, built), { label: `judge opus · ${key} · ${pass}`, phase: 'Judge', schema: VERDICT_SCHEMA, effort: 'high' }),
-      () => agent(judgePrompt(key, built), { label: `judge fable · ${key} · ${pass}`, phase: 'Judge', schema: VERDICT_SCHEMA, model: 'fable', effort: 'high' }),
+      () => agent(judgePrompt(key, built), { label: `judge opus · ${key} · ${pass}`, phase: 'Judge', schema: VERDICT_SCHEMA, effort: args.judgeEffort || 'high' }),
+      () => agent(judgePrompt(key, built), { label: `judge fable · ${key} · ${pass}`, phase: 'Judge', schema: VERDICT_SCHEMA, model: 'fable', effort: args.judgeEffort || 'high' }),
     ])).filter(Boolean)
     history.push({ pass, built, verdicts: verdicts.map(v => ({ verdict: v.verdict, failed: v.checks.filter(c => !c.pass), fixes: v.fixes })) })
     log(`${key} pass ${pass}: ${verdicts.map(v => v.verdict).join(' / ')}`)

@@ -417,8 +417,12 @@ try {
 
     await page.click('#snow');
     check('snow on', (await state(page, 'snow')) === true && (await page.getAttribute('#snow', 'aria-pressed')) === 'true');
+    const capsOn = await page.evaluate(() => window.__market.snowCaps());
+    check('snow caps merged (one mesh per look) and all shown with snow on', capsOn.merged > 0 && capsOn.saved > 0 && capsOn.visible === capsOn.entries, JSON.stringify(capsOn));
     await page.click('#snow');
     check('snow off', (await state(page, 'snow')) === false);
+    const capsOff = await page.evaluate(() => window.__market.snowCaps());
+    check('snow off hides every cap, merged ones included', capsOff.visible === 0, JSON.stringify(capsOff));
     await page.click('#reset');
     check('reset view closes the panel', (await state(page, 'panel')) === null);
     await page.evaluate(() => window.__market.advance(2));

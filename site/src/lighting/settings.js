@@ -113,7 +113,7 @@ export const NIGHT = {
     // but not the roof. Deco stalls get `decoScale` of it and a lower slot priority.
     // a light_ past the 2 real lights a stall may have (the Bücherstand's counter lamp): a small glow
     lamp: { intensity: 2.5, reach: 1.3 },
-    sign: { intensity: 1.5, reach: 1.1, out: 0.3, up: 0.1, below: 0.08, span: 0.75, maxHalf: 1.0, decoScale: 0.6, fixture: true, fixtureEmissive: 2.2, color: [1.0, 0.74, 0.45] },
+    sign: { intensity: 1.5, reach: 1.1, out: 0.3, up: 0.1, below: 0.08, span: 0.75, maxHalf: 1.0, decoScale: 0.6, fixture: true, fixtureEmissive: 2.2, reflectorEmissive: 0.35, hoodRadius: 0.035, color: [1.0, 0.74, 0.45] },
   },
 
   // Round 2 (Codex: "lift crowd and facade detail without flattening the night"): the town wash
@@ -138,6 +138,12 @@ export const NIGHT = {
     warm: { color: [1.0, 0.62, 0.3], intensity: 4.8 },
     cold: { color: [0.62, 0.76, 1.0], intensity: 5.0 },
     window: 1.5,
+    // round 2: bulb bounce on the Ferris wheel (lights.js bulbBounce). Its rim, spokes and legs carry
+    // hundreds of bulbs, which in Cycles light the cream steel round them evenly; in the browser the
+    // bulbs are emissive only and the steel read near black (rides builder, round 2). A model with a
+    // rot_wheel gets a faint warm self-light on its opaque materials above `minY` m (or turning with
+    // the wheel): albedo x warm x `steel` (gondolas and paint: `other`). Full and lite alike; no lights.
+    bounce: { steel: 0.22, other: 0.1, minY: 3, color: [1.0, 0.7, 0.42] },
   },
 
   // Warm real-time lights at light_ empties, by kind (three.js units; colour temperature in Kelvin).
@@ -175,7 +181,10 @@ export const NIGHT = {
     // a metre further, onto the cobbles beside the stall (warm grey there in Cycles, blue in pass 3),
     // while the sign and the counter top, close under it, get less of it per unit of intensity.
     section: { point: 34, front: 9, frontAngle: 1.4, frontPenumbra: 0.25, frontAim: 1.7, frontLift: 0.4, frontOut: 0.8, spot: 34, pointDistance: 4.2, frontDistance: 9, spotDistance: 8 },
-    landmark: { point: 26, spot: 40, pointDistance: 10, spotDistance: 12 },
+    // round 2: wash/washDistance/washHeight: a landmark light_ higher than washHeight m (the Ferris
+    // wheel's hub, 14.7 m up) is a point wash over the steel instead of a downward stage spot (the rides
+    // builder: the wheel read near black). It is the landmark's first light.
+    landmark: { point: 26, spot: 40, pointDistance: 10, spotDistance: 12, wash: 60, washDistance: 16, washHeight: 8 },
     deco: { point: 18, front: 6, frontAngle: 1.4, frontPenumbra: 0.25, frontAim: 1.7, frontLift: 0.4, frontOut: 0.8, spot: 20, pointDistance: 3.6, frontDistance: 6, spotDistance: 7 },
     lamp: { point: 7, spot: 12, pointDistance: 10, spotDistance: 10 },
     tree: { point: 16, spot: 20, pointDistance: 10, spotDistance: 10 },

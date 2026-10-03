@@ -1011,13 +1011,13 @@ def g_chestnut(w, h, seed):
     t.col = mix(t.col, np.array(hexc("3c160a")), fbm(h, w, 10, seed) * 0.6)
     rng = np.random.default_rng(seed)
     stria = ndimage.uniform_filter1d(rng.random((h, w)), 25, axis=0)
-    t.col = mix(t.col, t.col * 1.3, stria * 0.3)
+    t.col = mix(t.col, t.col * 1.3, stria * 0.12)          # faint striae (strong ones read as ribs)
     base = smooth(h * 0.72, h * 0.85, yy)       # row h = bottom (v=0)
     t.paint(base, hexc("c9a47a"), 0.8, height=0.2)
-    t.paint(smooth(h * 0.12, 0, yy) * (np.abs(np.sin(xx / w * 4 * math.pi)) > 0.8), hexc("1a0c06"), 0.7)
+    t.paint(smooth(h * 0.06, 0, yy), hexc("2a140a"), 0.7)        # the dark tuft at the tip
     char = smooth(0.7, 0.85, fbm(h, w, 5, seed + 3))
     t.paint(char * 0.7, hexc("1a0c06"), 0.6)
-    t.height += stria * 0.4
+    t.height += stria * 0.15
     return t
 
 

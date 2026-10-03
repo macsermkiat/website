@@ -326,61 +326,95 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
     m.lathe(prof, seg(12, 6), "sw_wet", M, beer_col, "beer")
     ri = r_at(rim_z - 0.003)
     cream = C("f3e6c8")
-    # the foam's side against the glass, from the beer up to just under the rim: a denser, darker cream
-    # where it meets the beer (the bubbles are finer and wetter there)
-    foam_m.lathe([(r_at(level) - 0.0006, level - 0.002), (r_at(level + 0.004) - 0.0005, level + 0.004),
-                  (ri - 0.0004, rim_z - 0.003)], n, region_foam, M, C("e6d2a6"), "atlas")
-    # the crown: rings from the rim in to the top. (radius, height over the rim, lump weight)
+    wet = C("e2cc9c")                      # the wetter, darker cream where the head meets the glass
+    reg = vlib.R(region_foam)
+    # the foam region holds two textures (atlas_goods.g_foam): a wet edge strip along its bottom quarter
+    # (v 0..0.25: larger, glossier bubbles and lacing) and the dry crown in the square above (u, v 0.25..1)
+    edge = lambda u, v: reg.uv(u, 0.02 + 0.21 * v)
+    crown_uv = lambda x, y, ext: reg.uv(0.25 + 0.75 * (0.5 + x / (2 * ext)), 0.25 + 0.75 * (0.5 + y / (2 * ext)))
+    # the foam's side against the glass, from the beer up to just under the rim
+    side = [(r_at(level) - 0.0006, level - 0.002), (r_at(level + 0.004) - 0.0005, level + 0.004),
+            (ri - 0.0004, rim_z - 0.003)]
+    sv, sf, su = [], [], []
+    for i, (r, z) in enumerate(side):
+        for j in range(n + 1):
+            a = TWO_PI * j / n
+            sv.append((r * math.cos(a), r * math.sin(a), z))
+    for i in range(len(side) - 1):
+        for j in range(n):
+            q = (i * (n + 1) + j, i * (n + 1) + j + 1, (i + 1) * (n + 1) + j + 1, (i + 1) * (n + 1) + j)
+            sf.append(q)
+            su.append([edge(j / n, i / 2), edge((j + 1) / n, i / 2), edge((j + 1) / n, (i + 1) / 2),
+                       edge(j / n, (i + 1) / 2)])
+    foam_m.add(sv, sf, su, M, wet, "foam", True)
+    # the crown: rings from the rim in to the top. (radius, height over the rim, lump weight). Every glass
+    # gets its own dome height and a peak pushed off centre, so the heads do not read as stamped pads.
     dome = dome if dome is not None else min(0.02, rim_r * 0.36)
+    vr = 0.5 + 0.5 * noise.noise(Vector((seed * 0.37, 4.1, 0.0)))          # 0..1 per glass
+    dome *= 0.8 + 0.45 * vr
+    lean = Vector((math.cos(seed * 2.3), math.sin(seed * 2.3))) * rim_r * 0.12 * (0.4 + vr)
     rings = [(ri - 0.0004, -0.003, 0.0), (rim_r - 0.0005, 0.0025, 0.4), (rim_r + 0.0012, 0.0065, 0.8),
              (rim_r * 0.93, 0.35, 1.0), (rim_r * 0.74, 0.66, 1.0), (rim_r * 0.5, 0.86, 1.0),
              (rim_r * 0.24, 0.97, 0.8)]
-    if lite():
-        rings = [rings[0], rings[2], rings[4], rings[6]]
+    # lite keeps every other ring; `orig` is the ring's index in the full list, which decides how its height
+    # reads (rings 0-2 give metres over the rim, rings 3+ a fraction of the dome)
+    keep = [0, 2, 4, 6] if lite() else list(range(len(rings)))
     verts, faces, uvs, cols = [], [], [], []
-    reg = vlib.R(region_foam)
-    for i, (rr, hz, lw) in enumerate(rings):
+    for orig in keep:
+        rr, hz, lw = rings[orig]
         for j in range(n):
             a = TWO_PI * j / n
-            p = Vector((math.cos(a) * 2.6, math.sin(a) * 2.6, seed + i * 0.41))
+            p = Vector((math.cos(a) * 2.6, math.sin(a) * 2.6, seed + orig * 0.41))
             lump = noise.noise(p) * 0.6 + noise.noise(p * 2.7 + Vector((seed, 0, 0))) * 0.3
-            r = rr * (1.0 + 0.045 * lump * lw)
-            if i == 0:
+            big = noise.noise(Vector((math.cos(a) * 1.1, math.sin(a) * 1.1, seed * 0.7 + 2.0)))   # broad swells
+            r = rr * (1.0 + 0.05 * lump * lw)
+            if orig == 0:
                 z = rim_z + hz
-            elif i <= 2:
-                z = rim_z + hz + 0.0015 * lump
+            elif orig <= 2:
+                z = rim_z + hz + 0.0018 * lump + 0.0012 * big * lw
             else:
-                z = rim_z + 0.0065 + (dome - 0.0065) * hz + 0.0028 * lump * lw
-            verts.append((r * math.cos(a), r * math.sin(a), z))
+                z = rim_z + 0.0065 + (dome - 0.0065) * hz + (0.0042 * lump + 0.0035 * big) * lw
+            off = lean * (hz if orig > 2 else 0.0)
+            verts.append((r * math.cos(a) + off.x, r * math.sin(a) + off.y, z))
     top = len(verts)
-    verts.append((0.0, 0.0, rim_z + dome + 0.0012 * noise.noise(Vector((seed, 1.3, 0.2)))))
-    R = len(rings)
+    verts.append((lean.x, lean.y, rim_z + dome + 0.0018 * noise.noise(Vector((seed, 1.3, 0.2)))))
+    R = len(keep)
+    ext = rim_r * 1.1
+    cw, cc = jit(wet, 0.02), jit(cream, 0.02)
     for i in range(R - 1):
         for j in range(n):
             a, b = i * n + j, i * n + (j + 1) % n
             faces.append((a, b, b + n, a + n))
+            if i == 0:
+                # the band from inside the rim up over it: the wet edge strip
+                uvs.append([edge(j / n, 0.5), edge((j + 1) / n, 0.5), edge((j + 1) / n, 1.0), edge(j / n, 1.0)])
+                cols.append(cw)
+            else:
+                uvs.append([crown_uv(verts[k][0], verts[k][1], ext) for k in faces[-1]])
+                cols.append(cc)
     for j in range(n):
         faces.append(((R - 1) * n + j, (R - 1) * n + (j + 1) % n, top))
-    ext = rim_r * 1.1
-    for f in faces:
-        uvs.append([reg.uv(0.5 + verts[i][0] / (2 * ext), 0.5 + verts[i][1] / (2 * ext)) for i in f])
-    foam_m.add(verts, faces, uvs, M, jit(cream, 0.02), "atlas", True)
-    if spill and not lite():
-        # a run of foam over the rim and down the outside, thinning, ending in a bead
+        uvs.append([crown_uv(verts[k][0], verts[k][1], ext) for k in faces[-1]])
+        cols.append(cc)
+    foam_m.add(verts, faces, uvs, M, cream, "foam", True, cols=cols)
+    if spill:
+        # a run of foam over the rim and down the outside, thinning, ending in a bead (lite: fewer segments,
+        # same reach, so the lite head keeps the full head's bounds)
         c, s_ = math.cos(spill), math.sin(spill)
         pts, radii = [], []
-        for k in range(7):
-            t = k / 6
+        steps = 6 if not lite() else 3
+        for k in range(steps + 1):
+            t = k / steps
             out = rim_r + 0.0025 + 0.0012 * math.sin(math.pi * min(1.0, t * 1.6))
             z = rim_z + 0.004 - 0.052 * t ** 1.3
             if k == 0:
                 out = rim_r - 0.001
             pts.append((out * c - 0.002 * t * s_, out * s_ + 0.002 * t * c, z))
             radii.append(0.0042 * (1 - 0.45 * t) + 0.0006)
-        foam_m.tube(pts, 0.004, 5, region_foam, M, cream, "atlas", radii=radii)
+        foam_m.tube(pts, 0.004, 5 if not lite() else 4, region_foam, M, wet, "foam", radii=radii)
         b = pts[-1]
-        foam_m.sphere(0.0036, 6, 4, region_foam, M @ T(b[0] + 0.0008 * c, b[1] + 0.0008 * s_, b[2] - 0.002), cream,
-                      "atlas", scale=(1.0, 1.0, 1.25))
+        foam_m.sphere(0.0036, 6 if not lite() else 4, 4 if not lite() else 3, region_foam,
+                      M @ T(b[0] + 0.0008 * c, b[1] + 0.0008 * s_, b[2] - 0.002), wet, "foam", scale=(1.0, 1.0, 1.25))
 
 
 # ------------------------------------------------------------------ barrels
@@ -430,9 +464,10 @@ def barrel(m, M, L=0.36, r_end=0.12, r_belly=0.14, staves=16, lying=True, hoop_c
 
 
 # ------------------------------------------------------------------ sausages and bread
-def sausage(m, M, L=0.2, r=0.013, bend=0.02, dark=False, seed=0.0):
+def sausage(m, M, L=0.2, r=0.013, bend=0.02, dark=False, seed=0.0, raw=False):
     """Bratwurst along local X centred on the origin, gently curved in XY, slightly irregular in
-    girth. Its skin region runs once around (u) and once along (v), see atlas_goods.g_sausage."""
+    girth. Its skin region runs once around (u) and once along (v), see atlas_goods.g_sausage.
+    raw=True: an uncooked one, pale pinkish-beige satin skin with no browning or grate marks."""
     from mathutils import noise
     M = M or Matrix()
     k = seg(12, 5)
@@ -447,6 +482,9 @@ def sausage(m, M, L=0.2, r=0.013, bend=0.02, dark=False, seed=0.0):
         rr = max(0.003, r * tip * lumpy)
         rings.append([(x, y + rr * math.cos(TWO_PI * j / ring_n), rr * math.sin(TWO_PI * j / ring_n))
                       for j in range(ring_n)])
+    if raw:
+        m.loft(rings, "sw_satin", M, jit(C("dcc4b0"), 0.04), "atlas", cap0=True, cap1=True)
+        return
     m.loft(rings, "sausage_dark" if dark else "sausage", M, jit(WHITE, 0.05), "atlas", cap0=True, cap1=True)
 
 

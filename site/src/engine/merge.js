@@ -395,3 +395,67 @@ export function instancePools(pools, scene) {
   }
   return out;
 }
+
+/**
+ * Snow caps (snow_ nodes) across several models: the caps that do not ride on a moving body are merged, in world
+ * space under `into`, into one mesh per look, so turning the snow on adds a few draws instead of one per cap.
+ * Caps on a rot_/gondola_/horse_/instrument_ body, or moved by an animation clip, keep their own meshes.
+ * The merged meshes are named snow_merged_* and start with the caps' visibility. Returns
+ * { added: [merged meshes], removed: [snow_ nodes taken out of the scene], saved } so the caller can swap them
+ * in its snow list (the snow toggle sets `visible` on that list).
+ */
+export function mergeSnow(roots, into) {
+  const buckets = new Map();
+  const taken = new Map(); // snow_ node -> its meshes
+  for (const root of roots) {
+    root.updateMatrixWorld(true);
+    const moving = animatedNames(root);
+    const walk = (o) => {
+      if (o !== root && (ANCHOR.test(o.name || '') || moving.has(o.name) || o.userData.live)) return;
+      if (o !== root && /^snow_/i.test(o.name || '')) {
+        const meshes = [];
+        let ok = true;
+        o.traverse((m) => {
+          if (m !== o && (ANCHOR.test(m.name || '') || moving.has(m.name))) ok = false;
+          if (m.isMesh) { if (!eligible(m)) ok = false; else meshes.push(m); }
+        });
+        if (ok && meshes.length) {
+          taken.set(o, meshes);
+          for (const m of meshes) {
+            const key = `${bucketKey(m, 'world')}|${o.visible ? 1 : 0}`;
+            if (!buckets.has(key)) buckets.set(key, []);
+            buckets.get(key).push({ mesh: m, node: o });
+          }
+        }
+        return;
+      }
+      for (const c of o.children) walk(c);
+    };
+    walk(root);
+  }
+  into.updateMatrixWorld(true);
+  const added = [], removed = new Set();
+  let saved = 0;
+  for (const items of buckets.values()) {
+    const nodes = new Set(items.map((it) => it.node));
+    if (nodes.size < 2) continue;
+    // a cap whose meshes fall in several buckets is only taken out when every one of its buckets merges
+    const mesh = mergeItems(items, into);
+    if (!mesh) continue;
+    mesh.name = `snow_merged_${items[0].mesh.material.name || 'cap'}`;
+    mesh.visible = items[0].node.visible;
+    mesh.userData.snow = true;
+    into.add(mesh);
+    added.push(mesh);
+    for (const it of items) { it.mesh.userData.snowMerged = true; }
+    saved += items.length - 1;
+  }
+  // take out each cap whose meshes are now all in merged meshes; hide (but keep) the mesh of a partly merged cap
+  for (const [node, meshes] of taken) {
+    const merged = meshes.filter((m) => m.userData.snowMerged);
+    if (!merged.length) continue;
+    if (merged.length === meshes.length) { node.removeFromParent(); removed.add(node); }
+    else merged.forEach((m) => { m.removeFromParent(); });
+  }
+  return { added, removed: [...removed], saved };
+}
