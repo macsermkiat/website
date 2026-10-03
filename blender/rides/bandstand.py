@@ -26,6 +26,14 @@ from nmlib import carpentry as cp  # noqa: E402
 from nmlib import render  # noqa: E402
 
 NAME = "bandstand"
+
+
+def register_art():
+    import art
+    rc.IMAGE_MATS["rug"] = (art.rug(), 0.95)
+
+
+register_art()
 RC0 = 3.7                       # deck corner radius
 A = RC0 * math.cos(math.pi / 8)  # deck apothem (3.42)
 DECK = 0.95
@@ -303,8 +311,8 @@ def build(lite):
     for k in (4, 5, 6):
         c0, c1 = corner(k, RCOL + 0.12), corner(k + 1, RCOL + 0.12)
         z = ZC - 0.1
-        cp.fir_garland(fir, beads, c0 + Vector((0, 0, z)), c1 + Vector((0, 0, z)), sag=0.38, radius=0.07,
-                       tufts_per_m=6 if lite else 16, bead_every=0.5 if lite else 0.34)
+        rc.needle_garland(fir, beads, c0 + Vector((0, 0, z)), c1 + Vector((0, 0, z)), sag=0.38, radius=0.075,
+                          sprigs_per_m=34, bead_every=0.62)
     for k in (4, 5, 6, 7):
         c = corner(k, RCOL + 0.16)
         n = c.normalized()
@@ -314,7 +322,33 @@ def build(lite):
         beads["ornament_red"].shape([(0, 0), (-0.15, -0.07), (-0.14, 0.07)], depth=0.02, M=Mb)
         for sx in (-1, 1):
             beads["ornament_red"].shape([(0, 0), (sx * 0.05, -0.25), (sx * 0.09, -0.22)], depth=0.015, M=Mb)
-    objs = rc.finish_all([paint, floor, ceil, iron, fret, roof, gilt, bulbs, fir, *beads.values(), snow, wire])
+    # ------------------------------------------------ a worn rug under the drum kit, a music stand by the sax
+    x, y, d = SLOTS["slot_drums"]
+    Ms = Matrix.Translation((x, y, DECK + 0.006)) @ Euler((0, 0, slot_yaw(d))).to_matrix().to_4x4()
+    rw, rd, ry = 1.75, 1.35, -0.42
+    rc.picture("bs_rug", "rug", [Ms @ Vector((-rw / 2, ry - rd / 2, 0)), Ms @ Vector((rw / 2, ry - rd / 2, 0)),
+                                 Ms @ Vector((rw / 2, ry + rd / 2, 0)), Ms @ Vector((-rw / 2, ry + rd / 2, 0))])
+    x, y, d = SLOTS["slot_sax"]
+    Ms = Matrix.Translation((x, y, DECK)) @ Euler((0, 0, slot_yaw(d))).to_matrix().to_4x4()
+    stand = Part("bs_musicstand", "blackmetal")
+    sp = Part("bs_sheet", "paper")
+    base = Ms @ Vector((0.62, -0.42, 0))
+    face = (Ms.to_3x3() @ Vector((-0.55, 0.45, 0))).normalized()          # the desk faces the player
+    for k in range(3):
+        ang = TAU * k / 3 + 0.4
+        rod(stand, base + Vector((0, 0, 0.22)), base + Vector((0.24 * math.cos(ang), 0.24 * math.sin(ang), 0.005)),
+            0.0065, seg=4)
+    rod(stand, base + Vector((0, 0, 0.02)), base + Vector((0, 0, 1.08)), 0.009, seg=6)
+    side = Vector((-face.y, face.x, 0))
+    top = base + Vector((0, 0, 1.12))
+    Md = rc.frame_at(top, side, (0, 0, 1)) @ Euler((-0.35, 0, 0)).to_matrix().to_4x4()
+    stand.mbox(Md, (0.48, 0.006, 0.30))
+    stand.mbox(Md @ Matrix.Translation((0, -0.025, -0.15)), (0.48, 0.05, 0.008))
+    for i, dx in enumerate((-0.11, 0.11)):
+        sp.mbox(Md @ Matrix.Translation((dx, -0.006, 0.01)) @ Euler((0, 0.02 * (1 - 2 * i), 0)).to_matrix().to_4x4(),
+                (0.215, 0.002, 0.29), tint=(1.0, 0.97, 0.9))
+    objs = rc.finish_all([paint, floor, ceil, iron, fret, roof, gilt, bulbs, fir, *beads.values(), snow, wire,
+                          stand, sp])
     # ------------------------------------------------ markers
     for name, (x, y, d) in SLOTS.items():
         node(name, (x, y, DECK), rot=(0, 0, slot_yaw(d)))

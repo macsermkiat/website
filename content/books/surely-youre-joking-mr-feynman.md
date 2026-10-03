@@ -9,7 +9,7 @@ sources:
   - https://proofwiki.org/wiki/Book:Richard_P._Feynman/Surely_You're_Joking,_Mr._Feynman!
   - https://jimbouman.com/surely-youre-joking-mr-feynman-richard-feynman/
   - https://openlibrary.org/books/OL2062828M/Surely_You're_Joking_Mr._Feynman!
-review: "check"
+review: "done"
 ---
 
 ## In short
@@ -18,7 +18,7 @@ This is less an autobiography than a pile of anecdotes, edited from taped conver
 
 ## Summary
 
-The first part, "From Far Rockaway to MIT", starts in the Depression. Young Feynman fixes neighbours' radios, and one man is amazed that the boy paces up and down thinking before he touches anything; the man goes around telling people this kid fixes radios by thinking. Working in a hotel kitchen he invents a faster way to cut string beans, which the cook ignores. At MIT he loves physics, dodges the humanities, and gets a summer job in a small chemical company.
+The first part, "From Far Rockaway to MIT", starts in the Depression. Young Feynman fixes neighbours' radios, and one man is amazed that the boy paces up and down thinking before he touches anything; the man goes around telling people this kid fixes radios by thinking. Working in a hotel kitchen he invents a faster way to cut string beans, which the cook ignores. At MIT he loves physics and dodges the humanities. The summer after he graduates, he is the only chemist at a small company trying to plate plastic with metal.
 
 The second part covers graduate school at Princeton. The title comes from here. At a tea given by the dean's wife, asked whether he wants cream or lemon, he says both, and she replies with the book's title line. He volunteers to be hypnotised, asks for "a map of the cat" in a biology class because he does not know the names of the muscles, and gives his first seminar with Einstein, Wolfgang Pauli and John von Neumann in the audience. He learns he is good at integrals because he picked up an unusual trick, differentiating under the integral sign, from an old calculus book, so he has "a different box of tools" from everyone else. He also runs experiments on the ants in his room to work out how they find food.
 

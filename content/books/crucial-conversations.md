@@ -11,7 +11,7 @@ sources:
   - https://github.com/mgp/book-notes/blob/master/crucial-conversations.md
   - https://readingraphics.com/book-summary-crucial-conversations/
   - https://adultingwithcheryl.medium.com/book-summary-crucial-conversations-tools-for-talking-when-stakes-are-high-ebd8f0a85a2e
-review: "check"
+review: "done"
 ---
 
 ## In short

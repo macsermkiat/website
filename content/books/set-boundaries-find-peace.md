@@ -10,7 +10,7 @@ sources:
   - https://readingraphics.com/book-summary-set-boundaries/
   - https://www.mindtools.com/a7xqzpz/set-boundaries-find-peace/
   - https://www.supersummary.com/set-boundaries-find-peace/summary/
-review: "check"
+review: "done"
 ---
 
 ## In short
@@ -23,7 +23,7 @@ Tawwab defines a boundary as an expectation or need that helps you feel safe and
 
 She then asks why so many people struggle. Most of us learned what was allowed in the family we grew up in. If your parents never said no, or punished you when you did, stating a limit as an adult feels dangerous. Fear of seeming mean, of being disliked or of losing someone keeps people quiet. Tawwab is blunt that guilt and discomfort are normal when you start, and that they are not a sign you are doing something wrong.
 
-A useful middle section describes three ways boundaries go. Porous boundaries let everything through: oversharing, people-pleasing, taking on other people's problems as your own. Rigid boundaries go too far the other way, with walls that keep everyone out and never bend. Healthy boundaries sit in between. They rest on knowing your own values and capacity, and they can flex with the situation.
+The middle section describes three ways boundaries go. Porous boundaries let everything through: oversharing, people-pleasing, taking on other people's problems as your own. Rigid boundaries go too far the other way, with walls that keep everyone out and never bend. Healthy boundaries sit in between. They rest on knowing your own values and capacity, and they can flex with the situation.
 
 She lists six types of boundaries. Physical ones cover your body and personal space. Sexual ones cover consent and preferences. Intellectual ones concern your thoughts and ideas and the right to hold them without being mocked. Emotional ones protect you from being dumped on or made responsible for someone else's feelings. Material ones cover money and possessions, such as whether you lend your car. Time boundaries cover how you spend your hours and energy. Violations can be small or large, and small ones repeated often do a lot of damage.
 

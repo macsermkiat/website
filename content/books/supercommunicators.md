@@ -10,7 +10,7 @@ sources:
   - https://williammeller.com/supercommunicators-by-charles-duhigg/
   - https://verbaltovisual.com/supercommunicators-by-charles-duhigg-a-visual-summary/
   - https://www.artofmanliness.com/social/social-skills/podcast-968-the-secrets-of-supercommunicators/
-review: "check"
+review: "done"
 ---
 
 ## In short
@@ -19,7 +19,7 @@ review: "check"
 
 ## Summary
 
-Duhigg starts from his own failure. At work he kept responding to a colleague's problems with solutions, and she finally told him he was not listening. At home he had similar trouble with his wife. He set out to learn why some people seem to connect with anyone, and early on he meets one: Felix Sigala, a former FBI negotiator whom colleagues sought out because he made people feel understood. Felix's secret was not charm. He paid close attention to what kind of conversation the other person wanted to have.
+Duhigg starts from his own failure. When a colleague came to him about trouble on her team, he kept offering practical fixes, such as making everyone's roles clearer. What she was trying to tell him was that the people on the team needed to respect each other more, and his solutions missed the point. At home he had similar trouble with his wife. He set out to learn why some people seem to connect with anyone, and early on he meets one: Felix Sigala, a longtime FBI administrator and negotiator whom Defense Department researchers studied because people of all kinds opened up to him. Felix's secret was not charm. He paid close attention to what kind of conversation the other person wanted to have.
 
 That leads to the book's framework and its first rule, the matching principle. Conversations go well when people are in the same kind of conversation at the same time. If you are talking about logistics while I am upset, we will miss each other. Duhigg ties this to research on how the brains of people who are really connecting start to fall into sync. One early story follows Jim Lawler, a CIA case officer trying to recruit a nervous foreign agent. His early attempts failed, and he got better when he dropped the sales pitch and responded to what the man was feeling.
 

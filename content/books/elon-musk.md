@@ -13,7 +13,7 @@ sources:
   - https://www.readtrung.com/p/6-thought-on-elon-musk-by-walter
   - https://www.space.com/elon-musk-walter-isaacson-book-excerpt-starship-surge
   - https://geekway.substack.com/p/an-ultimate-guide-to-elon-musks-algorithm
-review: "check"
+review: "done"
 ---
 
 ## In short

@@ -11,7 +11,7 @@
 //    node movement and book identity asserted
 // Usage: npm run build && node tests/smoke.mjs [--out ../review/round-2/engineer] [--port 4317] [--only shots,items,interact,audio,lite,phone,plain,missing]
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
 let pw;
@@ -82,6 +82,10 @@ const waitNote = (page, re) => page.waitForFunction((src) => new RegExp(src).tes
 const state = (page, k) => page.evaluate((k) => window.__market[k], k);
 /** A client point where a click would reach the named item (spiral search around its centre), or null. */
 const aimAt = (page, name, via = name) => page.evaluate(([name, via]) => {
+  // a point off the top of the window cannot be clicked: the whole stage must be in view first
+  const st = document.getElementById('stage');
+  const r0 = st.getBoundingClientRect();
+  if (r0.top < 0 || r0.bottom > innerHeight) st.scrollIntoView({ block: 'nearest', behavior: 'instant' });
   const m = window.__market, c = m.screenPoint(via);
   if (!c) return null;
   for (let r = 0; r <= 16; r += 2) for (let a = 0; a < 12; a++) {
@@ -262,6 +266,20 @@ try {
     await M(() => window.__market.advance(0.8));
     check('Bücherstand: the note gives its title and author', /Gödel/.test(await note(page)) && /Hofstadter/.test(await note(page)), await note(page));
     await pose('item_books_open.jpg', () => {});
+    // a spine that is one of the books on Mac's own shelf (content/bookshelf.json) shows the writer's one-line summary
+    // (a title the writer has already summarised in content/books/, when there is one)
+    const cats = (() => { try { return JSON.parse(readFileSync(path.resolve('../content/books/categories.json'), 'utf8')).categories.flatMap((c) => c.books); } catch { return []; } })();
+    const allLib = JSON.parse(readFileSync(path.resolve('../content/bookshelf.json'), 'utf8')).books.map((b) => b.title);
+    const summarised = cats.filter((b) => existsSync(path.resolve(`../content/books/${b.slug}.md`))).map((b) => b.title);
+    const lib = summarised.length ? summarised : allLib;
+    const nt = (t) => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    const itemsJson = JSON.parse(readFileSync(path.resolve('public/models/items.json'), 'utf8')).items;
+    const shelfSpine = Object.entries(itemsJson).find(([k, v]) => v.kind === 'book' && lib.some((t) => nt(t) === nt(v.title)) && !five.includes(k))?.[0] || null;
+    if (shelfSpine) {
+      await M((n) => { window.__market.clickItem(window.__market.openedBook()?.name); window.__market.advance(1.2); window.__market.clickItem(n); window.__market.advance(2.4); }, shelfSpine);
+      const ob = await M(() => window.__market.openedBook());
+      check('Bücherstand: a book from Mac\'s own shelf opens as itself, with the writer\'s one-line summary', ob?.name === shelfSpine && ob.mac === true && ob.note.length > 30 && (await note(page)).includes(ob.title), JSON.stringify(ob));
+    }
     await M(() => window.__market.resetView());
 
     // a deco stall: fly to its close-up, hover an iced Lebkuchen heart
@@ -423,6 +441,8 @@ try {
     await page.click('#reset');
     await frames(page, 40);
     const hit = await page.evaluate(() => {
+      const st = document.getElementById('stage');
+      if (st.getBoundingClientRect().top < 0) st.scrollIntoView({ block: 'nearest', behavior: 'instant' });
       const m = window.__market;
       const V = m.camera.position.constructor;
       const p = new V(7.4, 1.4, -1.4).project(m.camera);
@@ -512,6 +532,9 @@ try {
     check('plain.html credits the music (the manifest\'s credit line)', credit.test(await page.textContent('#credits')), await page.textContent('#credits'));
     check('plain.html lists every third-party asset with its source URL', (await page.locator('.credits-all a[href^="https://github.com/"]').count()) > 5);
     check('plain.html carries the books the 3D shelf features', /Gödel, Escher, Bach/.test(await page.textContent('#books')), (await page.textContent('#books')).slice(0, 200));
+    const shelfN = JSON.parse(readFileSync(path.resolve('../content/bookshelf.json'), 'utf8')).books.length;
+    const libN = await page.locator('#books .library li').count();
+    check('plain.html lists Mac\'s whole bookshelf, with the writer\'s one-line summaries', libN === shelfN && (await page.locator('#books .library .one-line').count()) > 0, `${libN} of ${shelfN}`);
     await shot(page, 'plain_html.jpg');
     await ctx.close();
     // no WebGL: the page shows every section as text in place of the market
@@ -540,7 +563,7 @@ try {
     const report = await page.evaluate(() => window.__market.report);
     check('missing glbs: every place is a stand-in', report.models.every((m) => m.source === 'standin'), JSON.stringify(report.models.filter((m) => m.source !== 'standin')));
     check('missing layout.json: the BUILD.md layout', report.layout === 'BUILD.md fallback', report.layout);
-    check('missing glbs are reported as bindings that did not resolve (nothing guessed)', report.bindings.length >= 10 && report.bindings.every((b) => /not in site\/public\/models|no asset/.test(b.problem)), JSON.stringify(report.bindings.slice(0, 3)));
+    check('missing glbs are reported as bindings that did not resolve (nothing guessed)', report.bindings.length >= 10 && report.bindings.every((b) => /(is|are) not in site\/public\/models|nor .* is in site\/public\/models|no asset/.test(b.problem)), JSON.stringify(report.bindings.filter((b) => !/(is|are) not in site\/public\/models|nor .* is in site\/public\/models|no asset/.test(b.problem)).slice(0, 4)));
     await page.click('#places button[data-place="glueh"]');
     await page.click('#pActions [data-action="pour"]');
     check('stand-ins keep the actions working', /poured tonight: 1/.test(await note(page)), await note(page));

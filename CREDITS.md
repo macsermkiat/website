@@ -67,12 +67,13 @@ The sky, stars, moon, clouds, snow, environment map and grain are all generated 
 
 ## Ride builder (Riesenrad, Karussell, bandstand, instruments: blender/rides/)
 
-All ride textures are procedural: the painted-steel kit `rsteel` is baked from Blender shader nodes in `blender/rides/rcommon.py`, and the wood and paint kits come from the carpenter's `nmlib`. No third-party images, models or scans are used. The only third-party assets are two fonts from the carpenter's bundle in `blender/lib/fonts/`, turned into 3D lettering inside the models:
+All ride textures are procedural: the painted-steel kit `rsteel` is baked from Blender shader nodes in `blender/rides/rcommon.py`, and the wood and paint kits come from the carpenter's `nmlib`. The posters, the price board (ferris.glb) and the drum rug (bandstand.glb) are drawn in code with Pillow by `blender/rides/art.py`. No third-party images, models or scans are used. The only third-party assets are three fonts from the carpenter's bundle in `blender/lib/fonts/`, turned into 3D lettering inside the models or set in the drawn posters:
 
 | Asset | Used for | Source | Licence |
 |---|---|---|---|
-| UnifrakturCook | "Riesenrad" entrance sign (ferris.glb), "Karussell" on the rounding board (carousel.glb) | https://github.com/google/fonts/tree/main/ofl/unifrakturcook | SIL Open Font License 1.1 |
-| Alegreya SC (Huerta Tipográfica) | "Kasse" sign on the Riesenrad ticket booth (ferris.glb) | https://github.com/google/fonts/tree/main/ofl/alegreyasc | SIL Open Font License 1.1 |
+| UnifrakturCook | "Riesenrad" entrance sign (ferris.glb), "Karussell" on the rounding board (carousel.glb); titles of the booth posters and price board (ferris.glb) | https://github.com/google/fonts/tree/main/ofl/unifrakturcook | SIL Open Font License 1.1 |
+| Alegreya SC (Huerta Tipográfica) | "Kasse" sign on the Riesenrad ticket booth; poster and price-board lettering (ferris.glb) | https://github.com/google/fonts/tree/main/ofl/alegreyasc | SIL Open Font License 1.1 |
+| IM Fell English Italic (IM Fell types, digitised by Igino Marini) | Italic lines on the booth posters (ferris.glb) | https://github.com/google/fonts/tree/main/ofl/imfellenglish | SIL Open Font License 1.1 |
 
 ## Vendor (goods and props: blender/props/, site/public/models/prop_*)
 

@@ -9,7 +9,7 @@ sources:
   - https://www.blinkist.com/en/books/how-to-know-a-person-en
   - https://richardblackaby.com/book-review-how-to-know-a-person/
   - https://medium.com/@peterbidstrup/book-review-david-brooks-how-to-know-a-person-ebba816a12c1
-review: "check"
+review: "done"
 ---
 
 ## In short
@@ -50,4 +50,4 @@ He closes on wisdom, which he defines as a way of relating more than a store of 
 
 ## If you read one chapter
 
-The chapter on serving a friend in despair, about Peter Marks, because it is the most honest and personal part of the book and the lesson in it is hard to forget.
+The chapter on serving a friend in despair, about Peter Marks, because it is the most personal part of the book.

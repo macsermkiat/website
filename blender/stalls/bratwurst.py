@@ -244,11 +244,12 @@ def preview(objs):
     render.add_light("env_ember_front", 'POINT', (BOWL_X, cy - 0.45, COUNTER_TOP + 0.15), 14, (1.0, 0.4, 0.12),
                      size=0.3)
     render.add_light("env_fill", 'AREA', (0.4, 0.2, 2.3), 160, size=2.0)
-    # the two gooseneck sign lamps: tight spots from the lamp heads onto the board, so the hotspot
-    # lands on the lettering and not on the roof snow in front of it
+    # the two gooseneck sign lamps: narrow spots from the lamp heads aimed at the upper half of the
+    # board. The lamp heads sit only 0.3 m in front of the board, so a wide cone spills a bright
+    # oval onto the roof snow below it; at 38 degrees the lower cone edge ends at the board's foot.
     for x in (-0.1, 1.0):
-        render.add_light("env_signlamp", 'SPOT', (x, -0.9, 3.83), 22, size=0.05, spot_size=math.radians(62),
-                         spot_blend=0.6, target=(x * 0.6 + 0.18, -0.58, 3.52))
+        render.add_light("env_signlamp", 'SPOT', (x, -0.9, 3.83), 24, size=0.04, spot_size=math.radians(38),
+                         spot_blend=0.35, target=(x * 0.6 + 0.18, -0.58, 3.58))
     render.add_light("env_neighbour", 'POINT', (-5.0, -1.5, 2.6), 150, size=0.6)
     if not props:
         print("[bratwurst] preview without the vendor's props")

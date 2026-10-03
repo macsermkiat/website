@@ -170,8 +170,9 @@ function splitByHeadings(src, file) {
 function readDir(dir) {
   if (!fs.existsSync(dir)) return [];
   return fs
-    .readdirSync(dir, { recursive: true })
+    .readdirSync(dir)
     .map(String)
+    // the section files only: sub-folders (content/books/, one page per book on Mac's shelf) are read by buildLibrary
     .filter((f) => f.toLowerCase().endsWith('.md') && !/readme\.md$/i.test(f))
     .sort()
     .map((f) => path.join(dir, f));
@@ -220,12 +221,83 @@ export function buildContent() {
       bk.shelfAdded = true;
     }
   }
+  // Mac's own bookshelf (content/bookshelf.json, the writer's content/books/): listed under the bookshop in the panel
+  // and on the text page, and used by the 3D shelf to tell which spines are Mac's and what each book is about.
+  const library = buildLibrary();
+  if (bk && library.books.length) {
+    bk.html += libraryHtml(library);
+    bk.libraryAdded = library.books.length;
+  }
   // the writer's `order:` (1-7) sets the order of the place buttons and the plain page, when every section has one
   const nums = SECTION_ORDER.map((id) => Number(sections[id]?.meta?.order));
   const order = nums.every((n) => Number.isFinite(n))
     ? [...SECTION_ORDER].sort((a, b) => nums[SECTION_ORDER.indexOf(a)] - nums[SECTION_ORDER.indexOf(b)])
     : SECTION_ORDER;
-  return { order, sections };
+  return { order, sections, library };
+}
+
+export const normTitle = (t) => String(t || '').toLowerCase().normalize('NFC').replace(/[’']/g, '').replace(/[^\p{L}\p{N}]+/gu, '');
+const slugTitle = (t) => String(t || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[’']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/**
+ * Mac's bookshelf: the titles he chose (content/bookshelf.json), in the writer's categories
+ * (content/books/categories.json) when they exist, each with its one-line summary from content/books/<slug>.md.
+ * Every part is optional: no shelf file means an empty library, a book without a page has no summary yet.
+ * A book page marked `review: check` is counted by the content gate (STRICT_CONTENT=1 stops on it).
+ */
+export function buildLibrary(dir = CONTENT_DIR) {
+  const shelf = readJson(path.join(dir, 'bookshelf.json'));
+  const cats = readJson(path.join(dir, 'books', 'categories.json'));
+  const pages = {};
+  const bookDir = path.join(dir, 'books');
+  if (fs.existsSync(bookDir)) {
+    for (const f of fs.readdirSync(bookDir).filter((f) => f.endsWith('.md'))) {
+      const { data } = frontMatter(fs.readFileSync(path.join(bookDir, f), 'utf8'));
+      const page = { slug: f.replace(/\.md$/, ''), title: str(data.title), author: str(data.author), category: str(data.category), oneLine: str(data.one_line || data.oneline || data.note), review: str(data.review) };
+      pages[page.slug] = page;
+      if (page.title) pages['t:' + normTitle(page.title)] = page;
+    }
+  }
+  const shelfBooks = Array.isArray(shelf?.books) ? shelf.books.filter((b) => b && (b.title || b.full_title)) : [];
+  const byTitle = new Map(shelfBooks.map((b) => [normTitle(b.title || b.full_title), b]));
+  const books = [];
+  const categories = [];
+  const add = (b, cat) => {
+    const slug = b.slug || slugTitle(b.title);
+    const page = pages[slug] || pages['t:' + normTitle(b.title)];
+    const own = byTitle.get(normTitle(b.title));
+    const entry = {
+      title: String(b.title || own?.title || ''),
+      author: String(b.author || own?.author || page?.author || ''),
+      slug,
+      category: cat?.key || page?.category || '',
+      oneLine: NOTES_MODE === 'hide' && NOTE_RE.test(page?.oneLine || '') ? '' : (page?.oneLine || '').replace(CHECK_RE, '').trim(),
+    };
+    books.push(entry);
+    return entry;
+  };
+  if (Array.isArray(cats?.categories) && shelfBooks.length) {
+    const seen = new Set();
+    for (const c of cats.categories) {
+      const list = (c.books || []).filter((b) => b?.title && byTitle.has(normTitle(b.title))).map((b) => { seen.add(normTitle(b.title)); return add(b, c); });
+      if (list.length) categories.push({ key: c.key || '', label: String(c.label_en || c.label || c.key || ''), labelDe: String(c.label_de || ''), books: list });
+    }
+    const rest = shelfBooks.filter((b) => !seen.has(normTitle(b.title))).map((b) => add(b, null));
+    if (rest.length) categories.push({ key: 'more', label: 'More from the shelf', labelDe: '', books: rest });
+  } else if (shelfBooks.length) {
+    categories.push({ key: 'all', label: '', labelDe: '', books: shelfBooks.map((b) => add(b, null)) });
+  }
+  return { books, categories, source: shelf?.source ? String(shelf.source) : '' };
+}
+
+/** The bookshelf as HTML for the panel and the text page: one list per category, a one-line summary per book. */
+export function libraryHtml(lib) {
+  if (!lib?.books?.length) return '';
+  const groups = lib.categories.map((c) => {
+    const li = c.books.map((b) => `<li><em>${esc(b.title)}</em>${b.author ? ` · ${esc(b.author)}` : ''}${b.oneLine ? `. <span class="one-line">${esc(b.oneLine)}</span>` : ''}</li>`).join('');
+    return `${c.label ? `<h4>${esc(c.label)}${c.labelDe ? ` <span lang="de">· ${esc(c.labelDe)}</span>` : ''}</h4>` : ''}<ul class="shelf-list">${li}</ul>`;
+  }).join('\n');
+  return `\n<details class="library" id="bookshelf"><summary>Mac’s bookshelf: ${lib.books.length} books he has read, by subject</summary>\n${groups}\n</details>\n`;
 }
 
 function listFiles(dir, base = dir) {
@@ -356,7 +428,7 @@ export function plainHtml(content) {
     <section id="${id}" aria-labelledby="${id}-h">
       <p class="eyebrow">${esc(s.name)} · ${esc(s.sub)}</p>
       <h2 id="${id}-h">${esc(s.title || s.sub)}</h2>
-      ${s.html}
+      ${s.libraryAdded ? s.html.replace('<details class="library"', '<details class="library" open') : s.html}
     </section>`;
     })
     .join('\n');
@@ -374,10 +446,16 @@ export function contentGate(dir = CONTENT_DIR) {
   for (const f of listFiles(dir).filter((f) => f.endsWith('.md'))) {
     const src = fs.readFileSync(path.join(dir, f), 'utf8');
     const notes = (src.match(/\[\[[\s\S]+?\]\]/g) || []).length;
-    const checks = (src.match(/<!--\s*check\b[\s\S]*?-->/gi) || []).length + (src.match(/\[(?:check|verify|todo|mac to check)(?::[^\]]*)?\]/gi) || []).length;
+    const checks = (src.match(/<!--\s*check\b[\s\S]*?-->/gi) || []).length + (src.match(/\[(?:check|verify|todo|mac to check)(?::[^\]]*)?\]/gi) || []).length
+      // a book page the writer has not yet reviewed (front matter `review: check`)
+      + (/^books\//.test(f) && /^(check|todo|draft)$/i.test(String(frontMatter(src).data.review || '').trim()) ? 1 : 0);
     if (notes || checks) left.push({ file: f, notes, checks });
   }
-  const parts = left.map((l) => `${l.file}: ${[l.notes && `${l.notes} note${l.notes > 1 ? 's' : ''}`, l.checks && `${l.checks} check marker${l.checks > 1 ? 's' : ''}`].filter(Boolean).join(', ')}`);
+  const one = (l) => `${l.file}: ${[l.notes && `${l.notes} note${l.notes > 1 ? 's' : ''}`, l.checks && `${l.checks} check marker${l.checks > 1 ? 's' : ''}`].filter(Boolean).join(', ')}`;
+  // the book pages are many and alike: one line for all of them
+  const pages = left.filter((l) => /^books\//.test(l.file) && !l.notes && l.checks === 1);
+  const parts = left.filter((l) => !pages.includes(l)).map(one);
+  if (pages.length) parts.push(`books/: ${pages.length} book page${pages.length > 1 ? 's' : ''} still marked review: check`);
   return { left, message: left.length ? `content still waiting for Mac: ${parts.join('; ')}` : '' };
 }
 

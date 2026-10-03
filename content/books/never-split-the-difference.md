@@ -9,7 +9,7 @@ sources:
   - https://www.runn.io/blog/never-split-the-difference-summary
   - https://bagerbach.com/books/never-split-the-difference/
   - https://growthabit.com/never-split-the-difference-book-summary/
-review: "check"
+review: "done"
 ---
 
 ## In short
@@ -28,7 +28,7 @@ Chapter six is about shaping how the other side sees the deal. People fear losse
 
 Chapter seven teaches calibrated questions: open questions starting with "how" or "what," such as "How am I supposed to do that?" They make the other side work on your problem while feeling in charge. Chapter eight covers making sure a deal actually happens. Watch for "I'll try," which often means no, get the same commitment three times in different ways, and find out who else behind the table can block the agreement.
 
-Chapter nine is about hard bargaining. Voss describes three negotiator types (analysts, accommodators and assertives) and the Ackerman method he learned at the FBI. Set a target price, open at 65 percent of it, then rise to 85, 95 and finally 100 percent in shrinking steps, ending on a precise number and perhaps a small non-monetary extra. He uses it to buy a red Toyota truck.
+Chapter nine is about hard bargaining. Voss describes three negotiator types (analysts, accommodators and assertives) and the Ackerman method he learned at the FBI. Set a target price, open at 65 percent of it, then rise to 85, 95 and finally 100 percent in shrinking steps, ending on a precise number and perhaps a small non-monetary extra.
 
 The final chapter is about black swans, the unknown facts that change everything. Every negotiation has a few, such as a hidden constraint or a personal motive. Voss argues that finding them takes face-to-face contact, attention to small slips and curiosity about the other side's view of the world. He contrasts successes with a 1981 bank siege in which police missed that the gunman wanted to die, not to escape.
 

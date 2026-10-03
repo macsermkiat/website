@@ -71,14 +71,18 @@ def g_coal(w, h, seed):
 
 def _hot(h, w, seed):
     """Which cracks glow: about a third of them, in patches."""
-    return smooth(0.48, 0.66, fbm(h, w, 34, seed + 6))
+    return smooth(0.4, 0.62, fbm(h, w, 34, seed + 6))
 
 
 def coal_emit(w, h, seed):
-    """Emission only inside the cracks (and the thin glowing rim of a few), everything else black."""
+    """Glow in the cracks (bright where the patch is hot) plus a dull ember glow over the hot patches that
+    the ash has not covered, so the bed reads as burning, not as black lumps with a few orange lines."""
     d1, d21, _ = voronoi(h, w, int(w * h / 260), seed)
-    crack = smooth(1.6, 0.0, d21)
-    glow = np.clip(crack * _hot(h, w, seed) * 1.3, 0, 1)
+    crack = smooth(2.6, 0.0, d21)
+    hot = _hot(h, w, seed)
+    ash = smooth(0.4, 0.7, fbm(h, w, 12, seed + 1))
+    ember = smooth(0.35, 0.75, hot) * (1 - 0.8 * ash) * (0.55 + 0.45 * fbm(h, w, 8, seed + 7))
+    glow = np.clip(np.maximum(crack * (0.25 + hot) * 1.2, ember * 0.42), 0, 1)
     glow = ndimage.gaussian_filter(glow, 0.8)
     return np.stack([glow, glow ** 1.5 * 0.45, glow ** 3 * 0.08], -1)
 

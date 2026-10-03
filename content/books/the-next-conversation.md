@@ -10,7 +10,7 @@ sources:
   - https://www.denisonforum.org/popular-culture/book-reviews-excerpts/a-book-review-of-jefferson-fishers-the-next-conversation/
   - https://www.getstoryshots.com/books/the-next-conversation-summary/
   - https://howtoes.blog/2026/02/17/the-next-conversation-jefferson-fisher-book-summary/
-review: "check"
+review: "done"
 ---
 
 ## In short

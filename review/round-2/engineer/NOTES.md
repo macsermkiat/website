@@ -30,6 +30,24 @@ load average of 15 to 18. The market owner should commit them; they are untracke
   - The lite light count is documented.
   - The Bücherstand's third light marker is resolved.
 
+## Late in the round: Mac's bookshelf and the sausage axis
+
+- **Mac's bookshelf** (`plugins/market.js` `buildLibrary`, `actions/items/books.js`).
+  - The build reads `content/bookshelf.json` (the 55 titles Mac chose), the writer's
+    `content/books/categories.json` and the one-line summary (`one_line`) from each `content/books/<slug>.md`.
+  - The bookshop panel and plain.html get "Mac's bookshelf: 55 books he has read, by subject", one list per
+    category, with a summary for every book the writer has done (36 so far). On plain.html the list is open.
+  - In the 3D shop, a spine whose printed title is on Mac's shelf opens as **his** book ("from Mac's shelf" on the
+    title page) with the writer's summary on the right page. Seven of the vendor's current spines match (The Order
+    of Time, The Book of Why, The Black Swan, Surely You're Joking, Man's Search for Meaning, Chaos, Reality Is Not
+    What It Seems). When the vendor prints Mac's titles on the spines, every one of them matches with no engine
+    change. "Pick a book for me" goes through the writer's five picks, then these spines.
+  - Section loading no longer reads sub-folders, so a book page's heading can never be taken for a section.
+  - The strict gate counts a book page still marked `review: check`. The build's warning reduces them to one line.
+- **Sausages turn about their own axis.** The vendor moved the sausage pivots to their base and asked for this.
+  `wurst.js` now turns each sausage about its long axis at `turn_axis.offset_threejs_y` over the pivot (items.json),
+  or about the middle of its mesh when there is no such field. It no longer rolls round its underside.
+
 ## What each item does
 
 All of this is in `src/actions/items/`. `index.js` finds the items, handles hover, and hands each click to the

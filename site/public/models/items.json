@@ -1,5 +1,5 @@
 {
- "about": "Display names for the vendor's act_ nodes (node names are unique across all prop sets; the full and the lite glb of a set carry the same act_ nodes at the same places). 'pivot' says where the node's origin is: 'base' is the point the item rests on; sausages turn about their centre. Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV rect [u_min, v_min, u_max, v_max] in glTF texture space (origin top-left, as three.js samples glTF textures) in prop_tex_books_color.webp.",
+ "about": "Display names for the vendor's act_ nodes (node names are unique across all prop sets; the full and the lite glb of a set carry the same act_ nodes at the same places). 'pivot' says where the node's origin is: 'base' is the point the item rests on (sausages too: their 'turn_axis' gives the long axis's height above the base, for turning them on the grate). Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV rect [u_min, v_min, u_max, v_max] in glTF texture space (origin top-left, as three.js samples glTF textures) in prop_tex_books_color.webp.",
  "items": {
   "act_glass_0": {
    "set": "prop_bier_counter",

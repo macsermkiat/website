@@ -400,7 +400,8 @@ SETS = {
                                seed=41, cam=((0.2, -2.05, 0.68), (0.2, 0.0, 0.2), 25),
                                hero=((-0.55, -0.95, 0.58), (-0.62, 0.0, 0.2), 32),
                                in_stall="stall_bratwurst.glb",
-                               stall_lights=(("env_ember", 'POINT', (-0.9, 0.0, 0.3), 25, (1.0, 0.36, 0.08), 0.15),),
+                               # the coals' own glow does the work; a small ember light just over the bed lights the grate from below
+                               stall_lights=(("env_ember", 'POINT', (-0.9, 0.0, 0.2), 6, (1.0, 0.36, 0.08), 0.15),),
                                stall_cams={"in_stall": ((-0.1, -2.5, 0.75), (-0.15, 0.1, 0.35), 26),
                                            "in_stall_grill": ((-0.55, -1.05, 0.42), (-0.88, 0.05, 0.32), 32)}),
 }

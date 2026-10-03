@@ -11,7 +11,9 @@ two gate lamps at the front (-Y).
 
 Nodes: rot_platform (spins about three.js Y), horse_0..11 (children of rot_platform; each
 horse is its own node so the engine can move it up and down its pole), horse_seat_2 (ride
-camera, inside horse_2), bulbs_*, snow_canopy, light_0/1, cam_view/cam_target.
+camera, inside horse_2), bulbs_*, snow_canopy, light_0/1, light_2 (a child of rot_platform,
+so the canopy light turns with the horses), cam_view/cam_target.
+The horses are one sculpted master (horse.py) in six coats.
 The horses face clockwise travel seen from above, which is the engine's default spin.
 
     /home/claude/tools/bpy-venv/bin/python blender/rides/carousel.py [--no-render] [--no-lite]
@@ -23,6 +25,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import rcommon as rc  # noqa: E402
+import horse  # noqa: E402
 from rcommon import TAU, Part, node, rod, side_M, state  # noqa: E402
 from mathutils import Euler, Matrix, Vector, noise  # noqa: E402
 from nmlib import carpentry as cp  # noqa: E402
@@ -44,15 +47,6 @@ TIER = (1.78, 5.56, 6.26)
 CREAM_T = (1.0, 0.94, 0.82)
 RED_T = (0.62, 0.05, 0.06)
 
-HORSE_COATS = [
-    # (coat tint, mane in gilt?, saddle tint, dapple)
-    ((1.0, 0.99, 0.96), True, (0.55, 0.03, 0.04), False),
-    ((0.55, 0.55, 0.57), False, (0.05, 0.12, 0.45), True),
-    ((0.95, 0.93, 0.88), True, (0.05, 0.30, 0.12), False),
-    ((0.40, 0.16, 0.07), False, (0.55, 0.03, 0.04), False),
-    ((0.05, 0.045, 0.045), True, (0.55, 0.40, 0.08), False),
-    ((0.86, 0.62, 0.30), False, (0.05, 0.12, 0.45), False),
-]
 
 
 # ------------------------------------------------------------------ geometry helpers
@@ -94,162 +88,6 @@ def limb(part, ctrl, n=8, per=2, tint=None, cap1=True):
     pts = smooth_path(ctrl, per)
     sweep(part, [p[:3] for p in pts], [p[3] for p in pts], [p[3] for p in pts], n=n, cap0=False,
           cap1=cap1, tint=tint)
-
-
-# ------------------------------------------------------------------ the horse
-BODY = [  # x, z, half width, half height (tail root -> muzzle)
-    (-0.67, 0.07, 0.04, 0.05), (-0.63, 0.06, 0.12, 0.13), (-0.56, 0.04, 0.17, 0.19),
-    (-0.45, 0.02, 0.19, 0.215), (-0.31, 0.00, 0.185, 0.205), (-0.13, -0.02, 0.175, 0.195),
-    (0.05, -0.02, 0.175, 0.200), (0.21, 0.01, 0.17, 0.21), (0.33, 0.06, 0.15, 0.20),
-    (0.41, 0.13, 0.12, 0.17), (0.47, 0.23, 0.10, 0.14), (0.52, 0.34, 0.085, 0.12),
-    (0.56, 0.45, 0.075, 0.10), (0.61, 0.54, 0.07, 0.09), (0.67, 0.60, 0.068, 0.085),
-    (0.76, 0.60, 0.064, 0.08), (0.85, 0.55, 0.055, 0.068), (0.93, 0.49, 0.047, 0.058),
-    (0.98, 0.45, 0.041, 0.050), (1.01, 0.43, 0.030, 0.036),
-]
-
-
-def body_at(x):
-    """Interpolated (z, half width, half height) of the barrel at x (trunk only)."""
-    for a, b in zip(BODY[:-1], BODY[1:]):
-        if a[0] <= x <= b[0]:
-            t = (x - a[0]) / (b[0] - a[0])
-            return tuple(a[i] + (b[i] - a[i]) * t for i in (1, 2, 3))
-    return BODY[-1][1:]
-
-
-def saddle_cloth(cloth, gl, lite, tint):
-    """A cut fabric saddle cloth draped over the barrel: a surface 12 mm off the coat from the
-    spine down each flank, with a scalloped bottom edge trimmed in gilt cord."""
-    xs = [-0.30 + 0.48 * i / (5 if lite else 9) for i in range(6 if lite else 10)]
-    nt = 7 if lite else 9
-    off = 0.012
-
-    def t_bottom(x):
-        u = (x - xs[0]) / (xs[-1] - xs[0])
-        return -0.62 + 0.10 * abs(math.sin(math.pi * u * 3))       # three scallops per side
-
-    rings = []
-    for x in xs:
-        z, w, h = body_at(x)
-        tb = t_bottom(x)
-        ring = []
-        for j in range(nt):
-            t = tb + (math.pi - 2 * tb) * j / (nt - 1)            # right flank, over the spine, left flank
-            ring.append(Vector((x, (w + off) * math.cos(t), z + (h + off) * math.sin(t))))
-        rings.append(ring)
-    cloth.loft(rings, closed=False, smooth=True, tint=tint)
-    if not lite:
-        for side in (0, -1):
-            edge = [r[side] + Vector((0, 0, -0.004)) for r in rings]
-            gl.tube(edge, 0.007, tseg=4)
-
-
-def build_horse(k, lite, var):
-    """One carved galloper in its own frame (nose toward +X, origin at the pole). Horses with the
-    same coat (k and k + 6) come out identical, so the web export stores their mesh once."""
-    coat, gilt_mane, saddle_t, dapple = HORSE_COATS[var % len(HORSE_COATS)]
-    state.seed(300 + var)
-    R = state.rng
-    if dapple:
-        def shade(p):
-            nn = noise.noise(Vector((p.x * 11, p.y * 11, p.z * 11)))
-            return 0.72 + 0.5 * max(0.0, nn)
-    else:
-        def shade(p):
-            return 1.0 + 0.05 * noise.noise(Vector((p.x * 5, p.y * 5, p.z * 5)))
-    en = Part(f"h{k}_enamel", "enamel", shade=shade, var=0.02)
-    gl = Part(f"h{k}_gilt", "gilt", var=0.03)
-    dark = Part(f"h{k}_mouth", "enamel", var=0.0)
-    n = 6 if lite else 10
-    body = BODY[::2] + [BODY[-1]] if lite else BODY
-    # trunk, neck and head in one loft
-    sweep(en, [(x, 0, z) for x, z, w, h in body], [w for *_, w, h in body], [h for *_, w, h in body],
-          n=n, tint=coat)
-    # carved muscle: shoulder blades sloping forward, forearm swell, hindquarters and gaskins, chest
-    ms = 6 if lite else 8
-    mr = 4 if lite else 5
-    for s in (() if lite else (-1, 1)):
-        en.sphere((0.29, s * 0.10, 0.05), 1.0, seg=ms, rings=mr, scale=(0.12, 0.062, 0.16), rot=(0, -0.45, 0), tint=coat)
-        en.sphere((-0.47, s * 0.11, 0.04), 1.0, seg=ms, rings=mr, scale=(0.17, 0.078, 0.15), rot=(0, 0.25, 0), tint=coat)
-    en.sphere((0.37, 0, -0.04), 1.0, seg=ms, rings=mr, scale=(0.09, 0.13, 0.15), tint=coat)
-    # head: cheek and jaw bulk, then an open mouth (lower jaw dropped, dark mouth, teeth)
-    en.sphere((0.74, 0, 0.555), 0.07, seg=6 if lite else 12, rings=4 if lite else 8, scale=(1.3, 0.95, 0.85),
-              tint=coat, rot=(0, 0.5, 0))
-    jaw = [(0.80, 0, 0.50, 0.040), (0.88, 0, 0.44, 0.032), (0.95, 0, 0.385, 0.024), (0.985, 0, 0.365, 0.02)]
-    limb(en, jaw, n=6 if lite else 8, per=1 if lite else 2, tint=coat)
-    dark.sphere((0.935, 0, 0.405), 1.0, seg=6 if lite else 8, rings=3 if lite else 5, scale=(0.06, 0.026, 0.022), rot=(0, 0.45, 0),
-                tint=(0.30, 0.03, 0.04))
-    if not lite:
-        g_iv = Part(f"h{k}_teeth", "ivory", var=0.0)
-        for zt, xt in ((0.422, 0.985), (0.382, 0.965)):
-            g_iv.box((xt, 0, zt), (0.018, 0.034, 0.008), rot=(0, 0.45, 0))
-    # legs: jumper pose, front legs tucked, hind legs stretched back; knee and hock bulges
-    ln = 5 if lite else 7
-    wob = [R.uniform(-0.03, 0.03) for _ in range(4)]
-    legs = [
-        [(0.27, 0.085, -0.06, 0.085), (0.33, 0.085, -0.26, 0.055), (0.50 + wob[0], 0.085, -0.31, 0.040),
-         (0.47 + wob[0], 0.085, -0.46, 0.030), (0.50 + wob[0], 0.085, -0.51, 0.032)],
-        [(0.27, -0.085, -0.06, 0.085), (0.31, -0.085, -0.28, 0.055), (0.45 + wob[1], -0.085, -0.40, 0.040),
-         (0.43 + wob[1], -0.085, -0.55, 0.030), (0.46 + wob[1], -0.085, -0.60, 0.032)],
-        [(-0.44, 0.10, -0.03, 0.105), (-0.39, 0.10, -0.24, 0.07), (-0.58 + wob[2], 0.10, -0.35, 0.042),
-         (-0.71 + wob[2], 0.10, -0.48, 0.030), (-0.77 + wob[2], 0.10, -0.53, 0.032)],
-        [(-0.44, -0.10, -0.03, 0.105), (-0.37, -0.10, -0.26, 0.07), (-0.54 + wob[3], -0.10, -0.39, 0.042),
-         (-0.66 + wob[3], -0.10, -0.53, 0.030), (-0.72 + wob[3], -0.10, -0.58, 0.032)],
-    ]
-    for L in legs:
-        limb(en, L[:-1], n=ln, per=1 if lite else 2, tint=coat, cap1=False)
-        a, b = Vector(L[-2][:3]), Vector(L[-1][:3])
-        d = (b - a).normalized()
-        rod(en, a - d * 0.01, b + d * 0.04, 0.034, r2=0.042, seg=ln, caps=True, tint=(0.05, 0.04, 0.035))
-    # ears, eyes, nostrils
-    for s in (-1, 1):
-        rod(en, (0.66, s * 0.035, 0.66), (0.62, s * 0.05, 0.76), 0.022, r2=0.004, seg=5 if lite else 7,
-            caps=True, tint=coat)
-        en.sphere((0.79, s * 0.058, 0.60), 0.014, seg=6, rings=3, tint=(0.02, 0.02, 0.02))
-        if not lite:
-            en.sphere((1.005, s * 0.022, 0.43), 0.009, seg=5, rings=3, tint=(0.05, 0.03, 0.03))
-    # tail: carved, sweeping down
-    tail = [(-0.64, 0, 0.07, 0.045), (-0.74, 0, 0.04, 0.055), (-0.81, 0, -0.10, 0.05),
-            (-0.82, 0, -0.27, 0.04), (-0.77, 0, -0.40, 0.022)]
-    limb(gl if gilt_mane else en, tail, n=ln, per=1,
-         tint=None if gilt_mane else (0.18, 0.12, 0.08))
-    # mane: carved locks along the crest, falling to the outer side (+y), alternating in size
-    mp = gl if gilt_mane else en
-    mt = None if gilt_mane else (0.2, 0.13, 0.08)
-    locks = 4 if lite else 6
-    for i in range(locks):
-        t = i / (locks - 1)
-        x = 0.40 + 0.26 * t
-        z = 0.20 + 0.40 * t + 0.08
-        big = 1.0 if i % 2 == 0 else 0.8
-        mp.sphere((x - 0.02, 0.045 + 0.01 * (i % 2), z), 0.055 * big, seg=6, rings=4,
-                  scale=(1.0, 0.45, 1.7), rot=(0.35 + 0.1 * (i % 2), 0.9 - 0.4 * t, 0), tint=mt)
-    mp.sphere((0.70, 0.0, 0.67), 0.05, seg=6, rings=4, scale=(1.2, 0.6, 0.6), rot=(0, 0.6, 0), tint=mt)  # forelock
-    # saddle cloth (cut edge), saddle, cantle and pommel
-    saddle_cloth(en, gl, lite, saddle_t)
-    en.sphere((-0.04, 0, 0.19), 1.0, seg=8 if lite else 12, rings=4 if lite else 6, scale=(0.22, 0.17, 0.07),
-              tint=(0.16, 0.06, 0.03))
-    en.sphere((-0.21, 0, 0.23), 1.0, seg=8, rings=5, scale=(0.05, 0.13, 0.06), tint=(0.16, 0.06, 0.03))
-    gl.sphere((0.13, 0, 0.24), 0.045, seg=8, rings=6)
-    if not lite:
-        # stirrups, bridle, reins and a jewelled breast collar
-        for s in (-1, 1):
-            gl.box((-0.02, s * 0.20, -0.10), (0.02, 0.008, 0.22), rot=(0, 0, 0))
-            gl.torus((-0.02, s * 0.21, -0.25), 0.035, 0.006, seg=8, tseg=3, rot=(math.pi / 2, 0, 0))
-        for x, z, w, h in ((0.95, 0.47, 0.05, 0.06), (0.80, 0.585, 0.069, 0.086)):
-            sweep(gl, [(x - 0.008, 0, z), (x + 0.008, 0, z)], [w + 0.006] * 2, [h + 0.006] * 2,
-                  n=12, cap0=False, cap1=False)
-        for s in (-1, 1):
-            rc_pts = [(0.96, s * 0.045, 0.44), (0.60, s * 0.09, 0.40), (0.30, s * 0.12, 0.30), (0.13, s * 0.03, 0.24)]
-            gl.tube([Vector(p) for p in smooth_path(rc_pts, 2)], 0.006, tseg=4)
-        for i in range(5):
-            a = -0.9 + 1.8 * i / 4
-            z0, w0, h0 = body_at(0.33)
-            p = Vector((0.36 + 0.05 * math.cos(a), (w0 + 0.03) * math.sin(a), z0 - 0.02 - 0.08 * math.cos(a)))
-            gl.sphere(p, 0.026, seg=5, rings=3)
-        gl.sphere((0.45, 0, -0.08), 0.04, seg=10, rings=6, scale=(0.6, 1, 1))
-        return [en, gl, dark, g_iv]
-    return [en, gl, dark]
 
 
 # ------------------------------------------------------------------ rotating structure
@@ -602,6 +440,9 @@ def build_static(lite):
 def build(lite):
     rot = node("rot_platform", (0, 0, 0))
     build_rotating(lite, rot)
+    # one sculpted master horse (horse.py) shared by the 12 nodes, painted in six coats: horses
+    # k and k + 6 share a mesh, and the gilt harness is one mesh for all twelve
+    herd = horse.Herd(lite)
     for k in range(12):
         phi, r = horse_place(k)
         yaw = math.atan2(-math.cos(phi), math.sin(phi))
@@ -609,18 +450,17 @@ def build(lite):
         pitch = 0.04 * math.sin((k % 6) * 1.7)
         h = node(f"horse_{k}", pos, parent=rot, rot=(0, pitch, yaw))
         rc.bpy.context.view_layer.update()
-        for ob in rc.finish_all(build_horse(k, lite, k % 6)):
-            # built in the horse's own frame: parent with identity transforms, no re-baking, so
-            # horses k and k + 6 stay bit-identical and the export stores their meshes once
-            ob.parent = h
-            ob.matrix_parent_inverse = Matrix()
-            ob.matrix_basis = Matrix()
+        herd.horse(k, k % 6, h)
         if k == 2:
             seat = h.matrix_world @ Vector((-0.04, 0, 0.24 + 0.75))
             node("horse_seat_2", tuple(seat), parent=h)
     build_static(lite)
     node("light_0", (0, -3.2, 3.0))
     node("light_1", (0, 3.2, 3.0))
+    # a canopy light that turns with the platform: it hangs from the sweeps between the inner and
+    # outer horses, so the rider on horse_2 always has the horses around them lit
+    node("light_2", ((R_IN + R_OUT) / 2 * math.cos(-math.pi / 2 + TAU * 2.5 / 12),
+                     (R_IN + R_OUT) / 2 * math.sin(-math.pi / 2 + TAU * 2.5 / 12), Z_SW - 0.25), parent=rot)
     node("cam_target", (0, 0, 2.3))
     cv = node("cam_view", (-7.8, -10.8, 3.1))
     cv.rotation_euler = (Vector((0, 0, 2.3)) - Vector((-7.8, -10.8, 3.1))).to_track_quat('-Z', 'Y').to_euler()

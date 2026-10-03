@@ -10,7 +10,7 @@ sources:
   - https://reactormag.com/beyond-oppenheimer-the-making-of-the-atomic-bomb-by-richard-rhodes/
   - https://historynet.com/wwii-book-review-making-atomic-bomb/
   - https://patricktreardon.com/book-review-the-making-of-the-atomic-bomb-by-richard-rhodes/
-review: "check"
+review: "done"
 ---
 
 ## In short
@@ -23,11 +23,11 @@ The book opens in London in September 1933. Leo Szilard, a Hungarian physicist w
 
 Rhodes then goes back to lay the foundations. In Manchester, Rutherford finds that atoms have a tiny, dense nucleus. In Copenhagen, Niels Bohr builds a model of the atom and turns his institute into the home of a close international community of physicists. The First World War shows what science can do to war: Fritz Haber, a German chemist, organises the first chlorine gas attack at Ypres in 1915. In 1932 James Chadwick discovers the neutron, a particle with no charge that can slip into a nucleus. In Rome, Enrico Fermi's group bombards element after element with neutrons and finds that slowing them down makes them far more effective.
 
-The second part is about politics catching up with physics. When Hitler takes power in 1933, Jewish scientists lose their posts, and many of the best minds in Europe leave for Britain and America: Szilard, Edward Teller, Eugene Wigner, John von Neumann, Hans Bethe, and eventually Einstein and Fermi. In December 1938, Otto Hahn and Fritz Strassmann in Berlin find barium in uranium that has been hit by neutrons, a result that makes no sense to them. Lise Meitner, who had fled to Sweden, works it out with her nephew Otto Frisch on a winter walk: the uranium nucleus has split in two, releasing a great deal of energy. Bohr carries the news to America, and soon realises that only the rare isotope uranium-235 splits easily.
+Next, politics catches up with physics. When Hitler takes power in 1933, Jewish scientists lose their posts, and many of the best minds in Europe leave for Britain and America: Szilard, Edward Teller, Eugene Wigner, John von Neumann, Hans Bethe, and eventually Einstein and Fermi. In December 1938, Otto Hahn and Fritz Strassmann in Berlin find barium in uranium that has been hit by neutrons, a result that makes no sense to them. Lise Meitner, who had fled to Sweden, works it out with her nephew Otto Frisch on a winter walk: the uranium nucleus has split in two, releasing a great deal of energy. Bohr carries the news to America, and soon realises that only the rare isotope uranium-235 splits easily.
 
 Szilard sees the danger at once. He drafts the letter Einstein signs in August 1939 warning President Roosevelt that Germany might build a bomb. The American response is slow. The push comes from Britain, where Frisch and Rudolf Peierls calculate in 1940 that something like a kilogram of pure uranium-235 might be enough, not tons. After Pearl Harbor the United States commits, and in 1942 General Leslie Groves takes charge and picks Robert Oppenheimer to lead a new weapons laboratory at Los Alamos. On 2 December 1942, Fermi's team runs the first self-sustaining chain reaction in a pile of graphite and uranium under the stands of a Chicago football field.
 
-The third part is the enormous build-out. Oak Ridge in Tennessee separates uranium-235 using giant magnets and miles of porous barriers. Hanford in Washington breeds plutonium in reactors. At Los Alamos the scientists discover that plutonium cannot work in a simple gun design, which forces them into the much harder route of implosion, crushing a plutonium core with precisely shaped explosives. Meanwhile Bohr, smuggled out of occupied Denmark, tries to persuade Churchill and Roosevelt to tell the Soviet Union about the bomb before it is used, hoping to avoid an arms race. Churchill brushes him off.
+Then comes the enormous build-out. Oak Ridge in Tennessee separates uranium-235 using giant magnets and miles of porous barriers. Hanford in Washington breeds plutonium in reactors. At Los Alamos the scientists discover that plutonium cannot work in a simple gun design, which forces them into the much harder route of implosion, crushing a plutonium core with precisely shaped explosives. Meanwhile Bohr, smuggled out of occupied Denmark, tries to persuade Churchill and Roosevelt to tell the Soviet Union about the bomb before it is used, hoping to avoid an arms race. Churchill brushes him off.
 
 Rhodes places the bomb inside a war that had already made cities into targets, including the firebombing of Tokyo in March 1945, which killed around a hundred thousand people in one night. The Trinity test in New Mexico succeeds on 16 July 1945. Hiroshima is destroyed on 6 August by a uranium gun bomb, Nagasaki on 9 August by a plutonium implosion bomb. Rhodes gives long passages to survivors' accounts, and they are hard to read.
 
@@ -51,4 +51,4 @@ The epilogue returns to Bohr. The bomb, he believed, made total war between grea
 
 ## If you read one chapter
 
-Read the chapter on the discovery of fission in late 1938, where Hahn's puzzling barium and Meitner and Frisch's walk in the snow turn a laboratory oddity into the key to the bomb.
+Read chapter 9, "An Extensive Burst", on the discovery of fission in late 1938, where Hahn's puzzling barium and Meitner and Frisch's walk in the snow turn a laboratory oddity into the key to the bomb.

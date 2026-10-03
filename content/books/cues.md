@@ -10,12 +10,12 @@ sources:
   - https://www.mickmel.com/notes-from-cues-by-vanessa-van-edwards/
   - https://growthabit.com/cues-book-summary-review-notes/
   - https://chasejarvis.com/blog/how-to-use-non-verbal-cues-to-improve-communication-with-vanessa-van-edwards/
-review: "check"
+review: "done"
 ---
 
 ## In short
 
-*Cues: Master the Secret Language of Charismatic Communication* argues that charisma is a set of signals you can learn. Vanessa Van Edwards, who runs the training company Science of People, sorts those signals into four channels (nonverbal, vocal, verbal and visual) and shows which ones make you seem warm, which make you seem competent, and which quietly undermine you.
+*Cues: Master the Secret Language of Charismatic Communication* argues that charisma is a set of signals you can learn. Vanessa Van Edwards, who runs the training company Science of People, sorts those signals into four channels (nonverbal, vocal, verbal and imagery, meaning what people see) and shows which ones make you seem warm, which make you seem competent, and which quietly undermine you.
 
 ## Summary
 
@@ -29,7 +29,7 @@ Part Two moves to voice, words and appearance. For a voice that sounds confident
 
 The verbal chapter treats word choice as a cue in its own right. She has readers audit their emails and texts for warmth words and competence words, rewrite stale openers like "Hope you're well", and match the vocabulary of the people they are talking to. Some people want data, others want a story, and you can learn to hear which. An example she likes is Hotmail's early growth, driven largely by a line added to the bottom of every outgoing email. She notes that a postscript is one of the most-read parts of an email.
 
-The visual chapter covers what people take from your appearance and surroundings: clothes, the background on a video call, the objects on your desk and the colours you use. Red tends to prompt action, blue suggests calm and trust, and yellow reads as cheerful but can be tiring. A marketing agency she describes won a client by pitching in that client's own colours and fonts.
+The imagery chapter covers what people take from your appearance and surroundings: clothes, the background on a video call, the objects on your desk and the colours you use. Red tends to prompt action, blue suggests calm and trust, and yellow reads as cheerful but can be tiring. A marketing agency she describes won a client by pitching in that client's own colours and fonts.
 
 Throughout, Van Edwards frames the skill as working in both directions. Once you know the cues, you can read other people more accurately and choose which signals you send, so that how you come across matches what you mean.
 
@@ -37,7 +37,7 @@ Throughout, Van Edwards frames the skill as working in both directions. Once you
 
 **Charisma is warmth plus competence.** People want to know whether you mean well and whether you are capable. Charisma is showing both, and most people need to raise whichever one they neglect.
 
-**Four channels.** Every interaction sends signals through your body, your voice, your words and your appearance. People read all four, mostly without noticing.
+**Four channels.** Every interaction sends signals through your body, your voice, your words and your imagery, meaning your appearance and what people see around you. People read all four, mostly without noticing.
 
 **Warmth cues.** Head tilts, nods, raised eyebrows, slow smiles and mirroring tell people you are friendly and listening.
 

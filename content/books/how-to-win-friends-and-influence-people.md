@@ -9,12 +9,12 @@ sources:
   - https://www.simonandschuster.com/books/How-To-Win-Friends-and-Influence-People/Dale-Carnegie/9780671027032
   - https://www.dalecarnegie.com/en/resources/how-to-win-friends-and-influence-people-summary
   - https://fs.blog/dale-carnegie-how-to-win-friends-and-influence-people/
-review: "check"
+review: "done"
 ---
 
 ## In short
 
-Dale Carnegie had taught evening classes in public speaking and human relations in New York since 1912 when a publisher at Simon & Schuster, Leon Shimkin, sat in on his course and persuaded him to turn it into a book. Published in 1936, it has sold more than thirty million copies. Its message is simple and old-fashioned in the best sense: people respond to being appreciated, listened to and understood, and they resist being criticised, corrected or ordered about.
+Dale Carnegie had taught evening classes in public speaking and human relations in New York since 1912 when a publisher at Simon & Schuster, Leon Shimkin, sat in on his course and persuaded him to turn it into a book. Published in 1936, it has sold more than thirty million copies. Its message is simple and old-fashioned: people respond to being appreciated, listened to and understood, and they resist being criticised, corrected or ordered about.
 
 ## Summary
 

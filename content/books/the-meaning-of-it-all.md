@@ -1,5 +1,5 @@
 ---
-title: "The Meaning of it All"
+title: "The Meaning of It All"
 author: "Richard P. Feynman"
 category: lives
 year: 1998
@@ -13,12 +13,12 @@ sources:
   - https://dailyquiddity.blogspot.com/2016/10/feynman-uncertainty-of-values.html
   - https://fs.blog/mental-tools-richard-feynman/
   - https://magazine.washington.edu/feynmans-meaning-of-it-all-selected-as-common-book/
-review: "check"
+review: "done"
 ---
 
 ## In short
 
-In April 1963 Feynman gave the John Danz Lectures at the University of Washington in Seattle, three talks for a general audience about science and the rest of life. They were transcribed from the recordings and published as this short book in 1998, ten years after his death. The thread through all three is that doubt, far from being a weakness, is the thing that makes science work, and a habit worth carrying into religion, politics and daily judgment.
+In April 1963 Feynman gave the John Danz Lectures at the University of Washington in Seattle, three talks for a general audience about science and the rest of life. They were transcribed from the recordings and published as this short book in 1998, ten years after his death. The thread through all three is that doubt is what makes science work, and it is a habit worth carrying into religion, politics and daily judgment.
 
 ## Summary
 
@@ -34,7 +34,7 @@ He splits religion into three parts: the metaphysical (claims about how the worl
 
 He applies the same idea to politics. The United States, as he sees it, was designed by people who admitted nobody knew the best way to govern, so they built a system that allows experiment and correction. He contrasts this with the Soviet Union, where the state backed Trofim Lysenko's false theory of heredity and damaged its own biology for years.
 
-The third lecture, "This Unscientific Age", is the longest and loosest. Feynman warns that he is now speaking as an ordinary citizen and may say foolish things. Our age has scientific gadgets, he argues, but not scientific habits of thought. He tests experts by asking questions until he finds where their knowledge ends. He mocks the politician who cannot admit he does not know how to fix farm policy. He shows how telepathy results shrank as experiments were run more carefully, and how picking out a pattern after the fact, like being amazed by one particular licence plate you happened to see, proves nothing. Flying saucers, astrology and dishonest advertising all get the same treatment.
+The third lecture, "This Unscientific Age", is the longest and loosest. Feynman warns that he is now speaking as an ordinary citizen and may say foolish things. Our age has scientific gadgets, he argues, but not scientific habits of thought. He tests experts by asking questions until he finds where their knowledge ends. He imagines a candidate who admits he does not know how to solve the farm problem and proposes to study it, and says such an honest man would never get elected, which he blames on what voters demand. He shows how telepathy results shrank as experiments were run more carefully, and how picking out a pattern after the fact, like being amazed by one particular licence plate you happened to see, proves nothing. Flying saucers, astrology and dishonest advertising all get the same treatment.
 
 ## Key ideas
 

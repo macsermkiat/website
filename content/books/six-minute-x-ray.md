@@ -9,7 +9,7 @@ sources:
   - https://www.shortform.com/blog/six-minute-x-ray/
   - https://www.shortform.com/summary/six-minute-x-ray-summary-chase-hughes
   - https://sobrief.com/books/six-minute-x-ray
-review: "check"
+review: "done"
 ---
 
 ## In short

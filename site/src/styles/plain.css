@@ -39,3 +39,10 @@ footer .credits a { color: inherit; }
 .credits-all h3 { font-size: 15px; margin: 12px 0 2px; }
 .credits-all a { word-break: break-all; color: inherit; }
 .shelf-list { columns: 2 16rem; }
+
+/* Mac's bookshelf (open by default on the text page: it is the content) */
+.library summary { cursor: pointer; font-weight: 600; }
+.library h4 { margin: 14px 0 4px; font-size: 1rem; }
+.library h4 span { font-weight: 400; opacity: .75; }
+.library li { margin: 4px 0; }
+.library .one-line { opacity: .85; }

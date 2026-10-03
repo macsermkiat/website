@@ -117,7 +117,13 @@ export function buildPlaceNav(onChoose, onFocus) {
     b.querySelector('b').textContent = S.name;
     b.querySelector('span').textContent = S.sub;
     b.setAttribute('aria-label', `${S.name}: ${S.sub}. Shortcut ${i + 1}`);
-    b.addEventListener('click', () => onChoose(id));
+    b.addEventListener('click', () => {
+      // the buttons sit under the market: bring the whole stage back into view to watch the flight (instant, so a
+      // pointer aimed at the scene right after lands where it was aimed)
+      const st = document.getElementById('stage')?.getBoundingClientRect();
+      if (st && (st.top < 0 || st.bottom > innerHeight)) document.getElementById('stage').scrollIntoView({ block: 'nearest', behavior: 'instant' });
+      onChoose(id);
+    });
     b.addEventListener('focus', () => onFocus?.(id));
     b.addEventListener('blur', () => onFocus?.(null));
     nav.appendChild(b);

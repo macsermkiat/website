@@ -15,7 +15,8 @@ Builds on the carpenter's nmlib (blender/lib/nmlib). Adds:
 Run the landmark scripts with the team's bpy:
     /home/claude/tools/bpy-venv/bin/python blender/rides/ferris.py [--no-render] [--no-lite]
     (renders honour NM_DEVICE and NM_THREADS; previews default to 1280x720, 48 samples, with a
-    1280 px JPEG in review/round-1/rides/; iterate with --res 960x540 --samples 32)
+    1280 px JPEG in review/round-$NM_ROUND/rides/ (default round 2); iterate with --res 960x540
+    --samples 32)
 """
 import argparse
 import json
@@ -34,7 +35,7 @@ from mathutils import Euler, Matrix, Vector  # noqa: E402
 from nmlib import bake, export, geo, mats, render, state  # noqa: E402
 from nmlib.geo import Part  # noqa: E402
 
-REVIEW = os.path.join(state.REPO, "review", "round-1", "rides")
+REVIEW = os.path.join(state.REPO, "review", f"round-{os.environ.get('NM_ROUND', '2')}", "rides")
 TAU = 2 * math.pi
 
 
@@ -76,7 +77,9 @@ def register_materials():
         # glow instead of showing a black night sky
         "mirror":     ((0.97, 0.84, 0.64), 0.16, 1.0, None, 0.0, 1.0),
         "enamel":     ((0.86, 0.84, 0.79), 0.26, 0.0, None, 0.0, 1.0),
-        "gilt":       ((0.93, 0.68, 0.30), 0.30, 1.0, None, 0.0, 1.0),
+        # gilding as bronze-powder paint, half metallic like the carpenter's gold band (v11):
+        # fully metallic gold went near-black in three.js wherever no bright reflection reached it
+        "gilt":       ((0.90, 0.60, 0.21), 0.30, 0.5, None, 0.0, 1.0),
         "ebony":      ((0.016, 0.014, 0.013), 0.32, 0.0, None, 0.0, 1.0),
         "ivory":      ((0.80, 0.76, 0.64), 0.30, 0.0, None, 0.0, 1.0),
         "bronze":     ((0.74, 0.50, 0.24), 0.42, 1.0, None, 0.0, 1.0),
@@ -89,12 +92,63 @@ def register_materials():
         "strings":    ((0.72, 0.70, 0.66), 0.25, 1.0, None, 0.0, 1.0),
         "hole":       ((0.004, 0.003, 0.003), 0.95, 0.0, None, 0.0, 1.0),
         "canvas":     ((0.76, 0.72, 0.64), 0.88, 0.0, None, 0.0, 1.0),
+        # gondola windows: thinner and lighter than the kit glass, a little soft, so a pane seen
+        # edge-on from the ride seat (or two panes behind each other) does not go dark
+        "gondola_glass": ((0.80, 0.84, 0.86), 0.18, 0.0, None, 0.0, 0.08),
     }
     for k, v in extra.items():
         mats.SIMPLE.setdefault(k, v)
 
 
 register_materials()
+
+
+# ------------------------------------------------------------------ image materials
+# key -> (png path, roughness): a printed or painted picture (posters, price boards) mapped 0..1
+# on a quad made by `picture()`. Created on demand by mats.get like the other materials.
+IMAGE_MATS = {}
+_mats_get = mats.get
+
+
+def image_material(key, png, rough=0.8):
+    m, nt, bsdf, L = mats._node_mat(key)
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    img = bpy.data.images.get(key) or bpy.data.images.load(png)
+    img.name = key
+    tex.image = img
+    uv = nt.nodes.new("ShaderNodeUVMap")
+    uv.uv_map = "UVMap"
+    L.new(uv.outputs[0], tex.inputs[0])
+    mats._vcol_multiply(nt, L, tex.outputs["Color"], bsdf)
+    bsdf.inputs["Roughness"].default_value = rough
+    bsdf.inputs["Metallic"].default_value = 0.0
+    return m
+
+
+def _get(key):
+    if key in IMAGE_MATS and key not in mats._mats:
+        mats._mats[key] = image_material(key, *IMAGE_MATS[key])
+    return _mats_get(key)
+
+
+mats.get = _get
+
+
+def picture(name, key, corners, tint=(1, 1, 1), coll=None):
+    """A quad (4 world points: bottom-left, bottom-right, top-right, top-left seen from the front)
+    showing image material `key` with UVs 0..1."""
+    me = bpy.data.meshes.new(name)
+    me.from_pydata([tuple(c) for c in corners], [], [(0, 1, 2, 3)])
+    uv = me.uv_layers.new(name="UVMap")
+    uv.data.foreach_set("uv", [0, 0, 1, 0, 1, 1, 0, 1])
+    ca = me.color_attributes.new("Col", 'FLOAT_COLOR', 'CORNER')
+    ca.data.foreach_set("color", [*tint, 1.0] * 4)
+    me.update()
+    ob = bpy.data.objects.new(name, me)
+    (coll or state.export_collection()).objects.link(ob)
+    me.materials.append(mats.get(key))
+    ob["nm_mat"] = key
+    return ob
 
 
 # =================================================================== geometry helpers
@@ -155,6 +209,41 @@ def lathe_poly(part, profile, seg, M=None, phase=None, flat=True, **kw):
         phase = math.pi / seg
     R = Euler((0, 0, phase)).to_matrix().to_4x4()
     part.lathe(profile, seg=seg, M=(M or Matrix()) @ R, smooth=not flat, **kw)
+
+
+def needle_garland(fir, beads, a, b, sag=0.3, radius=0.07, sprigs_per_m=30, bead_every=0.7, lite=None):
+    """Fir rope between a and b made of needle sprigs (thin cones fanning out from the rope,
+    darker at the core, a few lighter new tips), with a few large glass baubles. Reads as fir
+    at stage distance, where round tufts with many small baubles read as holly.
+    beads: {"ornament_red": Part, "ornament_gold": Part}."""
+    lite = state.lite() if lite is None else lite
+    R = state.rng
+    a, b = Vector(a), Vector(b)
+    n = 8 if lite else 18
+    pts = geo.catenary(a, b, sag, n)
+    fir.tube(pts, radius * 0.38, tseg=4 if lite else 5, var=0.1, tint=(0.8, 0.8, 0.8))
+    L = (b - a).length
+    tang = (b - a).normalized()
+    count = int(L * (sprigs_per_m * 0.4 if lite else sprigs_per_m))
+    for k in range(count):
+        t = (k + R.random()) / count
+        p = a.lerp(b, t) - Vector((0, 0, sag * 4 * t * (1 - t)))
+        for j in range(2 if lite else 3):
+            d = Vector((R.uniform(-1, 1), R.uniform(-1, 1), R.uniform(-0.8, 1)))
+            d = (d - tang * d.dot(tang) * 0.6).normalized()
+            ln = radius * R.uniform(1.05, 1.6)
+            tip = R.random() < 0.18
+            tint = (1.5, 1.45, 1.1) if tip else (R.uniform(0.75, 1.1),) * 3
+            rod(fir, p + d * radius * 0.2, p + d * ln, radius * 0.24, r2=0.0, seg=3, tint=tint, smooth=False)
+    nb = max(1, int(L / bead_every))
+    keys = list(beads)
+    for k in range(nb):
+        t = (k + 0.5) / nb
+        p = a.lerp(b, t) - Vector((0, 0, sag * 4 * t * (1 - t))) + Vector((0, 0, -radius * 0.9))
+        part = beads[keys[k % len(keys)]]
+        rr = R.uniform(0.028, 0.036)
+        part.sphere(p, rr, seg=6 if lite else 10, rings=4 if lite else 7, var=0.05)
+        rod(part, p + Vector((0, 0, rr * 0.9)), p + Vector((0, 0, rr * 1.35)), rr * 0.3, seg=6)
 
 
 # =================================================================== node helpers
@@ -245,7 +334,56 @@ def mesh_objs():
     return [o for o in state.export_collection().all_objects if o.type == 'MESH']
 
 
+def _webp_size(blob):
+    try:
+        import io
+        from PIL import Image
+        return Image.open(io.BytesIO(blob)).size[0]
+    except Exception:
+        return 0
+
+
+def share_kit_textures(glb_path):
+    """Move the kit textures (kit_*) out of an exported glb into shared files next to it.
+
+    A kit map that is byte-identical to one of the carpenter's shared deco kit files
+    (deco_kit_*.webp / *.lite.webp, which the market loads anyway) points at that file.
+    Anything else (the ride builder's own rsteel kit, other sizes) goes to
+    rides_kit_<name>_<px>.webp, shared by every ride file that uses the same map at the same
+    size. Returns {uri: bytes}."""
+    import hashlib
+    sys.path.insert(0, os.path.join(state.REPO, "blender", "lib"))
+    import glb_tools
+    js, binc = glb_tools.read_glb(glb_path)
+    bvs = js.get("bufferViews", [])
+    uris = {}
+    for im in js.get("images", []):
+        nm = im.get("name", "")
+        if "bufferView" not in im or not nm.startswith("kit_"):
+            continue
+        bv = bvs[im["bufferView"]]
+        blob = binc[bv.get("byteOffset", 0): bv.get("byteOffset", 0) + bv["byteLength"]]
+        sha = hashlib.sha1(blob).hexdigest()
+        choice = None
+        for cand in (f"deco_{nm}.webp", f"deco_{nm}.lite.webp"):
+            fp = os.path.join(state.MODELS_DIR, cand)
+            if os.path.exists(fp):
+                with open(fp, "rb") as f:
+                    if hashlib.sha1(f.read()).hexdigest() == sha:
+                        choice = cand
+                        break
+        uris[nm] = choice or f"rides_{nm}_{_webp_size(blob)}.webp"
+    if not uris:
+        return {}
+    written = glb_tools.externalize_images(glb_path, lambda n: n in uris, lambda n: uris[n], state.MODELS_DIR)
+    return {u: os.path.getsize(os.path.join(state.MODELS_DIR, u)) for u in written}
+
+
 def build_and_export(name, build, seed, lite, ao_res=None, texture_size=None, ao_samples=None):
+    """ao_res defaults to 768 (full) / 384 (lite): an AO atlas the size of a kit roughness map
+    (1024, or 512 for rsteel, iron and every lite kit map) is packed into that map by the glTF
+    exporter (ORM), which makes the map unique to this file. At other sizes every kit map stays
+    shareable (share_kit_textures)."""
     state.reset(seed, lite_mode=lite)
     mats.ensure_kit()
     t0 = time.time()
@@ -256,14 +394,18 @@ def build_and_export(name, build, seed, lite, ao_res=None, texture_size=None, ao
     for o in sorted(objs, key=lambda o: -len(o.data.polygons))[:int(os.environ.get("RC_TOP", "14"))]:
         print(f"     {o.name:30s} {export.triangles([o]):7d}")
     out = name + (".lite" if lite else "")
-    bake.bake_ao(objs, out, res=ao_res or (512 if lite else 1024),
+    bake.bake_ao(objs, out, res=ao_res or (384 if lite else 768),
                  samples=ao_samples or (10 if lite else 16),
                  hide=[o for o in objs if hidden_for_ao(o)])
     rep = export.export_glb(out, texture_size or (512 if lite else 1024))
+    ext = share_kit_textures(os.path.join(state.MODELS_DIR, out + ".glb"))
+    rep["bytes"] = os.path.getsize(os.path.join(state.MODELS_DIR, out + ".glb"))
+    rep["external"] = ext
+    print(f"[{name}] {out}.glb {rep['bytes'] / 1e6:.2f} MB after sharing kit maps: {sorted(ext)}")
     return objs, rep
 
 
-def run(name, build, preview=None, seed=1, ao_full=1024, ao_lite=512, tex_full=1024, tex_lite=512,
+def run(name, build, preview=None, seed=1, ao_full=768, ao_lite=384, tex_full=1024, tex_lite=512,
         ground=60):
     a = args()
     if a.preview_only:
@@ -279,12 +421,14 @@ def run(name, build, preview=None, seed=1, ao_full=1024, ao_lite=512, tex_full=1
             reports = json.load(f)
     if not a.no_lite:
         _, reports["lite"] = build_and_export(name, build, seed, True, ao_lite, tex_lite)
+        with open(rep_path, "w") as f:
+            json.dump(reports, f, indent=1)
     if not a.no_full:
         objs, reports["full"] = build_and_export(name, build, seed, False, ao_full, tex_full)
+        with open(rep_path, "w") as f:
+            json.dump(reports, f, indent=1)
         if preview and not a.no_render:
             do_preview(name, objs, preview, a, ground=ground)
-    with open(rep_path, "w") as f:
-        json.dump(reports, f, indent=1)
     for k, r in reports.items():
         print(f"[{name}] {k}: {r['bytes'] / 1e6:.2f} MB, {r['triangles']} tris")
     return reports

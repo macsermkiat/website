@@ -42,15 +42,33 @@ def Rz(a):
     return Euler((0, 0, a)).to_matrix().to_4x4()
 
 
-class Group:
-    """Parts that end up under one node (the instrument root or an act_ pivot)."""
+class FinePart(Part):
+    """A Part whose kit texture repeats `uv_scale` times finer by default: instrument wood has
+    a grain line every few millimetres, not the stall kit's plank scale."""
 
-    def __init__(self, prefix, node_name=None, pivot=(0, 0, 0), M=None):
+    def __init__(self, *a, uv_scale=1.0, **kw):
+        super().__init__(*a, **kw)
+        self.uv_scale = uv_scale
+
+    def _emit(self, bm, M, uv_scale=None, **kw):
+        super()._emit(bm, M, uv_scale=self.uv_scale if uv_scale is None else uv_scale, **kw)
+
+
+class Group:
+    """Parts that end up under one node (the instrument root or an act_ pivot).
+
+    wood_scale: kit repeat for the wood (0.35 = grain about three times finer than the stalls').
+    warp: optional function applied to every vertex in the build frame before M (the sax uses
+    it to lengthen its body without moving each key by hand)."""
+
+    def __init__(self, prefix, node_name=None, pivot=(0, 0, 0), M=None, wood_scale=1.0, warp=None):
         self.prefix = prefix
         self.node_name = node_name
         self.pivot = Vector(pivot)
         self.M = M or Matrix()          # local build frame -> instrument frame
         self.parts = {}
+        self.wood_scale = wood_scale
+        self.warp = warp
 
     def __getitem__(self, mat):
         if mat not in self.parts:
@@ -58,7 +76,16 @@ class Group:
             kw = {}
             if mat in ("wood", "rsteel", "paint"):
                 kw["bevel"] = 0.0015
-            self.parts[mat] = Part(nm, mat, var=0.03, **kw)
+            if mat == "wood_veneer":
+                # veneer wrapped round a drum shell: the lathe maps the grain along the drum's
+                # axis (it reads as barrel staves), so the UVs are turned a quarter after finish()
+                kw["bevel"] = 0.0015
+                self.parts[mat] = FinePart(nm, "wood", var=0.03, uv_scale=self.wood_scale, **kw)
+                self.parts[mat].swap_uv = True
+            elif mat == "wood" and self.wood_scale != 1.0:
+                self.parts[mat] = FinePart(nm, mat, var=0.03, uv_scale=self.wood_scale, **kw)
+            else:
+                self.parts[mat] = Part(nm, mat, var=0.03, **kw)
         return self.parts[mat]
 
     def finish(self, coll=None):
@@ -66,6 +93,14 @@ class Group:
         for p in self.parts.values():
             ob = p.finish(coll)
             if ob is not None:
+                if getattr(p, "swap_uv", False):
+                    uv = ob.data.uv_layers["UVMap"].data
+                    for l in uv:
+                        u, v = l.uv
+                        l.uv = (v, u)
+                if self.warp is not None:
+                    for v in ob.data.vertices:
+                        v.co = self.warp(v.co)
                 ob.data.transform(self.M)
                 objs.append(ob)
         return objs
@@ -83,15 +118,28 @@ def sax_body_r(z):
     return SAX_R_BOW + (SAX_R_TOP - SAX_R_BOW) * t
 
 
-def build_sax(lite):
+SAX_STRETCH = 1.10   # round 2: the body, bow and bell tube 10 % longer (a 0.70 m tenor body)
+
+
+def sax_warp(co):
+    """Lengthen everything below the neck socket; the neck, mouthpiece and octave key move up."""
+    z = co.z
+    if SAX_BOW < z <= SAX_TOP:
+        z = SAX_BOW + (z - SAX_BOW) * SAX_STRETCH
+    elif z > SAX_TOP:
+        z = z + (SAX_TOP - SAX_BOW) * (SAX_STRETCH - 1)
+    return Vector((co.x, co.y, z))
+
+
+def build_sax(lite, held=True):
     # sax frame: body axis +Z, bell and pearls toward -Y (away from the player)
-    tip = Vector((0, 0.272, 0.896))
+    tip = sax_warp(Vector((0, 0.272, 0.896)))
     beta = 0.36
     Mh = Ry(beta)
     t = Mh @ tip
     M = Matrix.Translation(Vector((0.0, -0.10, 1.53)) - t) @ Mh
-    strap = M @ Vector((0, 0.04, 0.60))
-    g = Group("sax", "act_sax", pivot=strap, M=M)
+    strap = M @ sax_warp(Vector((0, 0.04, 0.60)))
+    g = Group("sax", "act_sax" if held else None, pivot=strap, M=M, warp=sax_warp)
     br, iv, eb, ch = g["saxbrass"], g["ivory"], g["ebony"], g["chrome"]
     lea = g["leather"]
     n = 10 if lite else 16
@@ -198,7 +246,7 @@ def build_sax(lite):
 
 # =================================================================== upright piano
 def build_piano(lite):
-    g = Group("piano")
+    g = Group("piano", wood_scale=0.3)
     wd = g["wood"]
     WAL = (0.34, 0.20, 0.12)
     W = 1.50
@@ -296,37 +344,71 @@ def build_piano(lite):
 
 
 # =================================================================== double bass
-BASS_OUTLINE = [  # (z, half width) of the body, bottom to top
-    (0.14, 0.0), (0.155, 0.14), (0.19, 0.24), (0.26, 0.31), (0.36, 0.345), (0.46, 0.34), (0.55, 0.31),
-    (0.62, 0.265), (0.68, 0.238), (0.745, 0.236), (0.80, 0.255), (0.87, 0.27), (0.95, 0.262),
-    (1.02, 0.225), (1.09, 0.16), (1.16, 0.10), (1.22, 0.07), (1.25, 0.0)]
+def bmesh_tri(bm):
+    rc.bmesh.ops.triangulate(bm, faces=bm.faces[:])
+
+
+# Right half of the body outline, (half width, z), bottom to top, as three smooth runs joined at
+# sharp corners: the lower bout up to the lower corner, the C-bout, the upper bout with the
+# viol-like sloping shoulders into the neck heel. Real proportions for a 3/4 bass: lower bout
+# 0.69 m, waist 0.37 m, upper bout 0.54 m, body 1.11 m long.
+BASS_RUNS = [
+    [(0.0, 0.14), (0.14, 0.152), (0.25, 0.19), (0.32, 0.25), (0.345, 0.33), (0.342, 0.41),
+     (0.325, 0.49), (0.305, 0.545), (0.296, 0.575)],                        # lower bout -> corner tip
+    [(0.262, 0.566), (0.222, 0.590), (0.196, 0.632), (0.186, 0.68), (0.192, 0.73), (0.214, 0.768),
+     (0.250, 0.786)],                                                        # C-bout (inside the corners)
+    [(0.282, 0.776), (0.291, 0.80), (0.290, 0.85), (0.279, 0.905), (0.255, 0.965), (0.215, 1.03),
+     (0.168, 1.095), (0.122, 1.155), (0.086, 1.200), (0.060, 1.232), (0.0, 1.25)],   # corner tip -> shoulders
+]
+BASS_CORNERS = [(0.296, 0.575), (0.262, 0.566), (0.250, 0.786), (0.282, 0.776)]
+
+
+def _bass_dense():
+    pts = []
+    for run in BASS_RUNS:
+        d = rc.smooth_path([(w, z) for w, z in run], 6)
+        pts += d
+    return pts
 
 
 def bass_outline(n):
-    pts = rc.smooth_path([(z, w) for z, w in BASS_OUTLINE], 3)
-    zs = [p[0] for p in pts]
-    ws = [max(0.0, p[1]) for p in pts]
-    # resample to n/2 points per side, even in arc length
+    """Closed outline ring (x, z), counter-clockwise from the bottom point, about n points, with
+    the four corner points kept exactly so the corners stay sharp."""
     import bisect
+    dense = _bass_dense()
     L = [0.0]
-    for i in range(1, len(pts)):
-        L.append(L[-1] + math.hypot(zs[i] - zs[i - 1], ws[i] - ws[i - 1]))
+    for i in range(1, len(dense)):
+        L.append(L[-1] + math.hypot(dense[i][0] - dense[i - 1][0], dense[i][1] - dense[i - 1][1]))
     half = n // 2
     right = []
     for k in range(half + 1):
-        s = L[-1] * k / half
-        i = min(max(bisect.bisect_left(L, s), 1), len(L) - 1)
-        t = (s - L[i - 1]) / max(L[i] - L[i - 1], 1e-9)
-        right.append((ws[i - 1] + (ws[i] - ws[i - 1]) * t, zs[i - 1] + (zs[i] - zs[i - 1]) * t))
+        s_ = L[-1] * k / half
+        i = min(max(bisect.bisect_left(L, s_), 1), len(L) - 1)
+        t = (s_ - L[i - 1]) / max(L[i] - L[i - 1], 1e-9)
+        right.append((dense[i - 1][0] + (dense[i][0] - dense[i - 1][0]) * t,
+                      dense[i - 1][1] + (dense[i][1] - dense[i - 1][1]) * t))
+    for c in BASS_CORNERS:            # snap the nearest samples onto the corners
+        j = min(range(1, len(right) - 1), key=lambda j: (right[j][0] - c[0]) ** 2 + (right[j][1] - c[1]) ** 2)
+        right[j] = c
+    right[0] = (0.0, right[0][1])
+    right[-1] = (0.0, right[-1][1])
     ring = [(w, z) for w, z in right] + [(-w, z) for w, z in reversed(right[1:-1])]
-    return ring   # (x, z), counter-clockwise from the bottom point
+    return ring
+
+
+_BASS_W = None
 
 
 def bass_width(z):
-    for (z0, w0), (z1, w1) in zip(BASS_OUTLINE[:-1], BASS_OUTLINE[1:]):
-        if z0 <= z <= z1:
-            return w0 + (w1 - w0) * (z - z0) / (z1 - z0)
-    return 0.0
+    """Half width of the body at height z (the widest crossing of the outline)."""
+    global _BASS_W
+    if _BASS_W is None:
+        _BASS_W = _bass_dense()
+    best = 0.0
+    for (w0, z0), (w1, z1) in zip(_BASS_W[:-1], _BASS_W[1:]):
+        if min(z0, z1) <= z <= max(z0, z1) and z1 != z0:
+            best = max(best, w0 + (w1 - w0) * (z - z0) / (z1 - z0))
+    return best
 
 
 def build_bass(lite):
@@ -338,8 +420,20 @@ def build_bass(lite):
     ring = bass_outline(18 if lite else 44)
     zc = 0.70
 
+    def soften(r, passes):
+        """Round the corners off an inner ring (neighbour averaging), so the arching of the top
+        and back flattens out toward the corners instead of creasing from them."""
+        for _ in range(passes):
+            r = [((r[i - 1][0] + 2 * r[i][0] + r[(i + 1) % len(r)][0]) / 4,
+                  (r[i - 1][1] + 2 * r[i][1] + r[(i + 1) % len(r)][1]) / 4) for i in range(len(r))]
+        return r
+
+    rings_by_s = {}
+
     def plate(s, y):
-        return [Vector((x * s, y, zc + (z - zc) * s)) for x, z in ring]
+        if s not in rings_by_s:
+            rings_by_s[s] = ring if s >= 0.999 else soften(ring, 1 if s > 0.8 else 3)
+        return [Vector((x * s, y, zc + (z - zc) * s)) for x, z in rings_by_s[s]]
     arch = 0.036
     front = [(1.0, -0.10), (0.86, -0.10 - arch * (1 - 0.86 ** 2)), (0.62, -0.10 - arch * (1 - 0.62 ** 2)),
              (0.36, -0.10 - arch * (1 - 0.36 ** 2))]
@@ -353,10 +447,20 @@ def build_bass(lite):
     if not lite:
         eb.loft([plate(1.012, -0.098), plate(1.012, -0.104)], closed=True, smooth=True)
 
+    # the top's own surface (front rings and the flat cap inside the last one), for placing the
+    # f-holes, bridge and tailpiece on it: cast a ray from in front
+    from mathutils.bvhtree import BVHTree
+    fr = [plate(s_, y_) for s_, y_ in front]
+    tv = [v for r in fr for v in r]
+    m_ = len(fr[0])
+    tf = [(i * m_ + j, i * m_ + (j + 1) % m_, (i + 1) * m_ + (j + 1) % m_, (i + 1) * m_ + j)
+          for i in range(len(fr) - 1) for j in range(m_)]
+    tf.append(tuple((len(fr) - 1) * m_ + j for j in range(m_)))
+    top_bvh = BVHTree.FromPolygons(tv, tf, all_triangles=False)
+
     def top_y(x, z):
-        w = max(bass_width(z), 1e-3)
-        s = min(1.0, abs(x) / w)
-        return -0.10 - arch * (1 - s * s)
+        hit = top_bvh.ray_cast(Vector((x, -1.0, z)), Vector((0, 1, 0)))
+        return hit[0].y if hit[0] is not None else -0.10
     # f-holes: an italic f each. The upper eye sits toward the centre line and the lower eye
     # toward the edge; the stem is an S that swells into a wing below the upper eye and above the
     # lower eye, with the two nicks cut at its waist. Each is laid on the arch of the top.
@@ -370,6 +474,17 @@ def build_bass(lite):
         t = i / (m - 1)
         wing = 0.0045 * math.exp(-((t - 0.24) / 0.1) ** 2) + 0.0055 * math.exp(-((t - 0.76) / 0.1) ** 2)
         return 0.0026 + 0.0022 * math.sin(math.pi * t) + wing
+    def on_top(poly, depth=0.0012):
+        """A flat f-hole piece following the top's arch: each vertex sits just in front of the top."""
+        bm = rc.bmesh.new()
+        vs = [bm.verts.new((x, top_y(x, z) - depth, z)) for x, z in poly]
+        f = bm.faces.new(vs)
+        f.normal_update()
+        if f.normal.y > 0:
+            f.normal_flip()
+        bmesh_tri(bm)
+        hole.from_bmesh(bm, grain=0, smooth=False)
+
     for sx in (-1, 1):
         x0 = sx * 0.125
         band_l, band_r = [], []
@@ -382,30 +497,25 @@ def build_bass(lite):
             w = wdt(i)
             band_l.append((x0 + sx * (dx + nx * w), z + nz * w))
             band_r.append((x0 + sx * (dx - nx * w), z - nz * w))
-        poly = band_l + list(reversed(band_r))
-        slope = 0.13 * sx                     # the top plate's arch across the f-hole
-        yy = top_y(x0, 0.70) - 0.0005
-        M = Matrix.Translation((x0, yy, 0)) @ Rz(slope) @ Matrix.Translation((-x0, 0, 0)) @ \
-            basis((1, 0, 0), (0, 0, 1), (0, -1, 0))
-        hole.shape(poly, depth=0.005, M=M)
-        seg = 8 if lite else 14
+        on_top(band_l + list(reversed(band_r)))
+        seg = 8 if lite else 16
         (ux, uz), (lx, lz) = path_c[0], path_c[-1]
-        hole.shape(geo.circle_polygon(x0 + sx * ux, uz, 0.0105, seg), depth=0.005, M=M)
-        hole.shape(geo.circle_polygon(x0 + sx * lx, lz, 0.0135, seg), depth=0.005, M=M)
-        if not lite:
-            # the nicks at the waist, one each side
-            k = m // 2
-            dx, z = path[k]
-            a, b = path[k - 1], path[k + 1]
-            tx, tz = b[0] - a[0], b[1] - a[1]
-            ln = math.hypot(tx, tz) or 1
-            nx, nz = -tz / ln, tx / ln
-            for sgn in (-1, 1):
-                w = wdt(k) * 0.8
-                cx, cz = x0 + sx * (dx + sgn * nx * w), z + sgn * nz * w
-                tip = (x0 + sx * (dx + sgn * nx * (w + 0.009)), z + sgn * nz * (w + 0.009))
-                hole.shape([(cx - sx * tx / ln * 0.0025, cz - tz / ln * 0.0025), tip,
-                            (cx + sx * tx / ln * 0.0025, cz + tz / ln * 0.0025)], depth=0.005, M=M)
+        # round eyes, the lower one larger (on a bass it is about 3 cm across)
+        on_top(geo.circle_polygon(x0 + sx * ux, uz, 0.0115, seg), depth=0.0015)
+        on_top(geo.circle_polygon(x0 + sx * lx, lz, 0.0155, seg), depth=0.0015)
+        # the nicks at the waist, one each side, cut long enough to see from the stage edge
+        k = m // 2
+        dx, z = path[k]
+        a, b = path[k - 1], path[k + 1]
+        tx, tz = b[0] - a[0], b[1] - a[1]
+        ln = math.hypot(tx, tz) or 1
+        nx, nz = -tz / ln, tx / ln
+        for sgn in (-1, 1):
+            w = wdt(k) * 0.7
+            cx, cz = x0 + sx * (dx + sgn * nx * w), z + sgn * nz * w
+            tip = (x0 + sx * (dx + sgn * nx * (w + 0.013)), z + sgn * nz * (w + 0.013))
+            on_top([(cx - sx * tx / ln * 0.0035, cz - tz / ln * 0.0035), tip,
+                    (cx + sx * tx / ln * 0.0035, cz + tz / ln * 0.0035)], depth=0.0015)
     # neck, fingerboard, nut, pegbox, scroll, machines
     neck = [(0, 0.0, 1.20, 0.05), (0, -0.02, 1.35, 0.038), (0, -0.04, 1.55, 0.034), (0, -0.07, 1.73, 0.032)]
     pipe(wd, neck, n=6 if lite else 10, per=1 if lite else 2, cap1=True, side=(1, 0, 0), tint=(0.7, 0.42, 0.2))
@@ -517,7 +627,8 @@ def drum(g, c, r, h, M_axis, lite, shell_tint, lugs=8, heads=(True, True)):
     """Drum with shell, two heads, hoops and lugs. M_axis turns local Z into the drum axis."""
     seg = 10 if lite else 26
     M = Matrix.Translation(c) @ M_axis
-    g["wood"].lathe([(r, -h / 2), (r, h / 2)], seg=seg, M=M, tint=shell_tint)
+    # veneer wrapped round the shell: the grain runs round the drum, not along it like staves
+    g["wood_veneer"].lathe([(r, -h / 2), (r, h / 2)], seg=seg, M=M, tint=shell_tint)
     if heads[0]:
         g["drumhead"].lathe([(0.001, h / 2 + 0.004), (r - 0.004, h / 2 + 0.004), (r + 0.002, h / 2 - 0.004)], seg=seg, M=M)
     if heads[1]:
@@ -539,7 +650,7 @@ def drum(g, c, r, h, M_axis, lite, shell_tint, lugs=8, heads=(True, True)):
 
 
 def build_drums(lite):
-    g = Group("drums")
+    g = Group("drums", wood_scale=0.3)
     SHELL = (0.66, 0.22, 0.12)
     ch, bm = g["chrome"], g["blackmetal"]
     rs = 4 if lite else 6
@@ -624,7 +735,29 @@ def build_drums(lite):
     return groups
 
 
-INSTRUMENTS = {"sax": build_sax, "piano": build_piano, "bass": build_bass, "drums": build_drums}
+def build_sax_stand(lite):
+    """The sax resting upright on its floor stand (the band on a break): instr_sax_stand, placed
+    at slot_sax like instr_sax when no player holds it."""
+    grp = build_sax(lite, held=False)[0]
+    grp.M = Matrix.Translation((0.05, -0.35, 0.14)) @ Rz(0.5) @ Rx(-0.12)
+    st = Group("saxstand", M=Matrix.Translation((0.05, -0.35, 0.0)) @ Rz(0.5))
+    bm = st["blackmetal"]
+    for k in range(3):
+        a = TAU * k / 3 + 0.3
+        rod(bm, (0, -0.07, 0.1), (0.2 * math.cos(a), -0.07 + 0.2 * math.sin(a), 0.01), 0.007, seg=4 if lite else 5)
+        if not lite:
+            st["ebony"].sphere((0.2 * math.cos(a), -0.07 + 0.2 * math.sin(a), 0.01), 0.012, seg=6, rings=4)
+    rod(bm, (0, -0.07, 0.02), (0, -0.07, 0.62), 0.009, seg=6)
+    rod(bm, (0, -0.07, 0.62), (0, 0.0, 0.64), 0.008, seg=5)
+    st["leather"].tube([Vector((-0.05, -0.1, 0.16)), Vector((-0.05, -0.05, 0.08)), Vector((0.05, -0.05, 0.08)),
+                        Vector((0.05, -0.1, 0.16))], 0.012, tseg=4 if lite else 5, tint=(0.3, 0.3, 0.3))
+    # the padded peg the neck socket rests on
+    st["leather"].sphere((0, 0.0, 0.66), 0.018, seg=8, rings=5, tint=(0.3, 0.3, 0.3))
+    return [grp, st]
+
+
+INSTRUMENTS = {"sax": build_sax, "piano": build_piano, "bass": build_bass, "drums": build_drums,
+               "sax_stand": build_sax_stand}
 
 
 def export_build(key):
@@ -652,26 +785,8 @@ def place_in(key, M_slot, lite=False):
 
 
 def sax_on_stand(M_slot):
-    """Render-only: the sax resting upright on a floor stand (the band on a break)."""
-    env = state.env_collection()
-    grp = build_sax(False)[0]
-    # undo the held pose: stand the sax upright, bell forward, bow resting in the cradle
-    grp.M = M_slot @ Matrix.Translation((0.05, -0.35, 0.14)) @ Rz(0.5) @ Rx(-0.12)
-    objs = grp.finish(env)
-    for ob in objs:
-        ob.matrix_world = Matrix()
-    st = Group("saxstand", M=M_slot @ Matrix.Translation((0.05, -0.35, 0.0)) @ Rz(0.5))
-    bm = st["blackmetal"]
-    for k in range(3):
-        a = TAU * k / 3 + 0.3
-        rod(bm, (0, -0.07, 0.1), (0.2 * math.cos(a), -0.07 + 0.2 * math.sin(a), 0.01), 0.007, seg=5)
-    rod(bm, (0, -0.07, 0.02), (0, -0.07, 0.62), 0.009, seg=6)
-    rod(bm, (0, -0.07, 0.62), (0, 0.0, 0.64), 0.008, seg=5)
-    st["leather"].tube([Vector((-0.05, -0.1, 0.16)), Vector((-0.05, -0.05, 0.08)), Vector((0.05, -0.05, 0.08)),
-                        Vector((0.05, -0.1, 0.16))], 0.012, tseg=5, tint=(0.3, 0.3, 0.3))
-    for ob in st.finish(env):
-        ob.matrix_world = Matrix()
-    return objs
+    """Render-only: instr_sax_stand at a slot matrix (the bandstand preview without a player)."""
+    return place_in("sax_stand", M_slot)
 
 
 def preview_one(key):
@@ -683,6 +798,7 @@ def preview_one(key):
         render.add_light("env_rim", 'AREA', (-1.0, 1.8, 2.2), 70, color=(0.6, 0.7, 1.0), size=1.5,
                          rot=(math.radians(-60), 0, math.radians(200)))
         cams = {"sax": ((1.45, -1.75, 1.40), (-0.13, -0.40, 1.14), 40),
+                "sax_stand": ((1.7, -2.9, 1.2), (0.05, -0.35, 0.5), 38),
                 "piano": ((1.25, 1.35, 1.55), (0.0, -0.55, 0.85), 34),
                 "bass": ((-1.0, -3.3, 1.25), (-0.1, -0.3, 1.0), 34),
                 "drums": ((0.9, -2.6, 1.7), (-0.05, -0.55, 0.6), 36)}
@@ -695,5 +811,5 @@ if __name__ == "__main__":
     a = rc.args()
     keys = a.only.split(",") if a.only else list(INSTRUMENTS)
     for k in keys:
-        rc.run(f"instr_{k}", export_build(k), preview_one(k), seed=40 + len(k), ao_full=512, ao_lite=256,
+        rc.run(f"instr_{k}", export_build(k), preview_one(k), seed=40 + len(k), ao_full=384, ao_lite=192,
                tex_full=512, tex_lite=256, ground=12)

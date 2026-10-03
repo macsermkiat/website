@@ -7,7 +7,8 @@ import { songPlan } from '../src/audio/songplan.js';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { contentGate, assetCredits } from '../plugins/market.js';
+import { contentGate, assetCredits, buildLibrary, libraryHtml } from '../plugins/market.js';
+import { mkdirSync } from 'node:fs';
 import { readGlb, budget } from '../scripts/budget.mjs';
 
 let failed = 0;
@@ -74,6 +75,15 @@ check('the song is about ten minutes before it rests and starts again', plan.len
   writeFileSync(path.join(dir, 'b.md'), 'All confirmed.\n');
   const g = contentGate(dir);
   check('the strict content gate counts <!-- check --> comments and [check] tags', g.left.length === 1 && g.left[0].checks === 2 && /check marker/.test(g.message), g.message);
+  mkdirSync(path.join(dir, 'books'));
+  writeFileSync(path.join(dir, 'books', 'chaos.md'), '---\ntitle: "Chaos"\nauthor: "James Gleick"\none_line: "Order in disorder."\nreview: "check"\n---\n\n## In short\n\nText.\n');
+  writeFileSync(path.join(dir, 'bookshelf.json'), JSON.stringify({ books: [{ title: 'Chaos', author: 'James Gleick' }, { title: 'Grit', author: 'Angela Duckworth' }] }));
+  const g2 = contentGate(dir);
+  check('the strict content gate counts a book page still marked review: check', g2.left.some((l) => l.file === 'books/chaos.md' && l.checks === 1), g2.message);
+  const lib = buildLibrary(dir);
+  check('Mac\'s bookshelf: every chosen title, with its one-line summary where the writer has one', lib.books.length === 2 && lib.books[0].oneLine === 'Order in disorder.' && lib.books[1].oneLine === '', JSON.stringify(lib.books));
+  check('Mac\'s bookshelf renders as a list for the panel and the text page', /<details class="library"[\s\S]*<em>Chaos<\/em> · James Gleick\. <span class="one-line">Order in disorder\.<\/span>/.test(libraryHtml(lib)));
+  check('no bookshelf file: an empty library, no error', buildLibrary(path.join(dir, 'nowhere')).books.length === 0);
   const credits = assetCredits();
   check('asset credits from CREDITS.md carry source URLs and licences', /<details class="credits-all"/.test(credits) && /href="https:\/\/github\.com\/mrdoob\/three\.js"/.test(credits) && /MIT/.test(credits));
   const b = budget();

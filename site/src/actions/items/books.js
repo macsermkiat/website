@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { boxOf, rest, restore, wrap, esc, UP } from './common.js';
 import { viewFor } from '../../engine/market.js';
 import inventory from 'virtual:market-inventory';
-import { actionNote } from '../../content.js';
+import { actionNote, LIBRARY } from '../../content.js';
 
 const _p = new THREE.Vector3(), _q = new THREE.Quaternion();
 const BOOK_HOLD = 14; // seconds an open book stays out before the bookseller puts it back
@@ -29,13 +29,20 @@ export function createBooks(ctx) {
   const where = banded.length ? 'His picks wear a red paper band.' : 'His five stand together in the middle of the lower shelf.';
   let turn = 0;
 
-  /** What a book is: Mac's pick (title, author, note from reading.md) or the vendor's stock (items.json). */
+  /**
+   * What a book is: Mac's pick (title, author, note from reading.md), a book from Mac's own shelf (bookshelf.json,
+   * with the writer's one-line summary from content/books/), or the vendor's stock (items.json).
+   */
   function describe(n) {
     const i = pickOf.has(n) ? pickOf.get(n) : -1;
-    if (i >= 0) { const b = picks[i]; return { mac: true, title: b[0], author: b[1], note: b[2] }; }
     const b = bookInfo(n);
+    const lib = libraryEntry(b?.title) || (i >= 0 ? libraryEntry(picks[i][0]) : null);
+    if (i >= 0) { const p = picks[i]; return { mac: true, title: p[0], author: p[1], note: p[2] || lib?.oneLine || '' }; }
+    if (lib) return { mac: true, shelf: true, title: b?.title || lib.title, author: b?.author || lib.author, note: lib.oneLine || b?.note || 'One of the books on Mac’s own shelf.' };
     return { mac: false, title: b?.title || 'A secondhand book', author: b?.author || '', note: b?.note || 'A secondhand copy from the bookseller’s stock, not one of Mac’s.' };
   }
+  // after Mac's picks, "Pick a book for me" goes on to the spines that are books from his own shelf
+  const shelfSpines = nodes.filter((n) => !pickOf.has(n) && libraryEntry(bookInfo(n)?.title));
 
   let open = null; // { n, item, group, left, state }
   function openBook(n) {
@@ -122,12 +129,14 @@ export function createBooks(ctx) {
   }
 
   function pickForMe() {
-    const i = turn++ % Math.max(1, picks.length);
-    const n = spineFor[i] || nodes[(Math.random() * nodes.length) | 0];
+    const total = Math.max(1, picks.length + shelfSpines.length);
+    const k = turn++ % total;
+    const i = k < picks.length ? k : -1;
+    const n = (i >= 0 ? spineFor[i] : shelfSpines[k - picks.length]) || nodes[(Math.random() * nodes.length) | 0];
     if (n) openBook(n);
     else {
       // no shelf at all (a stand-in without books): the note alone
-      const b = picks[i];
+      const b = picks[Math.max(0, i)];
       if (b) say(actionNote('books', 'book', `<b>${esc(b[0])}</b>${b[1] ? ' · ' + esc(b[1]) : ''}${b[2] ? '<br>' + esc(b[2]) : ''}`, { title: b[0], author: b[1], note: b[2] }));
     }
   }
@@ -140,7 +149,7 @@ export function createBooks(ctx) {
       openBook: (n) => openBook(n),
       bookOf: (n) => describe(n),
       /** The book standing open (for tests): its node name, title and state. */
-      openedBook: () => (open ? { name: open.n.name, title: open.d.title, author: open.d.author, state: open.state } : null),
+      openedBook: () => (open ? { name: open.n.name, title: open.d.title, author: open.d.author, note: open.d.note, mac: !!open.d.mac, state: open.state } : null),
     },
     retract: close,
     update(dt) {
@@ -328,6 +337,16 @@ export function bookInfo(n) {
   const title = u.title || it?.title;
   if (!title) return null;
   return { title: String(title), author: String(u.author || it?.author || ''), note: it?.note ? String(it.note) : '' };
+}
+
+const LIB = new Map(LIBRARY.books.map((b) => [norm(b.title), b]));
+/** The entry for a title on Mac's own bookshelf (exact title, or a subtitle-free match), or null. */
+export function libraryEntry(title) {
+  const t = norm(title);
+  if (!t) return null;
+  if (LIB.has(t)) return LIB.get(t);
+  for (const [k, b] of LIB) if (k.length > 5 && t.length > 5 && (t.startsWith(k) || k.startsWith(t))) return b;
+  return null;
 }
 
 /** Map spine node -> index into `picks` for spines whose printed title is one of Mac's books. */

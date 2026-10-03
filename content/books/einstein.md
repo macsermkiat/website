@@ -9,7 +9,7 @@ sources:
   - https://www.simonandschuster.com/books/Einstein/Walter-Isaacson/9780743264747
   - https://fivebooks.com/best-books/walter-isaacson-on-einstein/
   - https://www.goodreads.com/book/show/10884.Einstein
-review: "check"
+review: "done"
 ---
 
 ## In short
@@ -24,7 +24,7 @@ At the Zurich Polytechnic he skipped lectures he found dull, annoyed his profess
 
 Isaacson argues the patent office was good for him. It paid, left him time to think, and trained him to look hard at the physics behind inventions, including devices for synchronising clocks across distances. In 1905, at twenty-six, he published a series of papers that changed physics. One proposed that light comes in packets, or quanta. One gave a way to measure the size of molecules, and another explained the jittering of particles in water as the result of molecules bumping into them. The paper on special relativity threw out absolute time: two observers moving relative to each other will disagree about whether events are simultaneous. A short follow-up showed that mass and energy are equivalent, the idea behind E=mc².
 
-Recognition came slowly, then all at once. He moved through professorships in Zurich and Prague and in 1914 took a post in Berlin, where his marriage fell apart. Meanwhile he worked on extending relativity to gravity. His "happiest thought", in 1907, was that a person falling freely would not feel their own weight, so gravity and acceleration might be the same thing. Turning that into a theory took eight years and a new kind of mathematics, which his old classmate Marcel Grossmann helped him learn. In November 1915, racing against the mathematician David Hilbert, he presented the finished equations of general relativity. They correctly accounted for a small wobble in the orbit of Mercury.
+Academic jobs followed within a few years. He moved through professorships in Zurich and Prague and in 1914 took a post in Berlin, where his marriage fell apart. Meanwhile he worked on extending relativity to gravity. His "happiest thought", in 1907, was that a person falling freely would not feel their own weight, so gravity and acceleration might be the same thing. Turning that into a theory took eight years and a new kind of mathematics, which his old classmate Marcel Grossmann helped him learn. In November 1915, racing against the mathematician David Hilbert, he presented the finished equations of general relativity. They correctly accounted for a small wobble in the orbit of Mercury.
 
 In 1919 a British eclipse expedition led by Arthur Eddington measured starlight bending around the sun by the amount he had predicted, and newspapers made him a celebrity overnight. He divorced Mileva, promising her the money from a Nobel Prize he had not yet won, and married his cousin Elsa. The prize came, for 1921, for his work on the light quantum rather than relativity.
 

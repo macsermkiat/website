@@ -108,3 +108,12 @@ mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-rad
 .goods summary { cursor: pointer; color: var(--muted); }
 .goodslist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 180px; overflow: auto; }
 .btn.small { font-size: 13px; padding: 4px 10px; }
+
+/* Mac's bookshelf under the bookshop panel (content/bookshelf.json + content/books/) */
+.library { margin: 12px 0 4px; border-top: 1px solid var(--line); padding-top: 8px; }
+.library summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.library h4 { font-size: 13px; letter-spacing: .04em; margin: 12px 0 4px; color: var(--ink); }
+.library h4 span { font-weight: 400; color: var(--muted); }
+.library .shelf-list { margin: 0; padding-left: 18px; }
+.library .shelf-list li { margin: 3px 0; line-height: 1.35; }
+.library .one-line { color: var(--muted); }

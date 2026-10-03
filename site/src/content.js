@@ -5,6 +5,8 @@ import content from 'virtual:market-content';
 import { PLACE_ORDER } from './places.js';
 
 export const SECTIONS = content.sections;
+/** Mac's own bookshelf (content/bookshelf.json with the writer's one-line summaries), or an empty one. */
+export const LIBRARY = content.library?.books ? content.library : { books: [], categories: [] };
 // the writer's order when the build found one, else the market's walking order
 export const ORDER = (content.order?.length ? content.order : PLACE_ORDER).filter((id) => SECTIONS[id]);
 

@@ -105,6 +105,8 @@ def main():
         ('wurst', 'Bratwurst entered, full'),
         ('lite_glueh', 'Glühwein entered, lite'),
         ('lite_band', 'Bandstand entered, lite'),
+        ('sign_glueh', 'Glühwein stand from the square, full'),
+        ('sign_wurst', 'Bratwurst stand from the square, full'),
     ]
     for n, t in pairs:
         a = load(mk(n))
@@ -119,6 +121,10 @@ def main():
     if a:
         cells = ([(b.crop(crop), 'Round 1: home view, left stalls (2x)')] if b else []) + [(a.crop(crop), 'Round 2: home view, left stalls (2x)')]
         grid(cells, 1, (720, 360), 'home_signs.jpg', 14)
+    # the two section signs from a visitor's approach (6.5-7.5 m in front of each stand, @cam=)
+    g, w = load(mk('sign_glueh')), load(mk('sign_wurst'))
+    if g and w:
+        grid([(g, 'Glühwein stand, 6.5 m'), (w, 'Bratwurst stand, 7.5 m')], 2, half, 'market_signs.jpg', 14)
 
 
 if __name__ == '__main__':

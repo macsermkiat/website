@@ -50,7 +50,7 @@ try {
     await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n >= 2 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }));
     await page.waitForFunction(() => getComputedStyle(document.getElementById('loading')).opacity === '0' || document.getElementById('loading').classList.contains('done'));
     await page.waitForTimeout(3000);
-    const rep = await page.evaluate(() => ({ lighting: window.__market?.report?.lighting, lights: window.__market?.report?.lights, warnings: window.__market?.report?.warnings }));
+    const rep = await page.evaluate(() => ({ lighting: window.__market?.report?.lighting, lights: window.__market?.report?.lights, warnings: window.__market?.report?.warnings, focus: window.__lighting?.focus, moves: window.__lighting?.focusMoves }));
     const file = path.join(OUT, `${name}.png`);
     // hold the last drawn frame, so the screenshot does not wait for another 20 s software-GL frame
     await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n >= 2 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }));

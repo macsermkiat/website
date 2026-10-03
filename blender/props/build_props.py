@@ -142,13 +142,31 @@ def main():
         r["label"] = d.get("label", name)
         reports[name] = r
         print(f"[props] {name}: {json.dumps({k: r.get(k) for k in ('full', 'lite', 'size')})}")
-        with open(REPORT, "w") as f:
-            json.dump(reports, f, indent=1, ensure_ascii=False)
+        reports = save_report(name, r)
     if not a.no_render:
         deco_contact_sheet(sets)
     shrink_shared_textures()
     write_props_json(sets)
-    write_items_json(sets, reports)
+    write_items_json(sets, load_report())
+
+
+def load_report():
+    if os.path.exists(REPORT):
+        with open(REPORT) as f:
+            return json.load(f)
+    return {}
+
+
+def save_report(name, r):
+    """Merge this set's entry into the report on disk (re-read first, so two builds running side by side for
+    different sets do not overwrite each other's entries), write it atomically and return the merged dict."""
+    reports = load_report()
+    reports[name] = r
+    tmp = REPORT + f".{os.getpid()}.tmp"
+    with open(tmp, "w") as f:
+        json.dump(reports, f, indent=1, ensure_ascii=False)
+    os.replace(tmp, REPORT)
+    return reports
 
 
 def deco_contact_sheet(sets):

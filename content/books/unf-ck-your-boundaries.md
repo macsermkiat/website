@@ -10,7 +10,7 @@ sources:
   - https://www.shortform.com/summary/unf-ck-your-boundaries-summary-faith-g-harper
   - https://sobrief.com/books/unfuck-your-boundaries
   - https://www.goodreads.com/book/show/46231474-unfuck-your-boundaries
-review: "check"
+review: "done"
 ---
 
 ## In short

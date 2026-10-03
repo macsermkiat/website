@@ -44,7 +44,7 @@ export function createWurst(ctx) {
   const sausages = new Map();
   for (const s of acts(place, 'act_sausage')) {
     const item = items.of('wurst', 'sausage').find((i) => i.node === s) || items.add(s, 'wurst', place, 'sausage');
-    if (item) sausages.set(item, { item, r: rest(s), axis: longAxis(s), angle: 0, turns: 0 });
+    if (item) sausages.set(item, { item, r: rest(s), axis: longAxis(s), centre: turnCentre(s, item.info), angle: 0, turns: 0 });
   }
   const onGrill = () => [...sausages.values()].filter((s) => /grill/i.test(s.item.info.name || '') || !s.item.info.name);
   let turned = 0;
@@ -61,11 +61,17 @@ export function createWurst(ctx) {
     s.turns++;
     const up = worldDirToParent(node, UP);
     const q = new THREE.Quaternion();
-    anim.add(0.55, (k) => {
-      node.quaternion.copy(s.r.q).multiply(q.setFromAxisAngle(s.axis, a0 + k * Math.PI));
-      node.position.copy(s.r.p).addScaledVector(up, Math.sin(k * Math.PI) * 0.05);
-    }, () => {
-      node.position.copy(s.r.p);
+    // turn about the sausage's own long axis through its middle, not about its base pivot (items.json turn_axis)
+    const sc = s.centre.clone().multiply(node.scale);
+    const shift = new THREE.Vector3();
+    const pose = (a, hop) => {
+      q.setFromAxisAngle(s.axis, a);
+      node.quaternion.copy(s.r.q).multiply(q);
+      shift.copy(sc).applyQuaternion(q).negate().add(sc).applyQuaternion(s.r.q);
+      node.position.copy(s.r.p).add(shift).addScaledVector(up, hop);
+    };
+    anim.add(0.55, (k) => pose(a0 + k * Math.PI, Math.sin(k * Math.PI) * 0.05), () => {
+      pose(s.angle, 0);
       item.busy = false;
       // fat drips on the coals: a flare and a spray of sparks
       flare = Math.min(2.2, flare + (quiet ? 0.35 : 1.2));
@@ -231,4 +237,18 @@ export function createWurst(ctx) {
       for (const [roll, b] of buns) if (!roll.busy && (b.left -= dt) <= 0) handOver(roll);
     },
   };
+}
+
+/**
+ * The point (node-local) the sausage turns about: items.json turn_axis gives the axis height over a base pivot;
+ * otherwise the middle of its mesh, across its long axis.
+ */
+function turnCentre(node, info = {}) {
+  const off = +info.turn_axis?.offset_threejs_y;
+  if (Number.isFinite(off) && off !== 0) return new THREE.Vector3(0, off / (node.scale.y || 1), 0);
+  const box = boxOf(node, node);
+  if (box.isEmpty()) return new THREE.Vector3();
+  const c = box.getCenter(new THREE.Vector3());
+  const ax = longAxis(node);
+  return c.sub(ax.clone().multiplyScalar(c.dot(ax)));
 }

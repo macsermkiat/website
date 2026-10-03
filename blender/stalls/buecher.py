@@ -82,9 +82,11 @@ def cabinet(h, glass, xc, lite):
 
 
 # cloth and leather bindings (linear RGB tints of the 'bookcloth' material)
-BINDINGS = [(0.30, 0.035, 0.03), (0.04, 0.14, 0.07), (0.035, 0.06, 0.19), (0.20, 0.09, 0.035),
-            (0.50, 0.31, 0.09), (0.66, 0.58, 0.42), (0.035, 0.035, 0.035), (0.17, 0.025, 0.06),
-            (0.035, 0.16, 0.16), (0.36, 0.16, 0.05)]
+# (lifted about 1.6x in round 2: behind the glass, with no engine light inside the cabinet, the
+# darker round-1 cloths read as an empty cabinet in three.js)
+BINDINGS = [(0.46, 0.06, 0.05), (0.07, 0.23, 0.11), (0.06, 0.10, 0.30), (0.33, 0.15, 0.06),
+            (0.66, 0.44, 0.14), (0.74, 0.66, 0.50), (0.07, 0.07, 0.065), (0.28, 0.045, 0.10),
+            (0.06, 0.26, 0.26), (0.54, 0.25, 0.08)]
 
 
 def cabinet_books(h, xa, xb, yc, lite):
@@ -289,6 +291,11 @@ def _lights_and_camera(yF):
     render.lights_at_markers(energy=100)
     render.add_light("env_fill", 'AREA', (0, 0.2, 2.5), 200, size=2.0)
     render.add_light("env_lantern", 'POINT', (W / 2 + 0.03, yF - 0.3, 1.95), 30, size=0.08)
+    # the small bulb under each cabinet top: light the spines behind the glass
+    cab_y = yF - CAB_D / 2 + 0.05
+    for xc in (-W / 2 + 0.1 + CAB_W / 2, W / 2 - 0.1 - CAB_W / 2):
+        render.add_light("env_cabinet", 'POINT', (xc, cab_y, 2.07), 7, size=0.03)
+        render.add_light("env_cabinet_low", 'POINT', (xc, cab_y + 0.02, 1.3), 3, size=0.05)
     render.add_light("env_neighbour", 'POINT', (-5.0, -1.2, 2.6), 170, size=0.6)
     return render.camera((-4.5, -6.9, 2.0), (0.0, -0.4, 1.8), lens=30)
 

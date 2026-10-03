@@ -10,7 +10,7 @@ sources:
   - https://conceptually.org/concepts/6-principles-of-influence
   - https://www.usgbc.org/sites/default/files/2020-05/Cialdini%20article.pdf
   - https://www.suebehaviouraldesign.com/en/blog/cialdini-principles-of-persuasion/
-review: "check"
+review: "done"
 ---
 
 ## In short

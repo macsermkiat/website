@@ -25,6 +25,16 @@ from nmlib import carpentry as cp  # noqa: E402
 from nmlib import geo, render  # noqa: E402
 
 NAME = "ferris"
+
+
+def register_art():
+    import art
+    rc.IMAGE_MATS["poster_riesenrad"] = (art.poster_riesenrad(), 0.75)
+    rc.IMAGE_MATS["poster_nachtmarkt"] = (art.poster_nachtmarkt(), 0.75)
+    rc.IMAGE_MATS["price_board"] = (art.price_board(), 0.6)
+
+
+register_art()
 HUB = 14.70         # axle height (lowest gondola clears the boarding deck by 9 cm)
 RO = 11.2           # outer ring = gondola axles
 RI = 10.05          # inner ring
@@ -162,7 +172,7 @@ def build_gondola(i, g, lite):
     body = Part(f"gond{i}_body", "rsteel", tint=col, bevel=0.0, var=0.04)
     trim = Part(f"gond{i}_trim", "rsteel", tint=CREAM, bevel=0.0, var=0.04)
     gilt = Part(f"gond{i}_gilt", "gilt", var=0.03)
-    glass = Part(f"gond{i}_glass", "glass")
+    glass = Part(f"gond{i}_glass", "gondola_glass")
     wood = Part(f"gond{i}_wood", "wood", tint="honey", bevel=0.0)
     bulbs = Part(f"bulbs_g{i}", "bulb_warm")
     snow = Part(f"snow_g{i}", "snow")
@@ -438,13 +448,74 @@ def build_frame(lite):
     cp.sign(paint, paint, "Kasse", state.font("alegreya_sc"), (bx, by - D / 2 - 0.05, 2.18), 0.9, 0.22,
             depth=0.03, board_band="cream", text_band="red", board_shape="rect", text_size=0.15,
             text_depth=0.01, max_fill=0.8)
+    # ticket window grille: bars in front of the pane, a round speaking grille, a brass money dish
+    iron = Part("booth_iron", "blackmetal")
+    yg = by - D / 2 - 0.03
+    for j in range(13):
+        xx = bx - 0.46 + 0.92 * j / 12
+        rod(iron, (xx, yg, 1.28), (xx, yg, 1.96), 0.0055, seg=4 if lite else 6)
+    for z in (1.30, 1.94):
+        iron.box((bx, yg, z), (0.96, 0.014, 0.02))
+    if not lite:
+        # arched top rail with short radial bars (the grille's crown)
+        for j in range(9):
+            a = math.pi * (j + 0.5) / 9
+            p = Vector((bx + 0.44 * math.cos(a), yg, 1.72 + 0.2 * math.sin(a)))
+            rod(iron, (bx, yg, 1.72), tuple(p), 0.004, seg=4)
+    brass = Part("booth_brass", "brass")
+    brass.torus((bx, by - D / 2 - 0.004, 1.45), 0.075, 0.009, seg=8 if lite else 16, tseg=4 if lite else 6,
+                rot=(math.pi / 2, 0, 0))
+    if not lite:
+        for j in range(5):
+            xx = bx - 0.05 + 0.1 * j / 4
+            h = math.sqrt(max(0.0, 0.075 ** 2 - (xx - bx) ** 2))
+            rod(brass, (xx, by - D / 2 - 0.004, 1.45 - h), (xx, by - D / 2 - 0.004, 1.45 + h), 0.003, seg=4)
+    brass.lathe([(0.001, 1.030), (0.10, 1.030), (0.13, 1.045), (0.125, 1.05)], seg=8 if lite else 16,
+                M=Matrix.Translation((bx, by - D / 2 - 0.08, 0)))
+    # posters on both side walls and the painted price board under the window
+    xl, xr = bx - W / 2 - 0.02, bx + W / 2 + 0.02
+    rc.picture("booth_poster_l", "poster_riesenrad",
+               [(xl, by + 0.3, 1.0), (xl, by - 0.3, 1.0), (xl, by - 0.3, 1.9), (xl, by + 0.3, 1.9)])
+    rc.picture("booth_poster_r", "poster_nachtmarkt",
+               [(xr, by - 0.3, 1.0), (xr, by + 0.3, 1.0), (xr, by + 0.3, 1.9), (xr, by - 0.3, 1.9)])
+    yp = by - D / 2 - 0.022
+    rc.picture("booth_prices", "price_board",
+               [(bx - 0.42, yp, 0.46), (bx + 0.42, yp, 0.46), (bx + 0.42, yp, 0.83), (bx - 0.42, yp, 0.83)])
+    # poster frames: thin dark battens round each picture
+    for (x0, y0_, x1_, y1_, z0, z1) in ((xl, by - 0.31, xl, by + 0.31, 0.99, 1.91),
+                                         (xr, by - 0.31, xr, by + 0.31, 0.99, 1.91)):
+        for z in (z0, z1):
+            wood.box((x0, by, z), (0.02, 0.64, 0.025), tint="dark", grain=1)
+        for yy in (y0_, y1_):
+            wood.box((x0, yy, (z0 + z1) / 2), (0.02, 0.025, z1 - z0), tint="dark", grain=2)
+
+    # queue rails: a lane of red steel rails from the entrance sign out toward the square, and a
+    # short rail that keeps the ticket queue along the booth front
+    qx = 0.85
+    y_s, y_e = -3.35, -7.2
+    for sx in (-1, 1):
+        xx = sx * qx
+        posts = [y_s + (y_e - y_s) * k / 4 for k in range(5)]
+        for yy in posts:
+            rod(red, (xx, yy, 0.0), (xx, yy, 1.0), 0.028, seg=6)
+            gilt.sphere((xx, yy, 1.03), 0.04, seg=6 if lite else 10, rings=4 if lite else 6)
+            red.cyl((xx, yy, 0.012), 0.09, 0.09, 0.025, seg=8 if lite else 12)
+        for z in (0.55, 0.98):
+            rod(red, (xx, y_s, z), (xx, y_e, z), 0.022, seg=6)
+    for xx in (bx - 0.95, bx - 0.1, bx + 0.75):
+        rod(red, (xx, by - D / 2 - 0.95, 0.0), (xx, by - D / 2 - 0.95, 1.0), 0.028, seg=6)
+        gilt.sphere((xx, by - D / 2 - 0.95, 1.03), 0.04, seg=6 if lite else 10, rings=4 if lite else 6)
+        red.cyl((xx, by - D / 2 - 0.95, 0.012), 0.09, 0.09, 0.025, seg=8 if lite else 12)
+    for z in (0.55, 0.98):
+        rod(red, (bx - 0.95, by - D / 2 - 0.95, z), (bx + 0.75, by - D / 2 - 0.95, z), 0.022, seg=6)
+
     # snow on the booth roof
     bm = bmesh.new()
     sv = [bm.verts.new(v + Vector((0, 0, 0.05))) for v in eaves] + [bm.verts.new(apex + Vector((0, 0, 0.05)))]
     for k in range(4):
         bm.faces.new((sv[k], sv[(k + 1) % 4], sv[4]))
     snow.from_bmesh(bm, grain=2)
-    return rc.finish_all([st, darks, red, wood, sleepers, paint, gilt, bulbs, gpane, roofp, snow])
+    return rc.finish_all([st, darks, red, wood, sleepers, paint, gilt, bulbs, gpane, roofp, snow, iron, brass])
 
 
 def build(lite):

@@ -1,6 +1,6 @@
 # Carpenter: round 2 notes
 
-Built on the cloud machine (CPU, `NM_THREADS=2`, load 10–18 from other builders). Every glb, kit texture, Cycles preview and three.js shot in this folder was regenerated in this round from the current scripts.
+Built on the cloud machine (CPU, `NM_THREADS=2`–3, load 10–18 from other builders). Every glb, kit texture, Cycles preview and three.js shot in this folder was regenerated in this round from the current scripts. The machine restarted after the Cycles previews were written and before the three.js shots were taken; after the restart I checked every glb again (`glb_tools.check`, node names, materials), took all the three.js shots, and rebuilt the Bratwurst (sign-spot preview) and the Bücherstand (cabinet books) once more.
 
 ## What changed in round 2
 
@@ -14,9 +14,9 @@ Built on the cloud machine (CPU, `NM_THREADS=2`, load 10–18 from other builder
 | Bier sign low contrast (Fable) | A warm cream board, with the Fraktur letters in the blue band darkened to deep navy by their tint, no letter bevel. | `stall_bier_threejs.jpg` |
 | Bier headroom (Opus, Fable) | Barrel front 9 staves x 7 rings (was 11 x 9), the garland 34 tufts/m with baubles every 0.28 m. The stall went from 43,429 to 39,745 triangles. | table below |
 | Bücher copper roof flat salmon in three.js (Fable) | New kit variant `copper_old`: the iron kit's dents, streaks and pitting with a copper-brown colour (its own 10 KB shared colour file), metal x0.6. It replaces the flat `copper` on the bay roof. | `stall_buecher_threejs.jpg`: dark, dented old copper |
-| Bücher glazed cabinets empty (Opus) | Low-poly book spines (new simple material `bookcloth`, coloured by vertex tint, underside and back faces dropped, about 10 tris a book) fill the upper three shelves of both cabinets, with a lying stack at each end of the bottom shelf. The middle of the bottom shelf stays free at `slot_cabinet_l/r`. A small warm bulb under each cabinet top lights the spines. The glass alpha went from 0.22 to 0.14. | `stall_buecher_preview.jpg`, `stall_buecher_threejs.jpg` |
+| Bücher glazed cabinets empty (Opus) | Low-poly book spines (new simple material `bookcloth`, coloured by vertex tint, underside and back faces dropped, about 10 tris a book) fill the upper three shelves of both cabinets, with a lying stack at each end of the bottom shelf. The middle of the bottom shelf stays free at `slot_cabinet_l/r`. A small warm bulb under each cabinet top lights the spines. The glass alpha went from 0.22 to 0.14. The first cloth colours were too dark to read behind the glass (no engine light reaches inside the cabinet), so the binding tints are now about 1.6x lighter, and the Cycles preview lights each cabinet from its bulb. | `stall_buecher_preview.jpg`, `stall_buecher_threejs.jpg`: red, green, blue and ochre spines behind the glazing bars |
 | Holzspielzeug sign board darker (priority 3) | The board is the blue band tinted to a deep navy (`board_tint` 0.36/0.40/0.52); the letters stay cream. | `deco_contact_sheet.jpg` |
-| Bratwurst sign lamps lit the roof snow (Opus) | Preview spots are tight (62°) from the lamp heads, aimed at the lettering. | `stall_bratwurst_preview.jpg` |
+| Bratwurst sign lamps lit the roof snow (Opus) | The lamp heads hang only 0.3 m in front of the board, so the first 62° cones still left a bright oval on the snow under the sign. The preview spots are now 38° (blend 0.35), aimed at the upper half of the board, so the lower cone edge ends at the board's foot. | `stall_bratwurst_preview.jpg`: the board is lit and the snow under it is not |
 | Snow on straight roofs looked ruled (Opus, optional) | `snow_cap(drifts=n)`: lumpy mounds slid down against the eave lip, 80 tris each. Each section stall has 3 per slope. | eaves in `stall_bier_preview.jpg`, `stall_buecher_preview.jpg`, `stall_bratwurst_preview.jpg` |
 | Bratwurst board-roof snow, no black dashes (priority 1) | Unchanged from round 1 pass 3: the snow drapes over each batten as one continuous ridge. I checked it again in the new preview. | `stall_bratwurst_preview.jpg` |
 | Deco AO packing (priority 1) | Unchanged and checked: deco AO bakes at 448 px (lite 256), so no kit roughness map gets packed. Every deco glb embeds only its own AO image (28–35 KB, lite 12–13 KB) and references all kit maps by URI. | `glb_tools.py report deco_*.glb` |
@@ -65,7 +65,9 @@ Built on the cloud machine (CPU, `NM_THREADS=2`, load 10–18 from other builder
 - `deco_contact_sheet.jpg`: the nine deco stalls (structures only, 840x600 tiles, 48 samples).
 - `stall_*_threejs.jpg`: the bare shipped glbs in three.js under the current `site/src/lighting` (SwiftShader, AO on, snow off as on the site), same camera as the Cycles preview. The lighting module now adds its own sign lamp over every `slot_sign`, so my round-1 sign-spot request is covered.
 - `stall_bratwurst_threejs_props.jpg`: the Bratwurst glb with `prop_wurst_counter` attached.
-- `stall_bier_threejs_home.jpg`: the Bierstand where `layout.json` places it, seen from the site's home camera.
+- `stall_bier_threejs_pennants.jpg`: a x2 crop of the eave in `stall_bier_threejs.jpg` (same pixels, enlarged): every pennant carries blue-and-white Rauten.
+- `stall_bier_threejs_home.jpg`: the Bierstand where `layout.json` places it, seen from the site's home camera, with a x3 inset of the same pixels. At that distance a pennant is about 5 px wide and the Rauten merge into a pale blue-and-white fringe; they resolve from lane and preview distance.
+- `shoot.mjs` writes raw PNGs to `review/round-2/carpenter/web/`; I removed them after converting to JPEG, as BUILD.md asks for JPEG previews.
 
 ## Rebuild
 
@@ -94,6 +96,7 @@ Built on the cloud machine (CPU, `NM_THREADS=2`, load 10–18 from other builder
 - **Section headroom depends on the vendor's growth.** At 2.7–3.4k it is tight again because the props grew this round. The split proposed above would settle it. My next cuts would be the eave bulb detail (7x5 → 6x4, about 600 tris a stall) and the fir garland tufts.
 - **Emissive stand-ins are a workaround.** They keep trim, pennants and hood readable under moonlight, but a lighting pass that lights the eaves (or a baked lightmap) would let me drop them.
 - **Glühwein sign under the site's new sign lamp** is bright at close range. That is a lighting setting, so I left the board colour alone.
+- **Rauten at the home view.** From the home camera a pennant is about 5 px wide, so the lozenges merge into a pale blue-and-white fringe (`stall_bier_threejs_home.jpg`). Fewer, bigger lozenges would read from further away but would no longer look like real Rauten, so I kept four per repeat.
 - **Cabinet books have no titles.** They are coloured spines only; the vendor's clickable books stay on the back shelves and counter.
 - **Bevel cost:** chamfers are still real geometry. A baked edge-normal trim sheet could halve the wall triangles.
 - **Scorch under the grill** is vertex shading on the counter's wear grid, so it is soft. A decal would be crisper.

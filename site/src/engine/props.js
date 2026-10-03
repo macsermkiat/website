@@ -59,10 +59,11 @@ export async function placeProps(placed, { lite, manager, warn, elsewhere = [], 
     let file = it.model;
     if (lite) {
       if (it.lite && modelExists(it.lite)) file = it.lite;
-      else if (it.lite) bad(it, `lite file ${it.lite} is not in public/models; the lite market loads ${it.model}.`);
+      else if (it.lite && modelExists(it.model)) bad(it, `lite file ${it.lite} is not in site/public/models; the lite market loads ${it.model}.`);
+      else if (it.lite) return bad(it, `neither ${it.lite} nor ${it.model} is in site/public/models.`);
       else file = liteVariant(it.model) || it.model;
     }
-    if (!modelExists(file)) return bad(it, `${file} is not in public/models.`);
+    if (!modelExists(file)) return bad(it, `${file} is not in site/public/models.`);
     try {
       if (!cache.has(file)) cache.set(file, loadGlb(file, manager));
       const src = await cache.get(file);
