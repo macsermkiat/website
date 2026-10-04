@@ -283,7 +283,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
       const ea = a.clone().lerp(b, C.inset), eb = b.clone().lerp(a, C.inset);
       out.push(shading.add({
         a: ea.setY(y).add(off), b: eb.setY(y).add(off), color: C.color, intensity: C.intensity, reach: C.reach,
-        oneSided: true, floor: base + C.floor, tag: 'canopy', priority: 1,
+        oneSided: true, floor: base + C.floor, ceiling: y - C.ceiling, tag: 'canopy', priority: 1,
       }));
     }
     if (out.length) console.info(`[lighting] ${out.length} canopy wash${out.length > 1 ? 'es' : ''} under the bulb strings of ${model.name || 'a model'}: ${out.map((e) => `${e.a.toArray().map((x) => x.toFixed(2))}..${e.b.toArray().map((x) => x.toFixed(2))}`).join(' | ')}`);

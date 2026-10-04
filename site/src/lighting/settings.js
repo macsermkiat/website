@@ -147,10 +147,11 @@ export const NIGHT = {
   // string that hangs at least `below` m under its model's top string, is at least `minLength` m long
   // and that no light_ of its model reaches (its middle more than `minAway` m from every light_ empty
   // in plan) gets a one-sided wash glow under it: `down` m lower and `out` m toward the model's
-  // front, along the string with its ends drawn in by `inset` of its length, which lights the board fronts and book spines under the canopy. It is the
+  // front, along the string with its ends drawn in by `inset` of its length, lighting nothing higher
+  // than `ceiling` m under the bulbs (the canopy's own fascia board sits right there and blew out), which lights the board fronts and book spines under the canopy. It is the
   // light those bulbs would throw; strings over a lit stall front (the Glühwein lambrequin, calibrated
   // against Cycles) are left alone.
-  canopy: { intensity: 6, reach: 1.7, down: 0.12, out: 0.3, inset: 0.12, minAway: 1.6, minLength: 0.6, below: 0.15, floor: 0.25, color: [1.0, 0.62, 0.34] },
+  canopy: { intensity: 9, reach: 1.8, down: 0.22, out: 0.3, inset: 0.12, ceiling: 0.12, minAway: 1.6, minLength: 0.6, below: 0.15, floor: 0.25, color: [1.0, 0.62, 0.34] },
 
   // faint cool rim on edges that face the moon, for figures and posts in front of the stalls.
   // It is added as radiance, not multiplied by albedo (the crowd's coats are albedo 0.01-0.07), and
