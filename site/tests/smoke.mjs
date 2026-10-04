@@ -343,7 +343,8 @@ try {
     check('Prost: the crowd raises a glass', (await page.locator('.bubble').count()) > 0);
     await go('bier');
     await act('bier', 'pint');
-    check('pull a pint (starts)', /Pouring/.test(await noteNow()), await noteNow());
+    // (reduced motion pours at once, so the note may already say the pint is pulled)
+    check('pull a pint (starts)', /Pouring|pulled tonight: 1/.test(await noteNow()), await noteNow());
     check('pull a pint (finishes)', await waitN(/pulled tonight: 1/, 30), await noteNow());
     await go('wurst');
     await act('wurst', 'turn');

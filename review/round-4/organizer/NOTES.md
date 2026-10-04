@@ -63,12 +63,12 @@ Every figure has the materials `coat`, `scarf`, `hat`, `body` and `mug`. The ful
 - `blender/people/specs.py`: Bier hat; vendor skin and light-cloth colours.
 - `site/public/models/people_vendor_{gluehwein,bier,wurst,buecher}{,.lite}.glb`: rebuilt.
 - `site/src/crowd.json`: regenerated.
-- `review/round-4/organizer/`: these notes, `crowd_map.jpg`, `bier_hat_before_after.jpg`, `vendors_closeup.jpg`, plus `three_books_browsers.jpg` if the three.js view finished (see below).
+- `review/round-4/organizer/`: these notes, `crowd_map.jpg`, `bier_hat_before_after.jpg`, `vendors_closeup.jpg`.
 
 No third-party assets were used, so `CREDITS.md` is unchanged.
 
 ## Open issues
 
-- **No in-engine vendor close-up this round.** `__market.openPlace` is now the guided stroll's `walkTo`, so the lighting designer's `shoot-market.mjs @open=` stays on the home view. The machine was at load 10 with other builders' Chromium instances, and one software-GL snap took about 9 minutes. The vendor check is the Cycles close-up. The three.js check of the new hat and skin is for the next full-market capture: the engineer's panel shots, or the lighting designer's.
+- **No in-engine vendor close-up this round.** `__market.openPlace` is now the guided stroll's `walkTo`, so the lighting designer's `shoot-market.mjs @open=` stays on the home view. The machine was at load 10 with other builders' Chromium instances, and one software-GL snap took about 9 minutes. The 50-minute capture run ended before it reached the Bücherstand browser view. So the vendor check is the Cycles close-up, and the browser check is the planner's clearance report and `crowd_map.jpg`. The three.js check of the new hat and skin is for the next full-market capture: the engineer's panel shots, or the lighting designer's.
 - Faces are still simple: a nose wedge, with eyes and brows in vertex colour. They read at panel distance, not in an extreme close-up.
 - Carried over from round 1: seated long coats read a little stiff from above; far mug-less lite figures stand with the hand at the coat front until the engine retargets `people_anims.glb`.
