@@ -101,8 +101,11 @@ const aimAt = (page, name, via = name) => page.evaluate(([name, via]) => {
   if (!c) return null;
   // prefer a point well inside the item (its neighbours 3 px away hit it too): a thin spine's edge pixel can
   // land on the next book once the pointer's hover lifts it
-  const inside = (x, y) => [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]].every(([dx, dy]) => m.itemAt(x + dx, y + dy) === name);
-  for (const test of [inside, (x, y) => m.itemAt(x, y) === name]) for (let r = 0; r <= 16; r += 2) for (let a = 0; a < 12; a++) {
+  // and only a point where the canvas itself is on top (not under the panel or the reading view)
+  const canvas = st.querySelector('canvas');
+  const onCanvas = (x, y) => document.elementFromPoint(x, y) === canvas;
+  const inside = (x, y) => onCanvas(x, y) && [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]].every(([dx, dy]) => m.itemAt(x + dx, y + dy) === name);
+  for (const test of [inside, (x, y) => onCanvas(x, y) && m.itemAt(x, y) === name]) for (let r = 0; r <= 16; r += 2) for (let a = 0; a < 12; a++) {
     const x = c.x + Math.cos(a * Math.PI / 6) * r, y = c.y + Math.sin(a * Math.PI / 6) * r;
     if (test(x, y)) return { x, y };
   }
@@ -368,21 +371,39 @@ try {
     await page.click('#places button[data-place="books"]');
     await page.evaluate(() => window.__market.advance(4));
     await frames(page, 2);
-    const si = spines.length > 1 ? 1 : 0, want = pickList[si] || ['', ''];
+    await page.evaluate(() => window.__market.settled()); // the deferred models are in and merged: nothing re-sorts under the pointer
     await stillCamera(page);
-    const aim = await aimAt(page, spines[si]);
-    if (aim) {
+    // a spine in clear view: any of Mac's books, nearest the middle of the market left of the panel first (some stand
+    // behind the panel at this size, and a spine at the very edge of the picture is a poor target)
+    const order = await page.evaluate(() => {
+      const m = window.__market, st = document.getElementById('stage').getBoundingClientRect(), pn = document.getElementById('panel').getBoundingClientRect();
+      const cx = st.left + (Math.min(st.right, pn.left) - st.left) / 2, cy = st.top + st.height / 2;
+      return Object.values(m.handlers.macSpines()).map((n) => ({ n, p: m.screenPoint(n) })).filter((o) => o.p)
+        .sort((a, b) => Math.hypot(a.p.x - cx, a.p.y - cy) - Math.hypot(b.p.x - cx, b.p.y - cy)).map((o) => o.n);
+    });
+    let pick = null, aim = null, hov = null;
+    for (const n of order.slice(0, 12)) {
+      const at = await aimAt(page, n);
+      if (!at) continue;
+      aim = at;
       await page.mouse.move(aim.x, aim.y);
       await frames(page, 3);
-      check('hovering a book lifts it and names it', (await page.evaluate(() => window.__market.hoveredItem)) === spines[si] && (await page.textContent('.tip')).includes(want[0]), `${await page.textContent('.tip')} at ${JSON.stringify(aim)}; itemAt now ${await page.evaluate(([x, y]) => window.__market.itemAt(x, y), [aim.x, aim.y])}; hovered ${await page.evaluate(() => window.__market.hoveredItem)}; want ${spines[si]} ${want[0]}`);
+      hov = await page.evaluate(() => window.__market.hoveredItem);
+      pick = n;
+      if (hov === n) break;
+    }
+    // the title it should show: its items.json title (the item's label)
+    const want = pick ? [await page.evaluate((n) => window.__market.item(n).label, pick), ''] : ['', ''];
+    if (aim) {
+      check('hovering a book lifts it and names it', hov === pick && (await page.textContent('.tip')).includes(want[0]), `${await page.textContent('.tip')} at ${JSON.stringify(aim)}; hovered ${hov}; want ${pick} ${want[0]}`);
       await page.mouse.click(aim.x, aim.y);
       await page.evaluate(() => window.__market.advance(3));
       const ob = await page.evaluate(() => window.__market.openedBook());
-      check('clicking a named spine opens that book, showing its own title', ob?.name === spines[si] && ob.title === want[0] && (await note(page)).includes(want[0]), `${JSON.stringify(ob)} ${await note(page)}`);
-      const again = await aimAt(page, spines[si], `open_${spines[si]}`); // a click on the open book itself
+      check('clicking a named spine opens that book, showing its own title', ob?.name === pick && ob.title === want[0] && (await note(page)).includes(want[0]), `${JSON.stringify(ob)} ${await note(page)}`);
+      const again = await aimAt(page, pick, `open_${pick}`); // a click on the open book itself
       if (again) { await page.mouse.click(again.x, again.y); await page.evaluate(() => window.__market.advance(3)); }
       check('clicking the open book again puts it back', (await page.evaluate(() => window.__market.openedBook())) === null);
-    } else check('clicking a named spine opens that book, showing its own title', false, `no clear pixel on ${spines[si]}`);
+    } else check('clicking a named spine opens that book, showing its own title', false, `no clear pixel on any of Mac's spines`);
     // keyboard: the reading view takes focus, Escape closes it and puts the book back
     await page.evaluate(() => window.__market.clickItem('act_book_53'));
     await page.evaluate(() => window.__market.advance(3));
@@ -407,12 +428,16 @@ try {
       await page.evaluate(() => window.__market.advance(3));
       check('the reading view\'s close button puts the book back', (await page.evaluate(() => window.__market.openedBook())) === null);
     } else check('a title in the bookshelf list opens that book and its page', false, 'no link for chaos in the panel');
+    // while a book is being read its page covers the panel (a modal view): Escape closes the book, a second Escape the panel
     await page.evaluate(() => window.__market.clickItem('act_book_53'));
     await page.evaluate(() => window.__market.advance(3));
-    await page.click('#pClose');
+    await page.keyboard.press('Escape');
     await page.evaluate(() => window.__market.advance(3));
-    const tagOff = await page.evaluate(() => ({ open: window.__market.openedBook(), visible: window.__market.item('act_book_53').visible, reading: window.__market.reading().open }));
-    check('closing the panel closes the book and puts it back', tagOff.open === null && tagOff.visible, JSON.stringify(tagOff));
+    const mid2 = await page.evaluate(() => ({ open: window.__market.openedBook(), reading: window.__market.reading().open, panel: window.__market.panel }));
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => window.__market.advance(3));
+    const tagOff = await page.evaluate(() => ({ open: window.__market.openedBook(), visible: window.__market.item('act_book_53').visible, reading: window.__market.reading().open, panel: window.__market.panel }));
+    check('Escape twice: first the book goes back, then the panel closes', mid2.open === null && !mid2.reading && mid2.panel === 'books' && tagOff.open === null && tagOff.visible && !tagOff.panel, JSON.stringify([mid2, tagOff]));
 
     await page.click('#places button[data-place="band"]');
     check('lite: the player buttons say they move the spotlight', /Spotlight/.test(await page.textContent('#pActions [data-action="sax"]')));

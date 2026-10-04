@@ -127,8 +127,14 @@ def env_section(boards, slot_z):
         t = 0.025
         frame.box((ox + b["width"] / 2, oy + b["depth"] / 2, slot_z + oz - t / 2), (b["width"] + 0.08, b["depth"], t),
                   tint="pine")
-        frame.box((ox + b["width"] / 2, oy + b["depth"] + 0.01, slot_z + oz + 0.2), (b["width"] + 0.08, 0.02, 0.42),
-                  tint="honey")
+        # back board, 42 cm tall, but no higher than a board stepped back behind it (a cart's upper tier):
+        # a full-height back on the lower tier hid the upper tier's spines in the cart previews
+        bh = 0.42
+        for bb in boards:
+            if bb["offset"][2] > oz and bb["offset"][1] >= oy + b["depth"] - 0.02:
+                bh = min(bh, bb["offset"][2] - oz - 0.026)
+        frame.box((ox + b["width"] / 2, oy + b["depth"] + 0.01, slot_z + oz - 0.01 + bh / 2),
+                  (b["width"] + 0.08, 0.02, bh), tint="honey")
     for sx in (-0.02, x1 + 0.02):
         frame.box((sx, y1 / 2, (slot_z + ztop) / 2), (0.04, y1 + 0.02, slot_z + ztop), tint="pine")
     x = -1.6

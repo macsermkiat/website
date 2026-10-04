@@ -40,7 +40,9 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     for (const h of hits) {
       const o0 = h.object;
       if (o0.userData.bulbs && hits.length > 1) continue;
-      if (o0.userData.merged) continue; // the merged shelf mesh: the items' own (hidden) meshes answer for it
+      // the merged shelf goods: the items' own (hidden) meshes answer for them. A stall's merged body (mergeStatic)
+      // still answers as its place.
+      if (o0.userData.mergedItems) continue;
       if (o0.isSprite || o0.userData.itemFx === true && !items?.itemOf(o0)) continue;
       let o = o0;
       while (o && !o.userData.place && !o.userData.entry) o = o.parent;

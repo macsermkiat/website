@@ -154,7 +154,9 @@ const _v = new THREE.Vector3();
 /** Where the camera goes for a place: its cam_view/cam_target, or a view worked out from its position. */
 // Per-place camera nudges on top of the architect's cam_view: `dolly` keeps that fraction of the distance to
 // cam_target. The Bücherstand is about its books, so its view comes in closer to the shelves.
-export const VIEW_NUDGE = { books: { dolly: 0.8 } };
+// the Bücherstand with its six category sections (round 3): pull back a little from the carpenter's cam_view so the side racks
+// stand clear of the panel (was 0.8 for the small round-1 stall)
+export const VIEW_NUDGE = { books: { dolly: 1.12 } };
 
 export function viewFor(place) {
   const n = place.nodes;

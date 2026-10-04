@@ -128,7 +128,11 @@ stall.traverse((o) => {
 
 // light_ empties where the carpenter's stalls carry them (the reference glb has none yet):
 // light_0 inside under the roof ridge, light_1 under the front eave
-const empties = [
+// ?own=landmark uses the glb's own light_ empties as that kind instead (a ride: ?glb=/models/ferris.glb&tune=1&own=landmark)
+const ownKind = q.get('own');
+const ownEmpties = [];
+if (ownKind) stall.traverse((o) => { if (/^light_/.test(o.name)) ownEmpties.push(o); });
+const empties = ownKind ? ownEmpties : [
   ['light_0', [0, 2.3, -0.1]],
   ['light_1', [0, 2.35, 1.95]],
 ].map(([name, p]) => { const e = new THREE.Object3D(); e.name = name; e.position.set(...p); stall.add(e); return e; });
@@ -154,11 +158,15 @@ if (before) {
     options: { shadowCenter: [0, 0, 0.5], shadowRadius: 6, envCapture: q.get('capture') === '1', envCapturePosition: [2.5, 2.2, 7] },
   });
   const only = q.get('lights'); // e.g. ?lights=0 keeps just light_0
-  lighting.placeLights(empties.filter((e, i) => only == null || only.split('').includes(String(i))).map((obj) => ({ obj, kind: 'section', id: 'gluehwein' })), {
+  lighting.placeLights(empties.filter((e, i) => only == null || only.split('').includes(String(i))).map((obj) => ({ obj, kind: ownKind || 'section', id: ownKind ? 'ride' : 'gluehwein' })), {
     focus: target, shadowed: lite ? 0 : 2,
   });
 }
+// ?tune=1 runs the engine's per-model tuning (bulb bounce, hub fade) on the loaded glb, as main.js does
+// for every placed model: for checking a ride (?glb=/models/ferris.glb&tune=1) on the bench
+if (q.get('tune') === '1' && !before) lighting.raw?.tune?.(stall) ?? lighting.tune?.(stall);
 window.lighting = lighting;
+window.THREE = THREE; window.camera = camera; // for debugging scripts
 window.scene = scene;
 
 // ---------- HUD ----------

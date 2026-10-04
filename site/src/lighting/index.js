@@ -19,7 +19,7 @@ import { syntheticEnvironment, createEnvUpdater, probeTargets, captureProbe } fr
 import { installShading, bulbStrings } from './shading.js';
 import { createSnow } from './snow.js';
 import { GradePass } from './grade.js';
-import { placeWarmLights, adoptEngineLights, tuneEmissives, retargetLight, bulbBounce } from './lights.js';
+import { placeWarmLights, adoptEngineLights, tuneEmissives, retargetLight, bulbBounce, hubFade } from './lights.js';
 
 export { NIGHT, PROFILES } from './settings.js';
 export { placeWarmLights, tuneEmissives } from './lights.js';
@@ -88,7 +88,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
 
   // ---------- light size, local glows (bulb strings, stall interiors) and moon rim ----------
   const shading = installShading({
-    maxGlows: P.glows, maxClips: P.clips ?? 4, minRoughness: N.lightSize.minRoughness, minClearcoatRoughness: N.lightSize.minClearcoatRoughness,
+    maxGlows: P.glows, maxClips: P.clips ?? 4, minRoughness: N.lightSize.minRoughness, minClearcoatRoughness: N.lightSize.minClearcoatRoughness, ao: N.ao,
     pointShadowTaps: N.warm.shadowMap?.taps ?? 5,
   });
   shading.setRim(new THREE.Vector3(...N.moon.skyDirection), new THREE.Color(N.rim.color), N.rim.strength, N.rim.power, N.rim.dark);
@@ -258,7 +258,9 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   }
   /** Give the place `id` (a place id such as 'glueh', or a layout id) the real lights; null gives them back. */
   function focusPlace(id, { auto = false } = {}) {
-    if (!auto) focusExplicit = id != null;
+    // round 2, fix pass: once the engine calls focusPlace itself (openPlace / close), the camera-settle
+    // detection stops for good, so focusPlace(null) on close does not hand control back to it
+    if (!auto) focusExplicit = true;
     id = id || null;
     if (id === focusId) return focusId;
     for (const [L, home] of moved) moveLight(L, home);
@@ -316,6 +318,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   function tune(root) {
     const r = tuneEmissives(root, N, { lite });
     try { const n = bulbBounce(root, N); if (n) console.info(`[lighting] bulb bounce on ${n} materials of ${root.name || 'a model'}`); } catch (e) { console.warn('[lighting] bulb bounce failed', e); }
+    try { const h = hubFade(root, N, r.bulbs); if (h) console.info(`[lighting] hub fade on ${h} bulb meshes of ${root.name || 'a model'}`); } catch (e) { console.warn('[lighting] hub fade failed', e); }
     r.bulbs.forEach((m) => emissives.bulbs.add(m));
     r.windows.forEach((m) => emissives.windows.add(m));
     addBulbGlows(root);
@@ -473,7 +476,8 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
       ftAll++;
       if (adaptive && quality.level < 5 && ++sinceStep >= 150 && ftN >= 150 && frame > 200) {
         const s = stats();
-        if (s.p50 > 18.2) { stepDown(); ftN = 0; }
+        const ms = P.adaptiveMs || [16.7, 18.2];
+        if (s.p50 > (quality.level === 0 ? ms[0] : ms[1])) { stepDown(); ftN = 0; }
         sinceStep = 0;
       }
     }

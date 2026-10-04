@@ -445,7 +445,9 @@ def _section_def(key, seed):
     return dict(fn=lambda: section_set(key), slot=sec["slot"], stall="buecherstand", kind="section", section=True,
                 seed=seed, width=W + 0.4, section_boards=(sec["boards"], sec["slot_position"][2]),
                 cam=((W / 2, -1.25 - ymax, zc + 0.12), (W / 2, ymax / 2, zc), 32), cam_fixed=True,
-                hero=((W * 0.5, -0.62 - ymax * 0.5, top + 0.14), (W * 0.5, 0.0 + ymax * 0.5, top + 0.11), 40),
+                # close-up of the top board, square on (the carts' upper tier is stepped back by ymax, so the
+                # camera follows it there and backs off for the wider cart boards)
+                hero=((W * 0.5, ymax - max(0.62, 1.1 * W), top + 0.14), (W * 0.5, ymax, top + 0.11), 40),
                 label=f"{sec['label_de']} ({sec['books']} books)")
 
 

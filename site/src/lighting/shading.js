@@ -49,7 +49,7 @@ const CLIP = 4;
 const OPEN = 1e4; // floor / ceiling of a glow with no height limit
 const f = (x) => Number(x).toFixed(4);
 
-export function installShading({ maxGlows = 16, maxClips = 4, minRoughness = 0.3, minClearcoatRoughness = 0.3, pointShadowTaps = 12 } = {}) {
+export function installShading({ maxGlows = 16, maxClips = 4, minRoughness = 0.3, minClearcoatRoughness = 0.3, pointShadowTaps = 12, ao = null } = {}) {
   const saved = Object.fromEntries(KEYS.map((k) => [k, THREE.ShaderChunk[k]]));
   const CLIP0 = HEADER + maxGlows * 3;
   const size = CLIP0 + Math.max(1, maxClips) * CLIP;
@@ -58,6 +58,17 @@ export function installShading({ maxGlows = 16, maxClips = 4, minRoughness = 0.3
 
   THREE.ShaderChunk.lights_pars_begin = saved.lights_pars_begin + /* glsl */ `
 uniform vec4 lightingGlow[ ${size} ];
+// round 2, fix pass: the baked ambient occlusion of a model that ships one (the carpenter's stalls,
+// glTF occlusionTexture). three applies it to the hemisphere and the environment only; the lighting
+// also applies it to its local glows (they stand in for bounce light) and in part to the short-reach
+// interior lamps, whose light in a real stall is half bounce and is blocked in the corners
+float lightingAO() {
+  #ifdef USE_AOMAP
+    return ( texture2D( aoMap, vAoMapUv ).r - 1.0 ) * aoMapIntensity + 1.0;
+  #else
+    return 1.0;
+  #endif
+}
 // 1 inside the clip box of the point light at lightView (view space), 0 outside, a short fade between;
 // 1 for a light with no clip
 float lightingClip( vec3 lightView, vec3 posView ) {
@@ -87,7 +98,8 @@ float lightingClip( vec3 lightView, vec3 posView ) {
   const pointInfo = 'getPointLightInfo( pointLight, geometryPosition, directLight );';
   if (saved.lights_fragment_begin.includes(pointInfo)) {
     THREE.ShaderChunk.lights_fragment_begin = saved.lights_fragment_begin.replace(pointInfo,
-      `${pointInfo}\n\t\tdirectLight.color *= lightingClip( pointLight.position, geometryPosition );`);
+      `${pointInfo}\n\t\tdirectLight.color *= lightingClip( pointLight.position, geometryPosition );` +
+      (ao && ao.point > 0 ? `\n\t\tif ( pointLight.distance > 0.0 && pointLight.distance < ${f(ao.pointMaxDistance ?? 6)} ) directLight.color *= mix( 1.0, lightingAO(), ${f(ao.point)} );` : ''));
   } else {
     console.warn('[lighting] three changed the point-light loop; interior clips not installed');
   }
@@ -146,6 +158,7 @@ float lightingClip( vec3 lightView, vec3 posView ) {
   vec3 rimAlbedo = material.diffuseColor;
   rimF *= 1.0 - smoothstep( lightingGlow[ 1 ].w, lightingGlow[ 2 ].w, max( rimAlbedo.r, max( rimAlbedo.g, rimAlbedo.b ) ) );
   totalEmissiveRadiance += lightingGlow[ 2 ].rgb * ( lightingGlow[ 0 ].y * rimF * clamp( dot( gn, lightingGlow[ 1 ].xyz ) * 0.5 + 0.5, 0.0, 1.0 ) );
+  ${ao && ao.glow > 0 ? `glowIrr *= mix( 1.0, lightingAO(), ${f(ao.glow)} );` : ''}
   #if defined( STANDARD )
     reflectedLight.directDiffuse += glowIrr * BRDF_Lambert( material.diffuseContribution );
   #else

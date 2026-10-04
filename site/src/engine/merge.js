@@ -83,6 +83,7 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
     mesh.castShadow = b.items[0].mesh.castShadow;
     mesh.receiveShadow = b.items[0].mesh.receiveShadow;
     mesh.userData.merged = true;
+    mesh.userData.mergedItems = true; // picking skips it: the items' own (hidden) meshes answer for it
     b.parent.add(mesh);
     const saved = merged.index.array.slice();
     for (const it of b.items) {

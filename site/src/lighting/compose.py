@@ -126,6 +126,23 @@ def main():
     if g and w:
         grid([(g, 'Glühwein stand, 6.5 m'), (w, 'Bratwurst stand, 7.5 m')], 2, half, 'market_signs.jpg', 14)
 
+    # round 2, fix pass: the Ferris hub on the bench (?glb=/models/ferris.glb&tune=1&own=landmark), the
+    # pass-3 settings against the hub fade and the farther wash, and the hub in the home view
+    wb, wa = load(raw('wheel_before')), load(raw('wheel_after'))
+    if wb and wa:
+        box = (300, 60, 980, 600)
+        grid([(wb.crop(box), 'Pass 3: wash 6.2 m out, hub bulbs full'), (wa.crop(box), 'Fix pass: wash 9.2 m out, hub bulbs fade')], 2, (640, 508), 'wheel_hub_bench.jpg', 14)
+    p3 = load(os.path.join(OUT, 'raw_pass3', 'market.png'))
+    if p3 and a:
+        hub = (240, 120, 460, 300)
+        grid([(p3.crop(hub), 'Pass 3: home view, hub (3x)'), (a.crop(hub), 'Fix pass: home view, hub (3x)')], 2, (640, 524), 'market_hub.jpg', 14)
+    # baked AO in the glows and interior lamps, on the shipped Glühwein stall (the carpenter's AO map)
+    ao0, ao1 = load(raw('ao_off')), load(raw('ao_on'))
+    if ao0 and ao1:
+        grid([(ao0, 'Shipped Glühwein stall: AO for hemisphere only'), (ao1, 'AO also in glows and interior lamps')], 2, half, 'ao_stall.jpg', 14)
+        box = (420, 150, 1100, 330)
+        grid([(ao0.crop(box), 'Bulb row, AO off in the glows'), (ao1.crop(box), 'Bulb row, AO on')], 1, (680, 180), 'ao_bulb_row.jpg', 14)
+
 
 if __name__ == '__main__':
     main()

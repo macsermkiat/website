@@ -113,7 +113,27 @@ at 03:02) carries the matching `slot_cat_` empties (his `buecher_sections.py --c
 and his `stall_buecher_preview.jpg` shows these six sets standing in the real stall. check_props' seat check
 runs every set against the real stall glbs (see the table below).
 
-PREVIEW_LIST
+All at 1280 × 720, 48 samples, Cycles on CPU, rendered on 4 October. Pass 2 is the run after the machine
+restarted (05:30 onward UTC).
+
+| file | from | shows |
+|---|---|---|
+| `prop_books_physics_hero.jpg` | pass 2 | Physik & Kosmos, top board: *The Order of Time* (Rovelli) among Carroll, Hertog and Strogatz |
+| `prop_books_decisions_hero.jpg` | pass 2 | Risiko & Entscheidungen, the cart's upper tier: *The Book of Why*, *Thinking, Fast and Slow*, *Calling Bullshit* and the rest |
+| `prop_books_lives_hero.jpg` | pass 2 | Lebensgeschichten, the cart's upper tier |
+| `prop_books_mind_hero.jpg` | pass 2 | Geist & Körper, top board |
+| `prop_books_people_hero.jpg` | pass 2 | Menschen & Gespräche, top board |
+| `prop_books_craft_hero.jpg` | pass 2 | Handwerk & Gewohnheit, top board |
+| `prop_books_physics.jpg` | pass 1, 03:01 | both boards of the physics bay (wide; the set's geometry did not change in pass 2) |
+| `prop_books_counter_hero.jpg` | pass 2 | guest book, banker's lamp with its `bulb_warm` bulb, easel copy, price cards, bookmark tray |
+| `prop_books_counter.jpg` | pass 1, 02:49 | the whole counter (wide). Pass 2 only raised the easel legs by about 3 mm |
+| `prop_books_shelf_1.jpg`, `prop_books_shelf_2.jpg` | pass 1, 02:36 / 02:43 | the untitled secondhand stock on the back shelves (wide) |
+| `prop_bier_counter_hero.jpg` | pass 2 | tap handles, cream foam heads with flat spills, golden beer (glass casts no shadow in the preview) |
+| `prop_bier_back_hero.jpg`, `prop_bier_shelf_hero.jpg` | pass 2 | barrels and chalkboard; clean glasses |
+| `prop_wurst_counter_hero.jpg` | pass 2 | ember cracks in a dark char bed, grey ash, charred sausages on the grate, warming tray, raw tray |
+| `prop_gluehwein_counter_hero.jpg`, `prop_gluehwein_shelf_hero.jpg`, `prop_gluehwein_wine_hero.jpg` | pass 2 | copper kettle and mugs; bottles, spices, oranges; wine labels |
+| `deco_puffer.jpg` | pass 2 | Kartoffelpuffer with ragged, lacy edges |
+| `deco_goods_contact_sheet.jpg` | pass 2 | all nine deco frames. Eight frames are from round 2 (sets unchanged); the Puffer frame is new |
 
 ## Budgets
 
@@ -130,4 +150,28 @@ PREVIEW_LIST
 
 ## Contract notes and open issues
 
-OPEN_ISSUES
+- **The five named titles.** Three of the round-1 five (*Gödel, Escher, Bach*, *The Feynman Lectures on
+  Physics*, *Being You*) are not in Mac's 55, so under the round-3 rule they are gone. A judge checking "the five
+  named titles legible on spines" will find only *The Order of Time* and *The Book of Why*. If Mac wants the
+  other three, the writer adds them to categories.json and one rebuild puts them on a shelf.
+- **Feynman spine title.** "Surely You're Joking, Mr. Feynman!" and "What Do You Care What Other People
+  Think?" are long; their spines use two lines in a smaller face. They read in a close-up, but less boldly
+  than the short titles.
+- **Wide shots of five category sets** (mind, people, decisions, lives, craft) are not rendered; the heroes
+  frame each top board, and the carpenter's `stall_buecher_preview.jpg` shows all six sets in the stall.
+  The heroes do not show the lower boards.
+- **Beer colour.** Now that light reaches the beer in the preview, it reads orange-gold and a little opaque.
+  The glb's beer material is unchanged (transmission 0.65 on `beer`). A slightly clearer, more yellow Helles
+  would be a one-line change in `goods.beer_fill`.
+- **Lite ratios (WARN, not FAIL):** Bier back 42 %, Books counter 42 %, Mandeln 43 %, Spielzeug 42 %,
+  Schmuck 43 %, Käse 39 %, Maroni 40 %. They are mostly boxes and low-segment lathes that lite cannot cut further.
+- **Headroom.** Bierstand and Bratwurst are the tightest section stalls (see the budget table). The
+  Bücherstand, with the six category sets, is well inside its 80k / 4 MB.
+- **Glass in lite** uses alpha blending and the same material names. The site's lite path must not expect
+  KHR_materials_transmission. Foam subsurface shows only in Cycles; the glb carries sheen.
+- **Seat check limits.** `seat_check.mjs` flags props cutting into the stall and objects buried under a
+  stall top. It does not flag a prop floating above a surface.
+- **Contract:** nothing in my sets breaks BUILD.md. The counter set has no `light_` empty, and the lamp bulb is
+  `bulb_warm`. The 2048 px atlases are within the stalls' file budgets (see the table), and lite uses 512 px.
+- The stray `/books_deco.log` from round 2 is outside the repo. Only the market owner can remove it.
+

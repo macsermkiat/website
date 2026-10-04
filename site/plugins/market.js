@@ -330,7 +330,7 @@ export function libraryPagesHtml(lib) {
       </article>`).join('');
     return arts ? `<h3 class="bookcat">${esc(c.label)}${c.labelDe ? ` <span lang="de">· ${esc(c.labelDe)}</span>` : ''}</h3>${arts}` : '';
   }).join('\n');
-  return `\n<section class="booknotes" aria-label="Notes on every book on Mac’s shelf">\n<h3>Notes on every book</h3>\n${parts}\n</section>\n`;
+  return `\n<div class="booknotes" role="region" aria-label="Notes on every book on Mac’s shelf">\n<h3>Notes on every book</h3>\n${parts}\n</div>\n`;
 }
 
 function listFiles(dir, base = dir) {

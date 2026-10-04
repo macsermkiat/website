@@ -121,6 +121,13 @@ restart. The engine now follows them.
 - **Sausages.** The vendor's raw sausages (`act_sausage_16..23`, `raw: true`) and the warm tray turn in place, with
   no flare or sparks: only a sausage over the coals flares. "Turn the sausages" turns the ones on the grill. A raw one
   says it goes on the grill when there is room.
+- **Stall clicks in 3D (a bug found by the smoke run).** The picker skipped every mesh flagged `merged`, which was
+  meant for the merged shelf goods, whose items answer for them. But `mergeStatic` sets the same flag on each
+  stall's merged body. So a click on a stall's boards could fall through to nothing: the smoke check "clicking a stall
+  in 3D opens its panel" found the Bierstand front dead at the home view. The merged goods now carry their own flag
+  (`userData.mergedItems`), and only those are skipped (`engine/merge.js`, `interaction/picking.js`).
+- **The bookshop view** pulls back a little from the carpenter's `cam_view` (`VIEW_NUDGE.books.dolly` 0.8 → 1.12), so
+  the wider stall's side racks stand clear of the panel. The 0.8 dolly dated from the small round-1 stall.
 - **Tests.** Five new unit checks cover the library from categories.json, the linked list, a book's page fragment,
   the articles on the text page, and all 55 books with pages in the production content. The smoke run checks:
   - the reading view shows the clicked book's page;

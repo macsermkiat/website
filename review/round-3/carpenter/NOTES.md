@@ -50,6 +50,12 @@ What was built:
   - **String-light pole 4** is at (2.54, +0.6), behind the right rack and clear of it by more than 1.8 m.
 - **Organizer:** `browsing_buecherstand` places its two browsers at about stall-frame (±1.4, -1.95), which is where the carts now stand. Please re-run `crowd_plan.py`: they belong in front of the carts or at the racks (y ≈ -2.6).
 
+## After the machine restart
+
+- The machine restarted while the sign close-up was rendering, so `stall_buecher_signs.jpg` was missing. I checked everything on disk before redoing anything: both Bücherstand LODs matched `buecher_sections.json`, and `glb_tools.check` passed on all 26 files.
+- The finished 3/4 preview showed the right cart's rod sign covering half of "Menschen & Gespräche". I moved both cart signs to the carts' front aprons (see above), regenerated `buecher_sections.json` (only the two cart `sign` entries and the `boards` note changed; slots and boards are the same), and rebuilt both LODs, the preview, the sign close-up and the three.js shot.
+- I re-exported the nine `deco_*.lite.glb` from the same script state as their full files (the full files had been re-exported for the contact sheet, the lites had not). Their node sets and triangle counts are unchanged.
+
 ## Round 2 open points
 
 | Point (source) | What I did | How to check |
@@ -70,7 +76,7 @@ What was built:
 | stall_gluehwein | 37,603 | 0.94 MB | 8,066 | 0.21 MB |
 | stall_bratwurst | 36,391 | 0.86 MB | 7,467 | 0.21 MB |
 | stall_bier | 39,745 | 1.01 MB | 9,641 | 0.26 MB |
-| **stall_buecher** | **48,074** | **1.30 MB** | **14,185 (30 %)** | **0.40 MB** |
+| **stall_buecher** | **48,098** | **1.31 MB** | **14,297 (30 %)** | **0.40 MB** |
 | deco_lebkuchen | 13,433 | 0.38 MB | 3,986 | 0.13 MB |
 | deco_mandeln | 15,985 | 0.41 MB | 4,653 | 0.13 MB |
 | deco_kerzen | 14,143 | 0.39 MB | 4,046 | 0.13 MB |
@@ -88,7 +94,7 @@ What was built:
   - rack carcasses, boards and canopies, carts with spoked wheels: about 7k;
   - canopy snow: 1.4k;
   - bulbs: about 0.6k.
-- **The Bücherstand with the vendor's current sets** (`prop_books_<key>` x6: 5,550 tris; shelf_1, shelf_2 and counter: 5,356) comes to **59.0k tris** against 80k. Its size is about 1.3 + 0.6 MB of glb plus the shared atlases, against 4 MB. Lite: 14.2k + about 3.5k.
+- **The Bücherstand with the vendor's current sets** (`prop_books_<key>` x6: 5,550 tris; shelf_1, shelf_2 and counter: 5,356) comes to **59.0k tris** against 80k. Its size is about 1.31 + 0.6 MB of glb plus the shared atlases, against 4 MB. Lite: 14.3k + about 3.5k.
 - The other three section stalls and the nine deco structures are unchanged in geometry (the deco and Bratwurst glbs were re-exported from the same scripts), so the round-2 headroom figures still apply.
 - **Contract checks:** `glb_tools.check` passes on all 26 stall and deco files. For `stall_buecher*` it now also requires `slot_cat_<key>` and `sign_cat_<key>` for every category key.
   - Every stall has `slot_counter`, `slot_shelf_1`, `slot_shelf_2`, `slot_vendor`, `slot_sign`, `slot_front`, `light_*`, `bulbs_*`, `snow_*`, `cam_view`, `cam_target` and material `bulb_warm`.
@@ -100,8 +106,8 @@ What was built:
 ## Previews in this folder
 
 - `stall_buecher_preview.jpg`: Cycles, 1280x720, 48 samples, 3/4 front view at night. It shows the vendor's shipped `prop_books_<key>` sets on the racks and carts (imported at their rotated slots), plus the shelf and counter sets. The emissive stand-ins are off.
-- `stall_buecher_signs.jpg`: Cycles, 1280x720, 48 samples, from about the stall's `cam_view`. It shows the six category signs.
-- `stall_buecher_threejs.jpg`: the bare shipped glb in three.js (SwiftShader, AO on, snow off as on the site), same camera as the Cycles preview. The `paint_glow` signs read under moonlight. The racks are empty because no props are attached.
+- `stall_buecher_signs.jpg`: Cycles, 1280x720, 48 samples, straight on from 5.2 m in front of the counter (a little wider than `cam_view`). It shows all six category signs, the cart signs on the aprons, and the cabinets above the carts.
+- `stall_buecher_threejs.jpg`: the shipped glb in three.js (SwiftShader, AO on, snow off as on the site), same camera as the Cycles preview, with the vendor's nine book sets attached at their slots the way the engine does it (`blender/stalls/web/shoot.mjs --props`). The `paint_glow` signs read under moonlight, and the six sets land on their racks and carts.
 - `stall_bier_preview.jpg`: re-rendered with the narrow sign-lamp spots.
 - `stall_gluehwein_preview.jpg`, `stall_bratwurst_preview.jpg`: re-rendered this round with the vendor's current props (geometry unchanged).
 - `deco_contact_sheet.jpg`: the nine deco structures, re-rendered with the narrow sign-lamp spots (32 samples).

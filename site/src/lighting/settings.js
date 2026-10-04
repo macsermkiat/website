@@ -80,6 +80,15 @@ export const NIGHT = {
   // "size" of the point and spot lights for direct specular (see shading.js): a roughness floor
   lightSize: { minRoughness: 0.32, minClearcoatRoughness: 0.3 },
 
+  // Round 2, fix pass: baked ambient occlusion (shading.js lightingAO). The carpenter's stalls ship an
+  // occlusionTexture (uv1) since round 3; three uses it for the hemisphere and the environment only.
+  // `glow`: share of it applied to the local glows (interior bounce, eave, spill, sign, bulb strings),
+  // which stand in for bounce light and so should be occluded in full. `point`: share applied to the
+  // short-reach interior lamps (reach under pointMaxDistance m; not the rides' washes or the stage
+  // lights), so the top of a back wall tucked under the roof beam, behind the bulb row, is no longer
+  // lit as brightly as open wall and the bulbs stand apart. Models with no occlusion map are unchanged.
+  ao: { glow: 1.0, point: 0.6, pointMaxDistance: 6 },
+
   // local glows (shading.js): cheap diffuse light with no shadow, evaluated per fragment
   glow: {
     // the bulb strings light what hangs near them (garland, lambrequin); 0.6 lit the fascia board
@@ -149,6 +158,13 @@ export const NIGHT = {
     // rot_wheel gets a faint warm self-light on its opaque materials above `minY` m (or turning with
     // the wheel): albedo x warm x `steel` (gondolas and paint: `other`). Full and lite alike; no lights.
     bounce: { steel: 0.22, other: 0.1, minY: 3, color: [1.0, 0.7, 0.42] },
+    // round 2, fix pass: the Ferris wheel's hub. Its 16 spokes carry bulb strings that converge on the
+    // hub, and from the home view the last 3-4 m of every spoke overlap into one bloom: a white starburst.
+    // The bulbs of a rot_wheel's bulbs_ meshes fade with their distance from the wheel's axis: `min` of
+    // their emissive at `inner` m (the hub's rim, 1.2 m), full again from `outer` m. At 0.15 x 3.9 the
+    // inner bulbs sit under the bloom threshold, so they read as small amber dots on the spokes, and the
+    // wheel reads as rim and spokes. Per-vertex attribute, no extra draw calls.
+    hubFade: { inner: 1.2, outer: 5.0, min: 0.15 },
   },
 
   // Warm real-time lights at light_ empties, by kind (three.js units; colour temperature in Kelvin).
@@ -196,7 +212,11 @@ export const NIGHT = {
     // light_2 is 3.2 m in front of the hub). From 3.2 m the steel round the hub took 13x the rim's light
     // and, with the hub's bulbs, bloomed into a white star in the home view; from 6.2 m it is 4x.
     // 60 -> 70 and reach 16 -> 18 m keep the rim (11 m radius) as lit as before
-    landmark: { point: 26, spot: 40, pointDistance: 10, spotDistance: 12, wash: 70, washDistance: 18, washHeight: 8, washOut: 3 },
+    // round 2, fix pass: still a starburst in the home view. three's distance window (1 - (d/D)^4)^2 at
+    // D = 18 m cut the rim (12.8 m away) to 55 % but the hub (6.2 m) only to 97 %, so the hub took 7.5x
+    // the rim's light. washOut 3 -> 6 (the wash 9.2 m in front of the hub), washDistance 18 -> 30 and
+    // wash 70 -> 56: the rim gets the same light (0.24), the hub 63 % less (2.7x the rim)
+    landmark: { point: 26, spot: 40, pointDistance: 10, spotDistance: 12, wash: 56, washDistance: 30, washHeight: 8, washOut: 6 },
     deco: { point: 18, front: 6, frontAngle: 1.4, frontPenumbra: 0.25, frontAim: 1.7, frontLift: 0.4, frontOut: 0.8, spot: 20, pointDistance: 3.6, frontDistance: 6, spotDistance: 7 },
     lamp: { point: 7, spot: 12, pointDistance: 10, spotDistance: 10 },
     tree: { point: 16, spot: 20, pointDistance: 10, spotDistance: 10 },
@@ -239,6 +259,10 @@ export const PROFILES = {
     probeSize: 128,
     glows: 28, // local glows evaluated per fragment (stall interiors first, then bulb strings)
     adaptive: true, // step down MSAA, then composer pixel ratio, then bloom resolution if slow
+    // round 2, fix pass: the median frame time (ms, over 150 frames) that triggers each step. The first
+    // step (MSAA 4x -> 2x) comes at 16.7 ms, the judges' rule for the full profile, so any GPU slower
+    // than 60 fps at 4x settles at 2x by itself; the later steps wait for 18.2 ms (55 fps)
+    adaptiveMs: [16.7, 18.2],
     lightBudget: 14,
     // the place the visitor enters borrows up to this many unshadowed lights for its unlit light_ spots
     focusLights: 2,

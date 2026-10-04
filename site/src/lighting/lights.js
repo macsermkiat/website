@@ -960,3 +960,64 @@ export function tuneEmissives(root, N, { lite = false } = {}) {
   });
   return { bulbs, windows };
 }
+
+/**
+ * Round 2, fix pass: fade the bulbs of a turning wheel (a model with rot_wheel) toward its hub, so the
+ * converging spoke strings do not bloom into a starburst (settings emissive.hubFade). Each bulbs_ mesh
+ * under rot_wheel gets a per-vertex `nmEmit` (1 on the rim, `min` at the hub) and a clone of its bulb
+ * material that multiplies its emissive by it. `bulbs` (the model's bulb material set from
+ * tuneEmissives) gets the clones, so the emissive tuning still reaches them. Returns the meshes faded.
+ */
+export function hubFade(root, N, bulbs) {
+  const H = N.emissive?.hubFade;
+  const wheel = root.getObjectByName('rot_wheel');
+  if (!H || !wheel) return 0;
+  root.updateMatrixWorld(true);
+  const toWheel = new THREE.Matrix4().copy(wheel.matrixWorld).invert();
+  const m4 = new THREE.Matrix4(), v = new THREE.Vector3();
+  const lo = H.inner ?? 1.2, hi = H.outer ?? 5, min = H.min ?? 0.15;
+  const clones = new Map();
+  let n = 0;
+  wheel.traverse((o) => {
+    if (!o.isMesh || o.userData.hubFade || !(/^bulbs_/i.test(o.name) || /^bulbs_/i.test(o.parent?.name || ''))) return;
+    const pos = o.geometry?.attributes?.position;
+    if (!pos) return;
+    m4.multiplyMatrices(toWheel, o.matrixWorld);
+    const fade = new Float32Array(pos.count);
+    let any = false;
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(m4);
+      const t = THREE.MathUtils.smoothstep(Math.hypot(v.x, v.y), lo, hi); // the wheel turns about its local z
+      fade[i] = min + (1 - min) * t;
+      if (fade[i] < 0.999) any = true;
+    }
+    if (!any) return; // a gondola's bulbs, out on the rim
+    o.geometry = o.geometry.clone();
+    o.geometry.setAttribute('nmEmit', new THREE.BufferAttribute(fade, 1));
+    const one = (m) => {
+      if (!m || !m.emissive) return m;
+      if (clones.has(m)) return clones.get(m);
+      const q = m.clone();
+      q.name = m.name;
+      q.userData = { ...m.userData, hubFade: true };
+      const prev = m.onBeforeCompile;
+      q.onBeforeCompile = (sh, r) => {
+        prev?.call(q, sh, r);
+        sh.vertexShader = sh.vertexShader
+          .replace('#include <common>', '#include <common>\nattribute float nmEmit;\nvarying float vNmEmit;')
+          .replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvNmEmit = nmEmit;');
+        sh.fragmentShader = sh.fragmentShader
+          .replace('#include <common>', '#include <common>\nvarying float vNmEmit;')
+          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance *= vNmEmit;');
+      };
+      q.customProgramCacheKey = () => `nmHubFade|${m.customProgramCacheKey?.() ?? ''}`;
+      clones.set(m, q);
+      if (bulbs?.has(m)) bulbs.add(q);
+      return q;
+    };
+    o.material = Array.isArray(o.material) ? o.material.map(one) : one(o.material);
+    o.userData.hubFade = true;
+    n++;
+  });
+  return n;
+}
