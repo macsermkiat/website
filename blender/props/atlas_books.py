@@ -1,105 +1,110 @@
-"""The Bücherstand's own texture atlas: spines, front covers, page edges and the open spread.
+"""The Bücherstand's own texture atlas: Mac's 55 books (spines and front covers), untitled filler spines,
+page edges and the open guest book on the counter.
 
-Every book on the stall is one node with one material, book_cover_<n>, that reads this atlas
-(blender/out/vendor/books_*.png, shipped as prop_tex_books_*.webp). The spine and the front
-cover of a book come from the same spec, so the cover the engine shows when a book is opened
-matches the spine the visitor clicked.
+Every clickable book on the stall is one node with one material, book_cover_<nn>, that reads this atlas
+(blender/out/vendor/books_*.png, shipped as prop_tex_books_*.webp). A book's spine (spine_b<nn>) and front
+cover (cover_b<nn>) come from the same design (books_catalog), so the cover the engine shows when a book is
+opened matches the spine the visitor clicked.
 
-Book metadata (display title and full author) lives here too, for items.json.
+Region sizes follow each book's real proportions at one texel density (SPINE_PX_CM across and along the
+spine, COVER_PX_CM on the cover), so no spine is stretched and every title reads at the same sharpness.
+Round 3: the invented and borrowed stock titles of rounds 1-2 are gone; filler spines carry no text.
 """
 import math
 
 import numpy as np
 
+import books_catalog
 import vendor_atlas as va
-from vendor_atlas import Tex, fbm, fit_size, hexc, mix, shape_mask, smooth, text_mask
+from vendor_atlas import Tex, fbm, hexc, mix, shape_mask, smooth, text_mask
 
-COVER_W, COVER_H = 160, 232          # the five reading-list books
-GCOVER_W, GCOVER_H = 128, 184        # the rest of the stock (the books atlas grows taller to hold them all)
-
-# Named books: spine region key -> (display title, author, subtitle for the cover)
-NAMED_META = {
-    "order_of_time": ("The Order of Time", "Carlo Rovelli", None),
-    "geb": ("Gödel, Escher, Bach", "Douglas R. Hofstadter", "an Eternal Golden Braid"),
-    "feynman_1": ("The Feynman Lectures on Physics, Vol. I", "Richard P. Feynman, Robert B. Leighton, Matthew Sands", None),
-    "feynman_2": ("The Feynman Lectures on Physics, Vol. II", "Richard P. Feynman, Robert B. Leighton, Matthew Sands", None),
-    "feynman_3": ("The Feynman Lectures on Physics, Vol. III", "Richard P. Feynman, Robert B. Leighton, Matthew Sands", None),
-    "being_you": ("Being You", "Anil Seth", "A New Science of Consciousness"),
-    "book_of_why": ("The Book of Why", "Judea Pearl and Dana Mackenzie", "The New Science of Cause and Effect"),
-}
-
-# Full author names for the generic shelf titles (the spines print the short form)
-FULL_AUTHOR = {
-    "Goethe": "Johann Wolfgang von Goethe", "Kant": "Immanuel Kant", "Nietzsche": "Friedrich Nietzsche",
-    "Mann": "Thomas Mann", "Hesse": "Hermann Hesse", "Thoreau": "Henry David Thoreau", "Melville": "Herman Melville",
-    "Newton": "Isaac Newton", "Aurelius": "Marcus Aurelius", "Abbott": "Edwin A. Abbott", "Hawking": "Stephen Hawking",
-    "Rovelli": "Carlo Rovelli", "Feynman": "Richard P. Feynman", "Hofstadter": "Douglas R. Hofstadter",
-    "Hofstadter & Dennett": "Douglas R. Hofstadter and Daniel C. Dennett", "Dennett": "Daniel C. Dennett",
-    "Deutsch": "David Deutsch", "Kahneman": "Daniel Kahneman", "Pearl": "Judea Pearl",
-    "Wittgenstein": "Ludwig Wittgenstein", "Kuhn": "Thomas S. Kuhn", "Sagan": "Carl Sagan", "Greene": "Brian Greene",
-    "Nagel & Newman": "Ernest Nagel and James R. Newman", "Penrose": "Roger Penrose", "Schrödinger": "Erwin Schrödinger",
-    "Prigogine": "Ilya Prigogine and Isabelle Stengers", "Jaynes": "E. T. Jaynes", "": "Brüder Grimm",
-    "Kafka": "Franz Kafka", "Dawkins": "Richard Dawkins", "Eliot": "T. S. Eliot", "Nagel": "Thomas Nagel",
-    "Damasio": "Antonio Damasio", "Spinoza": "Baruch de Spinoza", "Schopenhauer": "Arthur Schopenhauer",
-}
-FULL_AUTHOR_BY_TITLE = {
-    "Surfaces and Essences": "Douglas R. Hofstadter and Emmanuel Sander",
-    # round 2 stock
-    "Sapiens": "Yuval Noah Harari", "The Gene": "Siddhartha Mukherjee", "The Double Helix": "James D. Watson",
-    "On the Origin of Species": "Charles Darwin", "Chaos": "James Gleick", "The Information": "James Gleick",
-    "Surely You're Joking, Mr. Feynman!": "Richard P. Feynman", "The Black Swan": "Nassim Nicholas Taleb",
-    "Superforecasting": "Philip E. Tetlock and Dan Gardner", "The Signal and the Noise": "Nate Silver",
-    "How to Read a Book": "Mortimer J. Adler and Charles Van Doren",
-    "Zen and the Art of Motorcycle Maintenance": "Robert M. Pirsig", "Man's Search for Meaning": "Viktor E. Frankl",
-    "Der Mythos des Sisyphos": "Albert Camus", "Die Blechtrommel": "Günter Grass", "Der Name der Rose": "Umberto Eco",
-    "Das Parfum": "Patrick Süskind", "Momo": "Michael Ende", "Die unendliche Geschichte": "Michael Ende",
-    "Der Vorleser": "Bernhard Schlink", "Effi Briest": "Theodor Fontane",
-    "Die Leiden des jungen Werthers": "Johann Wolfgang von Goethe", "Die Physiker": "Friedrich Dürrenmatt",
-    "Homo faber": "Max Frisch", "Im Westen nichts Neues": "Erich Maria Remarque",
-    "Emil und die Detektive": "Erich Kästner", "Die Räuber": "Friedrich Schiller",
-    "Nathan der Weise": "Gotthold Ephraim Lessing", "Der Schimmelreiter": "Theodor Storm",
-    "Narziß und Goldmund": "Hermann Hesse", "Das Glasperlenspiel": "Hermann Hesse",
-    "Berlin Alexanderplatz": "Alfred Döblin", "Pride and Prejudice": "Jane Austen", "Middlemarch": "George Eliot",
-    "One Hundred Years of Solitude": "Gabriel García Márquez", "Invisible Cities": "Italo Calvino",
-    "Ficciones": "Jorge Luis Borges", "The Little Prince": "Antoine de Saint-Exupéry",
-    "A Christmas Carol": "Charles Dickens", "Dune": "Frank Herbert", "Foundation": "Isaac Asimov",
-    "Solaris": "Stanisław Lem", "The Left Hand of Darkness": "Ursula K. Le Guin", "Frankenstein": "Mary Shelley",
-    "Elements": "Euclid", "What Is Mathematics?": "Richard Courant and Herbert Robbins",
-    "A Mathematician's Apology": "G. H. Hardy", "How to Solve It": "George Pólya",
-    "Proofs from THE BOOK": "Martin Aigner and Günter M. Ziegler",
-    "The Art of Computer Programming": "Donald E. Knuth",
-    "Structure and Interpretation of Computer Programs": "Harold Abelson and Gerald Jay Sussman",
-    "The Visual Display of Quantitative Information": "Edward R. Tufte",
-    "The Elements of Statistical Learning": "Trevor Hastie, Robert Tibshirani and Jerome Friedman",
-    "Information Theory, Inference and Learning Algorithms": "David J. C. MacKay",
-    "Statistical Rethinking": "Richard McElreath", "The Lady Tasting Tea": "David Salsburg",
-    "Das geheime Leben der Bäume": "Peter Wohlleben", "Silent Spring": "Rachel Carson",
-    "The Human Condition": "Hannah Arendt", "Sein und Zeit": "Martin Heidegger",
-    "Phänomenologie des Geistes": "Georg Wilhelm Friedrich Hegel", "The Republic": "Plato",
-    "Nicomachean Ethics": "Aristotle", "Leviathan": "Thomas Hobbes", "Essais": "Michel de Montaigne",
-    "Pensées": "Blaise Pascal", "Tao Te Ching": "Laozi", "The Periodic Table": "Primo Levi",
-    "The Blind Watchmaker": "Richard Dawkins", "Scale": "Geoffrey West",
-    "Algorithms to Live By": "Brian Christian and Tom Griffiths", "Our Mathematical Universe": "Max Tegmark",
-    "Anathem": "Neal Stephenson", "Stoner": "John Williams", "The Remains of the Day": "Kazuo Ishiguro",
-    "Austerlitz": "W. G. Sebald", "The Three-Body Problem": "Liu Cixin", "Thinking in Systems": "Donella H. Meadows",
-    "Pale Blue Dot": "Carl Sagan", "The Divine Comedy": "Dante Alighieri", "The Odyssey": "Homer",
-    "Don Quixote": "Miguel de Cervantes", "War and Peace": "Leo Tolstoy",
-    "The Brothers Karamazov": "Fyodor Dostoevsky", "To the Lighthouse": "Virginia Woolf",
-    "Nineteen Eighty-Four": "George Orwell", "Brave New World": "Aldous Huxley",
-}
+SPINE_PX_CM = (27, 20)        # px per cm across the spine (thickness) and along it (height)
+COVER_PX_CM = 10              # px per cm on the front cover
+N_FILLER = 18                 # untitled filler spines (not clickable, merged into each set's static mesh)
+FILLER_PX = (40, 300)
+SANS = ("oswald", "bebas", "josefin")
 
 
-def book_meta(spine_key):
-    """spine region key ('spine_geb', 'spine_g12') -> (title, author)."""
-    k = spine_key.replace("spine_", "")
-    if k in NAMED_META:
-        return NAMED_META[k][:2]
-    i = int(k[1:])
-    title, short, _ = va.GENERIC_TITLES[i]
-    return title, FULL_AUTHOR_BY_TITLE.get(title, FULL_AUTHOR.get(short, short))
+def book_meta(nn):
+    """Book nn -> (title, author) as in categories.json."""
+    b = dict(books_catalog.load())[nn]
+    return b["title"], b["author"]
 
 
-# ------------------------------------------------------------ cover art
+# ------------------------------------------------------------ spines
+def spine_spec(b):
+    """A g_spine spec for one book (vendor_atlas.g_spine draws it)."""
+    fnt = b["font"]
+    up = fnt in SANS
+    title = b["spine_title"].upper() if up else b["spine_title"]
+    author = b["spine_author"].upper() if up else b["spine_author"]
+    two = "\n" in title
+    acc = b["accent"]
+    # layout along the spine (0 = head, 1 = foot): the title from near the head, the author's name before the
+    # foot band; a long author name takes more length from the title
+    aw = min(0.27, max(0.13, 0.0115 * len(author)))
+    a_end = 0.91
+    ax = a_end - aw / 2
+    t0, t1 = 0.05, a_end - aw - 0.035
+    tx, span = (t0 + t1) / 2, (t1 - t0)
+    if b["binding"] == "cloth":
+        light = b["col"] in ("e8dfc8", "d8c9a2", "b49a6a")
+        return dict(col=b["col"], kind="cloth", gilt=not light and b["ink"] == "d9b25e", title=title, author=author,
+                    font=fnt, wght=600, ink=b["ink"], x=tx, span=span, ax=ax, aw=aw, scale=1.0, afont=fnt)
+
+    def extra(th, L, T, xx, yy):
+        # the jacket's accent: a band at the foot, a publisher's mark inside it, and for some a head band
+        th.paint(((xx > L * 0.935) & (xx < L * 0.975)).astype(float), hexc(acc), 0.45)
+        m = smooth(T * 0.2, T * 0.16, np.hypot(xx - L * 0.955, yy - T * 0.5))
+        th.paint(m, hexc(b["col"]), 0.45)
+        if b["motif"] in ("bar", "split", "frame2", "grid"):
+            th.paint(((xx > L * 0.02) & (xx < L * 0.04)).astype(float), hexc(acc), 0.45)
+    return dict(col=b["col"], kind="paper", title=title, author=author, font=fnt,
+                wght=700 if fnt in ("josefin", "playfair") else 600, ink=b["ink"], x=tx, span=span,
+                ax=ax, aw=aw, afont="oswald" if up else fnt, extra=extra, rules=False, scale=1.0 if two else 0.92)
+
+
+def g_filler(i):
+    """An untitled filler spine: cloth with blind rules, leather with raised bands and a blank label, or a
+    plain paper spine with a printed colour band. No lettering (filler books are not anyone's titles)."""
+    cols = va.SPINE_COLS
+    col = cols[(i * 7 + 3) % len(cols)]
+    kind = ("cloth", "leather", "paper")[i % 3]
+    if kind == "leather":
+        col = ["5a3522", "3e2618", "6b2a1c", "2e2a22"][i % 4]
+
+    def f(w, h, seed):
+        L, T = h, w
+        th = va.spine_base(L, T, seed, col, kind)
+        xx = np.arange(L)[None, :] * np.ones((T, 1))
+        yy = np.arange(T)[:, None] * np.ones((1, L))
+        ink = hexc("c8a456" if kind != "paper" else cols[(i * 5 + 1) % len(cols)])
+        if kind == "leather":
+            for k in range(4):
+                cx = L * (0.2 + 0.6 * k / 3)
+                th.height += smooth(3.2, 0, np.abs(xx - cx)) * 1.2
+                th.paint(smooth(0.8, 0, np.abs(np.abs(xx - cx) - 3.6)), ink, 0.4, 0.8)
+            lab = ((np.abs(xx - L * 0.32) < L * 0.09) & (yy > T * 0.16) & (yy < T * 0.84)).astype(float)
+            th.paint(lab, hexc(["6e1a1a", "1e1e1e", "25402a"][i % 3]), 0.5, 0.0, 0.2)
+        elif kind == "cloth":
+            for cx in (L * 0.06, L * 0.075, L * 0.925, L * 0.94):
+                th.paint(smooth(0.9, 0.2, np.abs(xx - cx)), ink, 0.45, 0.6 if i % 2 else 0.0, 0.1)
+            th.height -= smooth(0.9, 0.2, np.abs(xx - L * 0.45)) * 0.0
+        else:
+            th.paint(((xx > L * (0.82 + 0.02 * (i % 3))) & (xx < L * 0.95)).astype(float), ink, 0.45)
+        t = Tex(w, h)
+        t.col, t.rough = np.rot90(th.col, k=-1), np.rot90(th.rough, k=-1)
+        t.metal, t.height = np.rot90(th.metal, k=-1), np.rot90(th.height, k=-1)
+        t.hscale = 0.8
+        return t
+    return f, kind
+
+
+def filler_kinds():
+    return {f"spine_f{i}": ("cloth", "leather", "paper")[i % 3] for i in range(N_FILLER)}
+
+
+# ------------------------------------------------------------ covers
 def _wrap(text, fn, wght, max_w, size, max_lines):
     """Greedy word wrap at the largest size (<= size) that fits max_lines lines of max_w px."""
     words = text.split()
@@ -123,11 +128,8 @@ def _wrap(text, fn, wght, max_w, size, max_lines):
 
 def _text_block(w, h, text, fn, wght, size, max_w, y_mid, max_lines=4, lead=1.12):
     lines, s = _wrap(text, fn, wght, max_w, size, max_lines)
-    rows = []
     n = len(lines)
-    for i, ln in enumerate(lines):
-        rows.append((ln, fn, s, wght, (w / 2, y_mid + (i - (n - 1) / 2) * s * lead), "mm"))
-    return rows
+    return [(ln, fn, s, wght, (w / 2, y_mid + (i - (n - 1) / 2) * s * lead), "mm") for i, ln in enumerate(lines)]
 
 
 def _frame(w, h, inset, width):
@@ -150,131 +152,207 @@ def _cover_base(w, h, seed, col, kind):
     return t
 
 
-def g_cover(spec, meta, key):
-    """Front cover for a spine spec. meta = (title, author, subtitle)."""
-    title, author, sub = meta
+def _motif(name, w, h, cy):
+    """A cover graphic as a mask (0..1) centred at height cy. Simple original shapes, one per design."""
+    cx = w / 2
+    r = w * 0.26
 
+    def draw(fn):
+        return shape_mask(w, h, fn)
+    if name == "waves":
+        return draw(lambda d, s: [d.line([((x) * s, (cy + 6 * k + 4 * math.sin(x / w * 2 * math.pi * 2 + k)) * s)
+                                          for x in range(0, w + 1, 2)], fill=255, width=int(1.6 * s)) for k in range(-3, 4)])
+    if name == "orbit":
+        return draw(lambda d, s: [d.ellipse([(cx - r * f) * s, (cy - r * f * 0.45) * s, (cx + r * f) * s,
+                                             (cy + r * f * 0.45) * s], outline=255, width=int(1.4 * s))
+                                  for f in (0.5, 0.8, 1.1)] + [d.ellipse([(cx - 5) * s, (cy - 5) * s, (cx + 5) * s,
+                                                                          (cy + 5) * s], fill=255)])
+    if name == "field":
+        return draw(lambda d, s: [d.line([((cx - r * 1.2) * s, (cy + k * 5) * s), ((cx + r * 1.2) * s, (cy + k * 5 + 3 * math.sin(k)) * s)],
+                                         fill=255, width=int(1.2 * s)) for k in range(-4, 5)])
+    if name in ("rings", "sun"):
+        out = draw(lambda d, s: [d.ellipse([(cx - r * f) * s, (cy - r * f) * s, (cx + r * f) * s, (cy + r * f) * s],
+                                           outline=255, width=int(1.4 * s)) for f in (0.4, 0.7, 1.0)])
+        if name == "sun":
+            out = np.maximum(out, draw(lambda d, s: d.ellipse([(cx - r * 0.3) * s, (cy - r * 0.3) * s,
+                                                               (cx + r * 0.3) * s, (cy + r * 0.3) * s], fill=255)))
+        return out
+    if name == "spiral":
+        pts = [(cx + r * (t / 40) * math.cos(t * 0.45), cy + r * (t / 40) * math.sin(t * 0.45)) for t in range(41)]
+        return draw(lambda d, s: d.line([(x * s, y * s) for x, y in pts], fill=255, width=int(1.5 * s)))
+    if name == "clock":
+        def f(d, s):
+            for i in range(60):
+                a = 2 * math.pi * i / 60
+                ln = 8 if i % 5 == 0 else 3.5
+                d.line([((cx + r * math.cos(a)) * s, (cy + r * math.sin(a)) * s),
+                        ((cx + (r - ln) * math.cos(a)) * s, (cy + (r - ln) * math.sin(a)) * s)], fill=255, width=int(1.2 * s))
+        return draw(f)
+    if name == "split":
+        yy, xx = np.mgrid[0:h, 0:w].astype(float)
+        return ((yy > cy) & (yy < cy + h * 0.16)).astype(float)
+    if name == "curve":
+        pts = [(w * 0.15 + w * 0.7 * t / 30, cy + r - (r * 2) * (t / 30) ** 2) for t in range(31)]
+        return draw(lambda d, s: d.line([(x * s, y * s) for x, y in pts], fill=255, width=int(2 * s)))
+    if name == "burst":
+        def f(d, s):
+            for i in range(24):
+                a = 2 * math.pi * i / 24
+                d.line([(cx * s, cy * s), ((cx + r * 1.2 * math.cos(a)) * s, (cy + r * 1.2 * math.sin(a)) * s)],
+                       fill=255, width=int(1.0 * s))
+            d.ellipse([(cx - r * 0.3) * s, (cy - r * 0.3) * s, (cx + r * 0.3) * s, (cy + r * 0.3) * s], fill=255)
+        return draw(f)
+    if name == "bongo":
+        return draw(lambda d, s: [d.ellipse([(cx + dx - r * 0.45) * s, (cy - r * 0.45) * s, (cx + dx + r * 0.45) * s,
+                                             (cy + r * 0.45) * s], outline=255, width=int(2 * s)) for dx in (-r * 0.5, r * 0.55)])
+    if name in ("bar", "frame2"):
+        yy, xx = np.mgrid[0:h, 0:w].astype(float)
+        m = ((yy > cy - 3) & (yy < cy + 3) & (xx > w * 0.15) & (xx < w * 0.85)).astype(float)
+        return np.maximum(m, _frame(w, h, 8, 2)) if name == "frame2" else m
+    if name == "dots":
+        return draw(lambda d, s: [d.ellipse([(cx + i * 11 - 2.6) * s, (cy + j * 11 - 2.6) * s, (cx + i * 11 + 2.6) * s,
+                                             (cy + j * 11 + 2.6) * s], fill=255) for i in range(-3, 4) for j in range(-1, 2)])
+    if name == "grid":
+        def f(d, s):
+            for k in range(-3, 4):
+                d.line([((cx + k * 9) * s, (cy - 27) * s), ((cx + k * 9) * s, (cy + 27) * s)], fill=255, width=int(1 * s))
+                d.line([((cx - 27) * s, (cy + k * 9) * s), ((cx + 27) * s, (cy + k * 9) * s)], fill=255, width=int(1 * s))
+        return draw(f)
+    if name == "arch":
+        return draw(lambda d, s: d.arc([(cx - r) * s, (cy - r) * s, (cx + r) * s, (cy + r) * s], 180, 360, fill=255,
+                                       width=int(3 * s)))
+    if name == "bubble":
+        return draw(lambda d, s: [d.rounded_rectangle([(cx - r + dx) * s, (cy - r * 0.45 + dy) * s, (cx + r * 0.4 + dx) * s,
+                                                       (cy + r * 0.2 + dy) * s], radius=int(6 * s), outline=255,
+                                                      width=int(1.6 * s)) for dx, dy in ((0, 0), (r * 0.6, r * 0.55))])
+    if name == "crack":
+        pts = [(w * 0.2, cy - 10), (w * 0.38, cy + 3), (w * 0.5, cy - 6), (w * 0.62, cy + 8), (w * 0.8, cy - 2)]
+        return draw(lambda d, s: d.line([(x * s, y * s) for x, y in pts], fill=255, width=int(1.6 * s)))
+    if name == "swan":
+        def f(d, s):
+            d.ellipse([(cx - r * 0.7) * s, (cy) * s, (cx + r * 0.5) * s, (cy + r * 0.55) * s], fill=255)
+            d.arc([(cx + r * 0.1) * s, (cy - r * 0.9) * s, (cx + r * 0.75) * s, (cy + r * 0.3) * s], 180, 330,
+                  fill=255, width=int(3 * s))
+        return draw(f)
+    if name == "pencil":
+        return draw(lambda d, s: d.line([((cx - r) * s, (cy + r * 0.3) * s), ((cx + r) * s, (cy - r * 0.3) * s)],
+                                        fill=255, width=int(4 * s)))
+    if name == "dag":
+        def f(d, s):
+            pts = [(w * 0.3, cy - 6), (w * 0.7, cy - 6), (w * 0.5, cy + 8)]
+            for (x0, y0), (x1, y1) in ((pts[0], pts[1]), (pts[0], pts[2]), (pts[1], pts[2])):
+                d.line([(x0 * s, y0 * s), (x1 * s, y1 * s)], fill=255, width=int(1.5 * s))
+            for x, y in pts:
+                d.ellipse([(x - 4.5) * s, (y - 4.5) * s, (x + 4.5) * s, (y + 4.5) * s], fill=255)
+        return draw(f)
+    if name == "arrow":
+        def f(d, s):
+            d.line([((cx - r) * s, cy * s), ((cx + r * 0.6) * s, cy * s)], fill=255, width=int(2.5 * s))
+            d.polygon([((cx + r) * s, cy * s), ((cx + r * 0.5) * s, (cy - 7) * s), ((cx + r * 0.5) * s, (cy + 7) * s)], fill=255)
+        return draw(f)
+    return np.zeros((h, w))
+
+
+def g_cover(b):
+    """Front cover of one of Mac's books: cloth cases get a blind-stamped frame and stamped title and author;
+    jackets and paperbacks a typographic layout with the design's motif in its accent colour."""
     def f(w, h, seed):
-        kind = spec["kind"]
-        t = _cover_base(w, h, seed + 5, spec["col"], kind)
-        ink = hexc(spec.get("ink", "d9b25e"))
-        gilt = spec.get("gilt", False)
+        cloth = b["binding"] == "cloth"
+        kind = "cloth" if cloth else "paper"
+        t = _cover_base(w, h, seed + 5, b["col"], kind)
+        ink = hexc(b["ink"])
+        gilt = cloth and b["ink"] == "d9b25e"
         metal, rough = (1.0, 0.35) if gilt else (0.0, 0.55)
-        fn = spec.get("font", "garamond")
-        wg = spec.get("wght", 600)
+        fn = b["font"]
+        up = fn in SANS
+        wg = 700 if fn in ("josefin", "playfair") else 600
         rows = []
-        if kind == "leather":
-            t.paint(_frame(w, h, 9, 2), ink, rough, metal, -0.2)
-            t.paint(_frame(w, h, 14, 1), ink, rough, metal, -0.2)
-            lab = hexc(spec.get("label") or "6e1a1a")
-            yy, xx = np.mgrid[0:h, 0:w].astype(float)
-            panel = ((xx > w * 0.2) & (xx < w * 0.8) & (yy > h * 0.3) & (yy < h * 0.52)).astype(float)
-            t.paint(panel, lab, 0.5, 0.0, 0.15)
-            rows += _text_block(w, h, title, fn, wg, 20, w * 0.54, h * 0.41, 3)
-        elif kind == "cloth":
+        title, author = b["title"], b["author"]
+        if cloth:
             t.height = t.height - _frame(w, h, 10, 1.5) * 0.8          # blind-stamped panel
-            rows += _text_block(w, h, title, fn, wg, 22, w * 0.72, h * 0.33, 4)
-            if author:
-                rows += _text_block(w, h, author.upper(), fn, 500, 11, w * 0.7, h * 0.8, 2)
+            t.paint(_frame(w, h, 14, 1.0) * 0.6, ink, rough, metal, -0.2)
+            rows += _text_block(w, h, title, fn, wg, 20, w * 0.7, h * 0.34, 4)
+            rows += _text_block(w, h, author.upper(), fn, 500, 10, w * 0.7, h * 0.8, 2)
         else:
-            extra = spec.get("cover_extra")
-            if extra:
-                extra(t, w, h, seed)
-            else:
-                # a publisher's colour block across the lower third
-                yy = np.mgrid[0:h, 0:w][0].astype(float)
-                c2 = hexc(va.SPINE_COLS[(seed * 5 + 1) % len(va.SPINE_COLS)])
-                t.paint(((yy > h * 0.64) & (yy < h * 0.7)).astype(float), c2, 0.45)
-            rows += _text_block(w, h, spec["title"] if spec["title"].isupper() else title, fn, wg,
-                                spec.get("cover_size", 26), w * 0.8, h * spec.get("cover_y", 0.34), 4)
-            if sub:
-                rows += _text_block(w, h, sub, "garamond", 500, 11, w * 0.76, h * spec.get("sub_y", 0.56), 2)
-            if author:
-                afn = spec.get("afont", fn)
-                rows += _text_block(w, h, author.upper() if afn in ("oswald", "bebas", "josefin") else author,
-                                    afn, 500, 12, w * 0.8, h * 0.86, 2)
-        m = text_mask(w, h, rows)
-        t.paint(m, ink, rough, metal, -0.15 if kind != "paper" else 0.0)
+            m = _motif(b["motif"], w, h, h * 0.66)
+            t.paint(m, hexc(b["accent"]), 0.45)
+            rows += _text_block(w, h, title.upper() if up else title, fn, wg, 24, w * 0.8, h * 0.28, 4)
+            rows += _text_block(w, h, author.upper() if up else author, "oswald" if up else fn, 500, 11, w * 0.8,
+                                h * 0.87, 2)
+        t.paint(text_mask(w, h, rows), ink, rough, metal, -0.15 if cloth else 0.0)
         return t
     return f
 
 
-def _named_cover_extras():
-    """Original cover graphics for the five reading-list titles (typographic, no publisher art)."""
-    def order_of_time(t, w, h, seed):
-        # a ring of clock ticks behind the title, and a warm band at the foot
-        def ring(d, ss):
-            cx, cy, r = w / 2, h * 0.36, w * 0.36
-            for i in range(60):
-                a = 2 * math.pi * i / 60
-                l = 9 if i % 5 == 0 else 4
-                d.line([((cx + r * math.cos(a)) * ss, (cy + r * math.sin(a)) * ss),
-                        ((cx + (r - l) * math.cos(a)) * ss, (cy + (r - l) * math.sin(a)) * ss)],
-                       fill=255, width=int(1.2 * ss))
-        t.paint(shape_mask(w, h, ring) * 0.5, hexc("e5a33a"), 0.5)
-        yy = np.mgrid[0:h, 0:w][0].astype(float)
-        t.paint(((yy > h * 0.93) & (yy < h * 0.97)).astype(float), hexc("e5a33a"), 0.5)
-
-    def geb(t, w, h, seed):
-        yy = np.mgrid[0:h, 0:w][0].astype(float)
-        t.paint(((yy > h * 0.04) & (yy < h * 0.12)).astype(float), hexc("9c1f24"), 0.5)
-
-        def braid(d, ss):
-            cx, cy = w / 2, h * 0.7
-            for k in range(3):
-                x = cx + (k - 1) * 18
-                d.ellipse([(x - 12) * ss, (cy - 12) * ss, (x + 12) * ss, (cy + 12) * ss], outline=255, width=int(2 * ss))
-        t.paint(shape_mask(w, h, braid), hexc("9c1f24"), 0.5)
-
-    def being_you(t, w, h, seed):
-        yy, xx = np.mgrid[0:h, 0:w].astype(float)
-        t.paint(((yy > h * 0.93) & (yy < h * 0.97)).astype(float), hexc("e24a2a"), 0.5)
-        r = np.hypot(xx - w / 2, yy - h * 0.34)
-        t.paint(smooth(w * 0.34, w * 0.33, r) * smooth(w * 0.3, w * 0.31, r) * 0.8, hexc("f2c230"), 0.5)
-
-    def book_of_why(t, w, h, seed):
-        yy = np.mgrid[0:h, 0:w][0].astype(float)
-        t.paint(((yy > h * 0.03) & (yy < h * 0.08)).astype(float), hexc("2a5aa8"), 0.5)
-
-        def dag(d, ss):
-            pts = [(w * 0.3, h * 0.68), (w * 0.7, h * 0.68), (w * 0.5, h * 0.76)]
-            for (x0, y0), (x1, y1) in ((pts[0], pts[1]), (pts[0], pts[2]), (pts[1], pts[2])):
-                d.line([(x0 * ss, y0 * ss), (x1 * ss, y1 * ss)], fill=255, width=int(1.5 * ss))
-            for x, y in pts:
-                d.ellipse([(x - 5) * ss, (y - 5) * ss, (x + 5) * ss, (y + 5) * ss], fill=255)
-        t.paint(shape_mask(w, h, dag), hexc("2a5aa8"), 0.5)
-
-    def feynman(t, w, h, seed):
-        t.paint(_frame(w, h, 10, 1.5), hexc("e2bd6a"), 0.35, 1.0, -0.2)
-    return {"order_of_time": order_of_time, "geb": geb, "being_you": being_you, "book_of_why": book_of_why,
-            "feynman_1": feynman, "feynman_2": feynman, "feynman_3": feynman}
+# ------------------------------------------------------------ the open guest book on the counter
+GREETINGS = [
+    ("Frohe Weihnachten aus Leipzig! Wir kommen wieder.", "caveat"),
+    ("Danke für den Tipp mit dem Rovelli. A. & J.", "caveat"),
+    ("Best Glühwein, best books. Merry Christmas!", "caveat"),
+    ("Schöne Bescherung und ein gutes neues Jahr", "caveat"),
+    ("Hier war Lena (7) mit Oma", "caveat"),
+    ("Ein Buch ist ein Geschenk, das man immer wieder öffnen kann.", "caveat"),
+    ("Grüße aus Bangkok! Merry Christmas from far away.", "caveat"),
+    ("Für Mac: danke für die Empfehlung, K.", "caveat"),
+]
 
 
-def named_cover_specs():
-    specs = va.named_spines()
-    extras = _named_cover_extras()
-    out = {}
-    for key, spec in specs.items():
-        s = dict(spec)
-        s["cover_extra"] = extras[key]
-        if key == "being_you":
-            s["sub_y"] = 0.7
-        if key.startswith("feynman"):
-            s["kind"] = "paper"            # print the lettering flat, then the frame is gilt
-            s["title"] = "THE FEYNMAN LECTURES ON PHYSICS"
-            s["cover_size"] = 20
-            s["cover_y"] = 0.3
-        title, author, sub = NAMED_META[key]
-        if key.startswith("feynman"):
-            sub = "Volume " + key.split("_")[1].replace("1", "I").replace("2", "II").replace("3", "III")
-            author = "Feynman · Leighton · Sands"
-        out[key] = (s, (title, author, sub))
-    return out
+def g_pages_open(w, h, seed):
+    """Two-page spread of the bookseller's guest book: handwritten greetings in several inks on the left,
+    a pressed paper star and a few more lines on the right. No printed book title anywhere."""
+    from PIL import Image, ImageDraw
+    t = Tex(w, h, hexc("efe6cf"), 0.9)
+    yy, xx = np.mgrid[0:h, 0:w].astype(float)
+    t.col = mix(t.col, np.array(hexc("d9cba8")), smooth(0.04 * w, 0.0, np.abs(xx - w / 2)) * 0.6)   # gutter
+    t.col = mix(t.col, np.array(hexc("d9cba8")), fbm(h, w, 60, seed) * 0.25)
+    # faint ruled lines on both pages
+    rule = (np.abs(((yy - h * 0.1) % 22) - 0) < 0.8) & (yy > h * 0.08) & (yy < h * 0.92)
+    t.col = mix(t.col, np.array(hexc("b8c4d0")), rule * 0.35)
+    inks = ["1f2f6a", "2a2420", "6a1a1a", "1f4a2a"]
+    rngl = np.random.default_rng(seed)
+    for i, (txt, fn) in enumerate(GREETINGS):
+        page = 0 if i < 5 else 1
+        x0 = w * (0.07 if page == 0 else 0.56)
+        y = h * 0.1 + (i if page == 0 else i - 5) * 44 + 14
+        im = Image.new("L", (w * 3, h * 3), 0)
+        d = ImageDraw.Draw(im)
+        f = va.font("caveat", 17 * 3, 500)
+        words, line, ly = txt.split(), "", y
+        for wd in words:
+            if f.getlength(line + wd + " ") / 3 > w * 0.38:
+                d.text((x0 * 3, ly * 3), line, fill=255, font=f)
+                line, ly = "", ly + 20
+            line += wd + " "
+        d.text((x0 * 3, ly * 3), line, fill=255, font=f)
+        m = np.asarray(im.resize((w, h), Image.LANCZOS), float) / 255.0
+        t.paint(m * 0.92, hexc(inks[int(rngl.integers(len(inks)))]), 0.6)
+
+    def star(d, s):
+        cx, cy, R = w * 0.78, h * 0.78, h * 0.1
+        pts = []
+        for k in range(10):
+            rr = R if k % 2 == 0 else R * 0.45
+            a = -math.pi / 2 + k * math.pi / 5
+            pts.append(((cx + rr * math.cos(a)) * s, (cy + rr * math.sin(a)) * s))
+        d.polygon(pts, fill=255)
+    t.paint(shape_mask(w, h, star) * 0.9, hexc("b8322a"), 0.6, height=0.3)
+    t.height += fbm(h, w, 5, seed + 2) * 0.15
+    return t
 
 
-# ------------------------------------------------------------ open spread, swatch
+# ------------------------------------------------------------ swatch
 def g_book_swatch(w, h, seed):
     return Tex(w, h, (1, 1, 1), 0.5)
+
+
+def spine_px(b):
+    t, h, _ = b["dims"]
+    return max(40, round(t * 100 * SPINE_PX_CM[0])), round(h * 100 * SPINE_PX_CM[1])
+
+
+def cover_px(b):
+    _, h, d = b["dims"]
+    return round(d * 100 * COVER_PX_CM), round(h * 100 * COVER_PX_CM)
 
 
 def books_specs():
@@ -283,14 +361,25 @@ def books_specs():
     add = lambda n, w, h, g: R.append((n, w, h, g))
     add("bk_satin", 16, 16, g_book_swatch)
     add("pages_edge", 256, 48, va.g_pages_edge)
-    add("pages_open", 512, 352, va.g_pages_open)
-    for key, (spec, meta) in named_cover_specs().items():
-        add("spine_" + key, 80, 448, va.g_spine(va.named_spines()[key]))
-        add("cover_" + key, COVER_W, COVER_H, g_cover(spec, meta, key))
-    rng = np.random.default_rng(3)
-    for i, (title, author, kind) in enumerate(va.GENERIC_TITLES):
-        spec = va.generic_spine(i, title, author, kind, rng)
-        add(f"spine_g{i}", 48, 304, va.g_spine(spec))
-        full = FULL_AUTHOR_BY_TITLE.get(title, FULL_AUTHOR.get(author, author))
-        add(f"cover_g{i}", GCOVER_W, GCOVER_H, g_cover(spec, (title, full, None), f"g{i}"))
+    add("pages_open", 512, 352, g_pages_open)
+    for nn, b in books_catalog.load():
+        k = books_catalog.key(nn)
+        add("spine_" + k, *spine_px(b), va.g_spine(spine_spec(b)))
+        add("cover_" + k, *cover_px(b), g_cover(b))
+    for i in range(N_FILLER):
+        add(f"spine_f{i}", *FILLER_PX, g_filler(i)[0])
     return R
+
+
+if __name__ == "__main__":
+    import os
+    import sys
+    # quick look: render a few spines and covers to the scratch folder given as argv[1]
+    out = sys.argv[1] if len(sys.argv) > 1 else "/tmp"
+    from PIL import Image
+    specs = books_specs()
+    pick = [s for s in specs if s[0].startswith(("spine_b", "cover_b", "spine_f"))]
+    for name, w, h, g in pick:
+        tx = g(w, h, 7)
+        Image.fromarray((np.clip(tx.col, 0, 1) * 255).astype(np.uint8)).save(os.path.join(out, name + ".png"))
+    print(len(pick), "written to", out)

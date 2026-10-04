@@ -36,7 +36,7 @@ from nmlib import state  # noqa: E402
 TWO_PI = 2 * math.pi
 ATLAS_DIR = os.path.join(REPO, "blender", "out", "vendor")
 MODELS = os.path.join(REPO, "site", "public", "models")
-REVIEW = os.path.join(REPO, "review", "round-2", "vendor")
+REVIEW = os.path.join(REPO, "review", "round-3", "vendor")
 _REG = None
 LITE = {"on": False}
 # Two random streams. `rng` is the layout stream: where goods stand, their sizes and which book is which.
@@ -535,7 +535,8 @@ def material(key):
         return m
     names = {"atlas": "vendor_atlas", "glaze": "vendor_glaze", "glass": "vendor_glass", "liquid": "vendor_liquid",
              "beer": "vendor_beer", "coal_glow": "coal_glow", "flame": "flame", "lamp": "lamp_glow",
-             "grill_iron": "grill_iron", "lamp_shade": "vendor_lamp_shade", "foam": "vendor_foam"}
+             "grill_iron": "grill_iron", "lamp_shade": "vendor_lamp_shade", "foam": "vendor_foam",
+             "bulb_warm": "bulb_warm"}
     m = bpy.data.materials.new(names[key])
     m.use_nodes = True
     b = m.node_tree.nodes["Principled BSDF"]
@@ -546,7 +547,7 @@ def material(key):
         # the thin crown (Cycles previews) and a soft sheen (exported as KHR_materials_sheen) for the creamy
         # velvet look the engine can show
         _atlas_nodes(m, normal_strength=0.8)
-        for k, v in (("Subsurface Weight", 0.35), ("Subsurface Scale", 0.004), ("Sheen Weight", 0.35),
+        for k, v in (("Subsurface Weight", 0.15), ("Subsurface Scale", 0.004), ("Sheen Weight", 0.35),
                      ("Sheen Roughness", 0.4)):
             if k in b.inputs:
                 b.inputs[k].default_value = v
@@ -594,13 +595,17 @@ def material(key):
             nt.links.new(uv.outputs[0], t.inputs[0])
         _vcol_mult(nt, tc.outputs["Color"], b)
         nt.links.new(te.outputs["Color"], b.inputs["Emission Color"])
-        b.inputs["Emission Strength"].default_value = 3.0
-        b.inputs["Roughness"].default_value = 0.9
+        b.inputs["Emission Strength"].default_value = 4.0
+        # dry char: fully rough, not metallic, very little specular (round 2 read as glossy orange facets)
+        b.inputs["Roughness"].default_value = 1.0
+        b.inputs["Metallic"].default_value = 0.0
+        if "Specular IOR Level" in b.inputs:
+            b.inputs["Specular IOR Level"].default_value = 0.2
     elif key == "flame":
         b.inputs["Base Color"].default_value = (1.0, 0.75, 0.35, 1)
         b.inputs["Emission Color"].default_value = (1.0, 0.62, 0.22, 1)
         b.inputs["Emission Strength"].default_value = 12.0
-    elif key == "lamp":
+    elif key in ("lamp", "bulb_warm"):
         b.inputs["Base Color"].default_value = (1.0, 0.9, 0.7, 1)
         b.inputs["Emission Color"].default_value = (1.0, 0.78, 0.48, 1)
         b.inputs["Emission Strength"].default_value = 8.0

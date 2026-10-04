@@ -26,7 +26,7 @@ FAIL (exit 1):
 WARN (listed, exit 0): lite versions above 38 % of the full triangles (target about a third).
 
     python3 blender/props/check_props.py --notes   also rewrites the budget tables in
-                                                   review/round-2/vendor/NOTES.md from the current glbs
+                                                   review/round-3/vendor/NOTES.md from the current glbs
 """
 import json
 import os
@@ -44,16 +44,21 @@ MODELS = os.path.join(REPO, "site", "public", "models")
 REPORT = os.path.join(REPO, "blender", "out", "props_report.json")
 SECTION = {"gluehwein": "stall_gluehwein", "bierstand": "stall_bier", "bratwurst": "stall_bratwurst",
            "buecherstand": "stall_buecher"}
+CATEGORIES = os.path.join(REPO, "content", "books", "categories.json")
+with open(CATEGORIES) as _f:
+    BOOK_CATS = json.load(_f)["categories"]
 SECTION_SETS = ["prop_gluehwein_counter", "prop_gluehwein_shelf", "prop_gluehwein_wine", "prop_bier_counter",
                 "prop_bier_back", "prop_bier_shelf", "prop_wurst_counter", "prop_books_shelf_1", "prop_books_shelf_2",
-                "prop_books_counter"]
+                "prop_books_counter"] + [f"prop_books_{c['key']}" for c in BOOK_CATS]
+# BUILD.md: the Bücherstand with all its props may use 80k triangles and 4 MB; the other section stalls 60k / 3 MB
+STALL_BUDGET = {"buecherstand": (80000, 4.0)}
 DECO_KEYS = ["lebkuchen", "mandeln", "kerzen", "spielzeug", "schmuck", "kaese", "crepes", "maroni", "puffer"]
-NO_AO = ("vendor_glass", "flame", "lamp_glow", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade")
+NO_AO = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade")
 BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|sausage)_\d+$|^act_grill$")
 HEADROOM, SECTION_TRIS, SECTION_MB, DECO_TRIS = 2000, 60000, 3.0, 20000
 LITE_RATIO = 0.38
 ACT_BBOX_TOL, MESH_BBOX_TOL = 0.01, 0.02          # m: full vs lite bounds of act_ subtrees / mesh nodes
-NOTES = os.path.join(REPO, "review", "round-2", "vendor", "NOTES.md")
+NOTES = os.path.join(REPO, "review", "round-3", "vendor", "NOTES.md")
 SEAT = os.path.join(HERE, "seat_check.mjs")
 
 fails, warns = [], []
@@ -103,9 +108,9 @@ def check_nodes(name, js, nodes):
         and all(par.get(f"foam_{g.rsplit('_', 1)[1]}") == g for g in acts(nodes, "act_glass_")),
         "prop_wurst_counter": lambda: "act_grill" in nodes and "act_grill_swing" in nodes
         and acts(nodes, "act_sausage_") and acts(nodes, "act_roll_"),
-        "prop_books_shelf_1": lambda: acts(nodes, "act_book_"),
-        "prop_books_shelf_2": lambda: acts(nodes, "act_book_"),
     }
+    for c in BOOK_CATS:
+        need[f"prop_books_{c['key']}"] = (lambda c=c: len(acts(nodes, "act_book_")) == len(c["books"]))
     if name in need and not need[name]():
         fail(f"{name}: required act_ nodes missing")
     if name == "prop_wurst_counter":
@@ -339,6 +344,39 @@ def seat_check(sets):
     return res
 
 
+def check_books(items, seen):
+    """Mac's 55 books: each title in categories.json is exactly one act_book_<nn> in its category's set
+    prop_books_<key>, items.json carries name, author, slug and category, every slug has its summary file, and
+    no act_book_ node anywhere carries a title that is not in categories.json (no invented titles)."""
+    want = {}
+    for c in BOOK_CATS:
+        for b in c["books"]:
+            want[b["slug"]] = (b["title"], b["author"], c["key"])
+    got = {}
+    for n, it in items.items():
+        if not re.match(r"^act_book_\d+$", n):
+            continue
+        slug = it.get("slug")
+        if slug not in want:
+            fail(f"items.json: {n} ({it.get('title')!r}) is not one of Mac's books (slug {slug!r})")
+            continue
+        t, a, k = want[slug]
+        if (it.get("name"), it.get("title"), it.get("author"), it.get("category")) != (t, t, a, k):
+            fail(f"items.json: {n} does not match categories.json for {slug} "
+                 f"({it.get('name')!r}, {it.get('author')!r}, {it.get('category')!r})")
+        if it.get("set") != f"prop_books_{k}":
+            fail(f"{n} ({slug}) is in {it.get('set')}, not prop_books_{k}")
+        if slug in got:
+            fail(f"{slug} appears twice: {got[slug]} and {n}")
+        got[slug] = n
+        if not os.path.exists(os.path.join(REPO, "content", "books", slug + ".md")):
+            fail(f"{n}: content/books/{slug}.md does not exist")
+    missing = sorted(set(want) - set(got))
+    if missing:
+        fail(f"{len(missing)} of Mac's books have no act_book_ node: {missing[:6]}")
+    print(f"\nbooks: {len(got)} of {len(want)} titles from categories.json, one act_book_ node each")
+
+
 def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite):
     """Replace the generated budget block in NOTES.md (between the check_props markers)."""
     L = ["<!-- check_props:begin (generated by blender/props/check_props.py --notes; do not edit by hand) -->", "",
@@ -352,10 +390,11 @@ def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite
     L += ["", f"All prop glbs together: {glb_full / 1e6:.2f} MB full and {glb_lite / 1e6:.2f} MB lite. Shared textures "
           f"(`prop_tex_*`): {tex / 1e6:.2f} MB full and {tex_lite / 1e6:.2f} MB lite, loaded once for all sets.", "",
           "Section stalls, the carpenter's current stall glb plus my props (60k triangles and 3 MB with the shared "
-          "textures the sets use; check_props fails under 2k headroom):", "",
-          "| stall | stall tris | + props | total / 60k | headroom | MB / 3 |", "|---|---|---|---|---|---|"]
-    for st, a, b, tot, room, mb in section_rows:
-        L.append(f"| {st} | {a} | {b} | {tot} {'OK' if room >= HEADROOM else 'FAIL'} | {room} | {mb:.2f} |")
+          "textures the sets use, the Bücherstand 80k and 4 MB; check_props fails under 2k headroom):", "",
+          "| stall | stall tris | + props | total / budget | headroom | MB / budget |", "|---|---|---|---|---|---|"]
+    for st, a, b, tot, room, mb, lt, lmb in section_rows:
+        L.append(f"| {st} | {a} | {b} | {tot} / {lt // 1000}k {'OK' if room >= HEADROOM else 'FAIL'} | {room} | "
+                 f"{mb:.2f} / {lmb:.0f} |")
     L += ["", "Deco stalls, stall plus goods against 20k (check_props fails over):", "",
           "| deco stall | stall tris | goods | total / 20k | room |", "|---|---|---|---|---|"]
     for d, a, b, tot in deco_rows:
@@ -459,12 +498,13 @@ def main():
         tb = sum(os.path.getsize(os.path.join(MODELS, u)) for u in used)
         tot = sr["triangles"] + pt
         mb = (sr["bytes"] + pb + tb) / 1e6
-        print(f"{stall:14s} {sr['triangles']:6d} {pt:6d} {tot:6d} {SECTION_TRIS - tot:6d} {mb:5.2f}")
-        section_rows.append((stall, sr["triangles"], pt, tot, SECTION_TRIS - tot, mb))
-        if tot > SECTION_TRIS - HEADROOM:
-            fail(f"{stall}: {tot} triangles leaves {SECTION_TRIS - tot} headroom (< {HEADROOM})")
-        if mb > SECTION_MB:
-            fail(f"{stall}: {mb:.2f} MB with the shared textures (> {SECTION_MB})")
+        lim_t, lim_mb = STALL_BUDGET.get(stall, (SECTION_TRIS, SECTION_MB))
+        print(f"{stall:14s} {sr['triangles']:6d} {pt:6d} {tot:6d} {lim_t - tot:6d} {mb:5.2f} (of {lim_t // 1000}k, {lim_mb:.0f} MB)")
+        section_rows.append((stall, sr["triangles"], pt, tot, lim_t - tot, mb, lim_t, lim_mb))
+        if tot > lim_t - HEADROOM:
+            fail(f"{stall}: {tot} triangles leaves {lim_t - tot} headroom (< {HEADROOM})")
+        if mb > lim_mb:
+            fail(f"{stall}: {mb:.2f} MB with the shared textures (> {lim_mb})")
     print(f"\n{'deco stall':14s} {'stall':>6s} {'goods':>6s} {'total':>6s}")
     for d in DECO_KEYS:
         sid = "deco-" + ("kartoffelpuffer" if d == "puffer" else d)
@@ -476,7 +516,14 @@ def main():
         if tot > DECO_TRIS:
             fail(f"deco {d}: stall {sr['triangles']} + goods {pt} = {tot} > {DECO_TRIS} "
                  f"({'the stall alone leaves ' + str(max(0, DECO_TRIS - sr['triangles'])) + ' for goods'})")
-    seat_check(sets)
+    check_books(items, seen)
+    # the beer heads as the browser decodes them (meshopt, quantised node transforms): no tall foam columns
+    fc = subprocess.run(["node", os.path.join(HERE, "foam_check.mjs")], capture_output=True, text=True, timeout=300)
+    print("\nfoam check: " + " | ".join(fc.stdout.strip().splitlines()))
+    if fc.returncode:
+        fail("foam check: a beer head is too tall for its glass (blender/props/foam_check.mjs)")
+    if "--no-seat" not in sys.argv:
+        seat_check(sets)
     if "--notes" in sys.argv:
         write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite)
     if fails:

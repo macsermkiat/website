@@ -816,10 +816,38 @@ def maroni():
 
 # ------------------------------------------------------------------ Kartoffelpuffer
 def pancake(m, M, r):
-    n = seg(14, 8)
-    pts = [((r * (1 + rng.uniform(-0.08, 0.08))) * math.cos(TWO_PI * j / n),
-            (r * (1 + rng.uniform(-0.08, 0.08))) * math.sin(TWO_PI * j / n)) for j in range(n)]
-    m.extrude(pts, 0.009, M, "puffer", vlib.R("puffer", sub=(0.0, 0.0, 0.2, 0.2)), WHITE, back_region="puffer")
+    """A Kartoffelpuffer: thick and bumpy in the middle, thinning to a ragged, lacy edge where strands of
+    potato stick out (round 3; round 2's extruded discs read as tarts). The texture is mapped flat across it,
+    so the golden middle and the crisp dark-brown rim of the puffer region land where they belong."""
+    from mathutils import noise as mnoise
+    n = seg(18, 8)
+    reg = vlib.R("puffer")
+    seed = rng.uniform(0, 100)
+    outer = []
+    for j in range(n):
+        a = TWO_PI * j / n
+        k = 1 + 0.1 * mnoise.noise(Vector((math.cos(a) * 1.7, math.sin(a) * 1.7, seed)))
+        if rng.random() < 0.3:
+            k += rng.uniform(0.08, 0.2)               # a strand of potato sticking out
+        outer.append((r * k * math.cos(a), r * k * math.sin(a), 0.0015 + rng.uniform(0, 0.0015)))
+    rings = [outer]
+    if not vlib.lite():
+        rings.insert(0, [(r * 0.62 * math.cos(TWO_PI * j / n) * (1 + rng.uniform(-0.05, 0.05)),
+                          r * 0.62 * math.sin(TWO_PI * j / n) * (1 + rng.uniform(-0.05, 0.05)),
+                          0.0062 + rng.uniform(-0.0012, 0.0012)) for j in range(n)])
+    verts = [(0.0, 0.0, 0.0085)] + [v for ring in rings for v in ring] + [(0.0, 0.0, 0.0)]
+    uv = lambda v: reg.uv(0.5 + 0.5 * v[0] / (r * 1.25), 0.5 + 0.5 * v[1] / (r * 1.25))
+    faces = []
+    for j in range(n):
+        faces.append((0, 1 + j, 1 + (j + 1) % n))
+    for i in range(len(rings) - 1):
+        a0, b0 = 1 + i * n, 1 + (i + 1) * n
+        for j in range(n):
+            faces.append((a0 + j, b0 + j, b0 + (j + 1) % n, a0 + (j + 1) % n))
+    last, bot = 1 + (len(rings) - 1) * n, len(verts) - 1
+    for j in range(n):
+        faces.append((bot, last + (j + 1) % n, last + j))
+    m.add(verts, faces, [[uv(verts[i]) for i in f] for f in faces], M, jit(WHITE, 0.05), "atlas", True)
 
 
 def puffer():

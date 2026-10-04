@@ -4,7 +4,7 @@ import os
 import time
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 from . import state
 
@@ -220,11 +220,13 @@ def contact_sheet(items, out_jpg, cols=3, tile=(420, 236), pad=6, title=None):
     sheet.save(out_jpg, quality=88)
 
 
-def import_glb(path, at="slot_counter", offset=(0, 0, 0)):
+def import_glb(path, at="slot_counter", offset=(0, 0, 0), rotate=False):
     """Import a shipped market glb (e.g. the vendor's props) into the render-only Env collection,
     placed at the named empty `at` of the current build (or at a location tuple).
     Web glbs are meshopt-compressed, so the file is decoded first with blender/lib/decode.mjs.
-    Returns the imported objects, or [] when the file is missing (the preview then goes without)."""
+    Returns the imported objects, or [] when the file is missing (the preview then goes without).
+    rotate=True also turns the imported set by the empty's rotation (for slots that are rotated,
+    such as the Bücherstand's slot_cat_<key>); the default keeps the round-1/2 behaviour."""
     import subprocess
     if not os.path.exists(path):
         print(f"[nmlib] import_glb: {path} missing, skipped")
@@ -252,6 +254,10 @@ def import_glb(path, at="slot_counter", offset=(0, 0, 0)):
     loc += Vector(offset)
     for o in new:
         if o.parent is None:
-            o.location = o.location + loc
+            if rotate and isinstance(at, str):
+                R = bpy.data.objects[at].matrix_world.to_quaternion().to_matrix().to_4x4()
+                o.matrix_world = Matrix.Translation(loc) @ R @ o.matrix_world
+            else:
+                o.location = o.location + loc
     print(f"[nmlib] imported {os.path.basename(path)}: {len(new)} objects at {tuple(round(v, 3) for v in loc)}")
     return new

@@ -8,7 +8,7 @@ Maps (glTF conventions):
     atlas_color.png   base colour, sRGB, no lighting
     atlas_rm.png      G = roughness, B = metallic (R unused, 255)
     atlas_normal.png  tangent-space normal map (OpenGL / glTF +Y), from per-region height fields
-    coal_color.png / coal_emit.png   256 px pair for the coal_glow material (UV 0..1)
+    coal_color.png / coal_emit.png   512 px pair for the coal_glow material (UV 0..1)
 
 Regions are packed on shelves; regions.json maps name -> [u0, v0, u1, v1] in UV space (v up).
 Everything is generated from seeded noise, drawn text (OFL fonts in blender/props/fonts/ and
@@ -456,78 +456,7 @@ def g_pages_edge(w, h, seed):
     return t
 
 
-FAUST = ("Habe nun, ach! Philosophie, Juristerei und Medizin, und leider auch Theologie durchaus "
-         "studiert, mit heißem Bemühn. Da steh ich nun, ich armer Tor! Und bin so klug als wie zuvor; "
-         "heiße Magister, heiße Doktor gar und ziehe schon an die zehen Jahr herauf, herab und quer und "
-         "krumm meine Schüler an der Nase herum und sehe, daß wir nichts wissen können! Das will mir "
-         "schier das Herz verbrennen. Zwar bin ich gescheiter als all die Laffen, Doktoren, Magister, "
-         "Schreiber und Pfaffen; mich plagen keine Skrupel noch Zweifel, fürchte mich weder vor Hölle "
-         "noch Teufel. Dafür ist mir auch alle Freud entrissen, bilde mir nicht ein, was Rechts zu wissen.")
-
-
-def g_pages_open(w, h, seed):
-    """Two-page spread: left page text, right page a woodcut-style star map and a caption."""
-    t = Tex(w, h, hexc("efe6cf"), 0.9)
-    yy, xx = np.mgrid[0:h, 0:w].astype(float)
-    t.col = mix(t.col, np.array(hexc("d9cba8")), smooth(0.04 * w, 0.0, np.abs(xx - w / 2)) * 0.6)   # gutter
-    t.col = mix(t.col, np.array(hexc("d9cba8")), fbm(h, w, 60, seed) * 0.25)
-    im = Image.new("L", (w * 3, h * 3), 0)
-    d = ImageDraw.Draw(im)
-    f = font("garamond", 8.2 * 3, 450)
-    words = (FAUST + " " + FAUST).split()
-    x0, x1 = w * 0.07, w * 0.44
-    y = h * 0.1
-    k = 0
-    while y < h * 0.9 and k < len(words):
-        line = ""
-        while k < len(words) and f.getlength(line + words[k] + " ") / 3 < (x1 - x0):
-            line += words[k] + " "
-            k += 1
-        d.text((x0 * 3, y * 3), line, fill=255, font=f)
-        y += 10.5
-    fd = font("fraktur", 30 * 3)
-    d.text((w * 0.56 * 3, h * 0.1 * 3), "Faust.", fill=255, font=fd)
-    # right page: an engraved circle of stars (a star chart), caption lines
-    cx, cy, r = w * 0.75, h * 0.47, h * 0.28
-    d.ellipse([(cx - r) * 3, (cy - r) * 3, (cx + r) * 3, (cy + r) * 3], outline=255, width=4)
-    d.ellipse([(cx - r * 0.96) * 3, (cy - r * 0.96) * 3, (cx + r * 0.96) * 3, (cy + r * 0.96) * 3], outline=255, width=2)
-    rng = np.random.default_rng(seed)
-    # degree ticks around the ring, like an engraved celestial chart
-    for i in range(72):
-        a = 2 * math.pi * i / 72
-        l = r * (0.08 if i % 6 == 0 else 0.04)
-        d.line([((cx + (r * 0.96) * math.cos(a)) * 3, (cy + (r * 0.96) * math.sin(a)) * 3),
-                ((cx + (r * 0.96 - l) * math.cos(a)) * 3, (cy + (r * 0.96 - l) * math.sin(a)) * 3)], fill=255, width=2)
-
-    def star(px, py, R, n=5):
-        pts = []
-        for k in range(2 * n):
-            rr_ = R if k % 2 == 0 else R * 0.42
-            a = -math.pi / 2 + k * math.pi / n
-            pts.append(((px + rr_ * math.cos(a)) * 3, (py + rr_ * math.sin(a)) * 3))
-        d.polygon(pts, fill=255)
-    # two constellations: pointed stars joined by thin lines
-    for shape in ([(-0.5, -0.35), (-0.3, -0.45), (-0.1, -0.3), (0.05, -0.5), (0.25, -0.38)],
-                  [(-0.35, 0.2), (-0.15, 0.35), (0.1, 0.25), (0.3, 0.42), (0.15, 0.05)]):
-        pts = [(cx + u * r, cy + v * r) for u, v in shape]
-        d.line([(x * 3, y * 3) for x, y in pts], fill=200, width=2)
-        for x, y in pts:
-            star(x, y, rng.uniform(2.6, 3.8))
-    # scattered small stars
-    for i in range(18):
-        a, rr = rng.uniform(0, 2 * math.pi), r * math.sqrt(rng.random()) * 0.8
-        star(cx + rr * math.cos(a), cy + rr * math.sin(a), rng.uniform(1.2, 2.0), 4)
-    # a crescent moon
-    mx, my, mr = cx + r * 0.45, cy - r * 0.02, r * 0.16
-    d.ellipse([(mx - mr) * 3, (my - mr) * 3, (mx + mr) * 3, (my + mr) * 3], fill=255)
-    d.ellipse([(mx - mr + mr * 0.45) * 3, (my - mr - mr * 0.1) * 3, (mx + mr + mr * 0.45) * 3, (my + mr - mr * 0.1) * 3], fill=0)
-    for j in range(3):
-        d.line([(w * 0.6 * 3, (h * 0.83 + j * 9) * 3), (w * (0.9 - 0.08 * j) * 3, (h * 0.83 + j * 9) * 3)], fill=150, width=5)
-    im = im.resize((w, h), Image.LANCZOS)
-    m = np.asarray(im, float) / 255.0
-    t.paint(m * 0.9, hexc("2a2420"), 0.8, height=-0.1)
-    t.height += fbm(h, w, 5, seed + 2) * 0.15
-    return t
+# (the open-book spread is atlas_books.g_pages_open, the bookseller's guest book)
 
 
 # ------------------------------------------------------------ book spines
@@ -626,140 +555,8 @@ def g_spine(spec):
     return f
 
 
-def named_spines():
-    def band(col, x0, x1):
-        def e(th, L, T, xx, yy):
-            th.paint(((xx > L * x0) & (xx < L * x1)).astype(float), hexc(col), 0.45)
-        return e
-
-    def two(e1, e2):
-        def e(*a):
-            e1(*a)
-            e2(*a)
-        return e
-    specs = {
-        "order_of_time": dict(col="182a4f", kind="paper", title="THE ORDER OF TIME", font="oswald", wght=500,
-                              ink="f3efe4", author="CARLO ROVELLI", afont="oswald", x=0.37, ax=0.8, span=0.56,
-                              aw=0.2, extra=band("e5a33a", 0.94, 0.98)),
-        "geb": dict(col="efe9dc", kind="paper", title="GÖDEL, ESCHER, BACH", font="playfair", wght=800,
-                    ink="1b1b1b", author="HOFSTADTER", afont="playfair", x=0.4, ax=0.83, span=0.58, aw=0.2,
-                    extra=band("9c1f24", 0.03, 0.1)),
-        "feynman_1": dict(col="8e1b1d", kind="cloth", gilt=True, title="THE FEYNMAN LECTURES\nON PHYSICS",
-                          font="cinzel", wght=700, ink="e2bd6a", author="VOL. I", afont="cinzel", x=0.42, ax=0.84,
-                          span=0.66, scale=1.0),
-        "feynman_2": dict(col="8e1b1d", kind="cloth", gilt=True, title="THE FEYNMAN LECTURES\nON PHYSICS",
-                          font="cinzel", wght=700, ink="e2bd6a", author="VOL. II", afont="cinzel", x=0.42, ax=0.84,
-                          span=0.66),
-        "feynman_3": dict(col="8e1b1d", kind="cloth", gilt=True, title="THE FEYNMAN LECTURES\nON PHYSICS",
-                          font="cinzel", wght=700, ink="e2bd6a", author="VOL. III", afont="cinzel", x=0.42, ax=0.84,
-                          span=0.66),
-        "being_you": dict(col="141414", kind="paper", title="BEING YOU", font="bebas", ink="f2c230",
-                          author="ANIL SETH", afont="oswald", x=0.35, ax=0.78, span=0.48, scale=1.15,
-                          aw=0.2, extra=band("e24a2a", 0.93, 0.97)),
-        "book_of_why": dict(col="f4f1ea", kind="paper", title="THE BOOK OF WHY", font="josefin", wght=700,
-                            ink="161616", author="PEARL & MACKENZIE", afont="josefin", x=0.37, ax=0.8, span=0.54, aw=0.24,
-                            extra=band("2a5aa8", 0.93, 0.975)),
-    }
-    return specs
-
-
-GENERIC_TITLES = [
-    ("Faust", "Goethe", "leather"), ("Kritik der reinen Vernunft", "Kant", "leather"),
-    ("Also sprach Zarathustra", "Nietzsche", "leather"), ("Der Zauberberg", "Mann", "cloth"),
-    ("Siddhartha", "Hesse", "cloth"), ("Walden", "Thoreau", "cloth"), ("Moby-Dick", "Melville", "cloth"),
-    ("Principia", "Newton", "leather"), ("Meditations", "Aurelius", "leather"), ("Flatland", "Abbott", "cloth"),
-    ("A Brief History of Time", "Hawking", "paper"), ("Seven Brief Lessons on Physics", "Rovelli", "paper"),
-    ("Helgoland", "Rovelli", "paper"), ("QED", "Feynman", "paper"), ("The Character of Physical Law", "Feynman", "paper"),
-    ("I Am a Strange Loop", "Hofstadter", "paper"), ("The Mind's I", "Hofstadter & Dennett", "paper"),
-    ("Consciousness Explained", "Dennett", "paper"), ("The Beginning of Infinity", "Deutsch", "paper"),
-    ("The Fabric of Reality", "Deutsch", "paper"), ("Thinking, Fast and Slow", "Kahneman", "paper"),
-    ("Causality", "Pearl", "cloth"), ("Tractatus", "Wittgenstein", "cloth"),
-    ("Philosophical Investigations", "Wittgenstein", "cloth"),
-    ("The Structure of Scientific Revolutions", "Kuhn", "paper"), ("Cosmos", "Sagan", "paper"),
-    ("The Elegant Universe", "Greene", "paper"), ("Six Easy Pieces", "Feynman", "paper"),
-    ("Gödel's Proof", "Nagel & Newman", "paper"), ("The Emperor's New Mind", "Penrose", "paper"),
-    ("The Road to Reality", "Penrose", "cloth"), ("What Is Life?", "Schrödinger", "cloth"),
-    ("Order out of Chaos", "Prigogine", "paper"), ("Probability Theory", "Jaynes", "cloth"),
-    ("Buddenbrooks", "Mann", "cloth"), ("Der Steppenwolf", "Hesse", "cloth"), ("Grimms Märchen", "", "leather"),
-    ("Die Verwandlung", "Kafka", "cloth"), ("The Selfish Gene", "Dawkins", "paper"),
-    ("Surfaces and Essences", "Hofstadter", "paper"), ("The Waste Land", "Eliot", "cloth"),
-    ("Mind and Cosmos", "Nagel", "paper"), ("Reality Is Not What It Seems", "Rovelli", "paper"),
-    ("The Feeling of What Happens", "Damasio", "paper"), ("Critique of Judgment", "Kant", "leather"),
-    ("Ethik", "Spinoza", "leather"), ("Die Welt als Wille", "Schopenhauer", "leather"),
-    ("Der Prozess", "Kafka", "cloth"),
-    # round 2: more stock, so no title stands twice anywhere on the stall (atlas_books.FULL_AUTHOR_BY_TITLE
-    # gives each new title's full author)
-    ("Sapiens", "Harari", "paper"), ("The Gene", "Mukherjee", "paper"), ("The Double Helix", "Watson", "paper"),
-    ("On the Origin of Species", "Darwin", "leather"), ("Chaos", "Gleick", "paper"),
-    ("The Information", "Gleick", "paper"), ("Surely You're Joking, Mr. Feynman!", "Feynman", "paper"),
-    ("The Black Swan", "Taleb", "paper"), ("Superforecasting", "Tetlock & Gardner", "paper"),
-    ("The Signal and the Noise", "Silver", "paper"), ("How to Read a Book", "Adler & Van Doren", "cloth"),
-    ("Zen and the Art of Motorcycle Maintenance", "Pirsig", "paper"),
-    ("Man's Search for Meaning", "Frankl", "paper"), ("Der Mythos des Sisyphos", "Camus", "cloth"),
-    ("Die Blechtrommel", "Grass", "cloth"), ("Der Name der Rose", "Eco", "cloth"), ("Das Parfum", "Süskind", "paper"),
-    ("Momo", "Ende", "cloth"), ("Die unendliche Geschichte", "Ende", "cloth"), ("Der Vorleser", "Schlink", "paper"),
-    ("Effi Briest", "Fontane", "cloth"), ("Die Leiden des jungen Werthers", "Goethe", "leather"),
-    ("Die Physiker", "Dürrenmatt", "paper"), ("Homo faber", "Frisch", "paper"),
-    ("Im Westen nichts Neues", "Remarque", "cloth"), ("Emil und die Detektive", "Kästner", "cloth"),
-    ("Die Räuber", "Schiller", "leather"), ("Nathan der Weise", "Lessing", "leather"),
-    ("Der Schimmelreiter", "Storm", "cloth"), ("Narziß und Goldmund", "Hesse", "cloth"),
-    ("Das Glasperlenspiel", "Hesse", "cloth"), ("Berlin Alexanderplatz", "Döblin", "cloth"),
-    ("Pride and Prejudice", "Austen", "cloth"), ("Middlemarch", "George Eliot", "cloth"),
-    ("One Hundred Years of Solitude", "García Márquez", "paper"), ("Invisible Cities", "Calvino", "paper"),
-    ("Ficciones", "Borges", "paper"), ("The Little Prince", "Saint-Exupéry", "cloth"),
-    ("A Christmas Carol", "Dickens", "leather"), ("Dune", "Herbert", "paper"), ("Foundation", "Asimov", "paper"),
-    ("Solaris", "Lem", "paper"), ("The Left Hand of Darkness", "Le Guin", "paper"),
-    ("Frankenstein", "Shelley", "cloth"), ("Elements", "Euclid", "leather"),
-    ("What Is Mathematics?", "Courant & Robbins", "cloth"), ("A Mathematician's Apology", "Hardy", "cloth"),
-    ("How to Solve It", "Pólya", "paper"), ("Proofs from THE BOOK", "Aigner & Ziegler", "cloth"),
-    ("The Art of Computer Programming", "Knuth", "cloth"),
-    ("Structure and Interpretation of Computer Programs", "Abelson & Sussman", "cloth"),
-    ("The Visual Display of Quantitative Information", "Tufte", "cloth"),
-    ("The Elements of Statistical Learning", "Hastie et al.", "cloth"),
-    ("Information Theory, Inference and Learning Algorithms", "MacKay", "cloth"),
-    ("Statistical Rethinking", "McElreath", "cloth"), ("The Lady Tasting Tea", "Salsburg", "paper"),
-    ("Das geheime Leben der Bäume", "Wohlleben", "paper"), ("Silent Spring", "Carson", "paper"),
-    ("The Human Condition", "Arendt", "paper"), ("Sein und Zeit", "Heidegger", "cloth"),
-    ("Phänomenologie des Geistes", "Hegel", "leather"), ("The Republic", "Plato", "leather"),
-    ("Nicomachean Ethics", "Aristotle", "leather"), ("Leviathan", "Hobbes", "leather"),
-    ("Essais", "Montaigne", "leather"), ("Pensées", "Pascal", "leather"), ("Tao Te Ching", "Laozi", "cloth"),
-    ("The Periodic Table", "Primo Levi", "paper"), ("The Blind Watchmaker", "Dawkins", "paper"),
-    ("Scale", "West", "paper"), ("Algorithms to Live By", "Christian & Griffiths", "paper"),
-    ("Our Mathematical Universe", "Tegmark", "paper"), ("Anathem", "Stephenson", "paper"),
-    ("Stoner", "John Williams", "paper"), ("The Remains of the Day", "Ishiguro", "paper"),
-    ("Austerlitz", "Sebald", "cloth"), ("The Three-Body Problem", "Liu", "paper"),
-    ("Thinking in Systems", "Meadows", "paper"), ("Pale Blue Dot", "Sagan", "paper"),
-    ("The Divine Comedy", "Dante", "leather"), ("The Odyssey", "Homer", "leather"),
-    ("Don Quixote", "Cervantes", "leather"), ("War and Peace", "Tolstoy", "cloth"),
-    ("The Brothers Karamazov", "Dostoevsky", "cloth"), ("To the Lighthouse", "Woolf", "paper"),
-    ("Nineteen Eighty-Four", "Orwell", "paper"), ("Brave New World", "Huxley", "paper"),
-]
-
-
-def generic_spine(i, title, author, kind, rng):
-    col = SPINE_COLS[(i * 7 + 3) % len(SPINE_COLS)]
-    if kind == "leather":
-        col = ["5a3522", "3e2618", "6b2a1c", "2e2a22"][i % 4]
-        return dict(col=col, kind="leather", gilt=True, title=title, font=["garamond", "fell", "cinzel"][i % 3],
-                    wght=600, ink="d8b060", bands=4, label=["6e1a1a", "1e1e1e", "25402a"][i % 3], x=0.3)
-    if kind == "cloth":
-        light = col in ("e8dfc8", "d8c9a2", "b49a6a")
-        return dict(col=col, kind="cloth", gilt=not light, title=title, author=author,
-                    font=["garamond", "baskerville", "cinzel", "fell"][i % 4], wght=600,
-                    ink="1c1a18" if light else "d9b25e", x=0.4, span=0.54, ax=0.81, aw=0.17)
-    # paperback with printed blocks
-    ink = "f4efe4" if col not in ("e8dfc8", "d8c9a2", "b49a6a") else "1c1a18"
-    fnt = ["oswald", "josefin", "bebas", "playfair", "garamond"][i % 5]
-
-    def extra(th, L, T, xx, yy, i=i):
-        c2 = hexc(SPINE_COLS[(i * 5 + 1) % len(SPINE_COLS)])
-        th.paint(((xx > L * 0.88) & (xx < L * 0.97)).astype(float), c2, 0.45)
-        # publisher mark: a small circle
-        m = smooth(T * 0.22, T * 0.18, np.hypot(xx - L * 0.925, yy - T * 0.5))
-        th.paint(m, hexc(ink), 0.45)
-    return dict(col=col, kind="paper", title=title.upper() if fnt in ("oswald", "bebas") else title, author=author.upper()
-                if fnt in ("oswald", "bebas") else author, font=fnt, wght=600, ink=ink, x=0.36, ax=0.74, span=0.48, aw=0.18,
-                extra=extra)
+# Round 3: the named reading-list spines and the generic stock titles of rounds 1-2 were removed; Mac's own
+# books and the untitled filler spines are drawn by atlas_books (books_catalog holds their designs).
 
 
 def g_chalkboard(w, h, seed):
@@ -1039,6 +836,10 @@ def g_puffer(w, h, seed):
     t.col = mix(t.col, np.array(hexc("f0cf7a")), shreds * 0.5)
     t.col = mix(t.col, np.array(hexc("8a4a18")), smooth(0.6, 0.95, r + fbm(h, w, 10, seed) * 0.3) * 0.8)
     t.col = mix(t.col, np.array(hexc("5a2a0c")), smooth(0.85, 1.0, fbm(h, w, 5, seed + 4)) * 0.4)
+    # round 3: uneven browning where the pan was hottest, and crisp near-black strand tips at the rim
+    t.col = mix(t.col, np.array(hexc("a8601e")), smooth(0.55, 0.8, fbm(h, w, 18, seed + 7)) * 0.55)
+    t.col = mix(t.col, np.array(hexc("3a1a08")), smooth(0.82, 0.98, r) * shreds * 0.7)
+    t.rough = 0.4 - 0.15 * smooth(0.4, 0.9, fbm(h, w, 9, seed + 8))            # glossy where the oil sits
     t.height = shreds * 0.9
     return t
 
@@ -1228,8 +1029,8 @@ def build(size=SIZE, out=OUT):
     to8 = lambda a: Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8))
     # coal_glow has its own small texture pair (UV 0..1): base colour and the glow of the cracks
     cseed = 1000 + [s[0] for s in specs].index("coal") * 13
-    to8(atlas_goods.g_coal(256, 256, cseed).col).save(os.path.join(out, "coal_color.png"))
-    to8(atlas_goods.coal_emit(256, 256, cseed)).save(os.path.join(out, "coal_emit.png"))
+    to8(atlas_goods.g_coal(512, 512, cseed).col).save(os.path.join(out, "coal_color.png"))
+    to8(atlas_goods.coal_emit(512, 512, cseed)).save(os.path.join(out, "coal_emit.png"))
     meta = {"size": size, "used_rows_px": used, "regions": regions,
             "books": {"size": size, "height": max(size, -(-bused // 256) * 256), "used_rows_px": bused,
                       "regions": bregions}}

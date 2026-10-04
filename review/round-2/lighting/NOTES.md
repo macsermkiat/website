@@ -1,5 +1,7 @@
 # Round 2: lighting and atmosphere (lighting designer)
 
+This pass (pass 3) continued from the partial round-2 work on disk after a restart. It adds warmer bulb cores, softer shelf shadows and a softer Ferris hub, re-shoots the bench, the home view, the Glühwein approach and both lite entered views, and brings this file up to date with the code (the sign-lamp hood, the focus checks).
+
 `site/src/lighting/` is the night. `index.js` exports `createLighting({ scene, renderer, camera, lite })`, which returns `{ composer, update(dt, t), setSnow(on), dispose() }`. It also has the helpers the engine uses (`placeLights`, `tune`) and one new one this round, `focusPlace(id)`. The settings and the reasons for them are in `site/src/lighting/README.md`. Every round-2 change there is marked "round 2" and gives the round-1 value it replaced.
 
 The market report for the full home view says `lighting: "lighting"`, with 12 real-time lights (4 section interiors, 4 front fills, bandstand, tree, carousel, Ferris wheel) and no warnings.
@@ -85,7 +87,7 @@ If the fixed run's p50 is over 16.7 ms, set `PROFILES.full.msaa = 2` in `setting
 | Item | Size |
 |---|---|
 | Models and textures | None shipped. The sky, stars, snow, environment, probes and sign fixtures are generated in code. |
-| Code | About 139 KB of unminified JS in 11 files (9 modules plus `shoot*.mjs`/`perf.mjs`/`diag-market.mjs` tools; `compose.py`, `measure.py` for the review) |
+| Code | About 168 KB of unminified JS in 15 files: 9 modules (`index`, `lights`, `shading`, `settings`, `sky`, `env`, `snow`, `fog`, `grade`) plus tools and configs (`shoot*.mjs`, `perf.mjs`, `diag-market.mjs`, two vite configs). `compose.py` and `measure.py` make and measure the review images. |
 | Sign fixtures | 112 triangles per lamp, all lamps in one mesh, 3 draw calls per `placeLights` call |
 | Real-time warm lights | 14 on full, 4 on lite, minus the engine's reserved lights (12 in the market report). The entered place borrows up to 2 and the total stays the same. |
 | Local glows | 28 (full) / 16 (lite) slots in one shared uniform |
@@ -97,7 +99,8 @@ If the fixed run's p50 is over 16.7 ms, set `PROFILES.full.msaa = 2` in `setting
 - Measure real-GPU frame times on Mac's laptop (above).
 - The bench's left bulbs still merge into one bright run of about 120 px. The cause is the back wall right behind them, which the interior light lights almost white. The fix is baked AO or a lightmap on the carpenter's stalls, not more bloom tuning.
 - Snow does not settle on the ground or roofs yet.
-- Once the engine knows when a place is entered, it can call `lighting.raw.focusPlace(id)` from `openPlace` and `focusPlace(null)` on close. The camera-based detection then stops.
+- The engine should call `lighting.raw.focusPlace(id)` from `openPlace` and `focusPlace(null)` on close. The camera-based detection then stops, and the focus is set before the flight starts rather than a third of a second after it ends.
+- Re-shoot the Bratwurst approach (`market_sign_wurst.jpg` is from pass 1) when the machine is less loaded.
 
 ## Contract
 

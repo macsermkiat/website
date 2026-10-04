@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "lib"))
 
 from nmlib import bake, export, mats, render, state  # noqa: E402
 
-ROUND = os.environ.get("NM_ROUND", "2")
+ROUND = os.environ.get("NM_ROUND", "3")
 REVIEW = os.path.join(state.REPO, "review", f"round-{ROUND}", "carpenter")
 
 
@@ -33,13 +33,14 @@ def args():
     return a
 
 
-def vendor_props(pairs):
+def vendor_props(pairs, rotate=False):
     """Import the vendor's shipped prop glbs [(name, slot), ...] into the preview (render-only),
     so the Cycles preview shows the stall as the site assembles it. Returns True when at least
-    one set was found (callers fall back to simple stand-ins otherwise)."""
+    one set was found (callers fall back to simple stand-ins otherwise). rotate=True also applies
+    the slot's rotation (the Bücherstand's slot_cat_<key> on the angled racks)."""
     got = []
     for name, slot in pairs:
-        got += render.import_glb(os.path.join(state.MODELS_DIR, name + ".glb"), at=slot)
+        got += render.import_glb(os.path.join(state.MODELS_DIR, name + ".glb"), at=slot, rotate=rotate)
     return bool(got)
 
 

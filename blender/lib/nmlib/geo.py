@@ -72,6 +72,8 @@ class Part:
         self.V, self.F, self.UV, self.C, self.S = [], [], [], [], []
         self.curve_simplify = 6.0      # degrees; outline points of text/shapes closer than this merge
         self.lite_flat_text = True     # lite: letters are a single front face (no depth)
+        self.flat_text = False         # True: letters are a single front face in full builds too
+                                       # (painted lettering; about a third of the triangles)
 
     # ------------------------------------------------------------------ emit
     def _emit(self, bm, M, grain=None, tint=None, band=None, var=None, smooth=None,
@@ -355,7 +357,12 @@ class Part:
         cu.resolution_u = max(1, resolution - (1 if state.lite() else 0))
         b = 0.0012 if bevel is None else bevel
         flat = False
-        if state.lite():
+        if self.flat_text:
+            b = 0.0
+            flat = True
+            cu.extrude = 0.0
+            cu.fill_mode = 'FRONT'
+        elif state.lite():
             b = 0.0
             flat = self.lite_flat_text
             if flat:                    # lite: one front face per glyph, no sides or back

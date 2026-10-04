@@ -1,0 +1,384 @@
+{
+ "version": 1,
+ "about": "Bücherstand category sections (owner: carpenter; built by blender/stalls/buecher.py from blender/stalls/buecher_sections.py, so this file matches stall_buecher.glb). One section per key in content/books/categories.json. The vendor parents prop_books_<key> to slot_cat_<key>.",
+ "frame": "Positions are the stall's Blender frame (metres, Z up, origin on the ground at the footprint centre, front toward -Y; three.js: x = x, y = z, z = -y). Each section's frame is its slot empty's frame: +X along the boards from the visitor's left to right, -Y toward the visitor (spines face -Y), +Z up. slot_rotation_z_deg is that frame's rotation about Blender Z.",
+ "slot": "slot_cat_<key> sits at the LEFT end of the section's LOWEST board, on its top surface, at its front edge. Books stand on +Z from there, run along +X for board width and reach back (+Y) at most board depth.",
+ "boards": "offset is each board's [x, y, z] in the slot frame (same left end, front edge and top surface convention). clear_height is the free height above a board's top surface (null = open above). The cart's upper tier is stepped back (+Y) behind the lower tier's books.",
+ "mean_spine": 0.042,
+ "sections": [
+  {
+   "key": "physics",
+   "label_de": "Physik & Kosmos",
+   "label_en": "Physics and the Universe",
+   "books": 10,
+   "unit": "wing_l",
+   "kind": "side rack (left wing, bay 1 of 2 from the visitor's left)",
+   "slot": "slot_cat_physics",
+   "slot_position": [
+    -2.601,
+    -2.1832,
+    0.42
+   ],
+   "slot_rotation_z_deg": 50.0,
+   "board_count": 2,
+   "board_width": 0.56,
+   "board_depth": 0.26,
+   "board_thickness": 0.025,
+   "board_spacing": 0.38,
+   "boards": [
+    {
+     "index": 0,
+     "offset": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "width": 0.56,
+     "depth": 0.26,
+     "clear_height": 0.355
+    },
+    {
+     "index": 1,
+     "offset": [
+      0.0,
+      0.0,
+      0.38
+     ],
+     "width": 0.56,
+     "depth": 0.26,
+     "clear_height": 0.37
+    }
+   ],
+   "capacity_at_mean_spine": 26,
+   "shelf_length_needed": 0.42,
+   "sign": {
+    "node": "sign_cat_physics",
+    "text": "Physik & Kosmos",
+    "center": [
+     -2.4095,
+     -1.9783,
+     1.335
+    ],
+    "size": [
+     0.59,
+     0.24
+    ]
+   }
+  },
+  {
+   "key": "mind",
+   "label_de": "Geist & Körper",
+   "label_en": "Mind and Body",
+   "books": 9,
+   "unit": "wing_l",
+   "kind": "side rack (left wing, bay 2 of 2 from the visitor's left)",
+   "slot": "slot_cat_mind",
+   "slot_position": [
+    -2.2153,
+    -1.7236,
+    0.42
+   ],
+   "slot_rotation_z_deg": 50.0,
+   "board_count": 2,
+   "board_width": 0.54,
+   "board_depth": 0.26,
+   "board_thickness": 0.025,
+   "board_spacing": 0.38,
+   "boards": [
+    {
+     "index": 0,
+     "offset": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "width": 0.54,
+     "depth": 0.26,
+     "clear_height": 0.355
+    },
+    {
+     "index": 1,
+     "offset": [
+      0.0,
+      0.0,
+      0.38
+     ],
+     "width": 0.54,
+     "depth": 0.26,
+     "clear_height": 0.37
+    }
+   ],
+   "capacity_at_mean_spine": 25,
+   "shelf_length_needed": 0.378,
+   "sign": {
+    "node": "sign_cat_mind",
+    "text": "Geist & Körper",
+    "center": [
+     -2.0303,
+     -1.5264,
+     1.335
+    ],
+    "size": [
+     0.57,
+     0.24
+    ]
+   }
+  },
+  {
+   "key": "lives",
+   "label_de": "Lebensgeschichten",
+   "label_en": "Lives in Science and Industry",
+   "books": 6,
+   "unit": "cart_l",
+   "kind": "book cart (left of the counter)",
+   "slot": "slot_cat_lives",
+   "slot_position": [
+    -1.66,
+    -2.26,
+    0.62
+   ],
+   "slot_rotation_z_deg": 0.0,
+   "board_count": 2,
+   "board_width": 0.52,
+   "board_depth": 0.24,
+   "board_thickness": 0.025,
+   "board_spacing": 0.3,
+   "boards": [
+    {
+     "index": 0,
+     "offset": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "width": 0.52,
+     "depth": 0.24,
+     "clear_height": null
+    },
+    {
+     "index": 1,
+     "offset": [
+      0.0,
+      0.25,
+      0.3
+     ],
+     "width": 0.52,
+     "depth": 0.24,
+     "clear_height": 0.39
+    }
+   ],
+   "capacity_at_mean_spine": 24,
+   "shelf_length_needed": 0.252,
+   "sign": {
+    "node": "sign_cat_lives",
+    "text": "Lebensgeschichten",
+    "center": [
+     -1.4,
+     -1.8,
+     1.43
+    ],
+    "size": [
+     0.9,
+     0.24
+    ]
+   }
+  },
+  {
+   "key": "decisions",
+   "label_de": "Risiko & Entscheidungen",
+   "label_en": "Risk, Decisions and Markets",
+   "books": 11,
+   "unit": "cart_r",
+   "kind": "book cart (right of the counter)",
+   "slot": "slot_cat_decisions",
+   "slot_position": [
+    1.1,
+    -2.26,
+    0.62
+   ],
+   "slot_rotation_z_deg": 0.0,
+   "board_count": 2,
+   "board_width": 0.6,
+   "board_depth": 0.24,
+   "board_thickness": 0.025,
+   "board_spacing": 0.3,
+   "boards": [
+    {
+     "index": 0,
+     "offset": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "width": 0.6,
+     "depth": 0.24,
+     "clear_height": null
+    },
+    {
+     "index": 1,
+     "offset": [
+      0.0,
+      0.25,
+      0.3
+     ],
+     "width": 0.6,
+     "depth": 0.24,
+     "clear_height": 0.39
+    }
+   ],
+   "capacity_at_mean_spine": 28,
+   "shelf_length_needed": 0.462,
+   "sign": {
+    "node": "sign_cat_decisions",
+    "text": "Risiko & Entscheidungen",
+    "center": [
+     1.4,
+     -1.8,
+     1.43
+    ],
+    "size": [
+     0.98,
+     0.24
+    ]
+   }
+  },
+  {
+   "key": "people",
+   "label_de": "Menschen & Gespräche",
+   "label_en": "People and Conversation",
+   "books": 14,
+   "unit": "wing_r",
+   "kind": "side rack (right wing, bay 1 of 2 from the visitor's left)",
+   "slot": "slot_cat_people",
+   "slot_position": [
+    1.8682,
+    -1.3099,
+    0.42
+   ],
+   "slot_rotation_z_deg": -50.0,
+   "board_count": 2,
+   "board_width": 0.65,
+   "board_depth": 0.26,
+   "board_thickness": 0.025,
+   "board_spacing": 0.38,
+   "boards": [
+    {
+     "index": 0,
+     "offset": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "width": 0.65,
+     "depth": 0.26,
+     "clear_height": 0.355
+    },
+    {
+     "index": 1,
+     "offset": [
+      0.0,
+      0.0,
+      0.38
+     ],
+     "width": 0.65,
+     "depth": 0.26,
+     "clear_height": 0.37
+    }
+   ],
+   "capacity_at_mean_spine": 30,
+   "shelf_length_needed": 0.588,
+   "sign": {
+    "node": "sign_cat_people",
+    "text": "Menschen & Gespräche",
+    "center": [
+     2.0657,
+     -1.5685,
+     1.335
+    ],
+    "size": [
+     0.68,
+     0.24
+    ]
+   }
+  },
+  {
+   "key": "craft",
+   "label_de": "Handwerk & Gewohnheit",
+   "label_en": "Craft, Habits and Work",
+   "books": 5,
+   "unit": "wing_r",
+   "kind": "side rack (right wing, bay 2 of 2 from the visitor's left)",
+   "slot": "slot_cat_craft",
+   "slot_position": [
+    2.3118,
+    -1.8385,
+    0.42
+   ],
+   "slot_rotation_z_deg": -50.0,
+   "board_count": 2,
+   "board_width": 0.45,
+   "board_depth": 0.26,
+   "board_thickness": 0.025,
+   "board_spacing": 0.38,
+   "boards": [
+    {
+     "index": 0,
+     "offset": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "width": 0.45,
+     "depth": 0.26,
+     "clear_height": 0.355
+    },
+    {
+     "index": 1,
+     "offset": [
+      0.0,
+      0.0,
+      0.38
+     ],
+     "width": 0.45,
+     "depth": 0.26,
+     "clear_height": 0.37
+    }
+   ],
+   "capacity_at_mean_spine": 21,
+   "shelf_length_needed": 0.21,
+   "sign": {
+    "node": "sign_cat_craft",
+    "text": "Handwerk & Gewohnheit",
+    "center": [
+     2.4449,
+     -2.0205,
+     1.335
+    ],
+    "size": [
+     0.48,
+     0.24
+    ]
+   }
+  }
+ ],
+ "units": {
+  "wing_l": {
+   "length": 1.22,
+   "depth": 0.32,
+   "phi_deg": 50.0
+  },
+  "wing_r": {
+   "length": 1.22,
+   "depth": 0.32,
+   "phi_deg": 50.0
+  },
+  "cart_l": {
+   "width": 0.6,
+   "front_y": -2.28
+  },
+  "cart_r": {
+   "width": 0.68,
+   "front_y": -2.28
+  }
+ }
+}

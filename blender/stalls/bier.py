@@ -183,8 +183,14 @@ def preview(objs):
 def _lights_and_camera():
     render.lights_at_markers(energy=110)
     render.add_light("env_fill", 'AREA', (0, 0.2, 2.5), 280, size=2.6)
-    for x in (-0.7, 0.7):   # the two sign lamps
-        render.add_light("env_signlamp", 'SPOT', (x, -0.78, 4.08), 25, size=0.05, rot=(math.radians(62), 0, 0))
+    # the two gooseneck sign lamps (round 3): narrow spots from the lamp heads aimed at the upper
+    # half of the crest board, as on the Bratwurst. The round-2 62-degree cones spilled bright ovals
+    # onto the roof snow and the eave drifts under the sign.
+    ys = -0.42
+    zc = RIDGE - abs(ys) * math.tan(math.atan2(RIDGE - EAVE, D / 2)) + 0.05 + 0.42
+    for x in (-0.7, 0.7):
+        render.add_light("env_signlamp", 'SPOT', (x, -0.74, zc + 0.35), 22, size=0.04,
+                         spot_size=math.radians(36), spot_blend=0.35, target=(x * 0.6, ys, zc + 0.06))
     render.add_light("env_neighbour", 'POINT', (-5.2, -1.6, 2.7), 170, size=0.6)
     return render.camera((-4.6, -7.4, 2.1), (0.1, -0.5, 2.05), lens=29)
 

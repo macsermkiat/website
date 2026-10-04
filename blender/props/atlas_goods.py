@@ -60,42 +60,51 @@ def g_sausage(dark):
 
 def g_coal(w, h, seed):
     """Charcoal colour, two halves (goods map each coal face into one of them, set_wurst.coal_lump):
-    left half (u < 0.5) the burning sides: black char split by orange-red cracks;
-    right half (u >= 0.5) the ash-covered tops: grey-white ash over black, a few dull cracks."""
-    t = Tex(w, h, hexc("121110"), 0.92)
+    left half (u < 0.5) the burning sides: matte black char with a faint grain, split by thin dark-red cracks
+    (the glow itself is in coal_emit, only along the cracks and in a few small patches);
+    right half (u >= 0.5) the ash-covered tops: mottled grey ash over black, a few dull cracks.
+    Round 3: no orange across whole faces; the char between the cracks stays black."""
+    t = Tex(w, h, hexc("0e0d0c"), 1.0)
     yy, xx = np.mgrid[0:h, 0:w].astype(float)
     right = smooth(w * 0.48, w * 0.52, xx)
     d1, d21, _ = voronoi(h, w, int(w * h / 260), seed)
-    crack = smooth(1.8, 0.0, d21)
-    ash = smooth(0.4, 0.7, fbm(h, w, 12, seed + 1)) * (0.25 + 0.75 * right)
-    ash = np.maximum(ash, right * 0.55)
-    t.col = mix(t.col, np.array(hexc("6e6a66")), ash * 0.85)
-    t.col = mix(t.col, np.array(hexc("c8c4be")), smooth(0.6, 0.9, fbm(h, w, 5, seed + 2)) * ash * 0.7)
-    hot = _hot(h, w, seed) * (1 - right) + 0.15 * right
-    t.col = mix(t.col, np.array(hexc("8a2a08")), crack * hot)
-    t.height = -crack * 1.2 + np.clip(d1 / 10, 0, 1) * 0.6 + fbm(h, w, 3, seed + 3) * 0.3
+    crack = smooth(1.3, 0.0, d21)
+    # charcoal keeps the wood's grain: faint parallel streaks, and a slightly lighter grey sheen on high spots
+    grain = 0.5 + 0.5 * np.sin(yy * 0.9 + fbm(h, w, 10, seed + 9) * 6.0)
+    t.col = mix(t.col, np.array(hexc("262422")), grain * 0.35 * (1 - right))
+    ash = smooth(0.45, 0.75, fbm(h, w, 12, seed + 1)) * (0.15 + 0.85 * right)
+    ash = np.maximum(ash, right * smooth(0.25, 0.55, fbm(h, w, 20, seed + 11)) * 0.8)
+    t.col = mix(t.col, np.array(hexc("55524e")), ash * 0.8)
+    t.col = mix(t.col, np.array(hexc("8e8a84")), smooth(0.6, 0.9, fbm(h, w, 5, seed + 2)) * ash * 0.6)
+    hot = _hot(h, w, seed) * (1 - right)
+    t.col = mix(t.col, np.array(hexc("5a1406")), crack * hot)
+    t.rough = np.full((h, w), 1.0)
+    t.height = -crack * 1.4 + np.clip(d1 / 10, 0, 1) * 0.6 + fbm(h, w, 3, seed + 3) * 0.35 + grain * 0.15
     return t
 
 
 def _hot(h, w, seed):
-    """How hot the burning half is: most of it, in patches, never fully dark."""
-    return 0.45 + 0.55 * smooth(0.3, 0.6, fbm(h, w, 34, seed + 6))
+    """How hot the burning half is, in patches: some lumps glow brightly, some only dully, some are nearly out."""
+    return 0.2 + 0.8 * smooth(0.35, 0.7, fbm(h, w, 34, seed + 6))
 
 
 def coal_emit(w, h, seed):
-    """Glow. Left half: bright cracks and a red ember glow over the char between them (the burning sides).
+    """Glow. Left half: thin cracks, a bright orange-yellow core fading to deep red at their edges, brightness
+    varying in patches (_hot), plus a few small dull-red ember spots; the char between them does not glow.
     Right half: the ash tops, dark, with only faint lines. (Coverage is measured into the build report.)"""
     yy, xx = np.mgrid[0:h, 0:w].astype(float)
     right = smooth(w * 0.48, w * 0.52, xx)
     d1, d21, _ = voronoi(h, w, int(w * h / 260), seed)
-    crack = smooth(3.2, 0.0, d21)
+    core = smooth(0.9, 0.0, d21)                       # the crack's hot centre line
+    halo = smooth(2.2, 0.0, d21)                       # its red edges
     hot = _hot(h, w, seed)
-    ember = hot * (0.5 + 0.5 * fbm(h, w, 8, seed + 7))
-    glow_l = np.clip(np.maximum(crack * (0.55 + 0.6 * hot), ember * 0.5), 0, 1)
-    glow_r = crack * 0.12
-    glow = glow_l * (1 - right) + glow_r * right
-    glow = ndimage.gaussian_filter(glow, 0.8)
-    return np.stack([glow, glow ** 1.5 * 0.42, glow ** 3 * 0.07], -1)
+    spots = smooth(0.74, 0.86, fbm(h, w, 6, seed + 7)) * hot
+    r_l = np.clip(halo * 0.55 * hot + core * hot + spots * 0.35, 0, 1)
+    g_l = np.clip(core * hot ** 1.5 * 0.55 + halo * 0.08 * hot, 0, 1)
+    b_l = np.clip(core * hot ** 3 * 0.12, 0, 1)
+    fr = smooth(1.0, 0.0, d21) * 0.1
+    rgb = np.stack([r_l * (1 - right) + fr * right, g_l * (1 - right) + fr * 0.3 * right, b_l * (1 - right)], -1)
+    return ndimage.gaussian_filter(rgb, (0.6, 0.6, 0))
 
 
 # ------------------------------------------------------------ beer
@@ -133,17 +142,18 @@ def g_foam(w, h, seed):
     # the wet edge strip (image rows below 0.75 h)
     band = yy >= h * 0.75
     v = (yy - h * 0.75) / (h * 0.25)
-    wet = Tex(w, h, hexc("e4cf9e"), 0.3)
+    # round 3: a soft wet cream, not a glossy gold band (paler, matte-satin, little contrast)
+    wet = Tex(w, h, hexc("ece0c2"), 0.5)
     d1, d21, _ = voronoi(h, w, int(w * h / 160), seed + 5)
     r = np.sqrt(w * h / (w * h / 160)) * 0.5
     bub = np.clip(1 - (d1 / r) ** 2, 0, 1) ** 0.5
-    wet.col = mix(wet.col, np.array(hexc("c8a868")), smooth(1.6, 0.0, d21) * 0.6)
-    wet.col = mix(wet.col, np.array(hexc("fff4dc")), smooth(0.3, 0.0, d1 / r) * 0.45)
+    wet.col = mix(wet.col, np.array(hexc("d6c49c")), smooth(1.6, 0.0, d21) * 0.45)
+    wet.col = mix(wet.col, np.array(hexc("fbf3e2")), smooth(0.3, 0.0, d1 / r) * 0.35)
     lace = smooth(0.55, 0.8, np.abs(np.sin(xx / w * 2 * math.pi * 23 + fbm(h, w, 12, seed + 6) * 4)))
     lace *= smooth(0.0, 0.6, 1 - v)                 # streaks hang below the head (low v = the beer side)
     wet.col = mix(wet.col, np.array(hexc("f2e4c0")), lace * 0.4)
-    wet.col = mix(wet.col, np.array(hexc("b89050")), smooth(0.35, 0.0, v) * 0.35)   # beer-wet foot of the head
-    wet.rough = 0.22 + 0.25 * (1 - bub) * (1 - smooth(0.3, 0.0, v))
+    wet.col = mix(wet.col, np.array(hexc("d2b98a")), smooth(0.35, 0.0, v) * 0.25)   # beer-wet foot of the head
+    wet.rough = 0.48 + 0.2 * (1 - bub) * (1 - smooth(0.3, 0.0, v))
     wet.height = bub * r / 5.0 + lace * 0.4
     t.col = np.where(band[..., None], wet.col, t.col)
     t.rough = np.where(band, wet.rough, t.rough)

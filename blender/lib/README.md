@@ -51,7 +51,7 @@ turns the one light, neutral wood into pine, honey, oak, dark, grey or soot boar
 | `iron_matte` | kit variant of `iron` | sheet iron for hoods: its own lighter base colour (`kit_iron_matte_color`, the iron colour x1.7 in linear light, ~10 KB) and metal x0.35 as `metallicFactor`, so it reads grey under point lights without an environment map, plus a faint warm emissive copy of that colour (`emissiveFactor` 0.12/0.08/0.045) standing in for the bulbs and fire beside the hood, which no site light reaches. Vertex soot (`shade`) darkens only the base colour, so soot shows in lit areas while the stand-in keeps the shape readable. Roughness and normal maps are the iron kit's |
 | `paint_glow` | kit variant of `paint` | the paint atlas (use `band=` as with `paint`) plus a faint warm emissive copy of it (`emissiveFactor` 0.13/0.09/0.07, emissive texture = the shared paint colour map, so no extra bytes). For outward trim that faces out and down under an eave (bargeboards, carved valances, gable boards): under the site's moonlight plain red paint there goes near-black |
 | `copper_old` | kit variant of `iron` | old copper sheet for small roofs and hoods: the iron kit's dents, streaks and pitting with a copper-brown colour (`kit_copper_old_color`, the iron colour x1.35 x (1.25, 0.66, 0.42)), metal x0.6. Use it instead of the flat `copper` on architecture |
-| `rauten` | pattern, 0.26 m tile, 256 px | dedicated two-colour Bavarian lozenge texture (`mats.PATTERNS`, made with numpy, no bake): four big lozenges per repeat so the pattern survives mipmapping, a Bavarian blue (sRGB about 12/105/188; pattern version p2) and a warm white, and a faint, nearly neutral emissive copy of the pattern (`emissiveFactor` 0.22/0.20/0.17) standing in for the eave bulbs that hang beside the pennants. Embedded in the glb (about 3 KB). Use `uv_off=` to place a lozenge |
+| `rauten` | pattern, 0.26 m tile, 256 px | dedicated two-colour Bavarian lozenge texture (`mats.PATTERNS`, made with numpy, no bake): four big lozenges per repeat so the pattern survives mipmapping, a Bavarian blue (sRGB about 12/105/188; pattern version p2) and a warm white, and a faint, nearly neutral emissive copy of the pattern (`emissiveFactor` 0.22/0.20/0.17) standing in for the eave bulbs that hang beside the pennants. Embedded in the glb (6.4 KB as WebP in the decoded `stall_bier.glb`). Use `uv_off=` to place a lozenge |
 | `snow bulb_warm bulb_cold wire glass fir brass copper ember ash ornament_red ornament_gold fabric_* lamp_glass bookcloth` | simple | flat PBR values (still multiplied by `COLOR_0`; `bookcloth` is a light neutral binding cloth meant to be coloured by `tint=`) |
 
 **Emissive stand-ins.** `iron_matte`, `paint_glow` and `rauten` carry a faint emissive copy of their
@@ -97,7 +97,7 @@ Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shad
 - `mbox(M, size, ...)`: the same with any 4x4 matrix. `slab(p0, p1, width, thick, up=)` is a board from p0 to p1.
 - `cyl(center, r1, r2, depth, seg, rot, caps)`, `sphere(center, r, seg, rings, scale, rot)`, `ico(...)`, `torus(center, R, r, seg, tseg, rot, arc)`, `tube(points, radius, tseg)`, `lathe([(r, z), ...], seg, M)`, `loft(rings, closed)`.
 - `shape(outer, holes=[], depth, M, bevel=0)`: extrudes a 2D polygon with cut-outs (stars, hearts, scallops).
-- `text(body, font_path, size, depth, M, resolution=2, bevel=None, max_width=None)`: 3D lettering with the outline simplified. Returns (width, height).
+- `text(body, font_path, size, depth, M, resolution=2, bevel=None, max_width=None)`: 3D lettering with the outline simplified. Returns (width, height). A `\n` in `body` starts a second line (centred block). Set `part.flat_text = True` for painted lettering: each glyph is one front face `depth/2` in front of `M` (no sides or back, about a quarter of the triangles); lite builds always do this. `part.curve_simplify` (degrees, default 6) thins glyph outlines.
 - `finish(collection=None)` → the Blender object, or None if empty. `tris` gives the running triangle count.
 - Helpers: `star_polygon`, `circle_polygon`, `heart_polygon`, `catenary`, `look_rot`.
 
@@ -121,12 +121,15 @@ Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shad
 ### `render`
 - `night_scene()`: night world, moon, sky fill and trodden-snow ground. It is render-only and goes in the Env collection.
 - `add_light(name, kind, loc, energy, color, size, rot, spot_size=None, spot_blend=None, size_y=None, target=None)` (`target` aims a spot/area light), `lights_at_markers(energy)` (a point light at each `light_*`), `camera(loc, target, lens, dof)`, `render(png, samples=48, res=(1280,720), jpeg=...)` on the `NM_DEVICE` device with OIDN, `contact_sheet(items, out_jpg)`.
+- `import_glb(path, at="slot_counter", offset=(0,0,0), rotate=False)`: imports a shipped (meshopt) glb into the render-only Env collection at a named empty. `rotate=True` also applies the empty's rotation (round 3, for rotated slots such as the Bücherstand's `slot_cat_<key>`).
+- Sign lamps in previews: aim a narrow spot (34-38 degrees, blend 0.35) from the lamp head at the upper half of the board, so the lower cone edge ends on the board; wide cones leave bright ovals on the roof snow below (round 2 judges).
 
 ### Stall helpers (`blender/stalls/hut.py`, `pipeline.py`)
 - `Hut.build_roof(..., barge_part=None)`: painted bargeboards go into `barge_part` (e.g. a `paint_glow` Part) instead of the hut's paint Part.
 - `Hut.build_counter(..., extra_shade=None)`: a shade function multiplied into the counter's edge wear (the Bratwurst scorch under its grill).
 - `Hut.build_snow(**kw)`: passes `drifts=`, `cover=` and the rest to `snow_cap`.
-- `pipeline.vendor_props([(name, slot), ...])`: imports the vendor's shipped prop glbs into a Cycles preview (render-only). Previews go to `review/round-$NM_ROUND/carpenter/` (default round 2).
+- `pipeline.vendor_props([(name, slot), ...], rotate=False)`: imports the vendor's shipped prop glbs into a Cycles preview (render-only); `rotate=True` for rotated slots. Previews go to `review/round-$NM_ROUND/carpenter/` (default round 3).
+- `stalls/buecher_sections.py` (plain Python, no bpy): the Bücherstand's six category sections (side racks and carts). `buecher.py` builds from it, and `python3 blender/stalls/buecher_sections.py` writes `blender/stalls/buecher_sections.json` for the vendor, so the json always matches the model.
 
 ## Checking a stall in the browser
 
@@ -144,7 +147,7 @@ site's home camera where `site/src/layout.json` places it.
 
 - `node blender/lib/optimize.mjs in.glb out.glb [--texture-size 1024]`. This is the web step. Use it instead of `gltf-transform optimize`: that CLI prunes every empty leaf node, which would delete `slot_*`, `light_*` and `cam_*`, and its palette/join passes rename or merge materials such as `bulb_warm`. This script runs dedup, weld, prune (keeping leaves), sparse, WebP at `--texture-size` and meshopt, and leaves the node and material names alone.
 - `python3 blender/lib/glb_tools.py report file.glb ...` lists nodes, materials, images, triangles and size.
-- `python3 blender/lib/glb_tools.py check file.glb ...` checks the stall node contract: `slot_counter`, `slot_shelf_1`, `slot_shelf_2`, `slot_vendor`, `slot_sign`, `slot_front`, `cam_view`, `cam_target`, `light_*`, `bulbs_*`, `snow_*` and a `bulb_warm`/`bulb_cold` material.
+- `python3 blender/lib/glb_tools.py check file.glb ...` checks the stall node contract: `slot_counter`, `slot_shelf_1`, `slot_shelf_2`, `slot_vendor`, `slot_sign`, `slot_front`, `cam_view`, `cam_target`, `light_*`, `bulbs_*`, `snow_*` and a `bulb_warm`/`bulb_cold` material. For `stall_buecher*.glb` it also requires `slot_cat_<key>` and `sign_cat_<key>` for every key in `content/books/categories.json`.
 
 ## Stall scripts built on this
 

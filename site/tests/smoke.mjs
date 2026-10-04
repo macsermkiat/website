@@ -72,6 +72,17 @@ async function frames(page, n) {
   await page.evaluate((n) => new Promise((res) => { let k = 0; const f = () => (++k >= n ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
 }
 const note = (page) => page.textContent('#actNote');
+/** Wait until the camera stops moving (a flight or a panel's framing still easing on a slow software-GL page). */
+async function stillCamera(page, tries = 30) {
+  let prev = null;
+  for (let i = 0; i < tries; i++) {
+    const p = await page.evaluate(() => [...window.__market.camera.position.toArray(), ...window.__market.camera.quaternion.toArray()]);
+    if (prev && p.every((v, k) => Math.abs(v - prev[k]) < 1e-4)) return true;
+    prev = p;
+    await frames(page, 2);
+  }
+  return false;
+}
 /** Everything requested before the market opened (the page marks 'market-ready' just before its first frame). */
 const bytesAtReady = (page) => page.evaluate(() => {
   const t = performance.getEntriesByName('market-ready')[0]?.startTime ?? Infinity;
@@ -88,9 +99,12 @@ const aimAt = (page, name, via = name) => page.evaluate(([name, via]) => {
   if (r0.top < 0 || r0.bottom > innerHeight) st.scrollIntoView({ block: 'nearest', behavior: 'instant' });
   const m = window.__market, c = m.screenPoint(via);
   if (!c) return null;
-  for (let r = 0; r <= 16; r += 2) for (let a = 0; a < 12; a++) {
+  // prefer a point well inside the item (its neighbours 3 px away hit it too): a thin spine's edge pixel can
+  // land on the next book once the pointer's hover lifts it
+  const inside = (x, y) => [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]].every(([dx, dy]) => m.itemAt(x + dx, y + dy) === name);
+  for (const test of [inside, (x, y) => m.itemAt(x, y) === name]) for (let r = 0; r <= 16; r += 2) for (let a = 0; a < 12; a++) {
     const x = c.x + Math.cos(a * Math.PI / 6) * r, y = c.y + Math.sin(a * Math.PI / 6) * r;
-    if (m.itemAt(x, y) === name) return { x, y };
+    if (test(x, y)) return { x, y };
   }
   return null;
 }, [name, via]);
@@ -353,11 +367,12 @@ try {
     await page.evaluate(() => window.__market.advance(4));
     await frames(page, 2);
     const si = spines.length > 1 ? 1 : 0, want = pickList[si] || ['', ''];
+    await stillCamera(page);
     const aim = await aimAt(page, spines[si]);
     if (aim) {
       await page.mouse.move(aim.x, aim.y);
       await frames(page, 3);
-      check('hovering a book lifts it and names it', (await page.evaluate(() => window.__market.hoveredItem)) === spines[si] && (await page.textContent('.tip')).includes(want[0]), await page.textContent('.tip'));
+      check('hovering a book lifts it and names it', (await page.evaluate(() => window.__market.hoveredItem)) === spines[si] && (await page.textContent('.tip')).includes(want[0]), `${await page.textContent('.tip')} at ${JSON.stringify(aim)}; itemAt now ${await page.evaluate(([x, y]) => window.__market.itemAt(x, y), [aim.x, aim.y])}; hovered ${await page.evaluate(() => window.__market.hoveredItem)}; want ${spines[si]} ${want[0]}`);
       await page.mouse.click(aim.x, aim.y);
       await page.evaluate(() => window.__market.advance(3));
       const ob = await page.evaluate(() => window.__market.openedBook());
@@ -450,6 +465,7 @@ try {
     // a click in the 3D view on the Bierstand
     await page.click('#reset');
     await frames(page, 40);
+    const still = await stillCamera(page);
     const hit = await page.evaluate(() => {
       const st = document.getElementById('stage');
       if (st.getBoundingClientRect().top < 0) st.scrollIntoView({ block: 'nearest', behavior: 'instant' });
@@ -463,7 +479,7 @@ try {
     await frames(page, 3);
     const tip = await page.locator('.tip').isVisible();
     await page.mouse.click(hit.x, hit.y);
-    check('hover shows the place tooltip', tip);
+    check('hover shows the place tooltip', tip, `camera still: ${still}; at ${JSON.stringify(hit)} picks ${JSON.stringify(await page.evaluate(([x, y]) => window.__market.pickAt(x, y), [hit.x, hit.y]))}`);
     check('clicking a stall in 3D opens its panel', (await state(page, 'panel')) === 'bier', await state(page, 'panel'));
     await ctx.close();
   }

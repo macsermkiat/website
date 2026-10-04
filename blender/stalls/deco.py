@@ -143,7 +143,7 @@ def build_variant(key, lite):
                 text_bevel=0.0, text_dy=-0.03 if shape == "arch" else 0.0)
         lamp_x = (-sw * 0.3, sw * 0.3)
         h.sign_lamps(lamp_x, ys - 0.03, sign_c.z + sh / 2 + 0.06, reach=0.3)
-        lamp_spots.extend([((x, ys - 0.33, sign_c.z + sh / 2 + 0.2), (x * 0.4, ys, sign_c.z)) for x in lamp_x])
+        lamp_spots.extend([((x, ys - 0.33, sign_c.z + sh / 2 + 0.2), (x * 0.4, ys, sign_c.z + 0.12)) for x in lamp_x])
         for x in (-sw / 2 + 0.2, sw / 2 - 0.2):
             h.iron.box((x, ys + 0.03, z_roof + 0.05), (0.028, 0.028, 0.2), bevel=0)
             a = Vector((x, ys + 0.04, sign_c.z + 0.08))
@@ -160,7 +160,7 @@ def build_variant(key, lite):
                 text_depth=0.014, resolution=1, text_bevel=0.0)
         lamp_x = (-sw * 0.28, sw * 0.28)
         h.sign_lamps(lamp_x, sign_c.y + 0.01, sign_c.z + sh / 2 + 0.03, reach=0.22)
-        lamp_spots.extend([((x, sign_c.y - 0.25, sign_c.z + sh / 2 + 0.16), (x * 0.4, sign_c.y, sign_c.z))
+        lamp_spots.extend([((x, sign_c.y - 0.25, sign_c.z + sh / 2 + 0.16), (x * 0.4, sign_c.y, sign_c.z + 0.1))
                            for x in lamp_x])
     if v["sign"] == "crest" or v.get("awning"):
         h.eave_bulbs(sides=False)
@@ -198,9 +198,12 @@ def main():
             render.night_scene(ground_size=24)
             render.lights_at_markers(energy=120)
             render.add_light("env_fill", 'AREA', (0, 0.1, 2.35), 90, size=1.8)
+            # round 3: narrow spots aimed at the upper half of the board (the round-2 110-degree
+            # cones left bright ovals on the roof snow under crest signs); the lower cone edge
+            # now ends on the board
             for p, t in lamp_spots:
-                render.add_light("env_signlamp", 'SPOT', p, 60, size=0.1, spot_size=math.radians(110),
-                                 spot_blend=1.0, target=t)
+                render.add_light("env_signlamp", "SPOT", p, 45, size=0.05, spot_size=math.radians(34),
+                                 spot_blend=0.35, target=t)
             render.add_light("env_neighbour", 'POINT', (-4.2, -1.4, 2.6), 120, size=0.6)
             render.camera((-3.0, -5.2, 2.15), (0.1, -0.5, 2.2), lens=30)
             mats.standin_emission(False)

@@ -78,9 +78,20 @@ def node_names(js):
     return [n.get("name", "") for n in js.get("nodes", [])]
 
 
+def buecher_required():
+    """slot_cat_<key> and sign_cat_<key> for every key in content/books/categories.json."""
+    import json
+    repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    with open(os.path.join(repo, "content", "books", "categories.json")) as f:
+        keys = [c["key"] for c in json.load(f)["categories"]]
+    return [f"slot_cat_{k}" for k in keys] + [f"sign_cat_{k}" for k in keys]
+
+
 def check_stall(path, extra_required=()):
     js, _ = read_glb(path)
     names = node_names(js)
+    if os.path.basename(path).startswith("stall_buecher"):
+        extra_required = list(extra_required) + buecher_required()
     missing = [r for r in list(STALL_REQUIRED) + list(extra_required) if r not in names]
     for p in STALL_PREFIXES:
         if not any(n.startswith(p) for n in names):

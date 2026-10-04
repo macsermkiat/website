@@ -38,7 +38,7 @@ def setup_device(scene=None, var="NM_DEVICE"):
 
 
 # materials that get no occlusion texture: see-through or self-lit
-AO_SKIP = ("vendor_glass", "flame", "lamp_glow", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade")
+AO_SKIP = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade")
 
 
 def bake_ao(name, res, samples=32, distance=0.12, floor=0.4):
@@ -111,6 +111,37 @@ def bake_ao(name, res, samples=32, distance=0.12, floor=0.4):
     return img
 
 
+def env_section(boards, slot_z):
+    """Render-only stand-in for one Bücherstand category bay (blender/stalls/buecher_sections.json): its boards
+    at their offsets from slot_cat_<key> (left end, front edge, top surface), uprights at both ends and a back
+    board, standing on a dark floor at the slot's real height. Returns the slot height."""
+    from nmlib.geo import Part
+    env = state.env_collection()
+    frame = Part("env_section_frame", "wood")
+    wood = Part("env_section_wood", "wood")
+    x1 = max(b["offset"][0] + b["width"] for b in boards)
+    y1 = max(b["offset"][1] + b["depth"] for b in boards)
+    ztop = max(b["offset"][2] for b in boards) + 0.42
+    for b in boards:
+        ox, oy, oz = b["offset"]
+        t = 0.025
+        frame.box((ox + b["width"] / 2, oy + b["depth"] / 2, slot_z + oz - t / 2), (b["width"] + 0.08, b["depth"], t),
+                  tint="pine")
+        frame.box((ox + b["width"] / 2, oy + b["depth"] + 0.01, slot_z + oz + 0.2), (b["width"] + 0.08, 0.02, 0.42),
+                  tint="honey")
+    for sx in (-0.02, x1 + 0.02):
+        frame.box((sx, y1 / 2, (slot_z + ztop) / 2), (0.04, y1 + 0.02, slot_z + ztop), tint="pine")
+    x = -1.6
+    while x < x1 + 1.6:
+        w = 0.15
+        wood.box((x + w / 2, y1 + 0.35, 1.4), (w - 0.005, 0.02, 2.8), tint="honey", grain=2, var=0.1)
+        x += w
+    wood.box((x1 / 2, 0, 0.01), (x1 + 3.2, 4.0, 0.02), tint="dark")
+    wood.finish(env)
+    frame.finish(env)
+    return slot_z
+
+
 def env_counter(kind="counter", width=3.0):
     """Render-only surroundings: a plain wooden counter (or shelf) in a stall interior at night."""
     from nmlib import render
@@ -151,10 +182,22 @@ def env_counter(kind="counter", width=3.0):
     return top
 
 
-def preview_scene(ps, kind="counter", width=3.0, extra_lights=()):
-    """Render-only surroundings and lights for a set; returns the counter / shelf top height."""
+def preview_scene(ps, kind="counter", width=3.0, extra_lights=(), section=None):
+    """Render-only surroundings and lights for a set; returns the counter / shelf top height.
+    kind "section": a Bücherstand category bay; `section` = (boards, slot_z) from buecher_sections.json."""
     from nmlib import render
     render.night_scene(ground_size=30)
+    if kind == "section":
+        top = env_section(*section)
+        ps.objs[ps.name].location = (0, 0, top)
+        bpy.context.view_layer.update()
+        x1 = max(b["offset"][0] + b["width"] for b in section[0])
+        render.add_light("env_light_0", 'POINT', (x1 / 2, -0.9, top + 1.3), 90, size=0.25)
+        render.add_light("env_light_1", 'POINT', (x1 / 2 - 1.2, -1.6, top + 0.9), 60, size=0.25)
+        render.add_light("env_fill", 'AREA', (x1 / 2 - 0.3, -1.3, top + 0.5), 40, (1.0, 0.72, 0.48), size=1.2,
+                         rot=(math.radians(70), 0, math.radians(-12)))
+        render.add_light("env_rim", 'POINT', (x1 + 0.6, -0.3, top + 0.8), 10, (1.0, 0.7, 0.45), size=0.2)
+        return top
     top = env_counter(kind, width)
     ps.objs[ps.name].location = (0, 0, top)
     bpy.context.view_layer.update()

@@ -1,5 +1,5 @@
 // three.js screenshots of the carpenter's stalls under the site's lighting (Playwright + SwiftShader).
-//   node blender/stalls/web/shoot.mjs [--out review/round-2/carpenter/web] [--only stall_bier,...]
+//   node blender/stalls/web/shoot.mjs [--out review/round-3/carpenter/web] [--only stall_bier,...]
 //        [--ao both|on|off] [--lite] [--w 1280 --h 720] [--props prop_a@slot_counter,prop_b@slot_shelf_1]
 //        [--signspot] [--home] [--tag name] [--cam x,y,z,tx,ty,tz,lens]
 //   --home   frame the stall from layout.json's home camera, the stall placed where layout.json puts it
@@ -18,7 +18,7 @@ const HERE = import.meta.dirname;
 const REPO = path.resolve(HERE, '../../..');
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
-const OUT = path.resolve(REPO, opt('--out', 'review/round-2/carpenter/web'));
+const OUT = path.resolve(REPO, opt('--out', 'review/round-3/carpenter/web'));
 const W = +opt('--w', 1280), H = +opt('--h', 720);
 const AO = opt('--ao', 'both');
 const lite = args.includes('--lite');
@@ -27,7 +27,7 @@ const CAMS = {
   stall_gluehwein: '-4.3,-7.4,2.1,0.1,-0.6,2.15,30',
   stall_bratwurst: '-4.4,-6.9,2.35,0.0,-0.5,1.9,30',
   stall_bier: '-4.6,-7.4,2.1,0.1,-0.5,2.05,29',
-  stall_buecher: '-4.5,-6.9,2.0,0.0,-0.4,1.8,30',
+  stall_buecher: '-3.3,-7.9,2.1,0.25,-1.3,1.3,28',
 };
 const only = opt('--only', Object.keys(CAMS).join(',')).split(',');
 const props = opt('--props', '');

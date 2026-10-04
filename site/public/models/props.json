@@ -82,6 +82,54 @@
    "asset": "stall_buecher.glb"
   },
   {
+   "set": "prop_books_physics",
+   "stall": "buecherstand",
+   "slot": "slot_cat_physics",
+   "model": "prop_books_physics.glb",
+   "lite": "prop_books_physics.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  {
+   "set": "prop_books_lives",
+   "stall": "buecherstand",
+   "slot": "slot_cat_lives",
+   "model": "prop_books_lives.glb",
+   "lite": "prop_books_lives.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  {
+   "set": "prop_books_mind",
+   "stall": "buecherstand",
+   "slot": "slot_cat_mind",
+   "model": "prop_books_mind.glb",
+   "lite": "prop_books_mind.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  {
+   "set": "prop_books_people",
+   "stall": "buecherstand",
+   "slot": "slot_cat_people",
+   "model": "prop_books_people.glb",
+   "lite": "prop_books_people.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  {
+   "set": "prop_books_decisions",
+   "stall": "buecherstand",
+   "slot": "slot_cat_decisions",
+   "model": "prop_books_decisions.glb",
+   "lite": "prop_books_decisions.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  {
+   "set": "prop_books_craft",
+   "stall": "buecherstand",
+   "slot": "slot_cat_craft",
+   "model": "prop_books_craft.glb",
+   "lite": "prop_books_craft.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "slot": "slot_counter",
@@ -223,6 +271,48 @@
    "stall": "buecherstand",
    "model": "prop_books_counter.glb",
    "lite": "prop_books_counter.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  "prop_books_physics": {
+   "slot": "slot_cat_physics",
+   "stall": "buecherstand",
+   "model": "prop_books_physics.glb",
+   "lite": "prop_books_physics.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  "prop_books_lives": {
+   "slot": "slot_cat_lives",
+   "stall": "buecherstand",
+   "model": "prop_books_lives.glb",
+   "lite": "prop_books_lives.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  "prop_books_mind": {
+   "slot": "slot_cat_mind",
+   "stall": "buecherstand",
+   "model": "prop_books_mind.glb",
+   "lite": "prop_books_mind.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  "prop_books_people": {
+   "slot": "slot_cat_people",
+   "stall": "buecherstand",
+   "model": "prop_books_people.glb",
+   "lite": "prop_books_people.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  "prop_books_decisions": {
+   "slot": "slot_cat_decisions",
+   "stall": "buecherstand",
+   "model": "prop_books_decisions.glb",
+   "lite": "prop_books_decisions.lite.glb",
+   "asset": "stall_buecher.glb"
+  },
+  "prop_books_craft": {
+   "slot": "slot_cat_craft",
+   "stall": "buecherstand",
+   "model": "prop_books_craft.glb",
+   "lite": "prop_books_craft.lite.glb",
    "asset": "stall_buecher.glb"
   },
   "prop_deco_lebkuchen": {

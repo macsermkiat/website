@@ -52,6 +52,31 @@ def lump(m, M, r, region, col, mat, subd=1, rough=0.35, squash=0.7, seed=0.0):
     m.add(verts, faces, uvs, M, col, mat, False)
 
 
+def irregular(bm, r, seed, rough, squash):
+    """Charcoal-chunk vertices from an icosphere: broad low-frequency lumps plus finer bumps, its own stretch
+    per lump, and one or two flat broken faces (vertices past a random plane are pushed onto it), so the
+    lumps read as split wood charcoal, not pebbles."""
+    import random
+    rr = random.Random(int(seed * 1000) + 7)
+    sx, sy = rr.uniform(0.8, 1.45), rr.uniform(0.7, 1.05)
+    cuts = []
+    for _ in range(rr.choice((1, 2, 2))):
+        nrm = Vector((rr.uniform(-1, 1), rr.uniform(-1, 1), rr.uniform(-0.4, 0.6))).normalized()
+        cuts.append((nrm, r * rr.uniform(0.45, 0.75)))
+    out = []
+    off = Vector((seed, seed * 1.7, 0))
+    for v in bm.verts:
+        p = v.co.copy()
+        k = 1 + rough * 0.8 * noise.noise(p * (1.4 / r) + off) + rough * 0.45 * noise.noise(p * (4.0 / r) + off * 2)
+        q = Vector((p.x * k * sx, p.y * k * 0.9 * sy, p.z * k * squash))
+        for nrm, d in cuts:
+            e = q.dot(nrm) - d
+            if e > 0:
+                q -= nrm * e
+        out.append((q.x, q.y, q.z))
+    return out
+
+
 def coal_lump(m, M, r, col, seed=0.0, hot_top=False, subd=1, rough=0.35, squash=0.7):
     """A burning charcoal lump on the coal_glow material. Its faces map into the two halves of the coal maps
     (atlas_goods.g_coal / coal_emit): the sides into a random window of the glowing left half (bright cracks,
@@ -60,10 +85,7 @@ def coal_lump(m, M, r, col, seed=0.0, hot_top=False, subd=1, rough=0.35, squash=
     bm = bmesh.new()
     bmesh.ops.create_icosphere(bm, subdivisions=subd, radius=r)
     verts, faces, uvs = [], [], []
-    for v in bm.verts:
-        p = v.co.copy()
-        k = 1 + rough * noise.noise(p * (3.0 / r) + Vector((seed, seed * 1.7, 0)))
-        verts.append((p.x * k, p.y * k * 0.9, p.z * k * squash))
+    verts = irregular(bm, r, seed, rough, squash)
     win = 0.16 + 0.1 * drng.random()                        # window size in UV
     hu, hv = drng.uniform(0.0, 0.5 - win), drng.uniform(0.0, 1.0 - win)
     au, av = drng.uniform(0.5, 1.0 - win), drng.uniform(0.0, 1.0 - win)
@@ -177,7 +199,8 @@ def grill(s):
                  (rr - 0.02, rz + 0.002), (0.0, rz + 0.002)], seg(20, 10), vlib.RW("iron"), None, C("8a8a8a"),
                 "grill_iron")
         # grey ash that fell through into the pan
-        g.disc(rr - 0.03, seg(16, 8), "sw_matte", T(0, 0, rz + 0.006), C("9a948c"), "atlas")
+        g.disc(rr - 0.03, seg(16, 8), vlib.R("coal", sub=(0.55, 0.05, 0.95, 0.95)), T(0, 0, rz + 0.006),
+               C("bdb8b0"), "atlas")
     # coal bed: glowing chunks with ash, piled in the bowl
     coal = s.node("coals", (0, 0, zb), parent="act_grill")
     coal.lathe([(0.0, 0.05), (0.17 * k_, 0.05), (0.185 * k_, 0.062), (0.0, 0.066)], 20 if not vlib.lite() else 8,
@@ -199,15 +222,18 @@ def grill(s):
         lump(coal, T(rr * math.cos(a), rr * math.sin(a), 0.064 + drng.uniform(0, 0.006), rz=drng.uniform(0, 6)),
              drng.uniform(0.016, 0.024), vlib.R("coal", sub=(0.55, 0.05, 0.95, 0.95)), jit(C("a8a49e"), 0.1),
              "atlas", subd=1, seed=50 + i * 1.9)
+    # the ash drift against the bowl wall: mottled grey ash over char (the coal map's ash half), not a flat
+    # pale ring (round 2 read as a white plate)
     coal.lathe([(0.15 * k_, 0.062), (0.18 * k_, 0.066), (0.19 * k_, 0.072), (0.186 * k_, 0.074)],
                20 if not vlib.lite() else 8,
-               "sw_matte", None, C("8e8a84"), "atlas")
+               vlib.R("coal", sub=(0.55, 0.05, 0.95, 0.95)), None, C("a8a49c"), "atlas")
     for i in range(7 if not vlib.lite() else 2):
         a = drng.uniform(0, TWO_PI)
         rr = 0.15 * math.sqrt(drng.random())
         z = 0.058 + (0.18 - rr) * 0.12 + 0.03
         lump(coal, T(rr * math.cos(a), rr * math.sin(a), z, rz=drng.uniform(0, 6)), drng.uniform(0.014, 0.022),
-             "sw_matte", jit(C("b4b0aa"), 0.08), "atlas", subd=1, rough=0.25, squash=0.22, seed=80 + i)
+             vlib.R("coal", sub=(0.55, 0.05, 0.95, 0.95)), jit(C("b0aca4"), 0.08), "atlas", subd=1, rough=0.25,
+             squash=0.22, seed=80 + i)
     # gallows: a square post from the deck on the left of the bowl, an arm over it, a hook
     post_top = 0.64 - fz
     px = -0.262
@@ -312,13 +338,13 @@ DESIGN_X0, DESIGN_X1 = -0.13, 1.87      # the counter the layout was drawn for (
 SAUSAGE_R = 0.0125
 
 
-def sausage_node(s, name, loc, label, parent=None, L=0.14, bend=0.008, dark=False, seed=0.0, rz=0.0):
+def sausage_node(s, name, loc, label, parent=None, L=0.14, bend=0.008, dark=False, seed=0.0, rz=0.0, raw=False):
     """One Bratwurst, act_sausage_<n>: its origin is at its base (the middle of its underside, where it
     rests), long axis along the node's X. The engine turns a sausage about its long axis, which is
     SAUSAGE_R above the origin (items.json: turn_axis)."""
     node = s.node(name, loc, parent=parent, rot=(0, 0, rz) if rz else None)
-    G.sausage(node, T(0, 0, SAUSAGE_R), L=L, r=SAUSAGE_R, bend=bend, dark=dark, seed=seed)
-    s.item(name, label, "sausage", turn_axis={"offset_blender_z": SAUSAGE_R, "offset_threejs_y": SAUSAGE_R,
+    G.sausage(node, T(0, 0, SAUSAGE_R), L=L, r=SAUSAGE_R, bend=bend, dark=dark, seed=seed, raw=raw)
+    s.item(name, label, "sausage", raw=raw, turn_axis={"offset_blender_z": SAUSAGE_R, "offset_threejs_y": SAUSAGE_R,
                                               "axis": "node X"})
     return node
 
@@ -375,14 +401,13 @@ def counter():
         Mt = T(rxm, 0.09, 0, rz=-0.04)
         m.lathe([(0.0, 0.0), (0.13, 0.0), (0.138, 0.04), (0.132, 0.04), (0.125, 0.004), (0.0, 0.004)], seg(16, 6),
                 "steel", Mt @ Matrix.Diagonal((1.0, 0.64, 1.0, 1.0)), C("d0d0d0"))
-        # lying along the tray's long side: five side by side, three more on top (lite: three)
-        for k in range(8 if not vlib.lite() else 3):
-            if vlib.lite():
-                y, z = -0.026 + k * 0.026, 0.004
-            else:
-                y, z = (-0.052 + k * 0.026, 0.004) if k < 5 else (-0.039 + (k - 5) * 0.026, 0.004 + 2 * SAUSAGE_R - 0.004)
-            G.sausage(m, Mt @ T(drng.uniform(-0.008, 0.008), y, z + SAUSAGE_R, rz=drng.uniform(-0.06, 0.06)),
-                      L=0.13, r=SAUSAGE_R, bend=0.005, dark=False, seed=40 + k, raw=True)
+        # lying along the tray's long side: five side by side, three more on top. Round 3: each raw one is its
+        # own clickable act_sausage_16..23 (base pivot, like the grilled ones), in full and lite alike
+        for k in range(8):
+            y, z = (-0.052 + k * 0.026, 0.004) if k < 5 else (-0.039 + (k - 5) * 0.026, 0.004 + 2 * SAUSAGE_R - 0.004)
+            dx, jr = drng.uniform(-0.008, 0.008), drng.uniform(-0.06, 0.06)
+            sausage_node(s, f"act_sausage_{16 + k}", tuple(Mt @ Vector((dx, y, z))), "Raw Bratwurst, ready for the grill",
+                         L=0.13, bend=0.005, seed=40 + k, rz=-0.04 + jr, raw=True)
     # basket of rolls, stacked two deep, each roll its own node
     G.crate(m, T(bx, by, 0), 0.34, 0.26, 0.07, C("b48c5c"), slats=2)
     m.box((0.3, 0.22, 0.004), T(bx, by, 0.014), "towel", WHITE, faces={"pz": "towel"}, skip=("nz",))

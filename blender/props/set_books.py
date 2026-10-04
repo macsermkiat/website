@@ -1,83 +1,66 @@
-"""Bücherstand goods: two shelves of individual books and the counter.
+"""Bücherstand goods: Mac's 55 books in six category sections, the back shelves and the counter.
 
-prop_books_shelf_1 -> slot_shelf_1 of stall_buecher (lower back shelf, eye level; the five named titles)
-prop_books_shelf_2 -> slot_shelf_2 of stall_buecher (upper back shelf)
-prop_books_counter -> slot_counter of stall_buecher (open books on a stand, stacks, a row between
-                      bookends, a tray of bookmarks, price cards, a banker's lamp, a cash box)
+prop_books_<key>   -> slot_cat_<key> of stall_buecher, one per category in content/books/categories.json
+                      (physics, lives, mind, people, decisions, craft). The carpenter's
+                      blender/stalls/buecher_sections.json gives each section's boards (offset from the slot:
+                      left end, front edge, top surface; width, depth, clear height). Every book of the category
+                      stands spine-out on those boards as its own node act_book_<nn> (nn = 00..54 in
+                      categories.json order, books_catalog), among untitled filler books (static, not clickable).
+prop_books_shelf_1 -> slot_shelf_1 (lower back shelf): untitled secondhand stock, stacks, bookends
+prop_books_shelf_2 -> slot_shelf_2 (upper back shelf): the same
+prop_books_counter -> slot_counter: the open guest book on a reading stand, two face-out copies of Mac's books
+                      on easels (static display copies, not act_ nodes: each title is clickable once, on its
+                      category shelf), untitled stacks, bookmarks, price cards, a banker's lamp with an emissive
+                      bulb_warm bulb (no light_ empty: the stall has its two), a cash box.
 
-Every book is its own node act_book_<n> (numbered across the whole stall: shelf 1 from 0, shelf 2 from
-100, counter from 200) with its origin at the foot of its spine (standing) or under the middle of its
-lowest face (lying), spine facing -Y (the visitor). Each book has one material, book_cover_<n>, that
-reads the books atlas; its front cover (the +X board of a standing book, spine on the left as you look
-at it) carries the cover art, whose UV rect items.json gives as cover_uv.
-
-The Bücherstand shelves are 2.08 m wide, but diagonal braces stand at x = +-0.95 from 0.22 m up, so the
-shelf sets keep to x = +-0.925. A third knee brace under the upper shelf rises from 0.22 m above shelf 1
-at x = -0.015..0.015, so books standing across the middle of shelf 1 stay under 0.205 m (LOW_ZONES), and
-the reading-list block stands left of it. Each shelf has a 5 cm front lip at y = -0.14; spines stand just
-behind it. check_props' seat check fails if a book cuts into any of these.
-No title repeats anywhere on the stall: the counter has its own list and the two shelves draw from two
-disjoint shuffled halves of the remaining generic titles (shelf_pools); running out raises.
-The lamp has no light_ empty: the stall already has its two (light_0, light_1). Its bulb is emissive.
+Every act_book_<nn> has its origin at the middle of its spine's foot (where it stands), the spine toward -Y
+(the visitor), and one material book_cover_<nn> reading the books atlas; its front cover (the +X board, spine on
+its left as you look at it) carries the cover art whose UV rect items.json gives as cover_uv. items.json also
+carries name (title), author, slug and category. No invented titles anywhere: filler spines carry no lettering.
 """
+import json
 import math
+import os
 
 from mathutils import Matrix, Vector
 
 import atlas_books
+import books_catalog
 import goods as G
-import vendor_atlas
 import vlib
 from vlib import C, T, WHITE, drng, jit, lite, rng, seg
 
 TWO_PI = 2 * math.pi
-NAMED = ["order_of_time", "geb", "feynman_1", "feynman_2", "feynman_3", "being_you", "book_of_why"]
-NAMED_SIZE = {"order_of_time": (0.036, 0.215, 0.145), "geb": (0.058, 0.245, 0.17), "feynman_1": (0.05, 0.285, 0.215),
-              "feynman_2": (0.05, 0.285, 0.215), "feynman_3": (0.05, 0.285, 0.215), "being_you": (0.042, 0.24, 0.16),
-              "book_of_why": (0.044, 0.245, 0.165)}
-NAMED_KIND = {"order_of_time": "hard", "geb": "paper", "feynman_1": "hard", "feynman_2": "hard", "feynman_3": "hard",
-              "being_you": "hard", "book_of_why": "hard"}
-SHELF_X = 0.925
+SECTIONS_JSON = os.path.join(vlib.REPO, "blender", "stalls", "buecher_sections.json")
+SHELF_X = 0.925          # the back shelves: diagonal braces stand at x = +-0.95
 SPINE_Y = -0.118
-# (x0, x1, max height): stall parts above a shelf that books must stay under (see the docstring)
 LOW_ZONES = {"prop_books_shelf_1": [(-0.04, 0.04, 0.205)], "prop_books_shelf_2": []}
-NAMED_X = -0.52                     # where the reading-list block starts on shelf 1 (it ends near -0.19)
+SPINE_SET = 0.012        # titled spines stand this far behind a section board's front edge
 
 
-def spine_kinds():
-    return {f"spine_g{i}": t[2] for i, t in enumerate(vendor_atlas.GENERIC_TITLES)}
+def sections():
+    """{key: section} from the carpenter's buecher_sections.json (raises if it is missing: the vendor does
+    not invent a layout)."""
+    with open(SECTIONS_JSON) as f:
+        js = json.load(f)
+    return {s["key"]: s for s in js["sections"]}
 
 
-# the counter's own books (stacks and the row between bookends); the shelves never repeat them
-COUNTER_BOOKS = ["spine_g21", "spine_g4", "spine_g30", "spine_g8", "spine_g36", "spine_g2", "spine_g12",
-                 "spine_g13", "spine_g40", "spine_g0", "spine_g26", "spine_g44", "spine_g19"]
+def catalog():
+    return books_catalog.load()
 
 
-def shelf_pools():
-    """Every generic title stands once on the whole stall: the stock minus the counter's books, shuffled
-    once (fixed seed, independent of the set being built) and split in two, one half per shelf."""
-    import random
-    keys = [k for k in spine_kinds() if k not in COUNTER_BOOKS]
-    random.Random(2026).shuffle(keys)
-    half = len(keys) // 2
-    return {"prop_books_shelf_1": keys[:half], "prop_books_shelf_2": keys[half:]}
-
-
-def title_len(spine):
-    return len(atlas_books.book_meta(spine)[0])
-
-
-def book(m, w, h, d, spine, kind, mat, M=None, page_col=C("efe6d0")):
-    """A book standing on its tail: origin at the middle of the spine's foot, spine toward -Y,
-    fore-edge toward +Y, thickness w along X. Front cover on the +X board (spine on its left)."""
+# ------------------------------------------------------------ one book
+def book(m, w, h, d, spine, front, kind, mat, M=None, page_col=C("efe6d0")):
+    """A book standing on its tail: origin at the middle of the spine's foot, spine toward -Y, fore-edge
+    toward +Y, thickness w along X. Front cover on the +X board (spine on its left). `spine` and `front`
+    are books-atlas region names (front None: a plain board cut from the spine's cloth)."""
     M = M or Matrix()
     sreg = vlib.R(spine)
-    front = vlib.R("cover_" + spine[len("spine_"):])
     plain = vlib.R(sreg.rect, sub=(0.04, 0.25, 0.12, 0.75))
+    front = vlib.R(front) if front else plain
     edge = vlib.R("pages_edge")
     if lite():
-        # a plain box: spine, both boards and the head; no tail (it stands on it) and no fore-edge (it
-        # faces the back wall, or lies under the next book)
         m.box((w, d, h), M @ T(0, d / 2, h / 2), plain, WHITE, mat,
               faces={"ny": sreg, "px": front, "pz": edge}, skip=("nz", "py"))
         return
@@ -111,101 +94,85 @@ def book(m, w, h, d, spine, kind, mat, M=None, page_col=C("efe6d0")):
               faces={"ny": sreg, "px": front, "pz": edge, "py": edge, "nz": edge})
 
 
-def add_book(s, idx, loc, w, h, d, spine, kind, lying=False, rz=0.0, where="shelf", page_col=C("efe6d0")):
-    """One act_book_<idx> node. Lying books rest on their back board with the spine still to the front."""
-    name = f"act_book_{idx}"
-    mat = f"book:{idx}"
-    if lying:
-        node = s.node(name, loc, rot=(0, 0, rz))
-        # stand-up book turned onto its back cover (-X board down): height runs along X
-        book(node, w, h, d, spine, kind, mat, T(0, 0, w / 2) @ Matrix.Rotation(-math.pi / 2, 4, 'Y') @ T(0, 0, -h / 2),
-             page_col)
-    else:
-        node = s.node(name, loc, rot=(0, 0, rz) if rz else None)
-        book(node, w, h, d, spine, kind, mat, None, page_col)
-    title, author = atlas_books.book_meta(spine)
-    s.item(name, title, "book", title=title, author=author, cover_material=f"book_cover_{idx}",
-           cover_uv=cover_uv_gltf(spine),
-           cover_texture="prop_tex_books_color.webp", where=where)
+def book_dims(b, clear=None, depth=None):
+    """A book's (w, h, d) in metres, kept under a board's clear height and inside its depth."""
+    w, h, d = b["dims"]
+    if clear:
+        h = min(h, clear - 0.012)
+    if depth:
+        d = min(d, depth - SPINE_SET - 0.006)
+    return w, h, d
 
 
-def cover_uv_gltf(spine):
-    """The cover's rect in glTF texture space (origin top-left): [u_min, v_min, u_max, v_max]."""
-    u0, v0, u1, v1 = vlib.regions()["cover_" + spine[len("spine_"):]]
+def add_real_book(s, nn, b, loc, rz=0.0, clear=None, depth=None, where="section"):
+    """Mac's book nn as act_book_<nn>, standing at loc (the middle of its spine's foot)."""
+    name = f"act_book_{nn:02d}"
+    k = books_catalog.key(nn)
+    w, h, d = book_dims(b, clear, depth)
+    node = s.node(name, loc, rot=(0, 0, rz) if rz else None)
+    book(node, w, h, d, "spine_" + k, "cover_" + k, "paper" if b["binding"] == "paper" else "hard",
+         f"book:{nn:02d}", None, C("efe6d0") if b["binding"] != "cloth" else C("e2d6b8"))
+    s.item(name, b["title"], "book", title=b["title"], author=b["author"], slug=b["slug"], category=b["category"],
+           category_de=b["label_de"], cover_material=f"book_cover_{nn:02d}", cover_uv=cover_uv_gltf("cover_" + k),
+           cover_texture="prop_tex_books_color.webp", where=where,
+           size_m=[round(w, 3), round(h, 3), round(d, 3)])
+    return w
+
+
+def cover_uv_gltf(region):
+    """A region's rect in glTF texture space (origin top-left): [u_min, v_min, u_max, v_max]."""
+    u0, v0, u1, v1 = vlib.regions()[region]
     return [round(u0, 5), round(1 - v1, 5), round(u1, 5), round(1 - v0, 5)]
 
 
-def fill_shelf(s, x0, x1, start, named=(), low=(), pool=None):
-    """Books standing along the shelf from x0 to x1, with a horizontal stack; the named block left of the
-    middle. Standing books that reach into a `low` zone (x0, x1, h) are kept under h. Titles come from
-    `pool` in order, each once (a RuntimeError if the shelf needs more books than the pool holds)."""
-    kinds = spine_kinds()
-    order = list(pool)
-    idx, x, gi = start, x0, 0
+FILLER_KINDS = atlas_books.filler_kinds()
 
-    def take():
-        nonlocal gi
-        if gi >= len(order):
-            raise RuntimeError(f"{s.name}: the shelf needs more than its {len(order)} titles; add stock")
-        gi += 1
-        return order[gi - 1]
-    named = list(named)
-    named_x = NAMED_X
 
-    def cap(xa, w, h):
-        for z0, z1, hmax in low:
-            if xa - w / 2 < z1 and xa + w / 2 > z0:
-                h = min(h, hmax)
-        return h
-    placed_named = False
-    stack_at = [x1 - 0.42 + rng.uniform(-0.1, 0.1)] if named else [x0 + 0.5 + rng.uniform(-0.1, 0.1)]
-    while x < x1 - 0.02:
-        if named and not placed_named and x >= named_x:
-            for key in named:
-                w, h, d = NAMED_SIZE[key]
-                if cap(x + w / 2, w, h) < h:
-                    raise RuntimeError(f"reading-list book {key} would stand under a brace; move NAMED_X")
-                add_book(s, idx, (x + w / 2, SPINE_Y, 0), w, h, d, "spine_" + key, NAMED_KIND[key])
-                idx += 1
-                x += w + 0.0015
-            placed_named = True
-            continue
-        if stack_at and x >= stack_at[0]:
-            # a short stack of books lying flat, spines to the front
-            stack_at.pop(0)
-            base = x + 0.13
-            z = 0.0
-            for k in range(rng.randint(3, 5)):
-                w, h, d = rng.uniform(0.022, 0.04), rng.uniform(0.2, 0.25), rng.uniform(0.14, 0.18)
-                if x + h + 0.02 > x1:
-                    break
-                reg = take()
-                add_book(s, idx, (base + rng.uniform(-0.01, 0.01), SPINE_Y, z), w, h, d, reg,
-                         "paper" if kinds[reg] == "paper" else "hard", lying=True, rz=rng.uniform(-0.05, 0.05))
-                idx += 1
-                z += w
-            x = base + 0.14
-            continue
-        w = rng.uniform(0.02, 0.045)
-        hk = rng.uniform(0.85, 1.25)
-        if x + w > x1:
+def filler(m, M, w, h, d, k):
+    """An untitled filler book (merged into the set's static mesh, not clickable). k picks its spine."""
+    key = f"spine_f{k % atlas_books.N_FILLER}"
+    kind = FILLER_KINDS[key]
+    book(m, w, h, d, key, None, "paper" if kind == "paper" else "hard", "books", M,
+         C("efe6d0") if kind != "leather" else C("d8c8a0"))
+
+
+def filler_dims(clear, depth, kind):
+    w = rng.uniform(0.018, 0.042)
+    h = rng.uniform(0.19, 0.25) if kind != "leather" else rng.uniform(0.22, 0.28)
+    if clear:
+        h = min(h, clear - 0.015)
+    d = min(depth - SPINE_SET - 0.008, max(0.12, h * rng.uniform(0.62, 0.72)))
+    return w, h, d
+
+
+def filler_run(m, x, x_end, y0, z0, clear, depth, k0):
+    """Untitled books standing from x to (at most) x_end; returns (new x, next filler index)."""
+    k = k0
+    while True:
+        kind = FILLER_KINDS[f"spine_f{k % atlas_books.N_FILLER}"]
+        w, h, d = filler_dims(clear, depth, kind)
+        if x + w > x_end:
+            return x, k
+        filler(m, T(x + w / 2, y0 + rng.uniform(0.0, 0.01), z0), w, h, d, k)
+        x += w + rng.uniform(0.0005, 0.0025)
+        k += 7
+
+
+def filler_stack(m, x, y0, z0, clear, depth, k0, n=3):
+    """A short stack of untitled books lying flat, spines to the front; returns the x it ends at."""
+    z = 0.0
+    hmax = 0.0
+    for i in range(n):
+        w, h, d = rng.uniform(0.022, 0.038), rng.uniform(0.19, 0.23), rng.uniform(0.13, 0.16)
+        d = min(d, depth - SPINE_SET - 0.01)
+        if clear and z + w > clear - 0.02:
             break
-        reg = take()
-        if title_len(reg) > 24:
-            w = max(w, 0.032)          # a long title gets a spine wide enough to read
-        h = min(0.3, max(0.17, w * (304 / 48) * hk))
-        if kinds[reg] == "leather":
-            h = min(0.3, max(h, 0.22))
-        h = cap(x + w / 2, w, h)
-        d = min(0.22, max(0.12, h * rng.uniform(0.62, 0.72)))
-        if x + w > x1:
-            break
-        add_book(s, idx, (x + w / 2, SPINE_Y + rng.uniform(0.0, 0.012), 0), w, h, d, reg,
-                 "paper" if kinds[reg] == "paper" else "hard",
-                 page_col=C("efe6d0") if kinds[reg] != "leather" else C("d8c8a0"))
-        idx += 1
-        x += w + rng.uniform(0.0005, 0.003)
-    return idx
+        Ml = T(x + 0.12 + rng.uniform(-0.006, 0.006), y0, z0 + z, rz=rng.uniform(-0.05, 0.05)) @ \
+            T(0, 0, w / 2) @ Matrix.Rotation(-math.pi / 2, 4, 'Y') @ T(0, 0, -h / 2)
+        filler(m, Ml, w, h, d, k0 + i * 5)
+        hmax = max(hmax, h)
+        z += w
+    return x + 0.25
 
 
 def bookend(m, M, col=C("8a6a3a"), side=1):
@@ -229,7 +196,7 @@ def open_book(m, M, w=0.36, d=0.24, thick=0.03, cover=C("6e1a22")):
     """An open book lying on its back: two curved page blocks and the case underneath."""
     k = seg(10, 4)
     reg = vlib.R("pages_open")
-    m.box((w + 0.012, d + 0.012, 0.004), M @ T(0, 0, 0.002), vlib.R("spine_g5", sub=(0.05, 0.3, 0.12, 0.7)), cover,
+    m.box((w + 0.012, d + 0.012, 0.004), M @ T(0, 0, 0.002), vlib.R("spine_f3", sub=(0.05, 0.3, 0.12, 0.7)), cover,
           "books")
     for side in (-1, 1):
         m.box((w / 2 - 0.012, d - 0.004, thick * 0.6), M @ T(side * (w / 4 + 0.004), 0, 0.004 + thick * 0.3),
@@ -256,7 +223,7 @@ def open_book(m, M, w=0.36, d=0.24, thick=0.03, cover=C("6e1a22")):
 
 
 def lamp(m, x, y):
-    """Banker's lamp: brass base and stem, green cased-glass shade, a warm emissive bulb (no light_ empty)."""
+    """Banker's lamp: brass base and stem, green cased-glass shade, an emissive bulb_warm bulb (no light_ empty)."""
     n = seg(20, 8)
     m.lathe([(0.0, 0.0), (0.085, 0.0), (0.09, 0.006), (0.085, 0.018), (0.06, 0.026), (0.02, 0.032), (0.0, 0.032)],
             n, "brass", T(x, y + 0.03, 0), WHITE)
@@ -278,7 +245,8 @@ def lamp(m, x, y):
         m.tube([Ms @ Vector((0.05, -0.04, 0.01)), Ms @ Vector((0.05, -0.05, -0.08))], 0.0015, 4, "brass", None, WHITE)
         m.sphere(0.006, 6, 4, "brass", T(*(Ms @ Vector((0.05, -0.05, -0.085)))), WHITE)
     m.cyl(0.018, 0.02, 0.05, seg(10, 6), "brass", Ms @ T(0, 0, 0.03), WHITE)
-    m.sphere(0.024, seg(10, 6), seg(6, 3), "sw_satin", Ms @ T(0, 0, 0.012), WHITE, "lamp", scale=(1.8, 1, 1))
+    # the bulb: emissive bulb_warm (BUILD.md: a small glow in a stall that has its two light_ empties)
+    m.sphere(0.024, seg(10, 6), seg(6, 3), "sw_satin", Ms @ T(0, 0, 0.012), WHITE, "bulb_warm", scale=(1.8, 1, 1))
 
 
 def cash_box(m, M):
@@ -326,64 +294,171 @@ def bookmark_tray(m, M):
                Mk, uvq=[(0, 0), (1, 0), (1, 1), (0, 1)])
 
 
+
+
+def easel_copy(m, M, nn, b, scale=1.0):
+    """A face-out display copy of Mac's book nn on a small wooden easel (static: the clickable copy of every
+    title is the one on its category shelf). The book leans back 15 degrees, its front cover to the visitor."""
+    k = books_catalog.key(nn)
+    w, h, d = b["dims"]
+    h, d = h * scale, d * scale
+    wood = vlib.RW("wood")
+    # easel: a back leg, a ledge and two front legs
+    m.box((0.012, 0.012, h * 0.8), M @ T(0, 0.06, h * 0.38, rx=-0.26), wood, C("6a4228"))
+    m.box((d * 0.9, 0.03, 0.008), M @ T(0, -0.035, 0.012), wood, C("7a4a2c"))
+    m.box((d * 0.9, 0.006, 0.02), M @ T(0, -0.048, 0.02), wood, C("7a4a2c"))
+    for sx in (-1, 1):
+        m.box((0.01, 0.01, h * 0.75), M @ T(sx * d * 0.38, -0.01, h * 0.36, rx=0.26), wood, C("6a4228"))
+    # the book turned so its front cover (+X board) faces the visitor (-Y), spine on the left, centred on the
+    # easel, standing on the ledge and leaning back against the back leg
+    Mb = M @ T(0, -0.035 + w / 2, 0.016) @ Matrix.Rotation(-0.26, 4, 'X') @ T(-d / 2, 0, 0) @ \
+        Matrix.Rotation(-math.pi / 2, 4, 'Z')
+    book(m, w, h, d, "spine_" + k, "cover_" + k, "paper" if b["binding"] == "paper" else "hard", "books", Mb)
+
+
 def counter():
     s = vlib.PropSet("prop_books_counter", "slot_counter", "buecherstand", footprint=(2.0, 0.45))
     m = s.static
-    kinds = spine_kinds()
-    # reading stand with a big open book
+    cat = dict(catalog())
+    # reading stand with the bookseller's open guest book
     Ml = T(-0.45, 0.04, 0)
     m.box((0.3, 0.22, 0.012), Ml @ T(0, 0.02, 0.006), vlib.RW("wood"), C("6a4228"))
     m.box((0.38, 0.26, 0.012), Ml @ T(0, 0.02, 0.07, rx=0.45), vlib.RW("wood"), C("7a4a2c"))
     m.box((0.38, 0.02, 0.02), Ml @ T(0, -0.1, 0.022, rx=0.45), vlib.RW("wood"), C("6a4228"))
     m.box((0.02, 0.12, 0.1), Ml @ T(0, 0.1, 0.05), vlib.RW("wood"), C("6a4228"))
     open_book(m, Ml @ T(0, 0.02, 0.078, rx=0.45), w=0.36, d=0.25, cover=C("5a1a1e"))
-    # a second open book lying flat, and a pencil across it
+    # a pencil on a ribbon beside the guest book, and a second open book (untitled) lying flat
     open_book(m, T(-0.08, -0.09, 0, rz=0.08), w=0.3, d=0.2, thick=0.022, cover=C("1f2f52"))
     m.cyl(0.0035, 0.0035, 0.17, 6, "sw_satin", T(-0.16, -0.13, 0.044, ry=math.pi / 2), C("d8a020"))
-    idx = 200
-    # two stacks of books lying flat
-    for sx, sy, specs in ((-0.84, -0.08, (("spine_g21", 0.032, 0.24, 0.17), ("spine_g4", 0.028, 0.22, 0.15),
-                                          ("spine_g30", 0.04, 0.25, 0.18), ("spine_g8", 0.026, 0.2, 0.14))),
-                          (0.76, -0.12, (("spine_g36", 0.03, 0.23, 0.16), ("spine_g2", 0.034, 0.21, 0.15),
-                                         ("spine_g12", 0.024, 0.2, 0.13)))):
-        z = 0.0
-        for reg, w, h, d in specs:
-            add_book(s, idx, (sx + rng.uniform(-0.01, 0.01), sy, z), w, h, d, reg,
-                     "paper" if kinds[reg] == "paper" else "hard", lying=True, rz=rng.uniform(-0.08, 0.08),
-                     where="counter")
-            idx += 1
-            z += w
-    price_card(m, T(-0.84, -0.02, 0.126), 2)
-    # a short row standing between two bookends at the back
+    # two face-out display copies of Mac's books on easels, at the counter's ends
+    easel_copy(m, T(-0.84, 0.02, 0, rz=0.12), 8, cat[8])          # The Order of Time
+    easel_copy(m, T(0.74, 0.04, 0, rz=-0.1), 53, cat[53])         # Atomic Habits
+    # an untitled stack lying flat, and a short row between bookends (secondhand stock)
+    z = 0.0
+    for k, (w, h, d) in enumerate(((0.032, 0.24, 0.17), (0.028, 0.22, 0.15), (0.04, 0.25, 0.18))):
+        Ms = T(-0.62 + rng.uniform(-0.01, 0.01), -0.1, z, rz=rng.uniform(-0.08, 0.08)) @ T(0, 0, w / 2) @ \
+            Matrix.Rotation(-math.pi / 2, 4, 'Y') @ T(0, 0, -h / 2)
+        filler(m, Ms, w, h, d, 2 + k * 5)
+        z += w
+    price_card(m, T(-0.62, -0.04, z), 2)
     x = 0.08
-    for reg in ("spine_g13", "spine_g40", "spine_g0", "spine_g26", "spine_g44", "spine_g19"):
+    for k in range(6):
         w = rng.uniform(0.025, 0.04)
         h = rng.uniform(0.2, 0.25)
-        add_book(s, idx, (x + w / 2, 0.05, 0), w, h, h * 0.68, reg, "paper" if kinds[reg] == "paper" else "hard",
-                 where="counter")
+        filler(m, T(x + w / 2, 0.05, 0), w, h, h * 0.68, 3 + k * 7)
         x += w + 0.002
-        idx += 1
     bookend(m, T(0.075, 0.05, 0), side=1)
     bookend(m, T(x + 0.004, 0.05, 0), side=-1)
     price_card(m, T(0.2, -0.05, 0), 3)
     bookmark_tray(m, T(0.34, -0.14, 0, rz=0.1))
-    lamp(m, 0.56, 0.08)
-    cash_box(m, T(0.86, 0.1, 0, rz=-0.15))
-    price_card(m, T(0.64, -0.17, 0, rz=0.2), 0)
+    lamp(m, 0.52, 0.1)
+    cash_box(m, T(0.95, 0.12, 0, rz=-0.15))
+    price_card(m, T(0.6, -0.17, 0, rz=0.2), 0)
     s.finish()
     return s
 
 
+def shelf_set(name, slot, seed_k):
+    """A back shelf of untitled secondhand stock: standing runs, a lying stack or two, brass bookends."""
+    s = vlib.PropSet(name, slot, "buecherstand", footprint=(2.08, 0.28))
+    m = s.static
+    low = LOW_ZONES.get(name, ())
+    x, k = -SHELF_X + 0.012, seed_k
+    x1 = SHELF_X - 0.012
+    stacks = [-0.55 + rng.uniform(-0.08, 0.08), 0.42 + rng.uniform(-0.08, 0.08)]
+    while x < x1 - 0.02:
+        if stacks and x >= stacks[0]:
+            stacks.pop(0)
+            x = filler_stack(m, x, SPINE_Y, 0.0, None, 0.26, k, n=rng.randint(3, 5)) + 0.01
+            k += 11
+            continue
+        # a standing run up to the next stack (or the end), kept under the brace over the middle
+        nxt = stacks[0] if stacks else x1
+        kind = FILLER_KINDS[f"spine_f{k % atlas_books.N_FILLER}"]
+        w, h, d = filler_dims(None, 0.26, kind)
+        for z0, z1, hmax in low:
+            if x - 0.02 < z1 and x + w + 0.02 > z0:
+                h = min(h, hmax)
+        if x + w > nxt:
+            x = nxt
+            continue
+        filler(m, T(x + w / 2, SPINE_Y + rng.uniform(0.0, 0.012), 0), w, h, min(d, 0.2), k)
+        x += w + rng.uniform(0.0005, 0.003)
+        k += 7
+    bookend(m, T(-SHELF_X, SPINE_Y, 0), side=1)
+    bookend(m, T(SHELF_X, SPINE_Y, 0), side=-1)
+    s.finish()
+    return s
+
+
+def section_set(key):
+    """prop_books_<key>: Mac's books of one category on the section's boards (buecher_sections.json). The
+    titled books are split over the boards (the upper board, nearer eye level, gets the larger half), each
+    group stands together a little off-centre between untitled filler books, with a gap and a bookend for the
+    'room' the section was sized for. Raises if the titles do not fit."""
+    sec = sections()[key]
+    books = [(nn, b) for nn, b in catalog() if b["category"] == key]
+    s = vlib.PropSet(f"prop_books_{key}", sec["slot"], "buecherstand",
+                     footprint=(max(bd["width"] for bd in sec["boards"]), max(bd["depth"] for bd in sec["boards"])))
+    m = s.static
+    boards = sorted(sec["boards"], key=lambda bd: bd["index"])
+    n = len(books)
+    nb = len(boards)
+    # split: the upper board gets ceil(n / 2), the lower the rest (more boards: spread evenly from the top)
+    counts = [n // nb] * nb
+    for i in range(n - sum(counts)):
+        counts[nb - 1 - i] += 1
+    it = iter(books)
+    k = 5 + 3 * len(key)
+    for bd, cnt in zip(boards, counts):
+        ox, oy, oz = bd["offset"]
+        W, depth, clear = bd["width"], bd["depth"], bd.get("clear_height")
+        group = [next(it) for _ in range(cnt)]
+        x0, x1 = ox + 0.012, ox + W - 0.012
+        need = sum(book_dims(b, clear, depth)[0] + 0.0025 for _, b in group)
+        if need > x1 - x0:
+            raise RuntimeError(f"{key}: board {bd['index']} is {W:.2f} m but its {cnt} titles need {need:.2f} m")
+        room = (x1 - x0) - need
+        # filler before the titles, the titles, filler after, leaving about a fifth of the room free at the
+        # right end for a bookend (books bought, room to restock)
+        free = max(0.0, min(0.12, room * 0.22))
+        left_fill = (room - free) * rng.uniform(0.35, 0.55)
+        y0 = oy + SPINE_SET
+        x, k = filler_run(m, x0, x0 + left_fill, y0, oz, clear, depth, k)
+        for nn, b in group:
+            w = book_dims(b, clear, depth)[0]
+            add_real_book(s, nn, b, (x + w / 2, y0 + rng.uniform(0.0, 0.004), oz), clear=clear, depth=depth)
+            x += w + rng.uniform(0.0012, 0.0035)
+        x, k = filler_run(m, x, x1 - free, y0, oz, clear, depth, k)
+        if x1 - x > 0.03:
+            bookend(m, T(x + 0.003, y0, oz), side=-1)
+    s.finish()
+    return s
+
+
+def _section_def(key, seed):
+    sec = sections()[key]
+    W = max(bd["offset"][0] + bd["width"] for bd in sec["boards"])
+    top = max(bd["offset"][2] for bd in sec["boards"])
+    zc = top / 2 + 0.12
+    ymax = max(bd["offset"][1] for bd in sec["boards"])
+    return dict(fn=lambda: section_set(key), slot=sec["slot"], stall="buecherstand", kind="section", section=True,
+                seed=seed, width=W + 0.4, section_boards=(sec["boards"], sec["slot_position"][2]),
+                cam=((W / 2, -1.25 - ymax, zc + 0.12), (W / 2, ymax / 2, zc), 32), cam_fixed=True,
+                hero=((W * 0.5, -0.62 - ymax * 0.5, top + 0.14), (W * 0.5, 0.0 + ymax * 0.5, top + 0.11), 40),
+                label=f"{sec['label_de']} ({sec['books']} books)")
+
+
 SETS = {
-    "prop_books_shelf_1": dict(fn=lambda: shelf_set("prop_books_shelf_1", "slot_shelf_1", 0, NAMED),
+    "prop_books_shelf_1": dict(fn=lambda: shelf_set("prop_books_shelf_1", "slot_shelf_1", 1),
                                slot="slot_shelf_1", stall="buecherstand", kind="shelf", section=True, seed=51,
-                               width=2.1, cam=((0.0, -1.35, 0.2), (0.0, 0.0, 0.14), 32),
-                               hero=((-0.36, -0.72, 0.17), (-0.36, 0.0, 0.14), 36)),
-    "prop_books_shelf_2": dict(fn=lambda: shelf_set("prop_books_shelf_2", "slot_shelf_2", 100, ()),
+                               width=2.1, cam=((0.0, -1.35, 0.2), (0.0, 0.0, 0.14), 32)),
+    "prop_books_shelf_2": dict(fn=lambda: shelf_set("prop_books_shelf_2", "slot_shelf_2", 4),
                                slot="slot_shelf_2", stall="buecherstand", kind="shelf2", section=True, seed=52,
-                               width=2.1, cam=((0.35, -1.1, 0.25), (0.1, 0.0, 0.14), 32),
-                               hero=((0.45, -0.72, 0.18), (0.45, 0.0, 0.14), 36)),
+                               width=2.1, cam=((0.35, -1.1, 0.25), (0.1, 0.0, 0.14), 32)),
     "prop_books_counter": dict(fn=counter, slot="slot_counter", stall="buecherstand", kind="counter", section=True,
                                seed=53, width=2.2, cam=((-0.0, -1.95, 0.62), (0.0, 0.0, 0.1), 30),
                                hero=((0.2, -0.85, 0.42), (0.22, 0.0, 0.1), 36)),
 }
+for _i, _c in enumerate(books_catalog.categories()):
+    SETS[f"prop_books_{_c['key']}"] = _section_def(_c["key"], 60 + _i)
