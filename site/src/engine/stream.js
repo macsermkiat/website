@@ -76,6 +76,8 @@ export function graft(lite, full) {
       added.push(m);
       m.traverse((o) => { if (o.isMesh) meshes++; });
     }
+    // a node the engine dressed (a coaster's write_ card given the coaster's print) dresses itself again
+    try { a.userData.afterGraft?.(); } catch (e) { console.warn('[stream] afterGraft', a.name, e); }
   };
   const added = [];
   visit(lite, full);

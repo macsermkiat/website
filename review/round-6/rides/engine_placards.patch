@@ -1,0 +1,40 @@
+diff -ru a/site/src/main.js b/site/src/main.js
+--- a/site/src/main.js	2026-10-04 19:54:25.173536575 +0000
++++ b/site/src/main.js	2026-10-04 19:54:25.181422056 +0000
+@@ -311,7 +311,8 @@
+         if (half !== 0) world.goTo(world.current.view + half);
+         return;
+       }
+-      if (piece.decorative) { guide.read('ferris.notice'); return; }
++      // a placard with its own reading camera is read where it hangs; the engine's own placards open the noticeboard
++      if (piece.decorative && !world.surface(sid)?.readView) { guide.read('ferris.notice'); return; }
+       guide.read(piece.id);
+     },
+     onLink: (href) => openLink(href),
+@@ -493,7 +494,9 @@
+     rig.update(dt);
+     world.update(dt);
+     const L = audio.levels;
+-    for (const r of market.rides) r.update(still ? 0 : dt, T, 1, !still);
++    // the wheel stands still while a gondola's placard is read (its reading camera rides in the gondola)
++    const holdWheel = world.isOpen && !!world.surface(world.current?.surface)?.holdsWheel;
++    for (const r of market.rides) { const hold = holdWheel && !!r.wheel; r.update(still || hold ? 0 : dt, T, 1, !still && !hold); }
+     for (const sync of riderSyncs) sync();
+     for (const m of market.mixers) if (!still) m.update(dt);
+     const pulse = (L.bass || 0) * 0.35 + (L.drums || 0) * 0.1;
+diff -ru a/site/src/world/surfaces.js b/site/src/world/surfaces.js
+--- a/site/src/world/surfaces.js	2026-10-04 19:54:25.177426121 +0000
++++ b/site/src/world/surfaces.js	2026-10-04 19:54:25.184939131 +0000
+@@ -609,7 +609,11 @@
+       if (!a) return;
+       const id = `ferris.placard_${i}`;
+       node.traverse((o) => { o.userData.readable = id; });
+-      out.push({ id, placeId: 'ferris', role: `placard_${i}`, kind: 'placard', label: 'a placard', root: node, faces: { main: a }, theme: 'print', align: 'center', base: a.h / 4.2, fit: [a.h / 9, a.h / 3.2], glow: readGlow(node), rough: false, fromModel: true, readView: null });
++      // its own reading camera (cam_read_question_<k>, a child of the gondola, so it rides with it): read where the
++      // gondola is now; holdsWheel stops rot_wheel while it is read
++      const camRead = place.root.getObjectByName(`cam_read_${k}`), camReadT = place.root.getObjectByName(`cam_read_${k}_target`);
++      const readView = camRead ? () => ({ pos: camRead.getWorldPosition(new THREE.Vector3()), target: (camReadT || node).getWorldPosition(new THREE.Vector3()), near: 0.02 }) : null;
++      out.push({ id, placeId: 'ferris', role: `placard_${i}`, kind: 'placard', label: 'a placard', root: node, faces: { main: a }, theme: 'print', align: 'center', base: a.h / 4.2, fit: [a.h / 9, a.h / 3.2], glow: readGlow(node), rough: false, fromModel: true, readView, holdsWheel: !!camRead });
+     });
+     if (out.length) return out;
+   }

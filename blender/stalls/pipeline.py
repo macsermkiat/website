@@ -7,6 +7,7 @@ preview(objs) adds render-only stand-ins, lights and the camera (Env collection)
 """
 import argparse
 import json
+import math
 import os
 import sys
 import time
@@ -16,7 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "lib"))
 
 from nmlib import bake, export, mats, render, state  # noqa: E402
 
-ROUND = os.environ.get("NM_ROUND", "4")
+ROUND = os.environ.get("NM_ROUND", "6")
 REVIEW = os.path.join(state.REPO, "review", f"round-{ROUND}", "carpenter")
 
 
@@ -29,6 +30,16 @@ def args():
     ap.add_argument("--res", default="1280x720")
     ap.add_argument("--preview-name", default=None)
     ap.add_argument("--cam", default=None, help="x,y,z,tx,ty,tz,lens debug camera")
+    ap.add_argument("--read-views", action="store_true",
+                    help="after the preview, render the view from every cam_read_<name> empty")
+    ap.add_argument("--read-only", action="store_true",
+                    help="render only the cam_read views (skip the 3/4 preview)")
+    ap.add_argument("--extra-only", action="store_true",
+                    help="render only the --extra-view cameras (skip the preview and read views)")
+    ap.add_argument("--read-res", default="960x540")
+    ap.add_argument("--extra-view", action="append", default=[],
+                    help="name=x,y,z,tx,ty,tz[,lens]: one more render at --read-res (repeatable)")
+    ap.add_argument("--read-samples", type=int, default=32)
     a, _ = ap.parse_known_args(sys.argv[1:])
     return a
 
@@ -81,6 +92,31 @@ def build_and_export(name, build, seed, lite, texture_size=None, externalize=Non
     return objs, rep
 
 
+def read_views(name, a):
+    """Render the engine's reading view from every cam_read_<name> empty: the desktop camera's
+    42 degree vertical field of view at 16:9 (lens 26.4 mm on a 36 mm sensor), no depth of field.
+    Saves review/round-N/carpenter/<stall>_read_<name>.jpg."""
+    import bpy
+    from mathutils import Vector
+    w, h = (int(v) for v in a.read_res.split("x"))
+    lens = 18.0 / (math.tan(math.radians(21.0)) * w / h)
+    out = []
+    # only the stall's own reading cameras (the vendor's imported props carry their own)
+    for ob in list(state.export_collection().all_objects):
+        if not ob.name.startswith("cam_read_") or ob.name.endswith("_target"):
+            continue
+        key = ob.name[len("cam_read_"):]
+        tgt = bpy.data.objects.get(f"cam_read_{key}_target")
+        if tgt is None:
+            continue
+        render.camera(tuple(ob.matrix_world.translation), tuple(tgt.matrix_world.translation), lens=lens)
+        pn = f"{name}_read_{key}"
+        render.render(os.path.join(state.OUT_DIR, "renders", f"{pn}.png"), samples=a.read_samples,
+                      res=(w, h), jpeg=os.path.join(REVIEW, f"{pn}.jpg"), jpeg_width=w)
+        out.append(pn)
+    return out
+
+
 def run(name, build, preview=None, seed=1, externalize="kit"):
     a = args()
     reports = {}
@@ -102,10 +138,21 @@ def run(name, build, preview=None, seed=1, externalize="kit"):
                 v = [float(t) for t in a.cam.split(",")]
                 render.camera(v[0:3], v[3:6], lens=v[6] if len(v) > 6 else 35)
             os.makedirs(REVIEW, exist_ok=True)
-            w, h = (int(v) for v in a.res.split("x"))
-            pn = a.preview_name or f"{name}_preview"
-            render.render(os.path.join(state.OUT_DIR, "renders", f"{pn}.png"), samples=a.samples,
-                          res=(w, h), jpeg=os.path.join(REVIEW, f"{pn}.jpg"))
+            if not (a.read_only or a.extra_only):
+                w, h = (int(v) for v in a.res.split("x"))
+                pn = a.preview_name or f"{name}_preview"
+                render.render(os.path.join(state.OUT_DIR, "renders", f"{pn}.png"), samples=a.samples,
+                              res=(w, h), jpeg=os.path.join(REVIEW, f"{pn}.jpg"))
+            if (a.read_views or a.read_only) and not a.extra_only:
+                read_views(name, a)
+            for ev in a.extra_view:
+                key, vals = ev.split("=", 1)
+                v = [float(t) for t in vals.split(",")]
+                render.camera(v[0:3], v[3:6], lens=v[6] if len(v) > 6 else 35)
+                w, h = (int(t) for t in a.read_res.split("x"))
+                render.render(os.path.join(state.OUT_DIR, "renders", f"{name}_{key}.png"),
+                              samples=a.read_samples, res=(w, h),
+                              jpeg=os.path.join(REVIEW, f"{name}_{key}.jpg"), jpeg_width=w)
     with open(rep_path, "w") as f:
         json.dump(reports, f, indent=1)
     for k, r in reports.items():

@@ -3,7 +3,6 @@
 //   walkTo(id)   walk the lane to a place's stop          home()   back to the overview of the square
 //   step(±1)     the previous / next stop                  read(id) read a piece (walking there first if need be)
 //   back()       from a close-up (an item, a deco stall, a shelf) back to the stop's view
-import * as THREE from 'three';
 
 export function createGuide({ camera, rig, stroll, streamer, actions, world, stopbar, signboard, note, key, market, announce, sections, onMove }) {
   let here = null; // the stop the visitor is at, or walking to
@@ -34,6 +33,7 @@ export function createGuide({ camera, rig, stroll, streamer, actions, world, sto
     arrived = false;
     // the stall in view and the one after it come in at full detail while the visitor walks
     streamer?.want([id, stroll.next(id)]);
+    if (id === 'books' || stroll.next(id) === 'books') actions.items?.handlers?.prefetchBook?.();
     stopbar.hide();
     signboard.setCurrent(id);
     document.documentElement.dataset.stop = id;
@@ -113,4 +113,3 @@ export function createGuide({ camera, rig, stroll, streamer, actions, world, sto
   };
 }
 
-export { THREE };

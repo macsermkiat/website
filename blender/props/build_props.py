@@ -13,7 +13,7 @@ Outputs
     blender/out/props_report.json      triangles, bytes, bounding boxes, pivots, items per set
     blender/out/vendor/renders/*.png   the preview PNGs (deco frames as prop_deco_<key>.png; never the shared
                                        blender/out/renders/, where the carpenter's deco.py writes deco_<key>.png)
-    review/round-4/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
+    review/round-6/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
                                        and the deco contact sheet (built only from the vendor's own frames)
 """
 import argparse
@@ -28,12 +28,13 @@ sys.path.insert(0, HERE)
 import vlib  # noqa: E402  (imports bpy)
 import vstage  # noqa: E402
 import set_bier  # noqa: E402
+import set_bookopen  # noqa: E402
 import set_books  # noqa: E402
 import set_deco  # noqa: E402
 import set_gluehwein  # noqa: E402
 import set_wurst  # noqa: E402
 
-MODULES = [set_gluehwein, set_bier, set_wurst, set_books, set_deco]
+MODULES = [set_gluehwein, set_bier, set_wurst, set_books, set_deco, set_bookopen]
 STALL_ASSET = {"gluehwein": "stall_gluehwein.glb", "bratwurst": "stall_bratwurst.glb",
                "bierstand": "stall_bier.glb", "buecherstand": "stall_buecher.glb"}
 REPORT = os.path.join(vlib.state.OUT_DIR, "props_report.json")
@@ -79,6 +80,12 @@ def render_previews(name, d, ps, a, res):
     if d.get("section"):
         if {"wide", "hero"} & set(a.shots.split(",")):
             top = vstage.preview_scene(ps, d["kind"], d.get("width", 3.0), section=d.get("section_boards"))
+            # round 6, preview only: bottles turned round to show their back labels, and stand-in text on the
+            # write_ faces where the engine will print the section's words (nothing exported changes)
+            if d.get("preview_turn"):
+                vstage.preview_turn(d["preview_turn"])
+            if d.get("preview_text"):
+                vstage.preview_texts(d["preview_text"]())
             if "wide" in a.shots:
                 # the wide shot frames the whole set (goods fill the width); "cam_fixed" keeps a hand-set camera
                 cam = d["cam"] if d.get("cam_fixed") else vstage.frame_cam(ps, lens=28, elev=WIDE_ELEV[d["kind"]],
@@ -86,6 +93,10 @@ def render_previews(name, d, ps, a, res):
                 vstage.shot(cam, top, os.path.join(vlib.REVIEW, f"{name}.jpg"), a.samples, res)
             if d.get("hero") and "hero" in a.shots:
                 vstage.shot(d["hero"], top, os.path.join(vlib.REVIEW, f"{name}_hero.jpg"), a.samples, res)
+            # round 6 pass 2: further close-ups of one set ({tag: cam}, rendered with the hero)
+            for tag, cam in d.get("heroes", {}).items():
+                if tag in a.shots or "hero" in a.shots:
+                    vstage.shot(cam, top, os.path.join(vlib.REVIEW, f"{name}_{tag}.jpg"), a.samples, res)
         if d.get("in_stall") and "stall" in a.shots:
             # last: the stall scene replaces the plain counter (the set is moved to the stall's slot)
             import bpy
@@ -113,7 +124,7 @@ def guard_paths():
     repo = os.path.realpath(vlib.REPO or "")
     if not repo or repo == "/" or not os.path.isfile(os.path.join(repo, "docs", "BUILD.md")):
         raise SystemExit(f"[props] refusing to run: repo root {repo!r} is not the website repo")
-    owned = {"review": (vlib.REVIEW, "review/round-4/vendor"), "models": (vlib.MODELS, "site/public/models"),
+    owned = {"review": (vlib.REVIEW, "review/round-6/vendor"), "models": (vlib.MODELS, "site/public/models"),
              "report": (os.path.dirname(REPORT), "blender/out"), "renders": (vstage.RENDERS, "blender/out/vendor/renders"),
              "atlas": (vlib.ATLAS_DIR, "blender/out/vendor")}
     for key, (path, rel) in owned.items():
@@ -203,7 +214,7 @@ def deco_contact_sheet(sets):
         print(f"[props] contact sheet not rebuilt, frames missing: {[os.path.basename(p) for p in missing]}")
         return
     out = os.path.join(vlib.REVIEW, "deco_goods_contact_sheet.jpg")
-    render.contact_sheet(frames, out, cols=3, tile=(416, 234), title="Deco stall goods (vendor, round 4)")
+    render.contact_sheet(frames, out, cols=3, tile=(416, 234), title="Deco stall goods (vendor, round 6)")
     print(f"[props] wrote {out}")
 
 
@@ -230,16 +241,23 @@ def shrink_shared_textures():
 
 def write_props_json(sets):
     """One form only, the list the engine reads (site/src/engine/props.js)."""
-    lst = []
+    lst, alone = [], []
     for name, d in sets.items():
+        if d.get("standalone"):
+            # not placed at a slot: the engine loads it on its own (book_open.glb: the book a visitor opens)
+            alone.append({"model": f"{name}.glb", "lite": f"{name}.lite.glb", "root": name,
+                          "use": "the open hardback shown when a book is clicked (blender/props/set_bookopen.py)"})
+            continue
         stall = d["stall"]
         key = stall.replace("deco-", "").replace("kartoffelpuffer", "puffer")
         lst.append({"set": name, "stall": stall, "slot": d["slot"], "model": f"{name}.glb",
                     "lite": f"{name}.lite.glb", "asset": STALL_ASSET.get(stall, f"deco_{key}.glb")})
     out = {"about": "Vendor prop sets. Each glb's root node is the set origin: parent it to the named slot_ empty "
                     "of the stall (layout.json id in 'stall', stall file in 'asset'). 'sets' is the list the engine "
-                    "reads; 'by_set' is the same data keyed by set name ({set: {slot, stall, model, lite, asset}}).",
+                    "reads; 'by_set' is the same data keyed by set name ({set: {slot, stall, model, lite, asset}}). "
+                    "'standalone' lists vendor models that are not placed at a slot (book_open.glb).",
            "sets": lst,
+           "standalone": alone,
            "by_set": {e["set"]: {k: e[k] for k in ("slot", "stall", "model", "lite", "asset")} for e in lst}}
     path = os.path.join(vlib.MODELS, "props.json")
     with open(path, "w") as f:

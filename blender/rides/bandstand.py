@@ -20,10 +20,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import rcommon as rc  # noqa: E402
+import rwrite  # noqa: E402
 from rcommon import TAU, Part, node, rod, side_M, state  # noqa: E402
 from mathutils import Euler, Matrix, Vector  # noqa: E402
 from nmlib import carpentry as cp  # noqa: E402
-from nmlib import render  # noqa: E402
+from nmlib import boards, render  # noqa: E402
 
 NAME = "bandstand"
 
@@ -332,7 +333,7 @@ def build(lite):
     Ms = Matrix.Translation((x, y, DECK)) @ Euler((0, 0, slot_yaw(d))).to_matrix().to_4x4()
     stand = Part("bs_musicstand", "blackmetal")
     sp = Part("bs_sheet", "paper")
-    base = Ms @ Vector((0.62, -0.42, 0))
+    base = Ms @ Vector((0.87, -0.42, 0))      # 25 cm further out than round 2: clear of the player from the stop
     face = (Ms.to_3x3() @ Vector((-0.55, 0.45, 0))).normalized()          # the desk faces the player
     for k in range(3):
         ang = TAU * k / 3 + 0.4
@@ -347,8 +348,11 @@ def build(lite):
     for i, dx in enumerate((-0.11, 0.11)):
         sp.mbox(Md @ Matrix.Translation((dx, -0.006, 0.01)) @ Euler((0, 0.02 * (1 - 2 * i), 0)).to_matrix().to_4x4(),
                 (0.215, 0.002, 0.29), tint=(1.0, 0.97, 0.9))
+    # ------------------------------------------------ the programme on a music stand at the front left
+    prog = programme_stand(lite)
     objs = rc.finish_all([paint, floor, ceil, iron, fret, roof, gilt, bulbs, fir, *beads.values(), snow, wire,
-                          stand, sp])
+                          stand, sp, *prog])
+    rwrite.surface("music", PROG_F, PROG_W, PROG_H, z=0.0018, fill=0.78, lift=0.03, margin=0.024)
     # ------------------------------------------------ markers
     for name, (x, y, d) in SLOTS.items():
         node(name, (x, y, DECK), rot=(0, 0, slot_yaw(d)))
@@ -358,6 +362,60 @@ def build(lite):
     cv = node("cam_view", (3.0, -9.6, 2.7))
     cv.rotation_euler = (Vector((0, 0.2, 2.0)) - Vector((3.0, -9.6, 2.7))).to_track_quat('-Z', 'Y').to_euler()
     return rc.mesh_objs()
+
+
+# the programme stand (write_music): front left of the deck, clear of the piano, bass and sax seen
+# from the stroll stop, its desk turned to the stop and tipped back like a music desk
+PROG_POS = (-2.30, -1.40)
+PROG_W, PROG_H = 0.44, 0.30
+PROG_F = boards.face_frame((PROG_POS[0], PROG_POS[1], DECK + 1.13), yaw=0.574, lean=0.38)
+
+
+def programme_stand(lite):
+    """An ornate cast-iron music stand (tripod with scrolled feet, fluted shaft, pierced desk with a
+    lip) holding the evening's programme: a few sheets of music, the top one blank for the engine's
+    text (write_music), and a little brass clip lamp on the desk's top edge."""
+    F = PROG_F
+    iron = Part("bs_progstand", "blackmetal")
+    brass = Part("bs_proglamp", "brass")
+    paper = Part("bs_progsheets", "paper")
+    bulbs = Part("bulbs_prog", "bulb_warm")
+    L = rwrite.local_box
+    dw, dh = PROG_W + 0.07, PROG_H + 0.07
+    L(iron, F, 0, 0, -0.006, dw, dh, 0.006)                                   # desk
+    L(iron, F, 0, -dh / 2 - 0.01, 0.02, dw, 0.012, 0.05)                      # lip (shelf)
+    L(iron, F, 0, -dh / 2 + 0.005, 0.042, dw, 0.03, 0.006)                    # lip front
+    if not lite:
+        for sx in (-1, 1):                                                    # rolled side edges
+            iron.tube([boards.at(F, sx * dw / 2, -dh / 2, 0.0), boards.at(F, sx * dw / 2, dh / 2, 0.0)], 0.006, tseg=5)
+        iron.tube([boards.at(F, -dw / 2, dh / 2, 0.0), boards.at(F, dw / 2, dh / 2, 0.0)], 0.006, tseg=5)
+    # shaft and tripod
+    top = boards.at(F, 0, -0.06, -0.03)
+    foot = Vector((top.x, top.y, DECK))
+    iron.cyl(foot + Vector((0, 0, (top.z - DECK) / 2 + 0.03)), 0.011, 0.011, top.z - DECK - 0.06, seg=6 if lite else 8)
+    iron.cyl(foot + Vector((0, 0, 0.42)), 0.017, 0.017, 0.05, seg=6 if lite else 8)          # collar
+    iron.cyl(top + Vector((0, 0, -0.04)), 0.016, 0.012, 0.06, seg=6 if lite else 8)
+    for k in range(3):
+        a = TAU * k / 3 + 0.3
+        d = Vector((math.cos(a), math.sin(a), 0))
+        pts = [foot + Vector((0, 0, 0.40)), foot + d * 0.12 + Vector((0, 0, 0.16)), foot + d * 0.26 + Vector((0, 0, 0.02)),
+               foot + d * 0.30 + Vector((0, 0, 0.035))]
+        iron.tube(pts, 0.008, tseg=4 if lite else 5)
+        if not lite:
+            iron.sphere(foot + d * 0.30 + Vector((0, 0, 0.02)), 0.014, seg=6, rings=4)
+    # the sheets: a stack under the top sheet, edges showing, slightly askew
+    rwrite.paper_slip(paper, F, 0.012, -0.008, PROG_W + 0.012, PROG_H + 0.012, rot=0.02, z=0.0002,
+                      tint=(0.93, 0.89, 0.78))
+    rwrite.paper_slip(paper, F, -0.006, -0.004, PROG_W + 0.006, PROG_H + 0.006, rot=-0.012, z=0.0010,
+                      tint=(0.98, 0.95, 0.86))
+    # clip lamp on the top edge, its shade bent down over the music
+    c = boards.at(F, PROG_W * 0.3, dh / 2 + 0.01, 0.0)
+    ez = boards.frame_axes(F)[2]
+    arm = [c, c + Vector((0, 0, 0.07)), c + Vector((0, 0, 0.10)) + ez * 0.05, c + Vector((0, 0, 0.08)) + ez * 0.11]
+    brass.tube(arm, 0.004, tseg=4 if lite else 5)
+    brass.cyl(arm[-1] + Vector((0, 0, -0.005)), 0.03, 0.012, 0.04, seg=8 if lite else 12, caps=False)
+    rc.bulb(bulbs, arm[-1] + Vector((0, 0, -0.02)), 0.014)
+    return [iron, brass, paper, bulbs]
 
 
 def lyre(part, base, h, facing=0.0):
@@ -388,6 +446,9 @@ def preview(objs):
         else:
             instruments.place_in(name.replace("slot_", ""), M)
     render.lights_at_markers(energy=160)
+    ez = boards.frame_axes(PROG_F)[2]
+    render.add_light("env_prog_lamp", 'POINT', tuple(boards.at(PROG_F, PROG_W * 0.3, (PROG_H + 0.07) / 2 + 0.07, 0.11)),
+                     6, size=0.02)
     render.add_light("env_ceiling", 'AREA', (0, 0, ZC + 0.1), 120, size=2.5, rot=(math.pi, 0, 0))
     spot = render.add_light("env_spot_l", 'SPOT', (-2.5, -6.5, 5.0), 900, color=(1.0, 0.78, 0.55), size=0.3)
     spot.data.spot_size = math.radians(38)

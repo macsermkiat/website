@@ -315,20 +315,20 @@ function placard(w = 0.62, h = 0.3) {
 
 export const STANDINS = {
   // the chalkboards stand on the counter's free end, below the garland and the bulbs, in the stop's picture
-  glueh: [{ role: 'board', kind: 'chalk', label: 'the chalkboard', build: () => counterBoard(0.58, 0.5, { seed: 3, header: 'Heute am Stand' }), pos: [-1.37, 1.05, 1.12], face: true, maxTurn: 0.45, base: 0.0205 }],
+  glueh: [{ role: 'board', aliases: ['about'], kind: 'chalk', label: 'the chalkboard', build: () => counterBoard(0.58, 0.5, { seed: 3, header: 'Heute am Stand' }), pos: [-1.37, 1.05, 1.12], face: true, maxTurn: 0.45, base: 0.0205 }],
   bier: [
-    { role: 'vomfass', kind: 'chalk', label: 'the “vom Fass” board', build: () => counterBoard(0.6, 0.5, { seed: 4, header: 'Frisch vom Fass' }), pos: [1.3, 1.05, 1.12], face: true, maxTurn: 0.45, base: 0.02 },
+    { role: 'vomfass', aliases: ['projects_board'], kind: 'chalk', label: 'the “vom Fass” board', build: () => counterBoard(0.6, 0.5, { seed: 4, header: 'Frisch vom Fass' }), pos: [1.3, 1.05, 1.12], face: true, maxTurn: 0.45, base: 0.02 },
   ],
   wurst: [
-    { role: 'menu', kind: 'chalk', label: 'the menu board', build: () => counterBoard(0.54, 0.5, { seed: 5, header: 'Speisekarte' }), pos: [1.46, 1.05, 1.08], face: true, maxTurn: 0.45, base: 0.02 },
-    { role: 'paper', kind: 'paper', label: 'the wrapping paper', build: () => sheet(0.38, 0.29, 'kraft', { curl: 0.01, seed: 8, margin: 0.09 }), pos: [-0.22, 1.0545, 1.3], rx: -Math.PI / 2, ry: 0.0, rz: 0.12, base: 0.0125, theme: 'print' },
+    { role: 'menu', aliases: ['writing_menu'], kind: 'chalk', label: 'the menu board', build: () => counterBoard(0.54, 0.5, { seed: 5, header: 'Speisekarte' }), pos: [1.46, 1.05, 1.08], face: true, maxTurn: 0.45, base: 0.02 },
+    { role: 'paper', aliases: ['writing_paper'], kind: 'paper', label: 'the wrapping paper', build: () => sheet(0.38, 0.29, 'kraft', { curl: 0.01, seed: 8, margin: 0.09 }), pos: [-0.22, 1.0545, 1.3], rx: -Math.PI / 2, ry: 0.0, rz: 0.12, base: 0.0125, theme: 'print' },
   ],
-  books: [{ role: 'card', kind: 'paper', label: 'the reading card', build: () => easelCard(0.32, 0.24), pos: [0.66, 1.05, 1.24], ry: -0.18, base: 0.0128, theme: 'print' }],
-  band: [{ role: 'sheet', kind: 'paper', label: 'the sheet music', build: () => musicStand(0.34, 0.46), pos: [-1.55, 0.95, 2.75], face: true, maxTurn: 0.8, base: 0.0135, theme: 'print' }],
+  books: [{ role: 'card', aliases: ['reading_card', 'books_card'], kind: 'paper', label: 'the reading card', build: () => easelCard(0.32, 0.24), pos: [0.66, 1.05, 1.24], ry: -0.18, base: 0.0128, theme: 'print' }],
+  band: [{ role: 'sheet', aliases: ['music'], kind: 'paper', label: 'the sheet music', build: () => musicStand(0.34, 0.46), pos: [-1.55, 0.95, 2.75], face: true, maxTurn: 0.8, base: 0.0135, theme: 'print' }],
   // the rides' stand-ins stand by the stop itself (atStop: metres ahead of the stop's eye, metres to its right),
   // on the ground and turned to it, so they sit in the picture where the walk ends
-  ferris: [{ role: 'notice', kind: 'paper', label: 'the noticeboard', build: () => noticeboard(1.3, 0.95, 1.0), pos: [5.6, 0, 8.4], atStop: [4.2, 2.1], face: true, maxTurn: 0.9, base: 0.034, theme: 'print' }],
-  carousel: [{ role: 'ticket', kind: 'paper', label: 'the ticket', build: () => ticketBooth(), pos: [-5.4, 0, 6.9], atStop: [3.4, -2.3], face: true, maxTurn: 1.2, base: 0.0105, theme: 'print' }],
+  ferris: [{ role: 'notice', aliases: ['questions_board'], kind: 'paper', label: 'the noticeboard', build: () => noticeboard(1.3, 0.95, 1.0), pos: [5.6, 0, 8.4], atStop: [4.2, 2.1], face: true, maxTurn: 0.9, base: 0.034, theme: 'print' }],
+  carousel: [{ role: 'ticket', aliases: ['contact'], kind: 'paper', label: 'the ticket', build: () => ticketBooth(), pos: [-5.4, 0, 6.9], atStop: [3.4, -2.3], face: true, maxTurn: 1.2, base: 0.0105, theme: 'print' }],
 };
 
 /** write_<name> meshes in a model: role -> mesh. */
@@ -342,7 +342,7 @@ export function writeNodes(root) {
  * The writing area of a model's write_ mesh: the plane its UVs span (least squares over its vertices:
  * position = O + u U + v V), with +V up the text. Returns { area, w, h } or null.
  */
-export function areaFromWriteMesh(node) {
+export function areaFromWriteMesh(node, body = null) {
   const mesh = node.isMesh ? node : node.children.find((c) => c.isMesh);
   const g = mesh?.geometry;
   const pos = g?.attributes.position, uv = g?.attributes.uv;
@@ -357,17 +357,77 @@ export function areaFromWriteMesh(node) {
   // X = A^-1 B: row 0 is O, row 1 is U, row 2 is V (Matrix3.elements is column-major)
   const row = (a) => new THREE.Vector3(...[0, 1, 2].map((k) => [0, 1, 2].reduce((acc, b) => acc + M.elements[b * 3 + a] * B[b][k], 0)));
   const O = row(0), U = row(1), V = row(2);
+  // the writing covers the UVs the plane actually has: one mapped into a corner of a print atlas spans only part
+  // of 0..1, so the area starts at its smallest (u, v) and is as wide and tall as its UVs reach
+  let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity;
+  for (let i = 0; i < uv.count; i++) { const u = uv.getX(i), v = uv.getY(i); u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v); }
+  O.addScaledVector(U, u0).addScaledVector(V, v0);
+  U.multiplyScalar(u1 - u0); V.multiplyScalar(v1 - v0);
   // glTF UVs run v down the image, so (u, v) = (0, 0) is the text's top-left and +V points down the text
   V.negate();
+  // into the frame of the mesh's parent: a quantized mesh node carries a dequantising scale and offset, which the
+  // stream's graft replaces with the full model's, so the area must not hang under it
+  mesh.updateMatrix();
+  const P0 = O.clone().applyMatrix4(mesh.matrix), P1 = O.clone().add(U).applyMatrix4(mesh.matrix), P2 = O.clone().add(V).applyMatrix4(mesh.matrix);
+  U.subVectors(P1, P0); V.subVectors(P2, P0);
   const w = U.length(), h = V.length();
   if (w < 1e-4 || h < 1e-4) return null;
   const x = U.clone().normalize(), y = V.clone().normalize(), z = new THREE.Vector3().crossVectors(x, y).normalize();
+  // the side the plane shows: away from the body it is printed on, when it lies on that body's skin (a coaster's
+  // faces, a board's front); else the way its normals point. Its material may be double-sided, so not its winding.
+  // When its UVs are mirrored against that side, the words run from the other edge, with the same top and size.
+  if (outward(mesh, g, P0, U, V, z, body) < 0) { P0.add(U); x.negate(); z.negate(); }
   const area = new THREE.Object3D();
   area.name = 'engine_write_area';
-  area.matrix.makeBasis(x, y, z).setPosition(O.clone().add(z.clone().multiplyScalar(0.0012)));
+  area.matrix.makeBasis(x, y, z).setPosition(P0.clone().add(z.clone().multiplyScalar(0.0012)));
   area.matrix.decompose(area.position, area.quaternion, area.scale);
-  mesh.add(area);
+  (mesh.parent || mesh).add(area);
   return { area, w, h };
+}
+
+/** +1 when `z` (in the mesh parent's frame) points out of the plane's visible side, -1 when into it, 0 unknown. */
+function outward(mesh, g, P0, U, V, z, body) {
+  const parent = mesh.parent;
+  if (body && parent) {
+    body.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(body);
+    if (!box.isEmpty()) {
+      const c = parent.worldToLocal(box.getCenter(new THREE.Vector3()));
+      const mid = P0.clone().addScaledVector(U, 0.5).addScaledVector(V, 0.5);
+      const d = mid.sub(c).dot(z);
+      if (Math.abs(d) > 0.0004) return Math.sign(d);
+    }
+  }
+  const nrm = g.attributes.normal;
+  if (!nrm) return 0;
+  const n = new THREE.Vector3(), t = new THREE.Vector3();
+  for (let i = 0; i < nrm.count; i++) n.add(t.fromBufferAttribute(nrm, i));
+  n.applyMatrix3(new THREE.Matrix3().getNormalMatrix(mesh.matrix));
+  return Math.sign(n.dot(z));
+}
+
+/**
+ * The write_ mesh's own material, copied so it can brighten a little while it is read (as a stand-in's does);
+ * only a lit material with an emissive channel. Chalk slate stays dark.
+ */
+function readGlow(node) {
+  const out = [];
+  node.traverse((o) => {
+    if (!o.isMesh || Array.isArray(o.material) || !o.material?.emissive || /slate|chalk/i.test(o.material.name || '')) return;
+    const m = o.material.clone();
+    m.emissive.set(0xfff0d8);
+    m.emissiveMap = m.map || null;
+    m.emissiveIntensity = 0.04;
+    o.material = m;
+    out.push(m);
+  });
+  return out;
+}
+
+/** The act_ pivot a write_ node belongs to (its nearest act_ ancestor), or the node itself. */
+function actOf(node, stop) {
+  for (let o = node; o && o !== stop; o = o.parent) if (/^act_/i.test(o.name || '')) return o;
+  return node;
 }
 
 /**
@@ -388,13 +448,17 @@ export function createSurfaces({ market, camera, warn = () => {}, stopView = nul
 
 function buildSurface(place, spec, camera, warn, stopView) {
   const id = `${place.id}.${spec.role}`;
-  const own = writeNodes(place.root)[spec.role];
+  const nodes = writeNodes(place.root);
+  // the model's own node: write_<role>, or one of the names the vendor gave it (write_writing_paper)
+  const ownRole = [spec.role, ...(spec.aliases || [])].find((r) => nodes[r]);
+  const own = ownRole && nodes[ownRole];
   let built, root, faces;
   if (own) {
-    // the model's own surface: its area from its UVs, no stand-in
-    const a = areaFromWriteMesh(own);
-    if (a) { root = own; faces = { main: a }; built = { glow: [] }; own.traverse((o) => { if (o.isMesh) o.userData.readable = id; }); }
-    else warn(`${place.entry.id}: write_${spec.role} has no usable UVs; using a stand-in`);
+    // the model's own surface: its area from its UVs, no stand-in; the whole act_ object it is printed on reads
+    const act = actOf(own, place.root);
+    const a = areaFromWriteMesh(own, act !== own ? act : null);
+    if (a) { root = act; faces = { main: a }; built = { glow: readGlow(own) }; root.traverse((o) => { o.userData.readable = id; }); }
+    else warn(`${place.entry.id}: write_${ownRole} has no usable UVs; using a stand-in`);
   }
   if (!root) {
     built = spec.build();
@@ -425,22 +489,187 @@ function buildSurface(place, spec, camera, warn, stopView) {
     }
     mark(root, id);
   }
-  const camRead = place.root.getObjectByName(`cam_read_${spec.role}`);
-  const camReadT = place.root.getObjectByName(`cam_read_${spec.role}_target`);
+  const camRole = own ? ownRole : spec.role;
+  const camRead = place.root.getObjectByName(`cam_read_${camRole}`);
+  const camReadT = place.root.getObjectByName(`cam_read_${camRole}_target`);
+  // a model's surface is whatever size its maker made it: its type is fitted to it (the largest size, between
+  // a twelfth and a thirtieth of its height, at which the words fit on one page; world/reader.js viewsOf)
+  const fa = faces.main;
+  const fit = own && fa ? [fa.h / 30, fa.h / (spec.kind === 'chalk' ? 11 : 13)] : null;
   const s = {
     id, placeId: place.id, role: spec.role, kind: spec.kind, label: spec.label, root, faces,
-    theme: spec.theme || (spec.kind === 'chalk' ? 'chalk' : 'print'), base: spec.base, rough: spec.kind === 'chalk',
+    theme: spec.theme || (spec.kind === 'chalk' ? 'chalk' : 'print'), base: fit ? fit[1] : spec.base, fit, rough: spec.kind === 'chalk',
     glow: built.glow || [], fromModel: !!own,
     readView(face = 'main', opts) {
-      if (camRead && face === 'main') return { pos: camRead.getWorldPosition(new THREE.Vector3()), target: (camReadT || root).getWorldPosition(new THREE.Vector3()), near: 0.05 };
       const f = faces[face] || faces.main;
+      if (camRead && face === 'main') {
+        // the maker's reading camera, from its side; drawn back if this screen is narrower than the 16:9 it was set for
+        // aimed at the middle of the writing (the maker's target may be the middle of the whole board)
+        const fitted = readViewFor(f.area, f.w, f.h, camera, { fill: 0.84 });
+        const target = fitted.target;
+        const dir = camRead.getWorldPosition(new THREE.Vector3()).sub((camReadT || root).getWorldPosition(new THREE.Vector3()));
+        const d = Math.max(dir.length(), fitted.distance * 1.04);
+        return { pos: target.clone().addScaledVector(dir.normalize(), d), target, near: 0.05 };
+      }
       return readViewFor(f.area, f.w, f.h, camera, opts || (spec.kind === 'chalk' ? { fill: 0.86, up: 0.1 } : undefined));
     },
   };
   return s;
 }
 
-/** Coasters for the Bierstand: n Bierdeckel on the counter's left end, a little fanned. */
+/** The coaster's own printed mesh (its act_ node's mesh that is no write_ card). */
+function printMesh(body) {
+  let hit = null;
+  body.traverse((o) => {
+    if (hit || !o.isMesh || o.isText) return;
+    for (let p = o; p && p !== body; p = p.parent) if (/^(write_|engine_)/i.test(p.name || '')) return;
+    hit = o;
+  });
+  return hit;
+}
+
+/**
+ * Give a write_ card the print of the body it fills a hole in: the body's material, and at each of the card's
+ * corners the UV of the body's vertex there, so the print runs on across it. Returns the UV centre, or null.
+ */
+function printOnto(node, body) {
+  const card = node.isMesh ? node : node.children.find((c) => c.isMesh);
+  const disc = printMesh(body);
+  if (!card || !disc || !disc.geometry.attributes.uv) return null;
+  body.updateWorldMatrix(true, true);
+  const dp = disc.geometry.attributes.position, duv = disc.geometry.attributes.uv;
+  const cp = card.geometry.attributes.position;
+  const toCard = card.matrixWorld.clone().invert().multiply(disc.matrixWorld);
+  const pts = [];
+  const v = new THREE.Vector3();
+  for (let i = 0; i < dp.count; i++) pts.push(v.fromBufferAttribute(dp, i).applyMatrix4(toCard).clone());
+  const uv = new Float32Array(cp.count * 2);
+  const w = new THREE.Vector3(), cs = card.getWorldScale(new THREE.Vector3()).x || 1;
+  let cu = 0, cv = 0;
+  for (let i = 0; i < cp.count; i++) {
+    w.fromBufferAttribute(cp, i);
+    let best = -1, bd = Infinity;
+    pts.forEach((p, k) => { const d = p.distanceToSquared(w); if (d < bd) { bd = d; best = k; } });
+    // a corner with no vertex of the print within 2 mm: the card is not a filled hole; leave it as it is
+    if (best < 0 || Math.sqrt(bd) * cs > 0.002) return null;
+    uv[i * 2] = duv.getX(best); uv[i * 2 + 1] = duv.getY(best);
+    cu += uv[i * 2] / cp.count; cv += uv[i * 2 + 1] / cp.count;
+  }
+  const g = card.geometry.clone();
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  card.geometry = g;
+  card.material = disc.material;
+  card.userData.printUv = [cu, cv];
+  return [cu, cv];
+}
+
+/**
+ * A plain card back for a model coaster, as round as the coaster and just outside it on the back's side: the
+ * coaster's own material with every UV at one plain point of its print (the middle of the front's field), so it
+ * is the same card, unprinted. Lies in the back area's plane.
+ */
+function cardBack(face, body, frontNode) {
+  const disc = printMesh(body);
+  if (!disc) return null;
+  const card = frontNode.isMesh ? frontNode : frontNode.children.find((c) => c.isMesh);
+  const at = card?.userData.printUv;
+  const { area } = face;
+  body.updateWorldMatrix(true, true);
+  const inv = area.matrixWorld.clone().invert();
+  const box = new THREE.Box3(), v = new THREE.Vector3(), m = new THREE.Matrix4().multiplyMatrices(inv, disc.matrixWorld);
+  const pos = disc.geometry.attributes.position;
+  for (let i = 0; i < pos.count; i++) box.expandByPoint(v.fromBufferAttribute(pos, i).applyMatrix4(m));
+  const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  // just inside the rim's corners, so a coaster of few segments shows no card beyond its edge
+  const r = (Math.min(size.x, size.y) / 2) * 0.965;
+  const g = new THREE.CircleGeometry(r, 48);
+  if (at) { const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, at[0], at[1]); }
+  const mat = at ? disc.material : new THREE.MeshStandardMaterial({ name: 'engine_coaster_card', color: 0xeee6d6, roughness: 0.9 });
+  const back = new THREE.Mesh(g, mat);
+  back.name = 'engine_coaster_back';
+  back.position.set(c.x, c.y, box.max.z + 0.00015);
+  area.add(back);
+  // in the body's frame from here on (the area moves when it is refitted)
+  area.updateMatrixWorld(true);
+  const keep = back.matrixWorld.clone();
+  const parent = area.parent;
+  parent.updateWorldMatrix(true, false);
+  parent.add(back);
+  back.matrix.copy(parent.matrixWorld.clone().invert().multiply(keep));
+  back.matrix.decompose(back.position, back.quaternion, back.scale);
+  back.castShadow = false;
+  return back;
+}
+
+/**
+ * Refit a face's writing area inside the round body it is printed on (a coaster): centred on the disc, `wk` x `hk`
+ * of its radius (centred lines then stay inside the edge: their corners reach sqrt(wk^2 + hk^2) / 2 of r), and
+ * lying on the disc's face itself. The area keeps its orientation. Returns { area, w, h, r }.
+ */
+export function fitRound(face, body, wk, hk) {
+  const { area } = face;
+  body.updateWorldMatrix(true, true);
+  const inv = area.matrixWorld.clone().invert();
+  const box = new THREE.Box3(), v = new THREE.Vector3(), m = new THREE.Matrix4();
+  body.traverse((o) => {
+    if (!o.isMesh || o.isText || !o.visible || !o.geometry?.attributes.position) return;
+    for (let p = o; p && p !== body; p = p.parent) if (/^engine_(write_area|text)/i.test(p.name || '')) return;
+    const pos = o.geometry.attributes.position;
+    m.multiplyMatrices(inv, o.matrixWorld);
+    for (let i = 0; i < pos.count; i++) box.expandByPoint(v.fromBufferAttribute(pos, i).applyMatrix4(m));
+  });
+  if (box.isEmpty()) return face;
+  const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  const r = Math.min(size.x, size.y) / 2;
+  const w = r * wk, h = r * hk;
+  // the new top-left corner, in the area's present frame, then in its parent's
+  area.updateMatrix();
+  area.position.copy(new THREE.Vector3(c.x - w / 2, c.y + h / 2, box.max.z + 0.0002).applyMatrix4(area.matrix));
+  area.updateMatrixWorld(true);
+  return { area, w, h, r };
+}
+
+/**
+ * The vendor's Bierdeckel (act_coaster_<i> with write_coaster_<i>_front / _back), the first `n` of them, as
+ * coaster surfaces; [] when the props have none (the engine then lays its own, placeCoasters).
+ */
+export function modelCoasters(place, n, camera) {
+  const out = [];
+  const nodes = writeNodes(place.root);
+  for (let i = 0; i < n; i++) {
+    const fn = nodes[`coaster_${i}_front`], bn = nodes[`coaster_${i}_back`];
+    if (!fn || !bn) break;
+    const root = actOf(fn, place.root);
+    const fa = areaFromWriteMesh(fn, root), ba = areaFromWriteMesh(bn, root);
+    if (!fa || !ba) break;
+    // the words are printed on the coaster's own round face, not on a card laid over it: the front's write_ card
+    // (which fills the opening the vendor left in the print) takes the print itself, so the coaster's face runs on
+    // unbroken under the words; the back gets a plain card face of its own, as round as the coaster; each area is
+    // refitted inside the disc (the front inside its printed ring, the back inside its rim)
+    printOnto(fn, root);
+    bn.traverse((o) => { if (o.isMesh) o.visible = false; });
+    const backCard = cardBack(ba, root, fn);
+    // when the full model is grafted on (engine/stream.js), the card takes the full print again
+    fn.userData.afterGraft = () => {
+      const at = printOnto(fn, root);
+      const disc = printMesh(root);
+      if (backCard && at && disc) { backCard.material = disc.material; const uv = backCard.geometry.attributes.uv; for (let k = 0; k < uv.count; k++) uv.setXY(k, at[0], at[1]); uv.needsUpdate = true; }
+    };
+    const front = fitRound(fa, root, 1.22, 0.9), back = fitRound(ba, root, 1.46, 1.12);
+    const id = `bier.coaster_${i}`;
+    root.traverse((o) => { o.userData.readable = id; });
+    const faces = { front, back };
+    out.push({
+      id, placeId: 'bier', role: `coaster_${i}`, kind: 'coaster', label: 'a Bierdeckel', root, faces, theme: 'print', align: 'center',
+      base: (back.r || back.w / 1.46) * 0.112, glow: [], rough: false, fromModel: true, holder: place.holder, lift: 0.0002,
+      readView(face = 'front') { const f = faces[face] || faces.front; return readViewFor(f.area, f.w, f.h, camera, { fill: f.r ? (0.84 * f.h) / (2 * f.r) : 0.62 }); },
+    });
+  }
+  // all or nothing: a partial set would leave a project without its coaster
+  if (out.length < n) { for (const s of out) s.root.traverse((o) => { delete o.userData.readable; }); return []; }
+  return out;
+}
+
 export function placeCoasters(place, n, camera) {
   const out = [];
   for (let i = 0; i < n; i++) {
@@ -453,7 +682,7 @@ export function placeCoasters(place, n, camera) {
     mark(c.group, id);
     c.group.traverse((o) => { if (o.isMesh) o.castShadow = false; });
     out.push({
-      id, placeId: 'bier', role: `coaster_${i}`, kind: 'coaster', label: 'a Bierdeckel', root: c.group, faces: c.faces, theme: 'print', base: 0.0062, glow: c.glow, rough: false,
+      id, placeId: 'bier', role: `coaster_${i}`, kind: 'coaster', label: 'a Bierdeckel', root: c.group, faces: c.faces, theme: 'print', align: 'center', base: 0.0062, glow: c.glow, rough: false, holder: place.holder,
       home: { p: c.group.position.clone(), q: c.group.quaternion.clone() },
       readView(face = 'front') { const f = c.faces[face] || c.faces.front; return readViewFor(f.area, f.w, f.h, camera, { fill: 0.62 }); },
     });
@@ -464,6 +693,20 @@ export function placeCoasters(place, n, camera) {
 /** Placards with the big questions, hung on the first gondolas of the Riesenrad. */
 export function hangPlacards(place, n) {
   const out = [];
+  // the ride builder's own placards (write_question_<k> on the gondolas), when the wheel has them
+  const nodes = writeNodes(place.root);
+  const own = Object.keys(nodes).filter((k) => /^question_\d+$/.test(k)).sort((a, b) => +a.split('_')[1] - +b.split('_')[1]);
+  if (own.length) {
+    own.slice(0, n).forEach((k, i) => {
+      const node = nodes[k];
+      const a = areaFromWriteMesh(node);
+      if (!a) return;
+      const id = `ferris.placard_${i}`;
+      node.traverse((o) => { o.userData.readable = id; });
+      out.push({ id, placeId: 'ferris', role: `placard_${i}`, kind: 'placard', label: 'a placard', root: node, faces: { main: a }, theme: 'print', align: 'center', base: a.h / 4.2, fit: [a.h / 9, a.h / 3.2], glow: readGlow(node), rough: false, fromModel: true, readView: null });
+    });
+    if (out.length) return out;
+  }
   const gondolas = place.nodes?.gondolas || [];
   for (let i = 0; i < Math.min(n, gondolas.length); i++) {
     const gnode = gondolas[Math.floor((i * gondolas.length) / Math.max(1, n))];

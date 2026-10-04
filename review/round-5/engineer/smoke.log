@@ -1,0 +1,266 @@
+· unit checks
+  ok   unit: GPU class: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE) (software (want software)) 
+  ok   unit: GPU class: llvmpipe (LLVM 15.0.7, 256 bits) (software (want software)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) UHD Graphics 620 (0x00005917) Direct3D11 vs_5_0 (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) UHD Graphics 630 (0x00003E9B) Direct3D11 vs_5_0 (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) UHD Graphics (0x00009A78) Direct3D11 vs_5_0 ps_ (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_ (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 655, OpenGL 4.1) (integrated (want integrated)) 
+  ok   unit: GPU class: Mesa Intel(R) UHD Graphics 620 (KBL GT2) (integrated (want integrated)) 
+  ok   unit: GPU class: Mesa Intel(R) Xe Graphics (TGL GT2) (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_ (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version) (integrated (want integrated)) 
+  ok   unit: GPU class: Apple GPU (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU Direct3D11 vs_5_0 ps (discrete (want discrete)) 
+  ok   unit: GPU class: ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0, D3D11) (discrete (want discrete)) 
+  ok   unit: GPU class: ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Pro, Unspecified Version) (discrete (want discrete)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) HD Graphics 4000 Direct3D11 vs_5_0 ps_5_0, D3D1 (weak (want weak)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) HD Graphics 520 (0x00001916) Direct3D11 vs_5_0  (weak (want weak)) 
+  ok   unit: GPU class: Intel HD Graphics 5000 (weak (want weak)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) UHD Graphics 600 (0x00003185) Direct3D11 vs_5_0 (weak (want weak)) 
+  ok   unit: GPU class: Mesa Intel(R) UHD Graphics 605 (GLK 3) (weak (want weak)) 
+  ok   unit: GPU class: Mali-T860 (weak (want weak)) 
+  ok   unit: GPU class: Mali-G52 (weak (want weak)) 
+  ok   unit: GPU class: Mali-G78 (integrated (want integrated)) 
+  ok   unit: GPU class: Adreno (TM) 506 (weak (want weak)) 
+  ok   unit: GPU class: Adreno (TM) 660 (integrated (want integrated)) 
+  ok   unit: GPU class: PowerVR Rogue GE8320 (weak (want weak)) 
+  ok   unit: a UHD 620 laptop gets the full market  
+  ok   unit: an Iris Xe laptop gets the full market  
+  ok   unit: an HD 4000 laptop gets the lite market  
+  ok   unit: a phone gets the lite market  
+  ok   unit: a 4 GB laptop gets the lite market  
+  ok   unit: the head runs into the loop  
+  ok   unit: the loop plays 3 passes  
+  ok   unit: the last stretch is the written ending, past loopEnd to the fermata ({"from":219.390907,"to":268.822,"pass":3,"alt":false}) 
+  ok   unit: pass 2 plays the second tenor chorus from the alternates ([{"from":88.231814,"to":180.959093,"pass":2,"alt":true}]) 
+  ok   unit: pass 1 and pass 3 play the main chorus  
+  ok   unit: segments join up with no gap  
+  ok   unit: the song is about ten minutes before it rests and starts again (618 s) 
+  ok   unit: the strict content gate counts <!-- check --> comments and [check] tags (content still waiting for Mac: a.md: 2 check markers) 
+  ok   unit: the strict content gate counts a book page still marked review: check (content still waiting for Mac: a.md: 2 check markers; books/: 1 book page still marked review: check) 
+  ok   unit: npm run content:check lists each marker the gate counts, with its line ([{"file":"a.md","line":1,"kind":"check","text":"<!-- check -->"},{"file":"a.md","line":3,"kind":"check","text":"[check: the year]"},{"file":"books/chaos.md","line":5,"kind":"review","text":"review: \"check\""}]) 
+  ok   unit: Mac's bookshelf comes from categories.json, with the one-line summary where the writer has one ([{"title":"Chaos","author":"James Gleick","slug":"chaos","category":"physics","categoryDe":"Physik & Kosmos","oneLine":"Order in disorder.","page":true},{"title":"Grit","author":"Angela Duckworth","slug":"grit","category":"physics","categoryDe":"Physik & Kosmos","oneLine":"","page":false}]) 
+  ok   unit: Mac's bookshelf renders as a list whose titles link to their reading pages  
+  ok   unit: a book's reading page is its markdown body under the title (In short as an h3)  
+  ok   unit: the text page carries every book's reading page with an anchor  
+  ok   unit: no categories file: an empty library, no error  
+  ok   unit: asset credits from CREDITS.md carry source URLs and licences  
+  ok   unit: production content: the unconfirmed book list is not reinstated in the bookshop panel  
+  ok   unit: production content: the 3D shelf keeps only books on Mac's own shelf  
+  ok   unit: production content: all 55 books from categories.json, each with its reading page (55 books,  without a page) 
+  ok   unit: budget: a glb's external textures are counted with it (deco_kit_wood_normal.webp deco_kit_wood_color.webp deco_kit_wood_rm.webp deco_kit_oak_normal.webp deco_kit_oak_color.webp deco_kit_oak_rm.webp deco_kit_paint_normal.webp deco_kit_paint_color.webp deco_kit_paint_rm.webp deco_kit_iron_normal.webp deco_kit_iron_color.webp deco_kit_iron_rm.webp) 
+  ok   unit: budget: a texture several assets share is charged once (deco_kit_wood_color.webp: 16 users) 
+  ok   unit: budget: deferred assets and the crowd's distance level are counted ({"firstLoad":9369196,"deferred":10193206,"onDemand":13595146,"everything":33157548,"aim":25000000,"over":false}) 
+  ok   unit: budget: the full market's full-detail stalls are counted on demand, not in the first load ({"full":{"firstLoad":9369196,"deferred":10193206,"onDemand":13595146,"everything":33157548,"aim":25000000,"over":false},"lite":{"firstLoad":7285404,"deferred":3795136,"onDemand":0,"everything":11080540,"aim":8000000,"over":false}}) 
+  ok   unit: budget: both first loads are smaller than round 4 (19.70 MB full, 7.44 MB lite) (9.37 / 7.29 MB) 
+  ok   unit: budget: the shared clips (people_anims.glb) are counted  
+  ok   unit: budget: the bandstand is charged with its instruments, its four players as person variants (people_band_sax people_band_piano people_band_bass people_band_drums) 
+  ok   unit: budget: a shared texture is charged to each user in equal parts (67837.92307692308 of 931276) 
+  ok   unit: budget: it reports a missing dist (the CLI then exits 1)  
+  ok   unit: budget: both first loads are under their aims (9.37 / 7.29 MB) 
+  ok   unit: streaming: each streamed stall's lite and full glbs have the same node tree (the graft's precondition)  
+  ok   unit: stroll: a leg joins every pair of stops (a signpost choice walks straight there)  
+  ok   unit: stroll: every stop has an eye and a target, and the Riesenrad its overview  
+· full market, 1280 px: the still, the signpost, a walk, the stops, streaming, no orbit and no side panel
+  ok   a still of the home view shows before the market is ready 
+· ready in 22.1 s
+· full: 8.34 MB downloaded when the market opens
+  ok   full: the first load is smaller than round 4 (19.70 MB) (8.34 MB)
+  ok   full market chosen with ?quality=full 
+  ok   the still fades out once the market is drawn 
+  ok   no side panel or reading aside on the 3D page 
+  ok   the stroll runs on the architect's stops and legs (layout.json stroll (stops and legs))
+  ok   the stroll's loop is the architect's order (["glueh","ferris","wurst","band","bier","carousel","books"])
+  ok   the signpost in the market is the carpenter's (act_sign_ boards) (act_sign_ nodes (signpost.glb))
+  ok   the on-screen signpost has seven arms and an overview 
+  ok   streaming: the section stalls, bandstand, town and tree open at lite detail ({"square":"full","gluehwein":"lite","bierstand":"lite","bratwurst":"lite","buecherstand":"lite","bandstand":"lite","town":"lite","tree":"lit)
+  ok   no orbit: a long drag turns the head at most 15°, and the camera stays where it is ({"c0":[3.247,9.249,32.979],"c1":[3.526,9.223,32.956],"look":{"yaw":0.2617977792481168,"pitch":0,"zoom":1}})
+  ok   zoom stays in its small band (1.1199992626945177)
+· screenshot ../review/round-5/engineer/home_signpost.jpg
+  ok   clicking the signpost's Glühwein board walks to the Glühwein stall ({"x":560.8388865062232,"y":537.5185711153125})
+  ok   the camera walks (not flies) to the stop ({"kind":"walk","t":0,"dur":12,"length":38.60055939715879})
+  ok   walking pace (about 3 m/s; never a dash) (3.22 m/s over 38.6 m)
+  ok   mid-stroll the camera is on its way, down at eye level and off the straight line ([1.664,3.337,22.069])
+  ok   arrived at the Glühwein stop, with its bar of things to do ({"arrived":true,"cam":{"mode":"stop","moving":false,"progress":null,"look":{"yaw":0,"pitch":0,"zoom":1},"pos":[-5.422,1.8,3.028],"target":[-)
+  ok   at a stop the head turns at most 15° 
+  ok   streaming: the stall at the stop comes in at full detail ({"square":"full","gluehwein":"full","bierstand":"lite","bratwurst":"lite","buecherstand":"lite","bandstand":"lite","town":"full","tree":"ful)
+  ok   streaming: the swap kept every action's nodes (no graft errors) ([{"id":"gluehwein","files":["stall_gluehwein.glb","prop_gluehwein_counter.glb","prop_gluehwein_shelf.glb","prop_gluehwein_wine.glb"],"meshes)
+  ok   → walks on to the next stop (the Riesenrad) 
+  ok   the Riesenrad stop is the overview, high on the wheel ([-18.362,20.189,-14.078])
+· screenshot ../review/round-5/engineer/stop_riesenrad_overview.jpg
+  ok   ← walks back to the stop before 
+  ok   key 4 walks to the Bücherstand 
+  ok   streaming: walking to a stall brings it in at full detail 
+  ok   0 goes back to the overview of the square 
+· reading on the writing surfaces (lite market, 1280 px)
+· ready in 48.6 s
+  ok   a writing surface for each section (board, coasters, menu, paper, card, sheet, noticeboard, ticket) (glueh.board bier.vomfass bier.coaster_0 bier.coaster_1 bier.coaster_2 wurst.menu wurst.paper books.card band.sheet ferris.notice carousel.ti)
+  ok   glueh.board: the words are drawn on it in 3D, the camera close in front (A warm cup with Mac I'm Mac, a physician at Chulalongkorn University in Bangkok who builds)
+  ok   glueh.board: a visually hidden copy for screen readers, and the page bar (A warm cup with MacGlühwein · About meI'm Mac, a physician a)
+  ok   glueh.board: Escape stops reading and steps back to the stop 
+  ok   bier.vomfass: the words are drawn on it in 3D, the camera close in front (On tap Three things are on tap: two pieces of software and a course. -  ProtoCol · Helles )
+  ok   bier.vomfass: a visually hidden copy for screen readers, and the page bar (On tapBierstand · ProjectsThree things are on tap: two piece)
+  ok   the projects board carries clickable links (GitHub) (https://github.com/macsermkiat)
+  ok   bier.vomfass: Escape stops reading and steps back to the stop 
+  ok   bier.coaster_0: the words are drawn on it in 3D, the camera close in front (ProtoCol Helles · always on tap)
+  ok   bier.coaster_0: a visually hidden copy for screen readers, and the page bar (ProtoColHelles · always on tapA chatbot that helps researche)
+  ok   a Bierdeckel flips over to its back ([{"open":true,"id":"bier.coaster_0","surface":"bier.coaster_0","view":0,"views":2,"face":"front","title":"ProtoCol"},{"open":true,"id":"bier)
+  ok   bier.coaster_0: Escape stops reading and steps back to the stop 
+  ok   wurst.menu: the words are drawn on it in 3D, the camera close in front (Off the grill Noch nichts vom Grill. This is where short essays on research, music and ide)
+  ok   wurst.menu: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
+  ok   wurst.menu: Escape stops reading and steps back to the stop 
+  ok   wurst.paper: the words are drawn on it in 3D, the camera close in front (Off the grill This is where short essays on research, music and ideas will go. Nothing is )
+  ok   wurst.paper: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
+  ok   wurst.paper: Escape stops reading and steps back to the stop 
+  ok   books.card: the words are drawn on it in 3D, the camera close in front (The bookshop I read physics, philosophy and books about the brain. The shelves hold books )
+  ok   books.card: a visually hidden copy for screen readers, and the page bar (The bookshopBücherstand · ReadingI read physics, philosophy )
+  ok   books.card: Escape stops reading and steps back to the stop 
+  ok   band.sheet: the words are drawn on it in 3D, the camera close in front (The Nachtmarkt Quartett The band on the bandstand is a quartet: tenor sax, piano, double b)
+  ok   band.sheet: a visually hidden copy for screen readers, and the page bar (The Nachtmarkt QuartettBandstand · MusicThe band on the band)
+  ok   band.sheet: Escape stops reading and steps back to the stop 
+  ok   ferris.notice: the words are drawn on it in 3D, the camera close in front (View from the top Nothing is written up here yet.)
+  ok   ferris.notice: a visually hidden copy for screen readers, and the page bar (View from the topRiesenrad · Big questionsNothing is written)
+  ok   ferris.notice: Escape stops reading and steps back to the stop 
+  ok   carousel.ticket: the words are drawn on it in 3D, the camera close in front (Come round again My code is on GitHub: github.com/macsermkiat . If you have something to s)
+  ok   carousel.ticket: a visually hidden copy for screen readers, and the page bar (Come round againKarussell · ContactMy code is on GitHub: git)
+  ok   carousel.ticket: Escape stops reading and steps back to the stop 
+  ok   a clicked book opens with its words on its own 3D pages ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
+  ok   the book's page turns (a leaf turns over) (Summary Carroll opens with a question that sounds like science fiction: why woul)
+  ok   Escape closes the book and puts it back 
+  ok   Enter at a stop reads its main piece (the Karussell ticket) 
+· every action, both rides, snow, the overview, the keyboard and a click in 3D (lite market, small viewport)
+· ready in 50.1 s
+  ok   the crowd streams in after the first frame 
+  ok   the on-screen signpost walks to the Glühwein stall 
+  ok   the stop bar offers the actions as buttons 
+  ok   pour a mug (the ladle fills one of the stall's own mugs) (Blue mug with white snowflakes, filled. Mugs poured tonight: 1. Red wine, cinnamon, clove and orange. Careful, it's hot.)
+  FAIL Prost: the crowd raises a glass 
+  ok   pull a pint (starts) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
+  ok   pull a pint (finishes) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
+  ok   turn the sausages (Turned. Nicely browned on this side.)
+  ok   a sausage in a bun (One Bratwurst im Brötchen with mustard. That will be 4 euros.)
+  ok   a sausage in a bun: one sits in a roll, with mustard 
+  ok   clicking one sausage in 3D turns that sausage (its node rotates) (0.9239,0,-0.3827,0 -> 0,0.3827,0,0.9239)
+  ok   pull a book: the bookseller picks one and it opens ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
+  ok   lite: the player buttons say they move the spotlight 
+  ok   feature a band member (The spotlight is on the tenor sax. The lite market plays the band as one mix, so this light is only for the eyes. Switch to the full market )
+  ok   the band plays (Now playing: Lanterns After Closing · the Nachtmarkt Quartett)
+  ok   featuring while playing 
+  ok   the band stops 
+  ok   lite: rides and deco stalls arrive after the first frame ({"lod":0,"deferred":11})
+  ok   Riesenrad ride 
+  ok   Riesenrad: the ride stops at the top for the view ({"t":13.5,"stage":"top","cam":24.42754762996355})
+· screenshot ../review/round-5/engineer/ride_riesenrad.jpg
+  ok   get off the wheel 
+  ok   carousel ride 
+  ok   Escape ends the ride 
+  ok   snow on 
+  ok   snow off 
+  ok   Overview (reset) goes back to the view over the square 
+  ok   key 3 walks to the Bratwurst stand 
+  ok   → walks on along the loop (the bandstand after the Bratwurst) 
+  ok   Escape at a stop goes back to the overview 
+  ok   Enter on a signpost arm walks there 
+· lite market, auto-detected
+· ready in 37.1 s
+· lite: 6.26 MB downloaded when the market opens
+  ok   lite: the first load is smaller than round 4 (7.44 MB) (6.26 MB)
+  ok   lite market detected on a weak GPU (software GPU: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver))
+  ok   lite: no shadows 
+  ok   lite: fewer lights ({"realtime":4,"pools":27,"cap":4,"places":["bierstand","gluehwein","bratwurst","buecherstand"]})
+· screenshot ../review/round-5/engineer/home_lite_stage.jpg
+· phone, reduced motion, touch
+· ready in 11.5 s
+  ok   lite market on a phone-sized screen 
+  ok   reduced motion: the home view holds still 
+  ok   phone: the signpost folds into one button 
+  ok   reduced motion: the walk is a cut 
+  ok   phone: tapping a sausage turns it (0,0.3476,0,0.9376 -> 0.9376,0,-0.3476,0)
+  ok   phone: reading the menu board fills the screen with it 
+· screenshot ../review/round-5/engineer/phone_reading_menu.jpg
+· plain.html
+  ok   plain.html has all seven sections (7 sections)
+  ok   plain.html links back to the market 
+  ok   plain.html credits the music (the manifest's credit line) (Music: “Lanterns After Closing”, an original ballad for this site. Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: M)
+  ok   plain.html lists every third-party asset with its source URL 
+  ok   plain.html carries the books the 3D shelf features (they are on Mac's shelf), and not the unconfirmed list (
+      Bücherstand · Reading
+      The bookshop
+      I read physics, philosophy and books about the brain.
+The shelves hold books from my A)
+  ok   plain.html lists Mac's whole bookshelf (categories.json), with the writer's one-line summaries (55 of 55)
+  ok   plain.html carries the same notes the reading view shows, one article per book (55 of 55)
+· screenshot ../review/round-5/engineer/plain_html.jpg
+  ok   without WebGL the 3D page falls back to the text of all seven sections 
+  ok   the 3D page links to plain.html 
+  ok   the 3D page credits the music in its footer (Music: “Lanterns After Closing”, an original ballad for this site. Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: M)
+  ok   the credit links every licence it names (5 named)
+  ok   the 3D page lists every third-party asset with its source URL 
+  ok   the canvas has an accessible name 
+  ok   mute covers the band and the stall sounds 
+· every model missing and layout.json ignored: the BUILD.md layout with labelled stand-ins
+· ready in 36.0 s
+  ok   missing glbs: every place is a stand-in ([])
+  ok   missing layout.json: the BUILD.md layout (BUILD.md fallback)
+  ok   missing glbs are reported as bindings that did not resolve (nothing guessed) ([])
+  ok   stand-ins keep the actions working (Mugs poured tonight: 1. Red wine, cinnamon, clove and orange. Careful, it's hot.)
+  ok   stand-ins keep the writing surfaces (the chalkboard is still read in 3D) 
+· screenshot ../review/round-5/engineer/missing_models_standins.jpg
+· ready in 34.1 s
+  ok   ?perf shows the frame-time meter with its Tour button 
+  ok   two missing glbs: just those two are stand-ins ([{"id":"bierstand","place":"bier","kind":"section","source":"standin","file":null},{"id":"riesenrad","place":"ferris","kind":"landmark","sou)
+· recorded stems on the full market
+· ready in 32.1 s
+  ok   play starts at once (mix)
+  ok   the mix bridges the wait for the stems (mix)
+  ok   the stems take over from the mix (stems)
+  ok   stem levels reach the stage ({"sax":0.3382164732267157,"piano":0.010172509310642834,"bass":0.021834593579216244,"drums":0.048326387250650055})
+  ok   last pass: the stems play on into the out head instead of looping ({"pos":221.35,"pass":3,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
+  ok   earlier passes: the loop goes round again ({"pos":46.99,"pass":2,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
+  ok   pass 2 plays the second tenor chorus (alternate stems) ({"pos":121.51,"pass":2,"alt":true,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
+  ok   pass 3 is back on the main chorus 
+  ok   the band stops (full) 
+
+192/193 checks passed
+No console errors.
+EXIT 1
+
+===== rerun of the interaction phase after the Prost fix (src/crowd.js, tests/smoke.mjs) =====
+· every action, both rides, snow, the overview, the keyboard and a click in 3D (lite market, small viewport)
+· ready in 51.4 s
+  ok   the crowd streams in after the first frame 
+  ok   the on-screen signpost walks to the Glühwein stall 
+  ok   the stop bar offers the actions as buttons 
+  ok   pour a mug (the ladle fills one of the stall's own mugs) (Blue mug with white snowflakes, filled. Mugs poured tonight: 1. Red wine, cinnamon, clove and orange. Careful, it's hot.)
+  ok   Prost: the crowd raises a glass (3 speaking)
+  ok   pull a pint (starts) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
+  ok   pull a pint (finishes) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
+  ok   turn the sausages (Turned. Nicely browned on this side.)
+  ok   a sausage in a bun (One Bratwurst im Brötchen with mustard. That will be 4 euros.)
+  ok   a sausage in a bun: one sits in a roll, with mustard 
+  ok   clicking one sausage in 3D turns that sausage (its node rotates) (0.9239,0,-0.3827,0 -> 0,0.3827,0,0.9239)
+  ok   pull a book: the bookseller picks one and it opens ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
+  ok   lite: the player buttons say they move the spotlight 
+  ok   feature a band member (The spotlight is on the tenor sax. The lite market plays the band as one mix, so this light is only for the eyes. Switch to the full market )
+  ok   the band plays (Now playing: Lanterns After Closing · the Nachtmarkt Quartett)
+  ok   featuring while playing 
+  ok   the band stops 
+  ok   lite: rides and deco stalls arrive after the first frame ({"lod":0,"deferred":11})
+  ok   Riesenrad ride 
+  ok   Riesenrad: the ride stops at the top for the view ({"t":13.5,"stage":"top","cam":24.42754762996355})
+· screenshot ../../../../tmp/claude-0/-home-claude-website/1be5eec7-c481-5143-a957-0d64882788ad/scratchpad/interact-out/ride_riesenrad.jpg
+  ok   get off the wheel 
+  ok   carousel ride 
+  ok   Escape ends the ride 
+  ok   snow on 
+  ok   snow off 
+  ok   Overview (reset) goes back to the view over the square 
+  ok   key 3 walks to the Bratwurst stand 
+  ok   → walks on along the loop (the bandstand after the Bratwurst) 
+  ok   Escape at a stop goes back to the overview 
+  ok   Enter on a signpost arm walks there 
+
+30/30 checks passed
+No console errors.
+EXIT 0

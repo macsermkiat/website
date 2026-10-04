@@ -1,5 +1,5 @@
 {
- "about": "Vendor prop sets. Each glb's root node is the set origin: parent it to the named slot_ empty of the stall (layout.json id in 'stall', stall file in 'asset'). 'sets' is the list the engine reads; 'by_set' is the same data keyed by set name ({set: {slot, stall, model, lite, asset}}).",
+ "about": "Vendor prop sets. Each glb's root node is the set origin: parent it to the named slot_ empty of the stall (layout.json id in 'stall', stall file in 'asset'). 'sets' is the list the engine reads; 'by_set' is the same data keyed by set name ({set: {slot, stall, model, lite, asset}}). 'standalone' lists vendor models that are not placed at a slot (book_open.glb).",
  "sets": [
   {
    "set": "prop_gluehwein_counter",
@@ -200,6 +200,14 @@
    "model": "prop_deco_puffer.glb",
    "lite": "prop_deco_puffer.lite.glb",
    "asset": "deco_puffer.glb"
+  }
+ ],
+ "standalone": [
+  {
+   "model": "book_open.glb",
+   "lite": "book_open.lite.glb",
+   "root": "book_open",
+   "use": "the open hardback shown when a book is clicked (blender/props/set_bookopen.py)"
   }
  ],
  "by_set": {

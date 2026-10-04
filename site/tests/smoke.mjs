@@ -119,6 +119,7 @@ const shot = async (page, name, sel, { keepScroll = false } = {}) => {
   if (!sel && !keepScroll) await page.evaluate(() => window.scrollTo(0, 0)); // clicking the place buttons scrolls the page
   // draw the current state first: with the clock held (advance() runs it without drawing) the canvas would still
   // show an older frame
+  await page.mouse.move(1, 1).catch(() => {}); // off the market: no hover label left in the picture
   const frozen = await page.evaluate(() => { if (!window.__market?.freeze) return false; window.__market.renderFrame?.(); window.__market.freeze(true); return true; });
   // a frozen page still waits for the frames already queued on the GPU; on SwiftShader those can take minutes
   const SHOT = 900000;
@@ -339,8 +340,10 @@ try {
     await page.click('#stopActs [data-action="pour"]');
     check('pour a mug (the ladle fills one of the stall\'s own mugs)', await waitN(/poured tonight: 1/), await noteNow());
     await act('glueh', 'prost');
-    await page.evaluate(() => window.__market.advance(1));
-    check('Prost: the crowd raises a glass', (await page.locator('.bubble').count()) > 0);
+    // the first voice answers at once, the rest a moment apart (timers, not frames): give them a few seconds
+    let bubbles = 0;
+    for (let i = 0; i < 6 && !bubbles; i++) { await page.evaluate(() => window.__market.advance(0.5)); bubbles = await page.locator('.bubble').count(); if (!bubbles) await page.waitForTimeout(500); }
+    check('Prost: the crowd raises a glass', bubbles > 0, `${bubbles} speaking`);
     await go('bier');
     await act('bier', 'pint');
     // (reduced motion pours at once, so the note may already say the pint is pulled)

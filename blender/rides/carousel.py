@@ -7,13 +7,14 @@ mirrors, gilt pilasters, shell cresting and two rows of bulbs, a striped canopy 
 scalloped fabric edge and bulbs on its ribs, and a second tier (a small drum with mirrors,
 its own striped roof and a gilt finial with a pennant).
 Static: a plank step ring round the platform and an iron outer rail with an entrance and
-two gate lamps at the front (-Y).
+two gate lamps at the front (-Y), and the Fahrkarten ticket booth right of the entrance, outside
+the stroll stop's sightline to the platform, with its paper ticket (write_contact).
 
 Nodes: rot_platform (spins about three.js Y), horse_0..11 (children of rot_platform; each
 horse is its own node so the engine can move it up and down its pole), horse_seat_2 (ride
 camera, inside horse_2), bulbs_*, snow_canopy, light_0/1, light_2 (a child of rot_platform,
 so the canopy light turns with the horses), cam_view/cam_target.
-The horses are one sculpted master (horse.py) in six coats.
+The horses are one sculpted master (horse.py) in six coats, normal- and colour-mapped from the sculpt.
 The horses face clockwise travel seen from above, which is the engine's default spin.
 
     /home/claude/tools/bpy-venv/bin/python blender/rides/carousel.py [--no-render] [--no-lite]
@@ -25,11 +26,12 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import rcommon as rc  # noqa: E402
+import rwrite  # noqa: E402
 import horse  # noqa: E402
 from rcommon import TAU, Part, node, rod, side_M, state  # noqa: E402
 from mathutils import Euler, Matrix, Vector, noise  # noqa: E402
 from nmlib import carpentry as cp  # noqa: E402
-from nmlib import geo, render  # noqa: E402
+from nmlib import boards, geo, render  # noqa: E402
 
 NAME = "carousel"
 PT = 0.42            # platform top
@@ -140,7 +142,7 @@ def build_rotating(lite, rot):
         if not lite:
             paint.mbox(side_M(c + Vector((0, 0, 0.1)) + Vector((math.cos(a), math.sin(a), 0)) * 0.018, a),
                        (L, 0.02, 0.008), band="gold", grain=0)
-    gilt.torus((0, 0, PT), RP + 0.02, 0.025, seg=48 if lite else 72, tseg=4 if lite else 5)
+    gilt.torus((0, 0, PT), RP + 0.02, 0.025, seg=32 if lite else 72, tseg=3 if lite else 5)
 
     # centre column: mirrors and painted panels between gilt pilasters
     nc = 12
@@ -187,7 +189,7 @@ def build_rotating(lite, rot):
             rod(frame, (R * math.cos(a0), R * math.sin(a0), Z_SW + 0.02), (R * math.cos(a1), R * math.sin(a1), Z_SW + 0.02),
                 0.04, seg=6)
     # ceiling: radial boards under the canopy, visible from the platform
-    nce = 32 if lite else 48
+    nce = 24 if lite else 48
     for i in range(nce):
         a = TAU * (i + 0.5) / nce
         d = Vector((math.cos(a), math.sin(a), 0))
@@ -217,8 +219,9 @@ def build_rotating(lite, rot):
         for yy in (hh - 0.05, -hh + 0.05):
             paint.mbox(Ms @ Matrix.Translation((0, yy, 0.035)), (L - 0.1, 0.035, 0.022), band="gold", grain=0)
         Mo = Ms @ Matrix.Translation((0, 0, 0.03))
-        if j % 4 == 0:
-            # the name on four sides, gilt on a dark green cartouche so it reads from the rail
+        if j % 8 == 0:
+            # the name on two opposite sides (the board turns, so it passes the front twice a turn),
+            # gilt on a dark green cartouche so it reads from the rail
             cw, chh = L * 0.93, 0.60
             ink.shape(rounded_rect(cw, chh, 0.08), depth=0.012, M=Mo @ Matrix.Translation((0, -0.01, 0.012)),
                       tint=(0.015, 0.075, 0.045))
@@ -227,7 +230,7 @@ def build_rotating(lite, rot):
             paint.text("Karussell", state.font("fraktur_bold"), 0.52, 0.02,
                        M=Mo @ Matrix.Translation((0, -0.05, 0.026)), max_width=cw * 0.9, band="gold")
         else:
-            ne = 10 if lite else 16
+            ne = 8 if lite else 16
             ell = [(0.26 * math.cos(TAU * i / ne), 0.19 * math.sin(TAU * i / ne)) for i in range(ne)]
             ell2 = [(0.31 * math.cos(TAU * i / ne), 0.235 * math.sin(TAU * i / ne)) for i in range(ne)]
             bevelled_mirror(mirror, ell, Mo, lite)
@@ -238,7 +241,7 @@ def build_rotating(lite, rot):
                     gilt.shape([(sx * 0.38, 0), (sx * 0.47, 0.05), (sx * 0.8, 0.0), (sx * 0.47, -0.05)],
                                depth=0.012, M=Mo)
         # shell cresting on top
-        if not lite or j % 2 == 0:
+        if not lite:
             shell = [(0.0, 0.0)]
             m = 11
             for i in range(m + 1):
@@ -255,6 +258,7 @@ def build_rotating(lite, rot):
         Rc = RB / math.cos(math.pi / NB) + 0.04
         pc = Vector((Rc * math.cos(ac), Rc * math.sin(ac), (RB0 + RB1) / 2))
         gilt.box(pc, (0.08, 0.07, RB1 - RB0 + 0.06), rot=(0, 0, ac))
+        # round 6 pass 2: the full bulbs are back (the normal-mapped horses paid for them)
         rc.bulb(bulbs, pc + Vector((math.cos(ac), math.sin(ac), 0)) * 0.06 + Vector((0, 0, 0.0)), 0.05)
         for yy, nbl in ((hh + 0.07, 5 if lite else 8), (-hh - 0.02, 0 if lite else 5)):
             for i in range(nbl):
@@ -306,8 +310,9 @@ def build_rotating(lite, rot):
         Ms = side_M(c, a)
         paint.mbox(Ms, (Lt + 0.01, z1 - z0, 0.04), band="cream" if j % 2 else "red", grain=0)
         if j % 2 == 0:
-            e = [(0.16 * math.cos(TAU * i / 14), 0.2 * math.sin(TAU * i / 14)) for i in range(14)]
-            e2 = [(0.2 * math.cos(TAU * i / 14), 0.25 * math.sin(TAU * i / 14)) for i in range(14)]
+            ne = 8 if lite else 14
+            e = [(0.16 * math.cos(TAU * i / ne), 0.2 * math.sin(TAU * i / ne)) for i in range(ne)]
+            e2 = [(0.2 * math.cos(TAU * i / ne), 0.25 * math.sin(TAU * i / ne)) for i in range(ne)]
             bevelled_mirror(mirror, e, Ms @ Matrix.Translation((0, 0, 0.025)), lite, rise=0.018)
             gilt.shape(e2, holes=[e], depth=0.025, M=Ms @ Matrix.Translation((0, 0, 0.025)))
         ac = a + math.pi / nt
@@ -417,9 +422,9 @@ def build_static(lite):
         angs.append(a)
         p = Vector((Rr * math.cos(a), Rr * math.sin(a), 0))
         rod(iron, p, p + Vector((0, 0, 1.0)), 0.028, seg=6)
-        gilt.sphere(p + Vector((0, 0, 1.04)), 0.04, seg=6, rings=4)
+        gilt.sphere(p + Vector((0, 0, 1.04)), 0.04, seg=4 if lite else 6, rings=3 if lite else 4)
     for z, rr in ((0.95, 0.03), (0.5, 0.02), (0.12, 0.02)):
-        iron.torus((0, 0, z), Rr, rr, seg=40 if lite else 48, tseg=4, arc=TAU - 2 * gap,
+        iron.torus((0, 0, z), Rr, rr, seg=32 if lite else 48, tseg=3 if lite else 4, arc=TAU - 2 * gap,
                    rot=(0, 0, front + gap))
     if not lite:
         for a0, a1 in zip(angs[:-1], angs[1:]):
@@ -435,6 +440,183 @@ def build_static(lite):
         gilt.box(p + Vector((0, 0, 1.62)), (0.22, 0.22, 0.05))
         rc.bulb(bulbs, p + Vector((0, 0, 1.8)), 0.13, lite=False)
     return rc.finish_all([wood, iron, gilt, bulbs, stone])
+
+
+# ------------------------------------------------------------------ ticket booth (write_contact)
+# Round 6 pass 2: moved round the rail to the right of the entrance, outside the stroll stop's
+# sightline to the platform. Seen from the stop (three.js local eye (2, 1.75, 10.5)) the booth's
+# roof spans 50-68 degrees, the canopy edge is at 71 and the platform's at 75 (plan angles from
+# +X), so it stands at the right edge of the picture and covers no horse. It keeps 1.3 m from the
+# end of walker_6/7's path and 0.3 m from the outer rail.
+BOOTH_C = (5.0, -5.5)
+BOOTH_YAW = -0.54           # its window turned toward the stroll stop
+BW, BD, BH = 1.30, 1.05, 2.15
+WIN = (0.34, 1.00, 1.62)    # window half width, sill and spring of the arch
+TICKET_W, TICKET_H = 0.30, 0.19
+TICKET_LEAN = 0.26
+
+
+def build_booth(lite):
+    """A little painted Kasse for the Karussell: plank walls in cream with red corner pilasters,
+    framed lower panels, an arched ticket window with a counter, a striped pyramid roof with a
+    scalloped valance, gilt finial and eave bulbs, and a "Fahrkarten" sign. Inside: a lamp, a
+    ticket roll and a brass bell, and a large paper ticket propped up in the window facing out,
+    which carries the contact details (write_contact)."""
+    Mb = Matrix.Translation((BOOTH_C[0], BOOTH_C[1], 0)) @ Euler((0, 0, BOOTH_YAW)).to_matrix().to_4x4()
+    paint = Part("booth_paint", "paint", bevel=0.0)
+    wood = Part("booth_wood", "wood", tint="honey")
+    gilt = Part("booth_gilt", "gilt")
+    canvas = Part("booth_roof", "canvas", var=0.03)
+    bulbs = Part("bulbs_booth", "bulb_warm")
+    paper = Part("booth_paper", "paper")
+    brass = Part("booth_brass", "brass")
+    snow = Part("snow_booth", "snow")
+
+    def P(x, y, z):
+        return Mb @ Vector((x, y, z))
+
+    def box(part, x, y, z, sx, sy, sz, **kw):
+        part.mbox(Mb @ Matrix.Translation((x, y, z)), (sx, sy, sz), **kw)
+    hw, hd = BW / 2, BD / 2
+    wx, ws, wa = WIN
+    # plinth and floor
+    box(paint, 0, 0, 0.06, BW + 0.06, BD + 0.06, 0.12, band="green", grain=0)
+    # walls of vertical boards; the front leaves the window open
+    nb = 6 if lite else 13
+    for j in range(nb):
+        x = -hw + (j + 0.5) * BW / nb
+        bwid = BW / nb - 0.006
+        for y in (-hd, hd):
+            if y < 0 and abs(x) < wx + 0.02:
+                box(paint, x, y, (0.12 + ws) / 2, bwid, 0.03, ws - 0.12, band="cream", grain=1)
+                top = wa + math.sqrt(max(0.0, 1 - (x / (wx + 0.02)) ** 2)) * 0.14
+                box(paint, x, y, (top + BH) / 2, bwid, 0.03, BH - top, band="cream", grain=1)
+            else:
+                box(paint, x, y, (0.12 + BH) / 2, bwid, 0.03, BH - 0.12, band="cream", grain=1)
+    nbs = 4 if lite else 10
+    for j in range(nbs):
+        y = -hd + (j + 0.5) * BD / nbs
+        for x in (-hw, hw):
+            box(paint, x, y, (0.12 + BH) / 2, 0.03, BD / nbs - 0.006, BH - 0.12, band="cream", grain=1)
+    # red corner pilasters, a red rail at sill height and a gold bead under the eave
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            box(paint, sx * hw, sy * hd, BH / 2 + 0.06, 0.09, 0.09, BH - 0.12, band="red", grain=1)
+    for y, L, along_x in ((-hd - 0.02, BW, True), (hd + 0.02, BW, True), (-hw - 0.02, BD, False), (hw + 0.02, BD, False)):
+        if along_x:
+            box(paint, 0, y, 0.95, L, 0.025, 0.06, band="red", grain=0)
+            box(paint, 0, y, BH - 0.06, L, 0.03, 0.10, band="red", grain=0)
+            if not lite:
+                box(paint, 0, y + math.copysign(0.012, y), BH - 0.12, L - 0.08, 0.012, 0.018, band="gold", grain=0)
+        else:
+            box(paint, y, 0, 0.95, 0.025, L, 0.06, band="red", grain=0)
+            box(paint, y, 0, BH - 0.06, 0.03, L, 0.10, band="red", grain=0)
+    # framed lower panels (red frames on the cream boards) on the front and sides
+    if not lite:
+        for (cx, cy, w, nrm) in ((-0.32, -hd - 0.018, 0.5, 'y'), (0.32, -hd - 0.018, 0.5, 'y'),
+                                 (-hw - 0.018, 0, 0.8, 'x'), (hw + 0.018, 0, 0.8, 'x')):
+            for dz in (0.22, 0.80):
+                if nrm == 'y':
+                    box(paint, cx, cy, dz, w, 0.012, 0.025, band="red", grain=0)
+                else:
+                    box(paint, cx, cy, dz, 0.012, w, 0.025, band="red", grain=0)
+            for dx in (-w / 2, w / 2):
+                if nrm == 'y':
+                    box(paint, cx + dx, cy, 0.51, 0.025, 0.012, 0.6, band="red", grain=1)
+                else:
+                    box(paint, cx, cy + dx, 0.51, 0.012, 0.025, 0.6, band="red", grain=1)
+    # back wall inside (dark), floor, inner sill and the outside counter
+    box(wood, 0, hd - 0.03, BH / 2, BW - 0.1, 0.02, BH - 0.2, tint="dark", grain=1)
+    box(wood, 0, -hd + 0.11, ws - 0.015, 2 * wx + 0.1, 0.24, 0.03, grain=0)            # inner sill
+    box(wood, 0, -hd - 0.08, ws - 0.01, 2 * wx + 0.26, 0.16, 0.035, grain=0, tint="oak")  # counter
+    for sx in (-1, 1):
+        box(paint, sx * (wx - 0.04), -hd - 0.12, ws - 0.09, 0.03, 0.03, 0.14, band="red", grain=1)  # brackets
+    # window frame: gilt arch and jambs
+    n = 8 if lite else 14
+    arch = [P(-(wx + 0.03) * math.cos(math.pi * k / n), -hd - 0.022, wa + 0.15 * math.sin(math.pi * k / n))
+            for k in range(n + 1)]
+    gilt.tube(arch, 0.014, tseg=4 if lite else 6)
+    for sx in (-1, 1):
+        rod(gilt, P(sx * (wx + 0.03), -hd - 0.022, ws + 0.02), P(sx * (wx + 0.03), -hd - 0.022, wa), 0.014,
+            seg=4 if lite else 6)
+    # Fahrkarten sign over the window
+    c = P(0, -hd - 0.035, 1.915)
+    cp.sign(paint, paint, "Fahrkarten", state.font("fraktur_bold"), tuple(c), 1.16, 0.20, depth=0.03,
+            board_band="red", text_band="gold", frame_band="gold", board_shape="rect", text_size=0.14,
+            text_depth=0.01, max_fill=0.86, rot_z=BOOTH_YAW, resolution=1)
+    # pyramid roof in red and cream gores, a scalloped valance, gilt finial and bulbs on the eaves
+    ov = 0.18
+    eav = [P(-hw - ov, -hd - ov, BH + 0.1), P(hw + ov, -hd - ov, BH + 0.1), P(hw + ov, hd + ov, BH + 0.1),
+           P(-hw - ov, hd + ov, BH + 0.1)]
+    apex = P(0, 0, BH + 0.95)
+    gores = 2 if lite else 4
+    for k in range(4):
+        a, b = eav[k], eav[(k + 1) % 4]
+        for g in range(gores):
+            p0, p1 = a.lerp(b, g / gores), a.lerp(b, (g + 1) / gores)
+            rings = [[p0, p1], [p0.lerp(apex, 0.55) + Vector((0, 0, 0.05)), p1.lerp(apex, 0.55) + Vector((0, 0, 0.05))],
+                     [apex, apex]]
+            canvas.loft(rings, closed=False, smooth=False, grain=2, tint=RED_T if g % 2 == 0 else CREAM_T)
+        rod(gilt, a + Vector((0, 0, 0.02)), apex + Vector((0, 0, 0.02)), 0.016, seg=4 if lite else 6)
+        side = (b - a)
+        Lk = side.length
+        mid = (a + b) / 2
+        out = Vector((side.y, -side.x, 0)).normalized()
+        phi = math.atan2(out.y, out.x)
+        cp.valance(canvas, -Lk / 2, Lk / 2, 0, 0.0, 0.06, 0.09, 4 if lite else 6, style="scallop", depth=0.01,
+                   tint=CREAM_T if k % 2 else RED_T, M=side_M(mid + Vector((0, 0, -0.01)), phi))
+        nbl = 4 if lite else 7
+        for i in range(nbl):
+            rc.bulb(bulbs, a.lerp(b, (i + 0.5) / nbl) + out * 0.02 + Vector((0, 0, -0.08)), 0.035, lite=True)
+    gilt.sphere(apex + Vector((0, 0, 0.06)), 0.06, seg=8 if lite else 12, rings=5 if lite else 8)
+    rod(gilt, apex + Vector((0, 0, 0.1)), apex + Vector((0, 0, 0.42)), 0.014, r2=0.004, seg=6, caps=True)
+    bm = rc.bmesh.new()
+    sv = [bm.verts.new(v + Vector((0, 0, 0.045))) for v in eav] + [bm.verts.new(apex + Vector((0, 0, 0.05)))]
+    for k in range(4):
+        bm.faces.new((sv[k], sv[(k + 1) % 4], sv[4]))
+    snow.from_bmesh(bm, grain=2)
+    # inside: a lamp over the window, a ticket roll on its spindle, a brass bell on the counter
+    rc.bulb(bulbs, P(0, -hd + 0.18, wa + 0.12), 0.05)
+    brass.cyl(P(0, -hd + 0.18, wa + 0.2), 0.05, 0.015, 0.05, seg=8 if lite else 12, caps=False)
+    # two small sign lamps under the eave (round 6 pass 2: the sign sat in the eave's shadow at
+    # night): brass brackets from the top rail, a shade and a warm bulb each, over the sign's face
+    for sx in (-0.34, 0.34):
+        arm = [P(sx, -hd - 0.03, 2.12), P(sx, -hd - 0.11, 2.15), P(sx, -hd - 0.15, 2.13)]
+        brass.tube(arm, 0.006, tseg=4 if lite else 6)
+        brass.cyl(arm[-1] + Vector((0, 0, -0.012)), 0.034, 0.012, 0.035, seg=6 if lite else 10, caps=False)
+        rc.bulb(bulbs, arm[-1] + Vector((0, 0, -0.034)), 0.016)
+    # and a gooseneck lamp from the right pilaster, beside the window (clear of the sign), so the
+    # ticket is lit from the front
+    arm = [P(hw - 0.02, -hd - 0.05, 1.56), P(hw - 0.08, -hd - 0.19, 1.62), P(0.34, -hd - 0.25, 1.58),
+           P(0.28, -hd - 0.25, 1.52)]
+    brass.tube(arm, 0.007, tseg=4 if lite else 6)
+    brass.cyl(arm[-1] + Vector((0, 0, -0.022)), 0.05, 0.018, 0.05, seg=8 if lite else 12, caps=False)
+    rc.bulb(bulbs, arm[-1] + Vector((0, 0, -0.045)), 0.022)
+    paper.cyl(P(0.33, -hd + 0.16, ws + 0.06), 0.055, 0.055, 0.06, seg=10 if lite else 16, rot=(0, math.pi / 2, 0),
+              tint=(1.05, 0.62, 0.45))
+    paper.cyl(P(0.33, -hd + 0.16, ws + 0.06), 0.02, 0.02, 0.062, seg=6, rot=(0, math.pi / 2, 0), tint=(0.5, 0.4, 0.3))
+    brass.sphere(P(-0.42, -hd - 0.10, ws + 0.035), 0.035, seg=8 if lite else 12, rings=4 if lite else 6,
+                 scale=(1, 1, 0.75))
+    brass.cyl(P(-0.42, -hd - 0.10, ws + 0.01), 0.045, 0.045, 0.01, seg=8 if lite else 12)
+    # the ticket: a card leaning back on a little wooden rest on the inner sill, a perforated stub
+    # on its left. Its writing area is write_contact.
+    tz = ws + 0.002 + (TICKET_H / 2 + 0.01) * math.cos(TICKET_LEAN)
+    ty = -hd + 0.07 + (TICKET_H / 2) * math.sin(TICKET_LEAN)
+    F = (Mb @ Matrix.Translation((0.03, ty, tz))) @ Euler((-TICKET_LEAN, 0, 0)).to_matrix().to_4x4() @ \
+        Euler((math.pi / 2, 0, 0)).to_matrix().to_4x4()
+    rwrite.local_box(paper, F, 0, 0, -0.0012, TICKET_W + 0.004, TICKET_H + 0.004, 0.0016, tint=(0.95, 0.90, 0.80))
+    rwrite.local_box(paper, F, -TICKET_W / 2 - 0.035, 0, -0.0012, 0.066, TICKET_H + 0.004, 0.0016,
+                     tint=(1.05, 0.62, 0.45))                                    # the stub, in ticket orange
+    if not lite:
+        for k in range(9):                                                      # perforation
+            yy = -TICKET_H / 2 + TICKET_H * (k + 0.5) / 9
+            rwrite.local_box(wood, F, -TICKET_W / 2 - 0.002, yy, 0.0002, 0.003, 0.008, 0.001, tint="dark")
+    rest = Mb @ Matrix.Translation((0.03, -hd + 0.07 + 0.058 * math.tan(TICKET_LEAN) + 0.012, ws + 0.07))
+    wood.mbox(rest @ Euler((-TICKET_LEAN, 0, 0)).to_matrix().to_4x4(), (0.16, 0.02, 0.12), grain=1, tint="dark")
+    wood.mbox(Mb @ Matrix.Translation((0.03, -hd + 0.06, ws + 0.012)), (TICKET_W + 0.1, 0.02, 0.02), grain=0)  # lip
+    objs = rc.finish_all([paint, wood, gilt, canvas, bulbs, paper, brass, snow])
+    rwrite.surface("contact", F, TICKET_W, TICKET_H, z=0.0002, fill=0.78, lift=0.0, margin=0.018)
+    return objs
 
 
 def build(lite):
@@ -455,15 +637,18 @@ def build(lite):
             seat = h.matrix_world @ Vector((-0.04, 0, 0.24 + 0.75))
             node("horse_seat_2", tuple(seat), parent=h)
     build_static(lite)
+    build_booth(lite)
     node("light_0", (0, -3.2, 3.0))
     node("light_1", (0, 3.2, 3.0))
     # a canopy light that turns with the platform: it hangs from the sweeps between the inner and
     # outer horses, so the rider on horse_2 always has the horses around them lit
     node("light_2", ((R_IN + R_OUT) / 2 * math.cos(-math.pi / 2 + TAU * 2.5 / 12),
                      (R_IN + R_OUT) / 2 * math.sin(-math.pi / 2 + TAU * 2.5 / 12), Z_SW - 0.25), parent=rot)
+    # the guided stroll's Karussell stop (site/src/layout.json 'stroll', review/round-5/architect):
+    # 10.5 m in front, beside the watching children; three.js local eye (2.0, 1.75, 10.5), target (0, 2.3, 0)
     node("cam_target", (0, 0, 2.3))
-    cv = node("cam_view", (-7.8, -10.8, 3.1))
-    cv.rotation_euler = (Vector((0, 0, 2.3)) - Vector((-7.8, -10.8, 3.1))).to_track_quat('-Z', 'Y').to_euler()
+    cv = node("cam_view", (2.0, -10.5, 1.75))
+    cv.rotation_euler = (Vector((0, 0, 2.3)) - Vector((2.0, -10.5, 1.75))).to_track_quat('-Z', 'Y').to_euler()
     return rc.mesh_objs()
 
 
@@ -476,7 +661,14 @@ def preview(objs):
     render.add_light("env_front", 'POINT', (-3.5, -8.5, 3.5), 380, size=1.0)
     render.add_light("env_rim", 'AREA', (8, 9, 9), 1400, color=(0.55, 0.65, 1.0), size=6,
                      rot=(math.radians(-50), 0, math.radians(35)))
-    return render.camera((-9.6, -12.8, 3.4), (0.2, 0, 2.6), lens=30)
+    # the ticket booth's lamps (emissive bulbs only light the browser through bloom)
+    Mb = Matrix.Translation((BOOTH_C[0], BOOTH_C[1], 0)) @ Euler((0, 0, BOOTH_YAW)).to_matrix().to_4x4()
+    for sx in (-0.34, 0.34):
+        render.add_light(f"env_sign_lamp{sx}", 'POINT', tuple(Mb @ Vector((sx, -BD / 2 - 0.15, 2.085))), 5, size=0.02)
+    render.add_light("env_booth_lamp", 'POINT', tuple(Mb @ Vector((0.28, -BD / 2 - 0.25, 1.46))), 12, size=0.03)
+    render.add_light("env_booth_in", 'POINT', tuple(Mb @ Vector((0, -BD / 2 + 0.18, 1.70))), 12, size=0.05)
+    # from just behind the stroll stop (three.js local eye (2, 1.75, 10.5)), the booth on the right
+    return render.camera((3.4, -14.6, 2.3), (-0.5, 0, 2.75), lens=24)
 
 
 if __name__ == "__main__":

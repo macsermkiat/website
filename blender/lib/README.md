@@ -119,6 +119,44 @@ Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shad
 - `stall_markers(counter_top, counter_y, shelf_1, shelf_2, vendor, sign, front, cam_view, cam_target, lights)`: all the `slot_*`, `cam_*` and `light_<n>` empties from docs/BUILD.md.
 - `export_glb(name, texture_size=1024, externalize=None)`: exports the Export collection to `blender/out/raw/<name>.glb` and runs `blender/lib/optimize.mjs` into `site/public/models/<name>.glb`. `externalize=(match(name), uri_for(name))` moves shared kit textures out of the glb (the deco kit uses it). Returns a report (bytes, triangles, nodes, images).
 
+### `boards` (round 6: writing surfaces for the in-market text)
+The engine draws each section's text on a blank surface in the stall (docs/adr/0003, BUILD.md
+`write_` / `cam_read_`). This module builds those surfaces and the boards around them.
+- Face frames: `face_frame(center, yaw=0, lean=0)` returns a 4x4 frame whose local +X runs right
+  along the writing, +Y up it and +Z out of the face toward the reader (yaw turns the face from
+  -Y toward +X; lean tips the top back). `at(F, x, y, z)`, `frame_axes(F)` and
+  `local_box(part, F, cx, cy, cz, sx, sy, sz, **kw)` place things in that frame.
+- `write_surface(name, F, w, h, z=0, surface="slate")` → the object `write_<name>`: one flat quad,
+  w x h metres, UVs 0-1 across it with +V up the text (glTF flips V; the engine reads it back),
+  material `chalk_slate` (or `paper_card` with `surface="card"`), no vertex colour, no AO, never
+  merged. `chalk_slate`'s base colour is `kit_slate_color` (512 px, numpy, cached in
+  `blender/out/kit/`, version `SLATE_VERSION`): a well-used blank blackboard, dark (sRGB 41-73)
+  so drawn chalk reads on it. Its `kit_` name makes the stall pipeline share it as
+  `deco_kit_slate_color.webp` / `.lite.webp`.
+- `chalkboard(name, F, w, h, frame, back, chalk=None, iron=None, rail=0.065, depth=0.034, tray=True,
+  frame_band=None, frame_tint="walnut", bead=None, nails=True)` → a hand-made framed blackboard
+  round `write_<name>`: four slightly irregular rails (wood tint or a paint band), an optional
+  painted inner bead `(Part, band)`, a backing board, nail heads and two screw eyes (`iron`), a
+  chalk tray with chalk sticks and a felt eraser (`chalk`, a `fabric_white` Part). Returns
+  `{"write", "outer": (W, H), "top", "eyes", "F"}` (eyes are local points on the top rail for
+  chains).
+- `read_distance(w, h, fill=0.76)` and `read_camera(name, F, w, h, fill=0.76, lift=0.06, side=0)`
+  → the empties `cam_read_<name>` (rotated to look at its target, like `cam_view`) and
+  `cam_read_<name>_target` on the area's centre, on the face normal at the distance where the
+  writing fills `fill` of a 16:9 frame at the site's 42 degree vertical field of view
+  (`READ_FOV_V`). 0.76 keeps the board's frame, tray and crest in the picture.
+- `chain(iron, a, b, link=0.035)`: a hanging chain of oval links (lite: a thin rod).
+- `barrel(staves, hoops, center, height=0.92, r_end=0.27, r_belly=0.32, ...)`: a whole standing
+  barrel of separate staves with iron hoops and a boarded head (lite: fewer staves and rings).
+
+The section stalls' boards (round 6):
+
+| stall | surface | writing area | where | `cam_read` distance |
+|---|---|---|---|---|
+| `stall_gluehwein` | `write_about` | 1.10 x 0.80 m | red-and-gold framed board on chains from a cross beam behind the counter, right of the vendor | 1.37 m, from just in front of the counter |
+| `stall_bratwurst` | `write_writing_menu` | 0.92 x 0.70 m | soot-dark board on its own stand (posts, cross feet, braces, "Speisekarte" header plank), front-left corner | 1.20 m |
+| `stall_bier` | `write_projects_board` | 0.92 x 0.70 m | blue-and-white framed board on a barrel, "Frisch vom Fass" crest, front-left corner | 1.20 m |
+
 ### `render`
 - `night_scene()`: night world, moon, sky fill and trodden-snow ground. It is render-only and goes in the Env collection.
 - `add_light(name, kind, loc, energy, color, size, rot, spot_size=None, spot_blend=None, size_y=None, target=None)` (`target` aims a spot/area light), `lights_at_markers(energy)` (a point light at each `light_*`), `camera(loc, target, lens, dof)`, `render(png, samples=48, res=(1280,720), jpeg=...)` on the `NM_DEVICE` device with OIDN, `contact_sheet(items, out_jpg)`.
@@ -129,7 +167,8 @@ Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shad
 - `Hut.build_roof(..., barge_part=None)`: painted bargeboards go into `barge_part` (e.g. a `paint_glow` Part) instead of the hut's paint Part.
 - `Hut.build_counter(..., extra_shade=None)`: a shade function multiplied into the counter's edge wear (the Bratwurst scorch under its grill).
 - `Hut.build_snow(**kw)`: passes `drifts=`, `cover=` and the rest to `snow_cap`.
-- `pipeline.vendor_props([(name, slot), ...], rotate=False)`: imports the vendor's shipped prop glbs into a Cycles preview (render-only); `rotate=True` for rotated slots. Previews go to `review/round-$NM_ROUND/carpenter/` (default round 4).
+- `pipeline.vendor_props([(name, slot), ...], rotate=False)`: imports the vendor's shipped prop glbs into a Cycles preview (render-only); `rotate=True` for rotated slots. Previews go to `review/round-$NM_ROUND/carpenter/` (default round 6).
+- `--read-views` (round 6): after the 3/4 preview, render the view from every `cam_read_<name>` empty at the site's 42 degree vertical field of view, 16:9 (`--read-res 960x540`, `--read-samples 32`), to `<stall>_read_<name>.jpg`. `--read-only` skips the 3/4 preview.
 - `stalls/buecher_sections.py` (plain Python, no bpy): the Bücherstand's six category sections (side racks and carts). `buecher.py` builds from it, and `python3 blender/stalls/buecher_sections.py` writes `blender/stalls/buecher_sections.json` for the vendor, so the json always matches the model.
   - Each section also has `cam_position` / `cam_target_position` (round 4): `buecher.py` exports them as the empties `cam_cat_<key>` (rotated to look at its target) and `cam_cat_<key>_target`, a close-up 1.75 m in front of the section at eye height. The two inner rack bays stand behind the carts, so their cameras swing 40° toward the lane.
   - `python3 blender/stalls/buecher_sections.py --check [file.glb ...]` is read-only: it compares the json with the module (in memory) and every `slot_cat_`, `cam_cat_` and `cam_cat_*_target` node of the glbs (default: both Bücherstand LODs) with the json, and exits 1 on any mismatch. Only the plain command (no `--check`) writes the json.
@@ -150,7 +189,7 @@ site's home camera where `site/src/layout.json` places it.
 
 - `node blender/lib/optimize.mjs in.glb out.glb [--texture-size 1024]`. This is the web step. Use it instead of `gltf-transform optimize`: that CLI prunes every empty leaf node, which would delete `slot_*`, `light_*` and `cam_*`, and its palette/join passes rename or merge materials such as `bulb_warm`. This script runs dedup, weld, prune (keeping leaves), sparse, WebP at `--texture-size` and meshopt, and leaves the node and material names alone.
 - `python3 blender/lib/glb_tools.py report file.glb ...` lists nodes, materials, images, triangles and size.
-- `python3 blender/lib/glb_tools.py check file.glb ...` checks the stall node contract: `slot_counter`, `slot_shelf_1`, `slot_shelf_2`, `slot_vendor`, `slot_sign`, `slot_front`, `cam_view`, `cam_target`, `light_*`, `bulbs_*`, `snow_*` and a `bulb_warm`/`bulb_cold` material. For `stall_buecher*.glb` it also requires `slot_cat_<key>`, `sign_cat_<key>`, `cam_cat_<key>` and `cam_cat_<key>_target` for every key in `content/books/categories.json`.
+- `python3 blender/lib/glb_tools.py check file.glb ...` checks the stall node contract: `slot_counter`, `slot_shelf_1`, `slot_shelf_2`, `slot_vendor`, `slot_sign`, `slot_front`, `cam_view`, `cam_target`, `light_*`, `bulbs_*`, `snow_*` and a `bulb_warm`/`bulb_cold` material. For `stall_buecher*.glb` it also requires `slot_cat_<key>`, `sign_cat_<key>`, `cam_cat_<key>` and `cam_cat_<key>_target` for every key in `content/books/categories.json`. Since round 6 it also requires each section stall's writing surface and reading camera (`glb_tools.WRITE_REQUIRED`): `write_about` on the Glühwein, `write_projects_board` on the Bierstand and `write_writing_menu` on the Bratwurst, each with `cam_read_<name>` and `cam_read_<name>_target`.
 
 ## Stall scripts built on this
 

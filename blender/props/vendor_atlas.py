@@ -670,9 +670,12 @@ def g_kraft(w, h, seed, text=None):
 def g_lebkuchen(text, border_col, text_col, seed_flowers=True):
     """Lebkuchen heart face (planar): glossy brown dough, piped icing border, lettering, flowers."""
     def f(w, h, seed):
-        t = Tex(w, h, hexc("7a3f1c"), 0.42)
+        # round 6 (judges, round 4: near-black in the browser): a warm mid brown with a lighter baked crust,
+        # not the round-4 7a3f1c..5a2c12, which the night lighting and the clear coat took to black
+        t = Tex(w, h, hexc("a85e2a"), 0.5)
         yy, xx = np.mgrid[0:h, 0:w].astype(float)
-        t.col = mix(t.col, np.array(hexc("5a2c12")), fbm(h, w, 20, seed) * 0.5)
+        t.col = mix(t.col, np.array(hexc("824619")), fbm(h, w, 20, seed) * 0.55)
+        t.col = mix(t.col, np.array(hexc("c07a3e")), smooth(0.55, 0.8, fbm(h, w, 9, seed + 7)) * 0.35)
         t.height = fbm(h, w, 6, seed + 1) * 0.4
         cx, cy = w / 2, h * 0.47
         s = w / 36
@@ -690,18 +693,21 @@ def g_lebkuchen(text, border_col, text_col, seed_flowers=True):
             pts = heart_pts(0.86)
             for i, (x, y) in enumerate(pts):
                 if i % 2 == 0:
-                    d.ellipse([(x - 3.2) * ss, (y - 3.2) * ss, (x + 3.2) * ss, (y + 3.2) * ss], fill=255)
+                    d.ellipse([(x - 3.9) * ss, (y - 3.9) * ss, (x + 3.9) * ss, (y + 3.9) * ss], fill=255)
             d.line([(x * ss, y * ss) for x, y in heart_pts(0.74)] + [(heart_pts(0.74)[0][0] * ss, heart_pts(0.74)[0][1] * ss)],
-                   fill=255, width=int(2.2 * ss))
+                   fill=255, width=int(2.9 * ss))
         bm = shape_mask(w, h, border)
-        t.paint(bm, hexc(border_col), 0.5, height=1.5)
+        t.paint(bm, hexc(border_col), 0.55, height=1.5)
         lines = text.split("\n")
         rows = []
         for i, ln in enumerate(lines):
             sz = fit_size(ln, "pacifico", h * 0.13, None, w * 0.52)
             rows.append((ln, "pacifico", sz, None, (cx, cy - (len(lines) - 1) * h * 0.075 + i * h * 0.15), "mm"))
         tm = text_mask(w, h, rows)
-        t.paint(tm, hexc(text_col), 0.5, height=1.4)
+        # a 1 px halo of icing round the letters, so the piped lettering reads thicker at market distance
+        from scipy import ndimage as _nd
+        tm = np.maximum(tm, _nd.grey_dilation(tm, size=(2, 2)) * 0.9)
+        t.paint(tm, hexc(text_col), 0.55, height=1.4)
         if seed_flowers:
             rng = np.random.default_rng(seed)
             def flowers(d, ss):
@@ -935,9 +941,9 @@ def region_specs():
     add("paper", 128, 128, lambda w, h, s: g_paper(w, h, s, True))
     add("kraft", 128, 128, lambda w, h, s: g_kraft(w, h, s, None))
     add("kraft_maroni", 128, 128, lambda w, h, s: g_kraft(w, h, s, "Heiße Maroni"))
-    for i, (txt, bc, tc) in enumerate((("Ich liebe\nDich", "f7f2e8", "f7f2e8"), ("Frohe\nWeihnachten", "f2d23a", "f7f2e8"),
-                                       ("Für Dich", "e05a8a", "f7f2e8"), ("Schatz", "5aa0e0", "f7f2e8"),
-                                       ("Prost!", "f7f2e8", "f2d23a"), ("Nacht-\nmarkt", "e05a8a", "f7f2e8"))):
+    for i, (txt, bc, tc) in enumerate((("Ich liebe\nDich", "fffbf2", "fffbf2"), ("Frohe\nWeihnachten", "f7da40", "fffbf2"),
+                                       ("Für Dich", "f06a9a", "fffbf2"), ("Schatz", "6ab0f0", "fffbf2"),
+                                       ("Prost!", "fffbf2", "f7da40"), ("Nacht-\nmarkt", "f06a9a", "fffbf2"))):
         add(f"lebkuchen_{i}", 192, 176, g_lebkuchen(txt, bc, tc))
     add("almonds", 128, 128, g_almonds)
     add("cone_paper", 128, 128, g_cone_paper)
@@ -957,14 +963,24 @@ def region_specs():
     return R
 
 
+# Regions added after a round's sets were built: packed in their own rows under everything else, in the order
+# given, so adding one never moves an older region (every set built on the atlas keeps its UVs). Their specs
+# go at the end of the list too, so the older regions keep their generator seeds.
+LATE = ("pretzel",)
+
+
 def pack(specs, size, height=None):
-    """Shelf packing, tallest first. Returns {name: (x, y, w, h)} of the inner rect (px, y down)."""
+    """Shelf packing, tallest first (LATE regions after, on fresh rows). Returns {name: (x, y, w, h)} of the
+    inner rect (px, y down)."""
     height = height or size
-    order = sorted(specs, key=lambda s: (-(s[2]), -s[1]))
+    order = sorted([s for s in specs if s[0] not in LATE], key=lambda s: (-(s[2]), -s[1]))
+    late = [s for s in specs if s[0] in LATE]
     x = y = row_h = 0
     out = {}
-    for name, w, h, _ in order:
+    for k, (name, w, h, _) in enumerate(order + late):
         W, H = w + 2 * PAD, h + 2 * PAD
+        if k == len(order) and late:
+            x, y, row_h = 0, y + row_h, 0
         if x + W > size:
             x, y, row_h = 0, y + row_h, 0
         if y + H > height:

@@ -23,7 +23,7 @@ const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, devi
 const page = await ctx.newPage();
 page.setDefaultTimeout(600000);
 const errors = [];
-page.on('console', (m) => { if (m.type() === 'error' || (process.env.VERBOSE && m.type() === 'warning')) { errors.push(m.text()); console.log('console', m.type(), m.text().slice(0, 300)); } });
+page.on('console', (m) => { if (m.type() === 'error' || (process.env.VERBOSE && (m.type() === 'warning' || m.type() === 'info'))) { errors.push(m.text()); console.log('console', m.type(), m.text().slice(0, 300)); } });
 page.on('pageerror', (e) => { errors.push(e.message); console.log('pageerror', e.message, e.stack?.slice(0, 600)); });
 page.on('response', (r) => { if (r.status() >= 400) { errors.push(`HTTP ${r.status()} ${r.url()}`); console.log('HTTP', r.status(), r.url()); } });
 const t0 = Date.now();

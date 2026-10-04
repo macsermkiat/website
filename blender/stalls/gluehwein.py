@@ -21,7 +21,7 @@ import hut  # noqa: E402
 import pipeline  # noqa: E402
 from hut import COUNTER_TOP, Hut  # noqa: E402
 from nmlib import carpentry as cp  # noqa: E402
-from nmlib import geo, render, state  # noqa: E402
+from nmlib import boards, geo, render, state  # noqa: E402
 from nmlib.geo import Part  # noqa: E402
 
 NAME = "stall_gluehwein"
@@ -117,26 +117,67 @@ def build(lite):
     # rake valances and its foot clears the bulb string, which now hangs below it.
     SL = h.part("sign", "paint_lit", var=0.02)
     sign_c = Vector((0, yO - 0.075, zt - 0.02))
-    cp.sign(SL, SL, "Glühwein", state.font("fraktur_bold"), sign_c, 2.05, 0.64, depth=0.04,
+    # round 6 (round 4 judges): the red letters are in the trim Part ('paint_glow', faint glow)
+    # instead of 'paint_lit', so they stay a deeper red against the glowing cream board
+    cp.sign(SL, T, "Glühwein", state.font("fraktur_bold"), sign_c, 2.05, 0.64, depth=0.04,
             board_band="cream", text_band="red", frame_band="gold", board_shape="arch",
             text_size=0.72, text_depth=0.016, text_dy=-0.045, max_fill=0.86, text_bevel=0.0, resolution=1)
     h.sign_lamps((-0.62, 0.62), yO - 0.04, sign_c.z + 0.32, reach=0.28)
 
     # ---------------------------------------------------------- garland, lights, bulbs
     anchors = [(-1.6, yF - 0.08, 2.2), (-0.55, yF - 0.08, 2.2), (0.55, yF - 0.08, 2.2), (1.6, yF - 0.08, 2.2)]
-    for a, b in zip(anchors[:-1], anchors[1:]):
-        cp.fir_garland(h.fir, h.beads, a, b, sag=0.16, radius=0.045, tufts_per_m=None if lite else 38)
+    for i, (a, b) in enumerate(zip(anchors[:-1], anchors[1:])):
+        # round 6: the right span hangs tighter, above the reading view of the board behind it
+        cp.fir_garland(h.fir, h.beads, a, b, sag=0.16 if i < 2 else 0.07, radius=0.045,
+                       tufts_per_m=None if lite else 38)
     h.eave_bulbs(sides=False)
     # a string on the tie beam under the lambrequin
     cp.bulb_string(h.bulbs, h.wire, [(-W / 2, yO - 0.05, zt - 0.36), (0, yO - 0.05, zt - 0.36),
                                      (W / 2, yO - 0.05, zt - 0.36)], sag=0.05, spacing=0.21)
-    h.interior_bulbs(xs=(-0.9, 0.0, 0.9), z=2.35)
-    # iron: hooks for mugs under the tie beam, strap hinges on the side walls
-    for x in (-1.2, -0.6, 0.0, 0.6, 1.2):
+    h.interior_bulbs(xs=(-0.9, 0.0), z=2.35)        # (the one at x 0.9 would hang behind the board)
+    # iron: hooks for mugs under the front header (the right-hand ones gave way to the board)
+    for x in (-1.2, -0.6, 0.0):
         h.iron.box((x, yF + 0.2, 2.05), (0.012, 0.012, 0.1))
+    menu_board(h, P)
     h.markers(sign_pos=tuple(sign_c + Vector((0, -0.05, 0))),
               lights=[(0, 0.1, 2.3), (0, yF - 0.7, 2.35)], cam_dist=3.6, cam_h=1.8)
     return h.finish()
+
+
+# round 6: the "about" chalkboard behind the counter (docs/adr/0003: text lives in the market)
+BOARD_W, BOARD_H = 1.10, 0.80                       # writing area (write_about), metres
+BOARD_C = (0.98, -0.52, 1.84)                       # its centre: right of the vendor, behind the counter
+
+
+def menu_board(h, P):
+    """A red-and-gold framed blackboard hung on two short chains from a cross beam behind the
+    counter, right of the vendor (who stands at x 0) and in front of the empty right half of
+    the back wall. Chalk tray with chalk and a felt eraser, a carved red crest with a gold star.
+    Exports write_about and cam_read_about / cam_read_about_target (a 16:9 reading view from
+    just in front of the counter, over the vendor's pot)."""
+    F = boards.face_frame(BOARD_C)
+    chalk = h.part("chalk", "fabric_white", var=0.03)
+    b = boards.chalkboard("about", F, BOARD_W, BOARD_H, frame=P, back=h.wood, chalk=chalk, iron=h.iron,
+                          frame_band="red", bead=(P, "gold"), rail=0.065)
+    W_, H_ = b["outer"]
+    top = BOARD_C[2] + H_ / 2
+    # cross beam between the side wall plates; the chains hang from it to the screw eyes
+    yb = BOARD_C[1] - 0.01
+    h.frame.box((0, yb, 2.47), (W - 0.2, 0.09, 0.11), tint="walnut")
+    for ex, _ in b["eyes"]:
+        x = BOARD_C[0] + ex
+        h.iron.box((x, yb, 2.405), (0.03, 0.03, 0.02), bevel=0)        # staple under the beam
+        boards.chain(h.iron, (x, yb, 2.40), (x, yb, top + 0.045), link=0.032)
+    # carved crest on the top rail: a red arch with a gold star
+    arch = [(-0.2, 0.0), (0.2, 0.0)] + [(0.2 * math.cos(math.pi * i / 10), 0.075 * math.sin(math.pi * i / 10))
+                                        for i in range(1, 10)]
+    Mc = boards.face_frame((BOARD_C[0], BOARD_C[1] + 0.004, top - 0.004))
+    P.shape(arch, depth=0.022, M=Mc, band="red")
+    Ms = Mc @ Matrix.Translation((0, 0.038, 0.014))
+    P.shape(geo.star_polygon(0, 0, 0.032, 0.014, 5), depth=0.008, M=Ms, band="gold")
+    # level with the board, slid 0.3 m right (a 12 degree oblique view) so the vendor's pot on
+    # the counter stays out of the picture; the garland's right span hangs higher (see build)
+    boards.read_camera("about", F, BOARD_W, BOARD_H, lift=0.0, side=0.3)
 
 
 def preview(objs):

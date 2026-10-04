@@ -4,13 +4,13 @@ Third-party assets used in the site, with source and licence.
 
 ## Carpenter (stalls, blender/lib)
 
-All wood, paint and iron textures are procedural (Blender shader nodes baked by `blender/lib/nmlib/mats.py`); no third-party images or models are used. The only third-party assets are fonts, bundled in `blender/lib/fonts/` and turned into 3D sign lettering inside the stall models:
+All wood, paint and iron textures are procedural (Blender shader nodes baked by `blender/lib/nmlib/mats.py`), and the blackboard slate of the round-6 writing boards is generated in numpy (`blender/lib/nmlib/boards.py`); no third-party images or models are used. The only third-party assets are fonts, bundled in `blender/lib/fonts/` and turned into 3D sign lettering inside the stall models:
 
 | Asset | Used for | Source | Licence |
 |---|---|---|---|
-| UnifrakturCook | Glühwein, Bier vom Fass, Lebkuchen, Käse signs | https://github.com/google/fonts/tree/main/ofl/unifrakturcook | SIL Open Font License 1.1 |
+| UnifrakturCook | Glühwein, Bier vom Fass, Lebkuchen, Käse signs; the 'Frisch vom Fass' crest on the Bierstand board (round 6) | https://github.com/google/fonts/tree/main/ofl/unifrakturcook | SIL Open Font License 1.1 |
 | IM Fell English Italic (IM Fell types, digitised by Igino Marini) | Bücher, Kerzen, Crêpes signs | https://github.com/google/fonts/tree/main/ofl/imfellenglish | SIL Open Font License 1.1 |
-| Alegreya SC (Huerta Tipográfica) | Bratwurst, Gebrannte Mandeln, Holzspielzeug, Christbaumschmuck, Heiße Maroni, Kartoffelpuffer signs; the six Bücherstand category signs (round 3); contact-sheet labels | https://github.com/google/fonts/tree/main/ofl/alegreyasc | SIL Open Font License 1.1 |
+| Alegreya SC (Huerta Tipográfica) | Bratwurst, Gebrannte Mandeln, Holzspielzeug, Christbaumschmuck, Heiße Maroni, Kartoffelpuffer signs; the six Bücherstand category signs (round 3); the 'Speisekarte' header of the Bratwurst menu board (round 6); contact-sheet labels | https://github.com/google/fonts/tree/main/ofl/alegreyasc | SIL Open Font License 1.1 |
 | UnifrakturMaguntia, IM Fell English SC | Bundled in `blender/lib/fonts/` as `state.font("fraktur")` and `state.font("fell_sc")` for other builders; no carpenter sign or shipped model uses them | https://github.com/google/fonts/tree/main/ofl/unifrakturmaguntia and .../imfellenglishsc | SIL Open Font License 1.1 |
 
 ## Engineer (site/)
@@ -71,23 +71,23 @@ The sky, stars, moon, clouds, snow, environment map and grain are all generated 
 
 ## Ride builder (Riesenrad, Karussell, bandstand, instruments: blender/rides/)
 
-All ride textures are procedural: the painted-steel kit `rsteel` is baked from Blender shader nodes in `blender/rides/rcommon.py`, and the wood and paint kits come from the carpenter's `nmlib`. The posters, the price board (ferris.glb) and the drum rug (bandstand.glb) are drawn in code with Pillow by `blender/rides/art.py`. No third-party images, models or scans are used. The only third-party assets are three fonts from the carpenter's bundle in `blender/lib/fonts/`, turned into 3D lettering inside the models or set in the drawn posters:
+All ride textures are procedural: the painted-steel kit `rsteel` is baked from Blender shader nodes in `blender/rides/rcommon.py`, and the wood and paint kits come from the carpenter's `nmlib`. The posters, the price board (ferris.glb), the drum rug (bandstand.glb) and, from round 6, the cork of the Riesenrad noticeboard (ferris.glb) and the spruce top of the double bass (instr_bass.glb) are drawn in code with numpy and Pillow by `blender/rides/art.py`. No third-party images, models or scans are used. The only third-party assets are three fonts from the carpenter's bundle in `blender/lib/fonts/`, turned into 3D lettering inside the models or set in the drawn posters:
 
 | Asset | Used for | Source | Licence |
 |---|---|---|---|
-| UnifrakturCook | "Riesenrad" entrance sign (ferris.glb), "Karussell" on the rounding board (carousel.glb); titles of the booth posters and price board (ferris.glb) | https://github.com/google/fonts/tree/main/ofl/unifrakturcook | SIL Open Font License 1.1 |
+| UnifrakturCook | "Riesenrad" entrance sign (ferris.glb), "Karussell" on the rounding board and "Fahrkarten" on the ticket booth (carousel.glb); titles of the booth posters and price board (ferris.glb) | https://github.com/google/fonts/tree/main/ofl/unifrakturcook | SIL Open Font License 1.1 |
 | Alegreya SC (Huerta Tipográfica) | "Kasse" sign on the Riesenrad ticket booth; poster and price-board lettering (ferris.glb) | https://github.com/google/fonts/tree/main/ofl/alegreyasc | SIL Open Font License 1.1 |
 | IM Fell English Italic (IM Fell types, digitised by Igino Marini) | Italic lines on the booth posters (ferris.glb) | https://github.com/google/fonts/tree/main/ofl/imfellenglish | SIL Open Font License 1.1 |
 
 ## Vendor (goods and props: blender/props/, site/public/models/prop_*)
 
-Every prop is modelled in code (`blender/props/*.py`) and every texture in the vendor atlas (`prop_tex_atlas_*.webp`: book spines and cloth, mug glazes and prints, bottle and jar labels, the chalkboard, copper, brass, steel, iron, wood, bread, sausage skin, coals, Lebkuchen icing, cheese, crêpes, chestnuts and so on) is drawn procedurally with numpy and Pillow by `blender/props/vendor_atlas.py`. No third-party images or models are used. The book spines and covers on the Bücherstand (`prop_tex_books_*.webp`, drawn by `blender/props/atlas_books.py`) carry only the titles and authors of Mac's 55 books from `content/books/categories.json`, set in the fonts below on original typographic designs; no publisher cover artwork is reproduced. Filler books carry no lettering. The open book on the counter is the bookseller's guest book, with greetings written for this site.
+Every prop is modelled in code (`blender/props/*.py`) and every texture in the vendor atlas (`prop_tex_atlas_*.webp`: book spines and cloth, mug glazes and prints, bottle and jar labels, the chalkboard, copper, brass, steel, iron, wood, bread, sausage skin, coals, Lebkuchen icing, cheese, crêpes, chestnuts and so on) is drawn procedurally with numpy and Pillow by `blender/props/vendor_atlas.py`. No third-party images or models are used. The book spines and covers on the Bücherstand (`prop_tex_books_*.webp`, drawn by `blender/props/atlas_books.py`) carry only the titles and authors of Mac's 55 books from `content/books/categories.json`, set in the fonts below on original typographic designs; no publisher cover artwork is reproduced. Filler books carry no lettering. The open book on the counter is the bookseller's guest book, with greetings written for this site. Round 6 adds a third procedural atlas, `prop_tex_print_*.webp` (`blender/props/atlas_print.py`): the Nachtmarkt-Bräu Bierdeckel (an invented brewery with a traditional brewer's star), the Nachtmarkt-Blatt market paper, the wine back labels of the fictional estates, and the cloth, paper and ribbon of the open hardback (`book_open.glb`), all drawn with numpy and Pillow in the fonts below.
 
 The only third-party assets are fonts, used to draw lettering into the atlas (bundled in `blender/props/fonts/` and the carpenter's `blender/lib/fonts/`):
 
 | Asset | Used for | Source | Licence |
 |---|---|---|---|
-| Oswald (The Oswald Project Authors) | Book spines and covers (e.g. The Order of Time), jacket lettering | https://github.com/google/fonts/tree/main/ofl/oswald | SIL Open Font License 1.1 |
+| Oswald (The Oswald Project Authors) | Book spines and covers (e.g. The Order of Time), jacket lettering, the Bierdeckel rim lettering | https://github.com/google/fonts/tree/main/ofl/oswald | SIL Open Font License 1.1 |
 | EB Garamond (The EB Garamond Project Authors) | Book spines and covers, labels | https://github.com/google/fonts/tree/main/ofl/ebgaramond | SIL Open Font License 1.1 |
 | Playfair Display (The Playfair Display Project Authors) | Book spines and covers (e.g. Infinite Powers); a label | https://github.com/google/fonts/tree/main/ofl/playfairdisplay | SIL Open Font License 1.1 |
 | Cinzel (The Cinzel Project Authors) | Cloth-bound spines (e.g. Einstein, Poor Charlie’s Almanack); rum label | https://github.com/google/fonts/tree/main/ofl/cinzel | SIL Open Font License 1.1 |
@@ -96,7 +96,7 @@ The only third-party assets are fonts, used to draw lettering into the atlas (bu
 | Libre Baskerville (The Libre Baskerville Project Authors) | Cloth spines, a bottle label | https://github.com/google/fonts/tree/main/ofl/librebaskerville | SIL Open Font License 1.1 |
 | Caveat (The Caveat Project Authors) | Chalk handwriting on the beer price board; the guest-book greetings | https://github.com/google/fonts/tree/main/ofl/caveat | SIL Open Font License 1.1 |
 | Pacifico (The Pacifico Project Authors) | Glühwein mug lettering, Lebkuchen icing, Amaretto label | https://github.com/google/fonts/tree/main/ofl/pacifico | SIL Open Font License 1.1 |
-| UnifrakturCook, IM Fell English, Alegreya SC (carpenter's bundle, credited above) | Mug and coaster Fraktur, spice-jar labels, paper-bag print | see Carpenter | SIL Open Font License 1.1 |
+| UnifrakturCook, IM Fell English, Alegreya SC (carpenter's bundle, credited above) | Mug and coaster Fraktur, spice-jar labels, paper-bag print, the Marktblatt masthead, back-label estate names | see Carpenter | SIL Open Font License 1.1 |
 
 ## Organizer (people, crowd: blender/people/, site/public/models/people_*, site/src/crowd.json)
 

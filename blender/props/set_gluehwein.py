@@ -7,7 +7,8 @@ prop_gluehwein_wine     -> slot_shelf_2 of stall_gluehwein (origin on the upper 
 
 Clickable goods are their own nodes with the origin at their base: act_mug_0..15 (0-9 on the counter,
 10-15 spare on the shelf), act_bottle_0..11 (wine shelf) and act_bottle_12..17 (Glühwein shelf),
-act_wineglass_0..4. The back shelves are 0.3 m deep with a 5 cm front lip, so shelf goods keep to
+act_wineglass_0..4. Round 6: every wine bottle carries a back label with a blank writing strip,
+write_label_<n> (n = the bottle's number), and cam_read_label_<n> behind it. The back shelves are 0.3 m deep with a 5 cm front lip, so shelf goods keep to
 y -0.12..0.14.
 """
 import math
@@ -16,6 +17,7 @@ from mathutils import Vector
 
 import goods as G
 import vlib
+import vprint
 from vlib import C, T, WHITE, drng, lite, rng, seg
 
 TWO_PI = 2 * math.pi
@@ -260,6 +262,11 @@ WINES = [
      2018, "Weingut Eiszapfen", "white"),
 ]
 ROSE = C("e8a098")
+# preview-only stand-ins for the tasting notes the engine prints on the back labels (the writer owns the real ones)
+PREVIEW_NOTES = ["Green apple, lime zest and a touch of honey; slate in the finish. Lovely with the Flammkuchen.",
+                 "Ripe peach and apricot, gently sweet and lifted by bright acidity.",
+                 "Dry and crisp: grapefruit, white flowers, a salty mineral edge.",
+                 "Red cherry and a little smoke; silky, with soft tannins."]
 
 
 def wine():
@@ -290,9 +297,17 @@ def wine():
             loc = (bx - 0.07 + (i - 10) * 0.14, 0.015, 0.12)
         node = s.node(f"act_bottle_{i}", loc, rot=(0, 0, rng.uniform(-0.15, 0.15)))
         G.bottle(node, None, lab, glass, kind, cap, liquid=ROSE if colour == "rosé" else None, n=10)
+        # round 6: a back label on every bottle with a blank writing strip, write_label_<n>, for its tasting note
+        # (docs/adr/0003: "wine bottles show their tasting note on the label when turned"), and a reading
+        # camera behind the bottle, cam_read_label_<n>, a child of the bottle: once the engine turns the bottle
+        # round (180 degrees about its base), the camera stands in front of the label
+        wm = vprint.write_node(s, f"write_label_{i}", f"act_bottle_{i}")
+        c, cw, ch = G.back_label(node, wm, None, kind, f"pr_back_{lab}", vlib.print_meta()["back_label_write"])
+        d = vprint.reading_distance(cw, ch, fill=0.8)
+        vprint.cam_read(s, f"label_{i}", c, (c[0], c[1] + d, c[2]), parent=f"act_bottle_{i}")
         s.item(f"act_bottle_{i}", f"{wname}, {region} {vint} ({prod})", "bottle", where="wine shelf",
                wine=wname, grape=grape, region=region, vintage=vint, producer=prod, colour=colour,
-               country="Germany")
+               country="Germany", write={"back_label": f"write_label_{i}"})
     if not lite():
         # straw tufts round the bottles in the crate
         for k in range(8):
@@ -328,5 +343,10 @@ SETS = {
                                  hero=((-0.55, -0.75, 0.2), (-0.55, 0.0, 0.12), 40)),
     "prop_gluehwein_wine": dict(fn=wine, slot="slot_shelf_2", stall="gluehwein", kind="shelf2", section=True, seed=23,
                                 cam=((0.0, -1.75, 0.25), (0.0, 0.0, 0.15), 32),
-                                hero=((-0.55, -0.7, 0.2), (-0.55, 0.0, 0.14), 40)),
+                                # round 6: the first four bottles turned round (as the engine turns one) to show
+                                # the back labels' writing strips, with stand-in tasting notes
+                                hero=((-0.9, -0.52, 0.17), (-0.9, 0.0, 0.085), 42),
+                                preview_turn=[f"act_bottle_{i}" for i in range(4)],
+                                preview_text=lambda: {f"write_label_{i}": [(t, 0.085, "garamond", "2a2420")]
+                                                      for i, t in enumerate(PREVIEW_NOTES)}),
 }

@@ -151,7 +151,12 @@ export function createCameraRig({ camera, dom, home, motion }) {
         if (move.t >= 1) finish();
         return;
       }
-      // resting: home drifts, a stop holds still; either takes the visitor's small look-around
+      // resting: home drifts, a stop holds still; either takes the visitor's small look-around, and after a while
+      // left alone the head turns gently back to the view (reduced motion: it stays where it was put)
+      if (idle > 8 && !motion.reduced) {
+        const r = Math.exp(-dt * 0.5);
+        look.wantYaw *= r; look.wantPitch *= r; look.wantZoom = 1 + (look.wantZoom - 1) * r;
+      }
       const k = motion.reduced ? 1 : 1 - Math.exp(-dt * 6);
       look.yaw += (look.wantYaw - look.yaw) * k;
       look.pitch += (look.wantPitch - look.pitch) * k;

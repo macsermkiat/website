@@ -28,7 +28,7 @@ import { createStopbar } from './ui/stopbar.js';
 import { createNote } from './ui/note.js';
 import { libraryBook } from './ui/reading.js';
 import { createWorldReader } from './world/reader.js';
-import { createSurfaces, placeCoasters, hangPlacards } from './world/surfaces.js';
+import { createSurfaces, placeCoasters, modelCoasters, hangPlacards } from './world/surfaces.js';
 import { sectionPieces } from './world/sections.js';
 import { SECTIONS, ORDER, bookPicks, phrases, taglineHtml } from './content.js';
 import { createPerfMeter } from './perf.js';
@@ -198,7 +198,9 @@ async function boot() {
   surfaces.onAdd((s) => { world.addSurface(s); picking?.refresh(); });
   if (market.places.bier) {
     const n = pieces['bier.vomfass']?.projects?.length || 0;
-    placeCoasters(market.places.bier, n, camera).forEach((s) => world.addSurface(s));
+    // the vendor's Bierdeckel when the props carry them (write_coaster_<i>_front/_back), else the engine's own
+    const own = modelCoasters(market.places.bier, n, camera);
+    (own.length ? own : placeCoasters(market.places.bier, n, camera)).forEach((s) => world.addSurface(s));
   }
   const hang = (place) => {
     const qs = pieces['ferris.notice']?.questions || [];

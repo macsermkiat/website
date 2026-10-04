@@ -7,13 +7,14 @@ How the master is made (full and lite):
      flared nostrils and an open jaw; tapered legs with knee, hock and fetlock bulges; flame
      locks of a carved mane falling to the outer side; a three-strand tail; a carved saddle
      cloth with a scalloped edge, a saddle and a breast collar.
-  2. The solids are fused with a voxel remesh, relaxed with a smoothing pass so every joint
-     becomes a soft carved crease, and collapsed to the triangle target (full 2.0k,
-     lite 0.72k).
-  3. Each vertex takes the region of the nearest source solid. Every coat is then painted per
-     region (coat colour with belly shading, dapples, blaze and socks where the coat has them;
-     dark hooves; mane and tail in gilt or dark paint; glossy black eyes; a red mouth; the
-     saddle cloth and breast collar in the coat's colours).
+  2. The solids are fused with a fine voxel remesh (~120k triangles), relaxed with a smoothing
+     pass so every joint becomes a soft carved crease, and collapsed to the master (full 1.3k,
+     lite 0.56k triangles). The sculpt is baked onto the master as a tangent-space normal map.
+  3. Each vertex of the sculpt takes the region of the nearest source solid. Every coat is
+     painted per region on the sculpt (coat colour with belly shading, dapples, blaze and socks
+     where the coat has them; dark hooves; mane and tail in gilt or dark paint; glossy black
+     eyes; a red mouth; the saddle cloth and breast collar in the coat's colours) and baked to a
+     base-colour map on the master's UVs.
 Horses with the same coat share one mesh; the thin gilt harness (bridle, reins, stirrups,
 jewels, cloth cord) is one mesh shared by all twelve. So the web file stores the master once
 per coat, and the engine still gets twelve separate horse_ nodes to move up and down.
@@ -191,10 +192,18 @@ def _source(lite):
                 bm.faces.new((vo[a][j], vo[a][j + 1], vi[a][j + 1], vi[a][j]))
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         P["cloth"].from_bmesh(bm, grain=0)
+    # saddle: a seat that dips between a tall cantle and the pommel (the rider's seat), and a skirt
+    # flap down each side over the cloth with a squared lower edge (round 2: it was a smooth blob)
     sd = P["saddle"]
-    sd.sphere((-0.04, 0, 0.19), 1.0, seg=14, rings=8, scale=(0.22, 0.165, 0.075))
-    sd.sphere((-0.21, 0, 0.235), 1.0, seg=10, rings=6, scale=(0.05, 0.13, 0.065))           # cantle
-    sd.sphere((0.12, 0, 0.225), 1.0, seg=10, rings=6, scale=(0.05, 0.10, 0.06))             # pommel
+    sd.sphere((-0.045, 0, 0.183), 1.0, seg=14, rings=8, scale=(0.20, 0.162, 0.052))          # seat, dipped
+    sd.sphere((-0.205, 0, 0.240), 1.0, seg=12, rings=6, scale=(0.055, 0.135, 0.068), rot=(0, 0.35, 0))  # cantle
+    sd.sphere((0.115, 0, 0.228), 1.0, seg=10, rings=6, scale=(0.05, 0.095, 0.062), rot=(0, -0.3, 0))    # pommel
+    th = 0.016 if lite else 0.012
+    for s in (-1, 1):
+        # skirt flap: a flattened slab following the barrel's curve, its top tucked under the seat
+        sd.sphere((-0.05, s * 0.172, 0.085), 1.0, seg=12, rings=6, scale=(0.135, th, 0.115), rot=(s * 0.33, 0, 0))
+        # the seat's welted edge rolling over onto the flap
+        sd.sphere((-0.045, s * 0.150, 0.180), 1.0, seg=10, rings=4, scale=(0.17, 0.018, 0.018), rot=(s * 0.5, 0, 0))
     # breast collar: a carved band round the chest
     z0, w0, h0 = body_at(0.33)
     ring = []
@@ -221,20 +230,20 @@ def _harness(lite):
                     0.006, tseg=4)
             gl.sphere((0.87, s * 0.07, 0.53), 0.018, seg=6, rings=4, scale=(1, 0.5, 1))
         # reins from the bit to the pommel
-        pts = smooth_path([(0.965, s * 0.05, 0.44), (0.62, s * 0.10, 0.40), (0.32, s * 0.13, 0.30), (0.12, s * 0.04, 0.24)], 2)
+        pts = smooth_path([(0.965, s * 0.05, 0.44), (0.62, s * 0.10, 0.40), (0.32, s * 0.13, 0.30), (0.12, s * 0.04, 0.24)], 1 if lite else 2)
         gl.tube([Vector(p) for p in pts], 0.0065, tseg=3 if lite else 4)
         # stirrup leather and iron
         gl.box((-0.02, s * 0.205, -0.10), (0.022, 0.008, 0.22))
-        gl.torus((-0.02, s * 0.212, -0.25), 0.036, 0.0065, seg=6 if lite else 10, tseg=3,
+        gl.torus((-0.02, s * 0.212, -0.25), 0.036, 0.0065, seg=5 if lite else 8, tseg=3,
                  rot=(math.pi / 2, 0, 0))
-    gl.sphere((0.13, 0, 0.27), 0.04, seg=6 if lite else 10, rings=4 if lite else 6)          # pommel knob
+    gl.sphere((0.13, 0, 0.27), 0.04, seg=5 if lite else 8, rings=3 if lite else 5)          # pommel knob
     # jewels along the breast collar and a medallion at the chest
     z0, w0, h0 = body_at(0.33)
-    for i in range(3 if lite else 5):
+    for i in range(0 if lite else 5):          # lite: no jewels (the medallion stays)
         a = -1.0 + 2.0 * i / (2 if lite else 4)
         p = Vector((0.355 + 0.06 * math.cos(a) + 0.02, (w0 + 0.05) * math.sin(a), z0 + 0.02 - 0.10 * math.cos(a)))
-        gl.sphere(p, 0.02, seg=5 if lite else 6, rings=3 if lite else 4)
-    gl.sphere((0.45, 0, -0.075), 0.042, seg=8 if lite else 10, rings=4 if lite else 6, scale=(0.55, 1, 1))
+        gl.sphere(p, 0.02, seg=5, rings=3)
+    gl.sphere((0.45, 0, -0.075), 0.042, seg=6 if lite else 8, rings=3 if lite else 5, scale=(0.55, 1, 1))
     if not lite:
         # gilt cord along the saddle cloth's scalloped edge
         xs = [-0.30 + 0.48 * i / 12 for i in range(13)]
@@ -253,7 +262,18 @@ def _harness(lite):
     return [gl, iv]
 
 
-# ------------------------------------------------------------------ fuse and paint
+# ------------------------------------------------------------------ fuse, bake and paint
+# Round 6 pass 2: the carved detail lives in maps. The fused sculpt (a fine voxel remesh, ~120k
+# triangles) is baked onto a much lighter collapsed master: a tangent-space normal map carries the
+# carving (muscles, creases, mane locks, the saddle's welt and flaps), and each coat is painted on
+# the dense sculpt and baked to a base-colour map, so eyes, nostrils, blaze, socks and dapples stay
+# crisp however few vertices the master has. Full 1,300 triangles (was 2,000), lite 560 (was 1,050).
+FULL_TRIS, LITE_TRIS = 1300, 560
+NRM_PX = {False: 1024, True: 512}
+COL_PX = {False: 512, True: 256}
+BAKE_EXT = {False: 0.03, True: 0.04}
+
+
 def _scratch():
     coll = bpy.data.collections.get("HorseScratch")
     if coll is None:
@@ -262,14 +282,103 @@ def _scratch():
     return coll
 
 
+def _regions_of(me, trees):
+    out = []
+    for v in me.vertices:
+        best, bd = "coat", 1e9
+        for k, t in trees.items():
+            hit = t.find_nearest(v.co)
+            if hit[0] is not None and hit[3] < bd:
+                best, bd = k, hit[3]
+        out.append(best)
+    return out
+
+
+def _unwrap(ob, px):
+    """UVMap on the collapsed master: smart islands, packed with a few texels between them."""
+    for o in bpy.context.view_layer.objects:
+        if o is not None:
+            o.select_set(False)
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+    if not ob.data.uv_layers:
+        ob.data.uv_layers.new(name="UVMap")
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=4.0 / px, area_weight=0.0,
+                             scale_to_bounds=True)
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def _bake(kind, high, low, img, extrusion, margin):
+    """Cycles selected-to-active bake from `high` onto `low`'s UVMap into `img`."""
+    scene = bpy.context.scene
+    state.configure_cycles(scene)
+    scene.cycles.samples = 4
+    tm = bpy.data.materials.new("hbake_target")
+    tm.use_nodes = True
+    tn = tm.node_tree.nodes.new("ShaderNodeTexImage")
+    tn.image = img
+    tm.node_tree.nodes.active = tn
+    old = list(low.data.materials)
+    low.data.materials.clear()
+    low.data.materials.append(tm)
+    for o in bpy.context.view_layer.objects:
+        if o is not None:
+            o.select_set(False)
+    high.select_set(True)
+    low.select_set(True)
+    bpy.context.view_layer.objects.active = low
+    kw = dict(type=kind, use_selected_to_active=True, cage_extrusion=extrusion,
+              max_ray_distance=extrusion * 2.5, margin=margin, use_clear=True)
+    if kind == 'NORMAL':
+        kw.update(normal_space='TANGENT')
+    bpy.ops.object.bake(**kw)
+    _fill_misses(img)
+    low.data.materials.clear()
+    for m in old:
+        low.data.materials.append(m)
+    bpy.data.materials.remove(tm)
+    img.pack()
+
+
+def _fill_misses(img, iters=24):
+    """Texels whose rays found no sculpt come back black: grow the neighbouring baked texels into
+    them (a few texels; it also widens the islands' outer margin, which is harmless)."""
+    import numpy as np
+    w, h = img.size
+    px = np.empty(w * h * 4, np.float32)
+    img.pixels.foreach_get(px)
+    px = px.reshape(h, w, 4)
+    rgb = px[..., :3]
+    ok = rgb.max(axis=2) > 0.02
+    n0 = int((~ok).sum())
+    for _ in range(iters):
+        if ok.all():
+            break
+        acc = np.zeros_like(rgb)
+        cnt = np.zeros((h, w), np.float32)
+        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)):
+            m = np.roll(ok, (dy, dx), axis=(0, 1))
+            acc += np.roll(rgb, (dy, dx), axis=(0, 1)) * m[..., None]
+            cnt += m
+        grow = (~ok) & (cnt > 0)
+        rgb[grow] = acc[grow] / cnt[grow][:, None]
+        ok = ok | grow
+    px[..., 3] = 1.0
+    img.pixels.foreach_set(px.ravel())
+    img.update()
+    print(f"[horse] {img.name}: filled {n0 - int((~ok).sum())} unbaked texels of {w * h}")
+
+
 def master(lite, voxel=None, target=None):
-    """Returns (mesh of the fused master, per-vertex region names, [(name, mesh, material)] of the
-    harness pieces). The caller links objects that use these meshes."""
+    """Returns (low mesh with UVMap, its per-vertex regions, dense sculpt object, the dense
+    per-vertex regions, harness [(name, mesh, material)], normal-map image). The dense object
+    stays in the scratch collection for the coat bakes; Herd removes it."""
     coll = _scratch()
-    P = _source(lite)
+    P = _source(False)                     # the fine sculpt for both LODs (it is only baked)
     srcs = {k: p.finish(coll) for k, p in P.items()}
     srcs = {k: o for k, o in srcs.items() if o is not None}
-    # join every region solid into one object for the remesh
     bm = bmesh.new()
     for o in srcs.values():
         bm.from_mesh(o.data)
@@ -280,130 +389,199 @@ def master(lite, voxel=None, target=None):
     coll.objects.link(ob)
     r = ob.modifiers.new("remesh", 'REMESH')
     r.mode = 'VOXEL'
-    r.voxel_size = voxel or (0.016 if lite else 0.0085)
+    r.voxel_size = voxel or 0.0085
     r.adaptivity = 0.0
     r.use_smooth_shade = True
     sm = ob.modifiers.new("smooth", 'SMOOTH')
     sm.factor = 0.6
-    sm.iterations = 2 if lite else 4
+    sm.iterations = 4
     dg = bpy.context.evaluated_depsgraph_get()
     dense = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
     nf = len(dense.polygons)
     ob.modifiers.clear()
     ob.data = dense
+    hi = bpy.data.objects.new("horse_dense", dense.copy())
+    coll.objects.link(hi)
     dec = ob.modifiers.new("decimate", 'DECIMATE')
     dec.decimate_type = 'COLLAPSE'
-    goal = target or (720 if lite else 2000)
+    goal = target or (LITE_TRIS if lite else FULL_TRIS)
     dec.ratio = min(1.0, goal / (2.0 * nf))
     dec.use_collapse_triangulate = True
     dg = bpy.context.evaluated_depsgraph_get()
     low = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
+    low.name = "horse_low"
+    # the collapse can leave zero-area faces, which the glTF exporter flags ("not valid"): clean them
+    # before anything is computed per vertex
+    low.validate(clean_customdata=False)
     print(f"[horse] remesh {nf} quads -> {len(low.polygons)} tris ({'lite' if lite else 'full'})")
-    # region per vertex: the nearest source solid
+    ob.modifiers.clear()
+    ob.data = low
+    ob.name = "horse_low"
+    low.polygons.foreach_set("use_smooth", [True] * len(low.polygons))
     trees = {}
     for k, o in srcs.items():
         bmk = bmesh.new()
         bmk.from_mesh(o.data)
         trees[k] = BVHTree.FromBMesh(bmk)
         bmk.free()
-    regions = []
-    for v in low.vertices:
-        best, bd = "coat", 1e9
-        for k, t in trees.items():
-            hit = t.find_nearest(v.co)
-            if hit[0] is not None and hit[3] < bd:
-                best, bd = k, hit[3]
-        regions.append(best)
-    for o in list(srcs.values()) + [ob]:
+    regions = _regions_of(low, trees)
+    dregions = _regions_of(hi.data, trees)
+    for o in list(srcs.values()):
         bpy.data.objects.remove(o)
+    px = NRM_PX[lite]
+    _unwrap(ob, px)
+    nrm = bpy.data.images.new(f"horse_nrm{'_lite' if lite else ''}", px, px)
+    nrm.colorspace_settings.name = "Non-Color"
+    nrm.generated_color = (0.5, 0.5, 1.0, 1.0)
+    # the cage starts this far outside the master, so mane locks and ears that the collapse
+    # flattened are still found on the sculpt; rays stop at 2.5x that (no hits on the next leg)
+    ext = BAKE_EXT[lite]
+    _bake('NORMAL', hi, ob, nrm, ext, 4 if lite else 6)
+    low = ob.data
+    bpy.data.objects.remove(ob)            # the mesh lives on in the horse objects
     harness = []
     for p in _harness(lite):
         o = p.finish(coll)
         if o is not None:
             harness.append((o.name, o.data, p.mat))
             bpy.data.objects.remove(o)
-    return low, regions, harness
+    return low, regions, hi, dregions, harness, nrm
 
 
-def paint(low, regions, coat_idx, name):
-    """A painted copy of the master for one coat: vertex colours per region, and the mane and
-    tail faces on the gilt material when the coat has a gilt mane."""
+def coat_color(p, reg, coat_idx):
+    """Painted colour (linear) of a point of the sculpt in region `reg` for one coat."""
     coat, mane, cloth, collar, ex = COATS[coat_idx % len(COATS)]
-    me = low.copy()
-    me.name = name
-    me.materials.clear()
-    me.materials.append(mats.get("enamel"))
-    me.materials.append(mats.get("gilt"))
-    cols = []
-    for v, reg in zip(me.vertices, regions):
-        p = v.co
-        if reg == "coat":
-            c = Vector(coat)
-            if ex.get("dapple"):
-                nn = noise.noise(Vector((p.x * 13, p.y * 13, p.z * 13)))
-                c = c * (0.78 + 0.55 * max(0.0, nn))
-            if ex.get("blush"):     # a warm tint on the muzzle, as painted on white gallopers
-                c = c.lerp(Vector((0.90, 0.62, 0.52)), max(0.0, min(1.0, (p.x - 0.90) / 0.08)) * 0.6)
-            if ex.get("blaze") and p.x > 0.78 and abs(p.y) < 0.022 + 0.01 * (p.x - 0.78) and p.z > 0.40:
+    if reg == "coat":
+        c = Vector(coat)
+        if ex.get("dapple"):
+            nn = noise.noise(Vector((p.x * 13, p.y * 13, p.z * 13)))
+            c = c * (0.78 + 0.55 * max(0.0, nn))
+        if ex.get("blush"):     # a warm tint on the muzzle, as painted on white gallopers
+            c = c.lerp(Vector((0.90, 0.62, 0.52)), max(0.0, min(1.0, (p.x - 0.90) / 0.08)) * 0.6)
+        if ex.get("blaze") and p.x > 0.78 and abs(p.y) < 0.022 + 0.01 * (p.x - 0.78) and p.z > 0.40:
+            c = Vector(WHITE)
+        nsock = ex.get("socks", 0)
+        if nsock and p.z < -0.38:
+            legs = (p.x > 0.2, p.x < -0.2)
+            if (nsock >= 4 and (legs[0] or legs[1])) or (nsock == 2 and legs[1]):
                 c = Vector(WHITE)
-            nsock = ex.get("socks", 0)
-            if nsock and p.z < -0.38:
-                legs = (p.x > 0.2, p.x < -0.2)
-                if (nsock >= 4 and (legs[0] or legs[1])) or (nsock == 2 and legs[1]):
-                    c = Vector(WHITE)
-            # shading the carver's painter adds: darker under the belly and inside the legs
-            shade = 0.82 + 0.18 * max(0.0, min(1.0, (p.z + 0.25) / 0.35))
-            c = c * shade
-        elif reg == "hoof":
-            c = Vector(HOOF)
-        elif reg in ("mane", "tail"):
-            c = Vector((1, 1, 1)) if mane == "gilt" else Vector(mane)
-        elif reg == "eye":
-            c = Vector(EYE)
-        elif reg == "nostril":
-            c = Vector(NOSTRIL)
-        elif reg == "mouth":
-            c = Vector(MOUTH)
-        elif reg == "saddle":
-            c = Vector(LEATHER)
-        elif reg == "cloth":
-            c = Vector(cloth)
-        else:
-            c = Vector(collar)
-        cols.append((c.x, c.y, c.z, 1.0))
-    for a in list(me.color_attributes):
-        me.color_attributes.remove(a)
-    ca = me.color_attributes.new("Col", 'FLOAT_COLOR', 'POINT')
-    ca.data.foreach_set("color", [x for c in cols for x in c])
-    me.color_attributes.active_color = ca
-    try:
-        me.color_attributes.render_color_index = me.color_attributes.active_color_index
-    except Exception:
-        pass
-    if mane == "gilt":
-        for f in me.polygons:
-            rs = [regions[i] for i in f.vertices]
-            if sum(r in ("mane", "tail") for r in rs) >= 2:
-                f.material_index = 1
-    me.polygons.foreach_set("use_smooth", [True] * len(me.polygons))
-    me.update()
-    return me
+        # shading the carver's painter adds: darker under the belly and inside the legs
+        shade = 0.82 + 0.18 * max(0.0, min(1.0, (p.z + 0.25) / 0.35))
+        return c * shade
+    if reg == "hoof":
+        return Vector(HOOF)
+    if reg in ("mane", "tail"):
+        return Vector((0.90, 0.60, 0.21)) if mane == "gilt" else Vector(mane)
+    if reg == "eye":
+        return Vector(EYE)
+    if reg == "nostril":
+        return Vector(NOSTRIL)
+    if reg == "mouth":
+        return Vector(MOUTH)
+    if reg == "saddle":
+        return Vector(LEATHER)
+    if reg == "cloth":
+        return Vector(cloth)
+    return Vector(collar)
+
+
+def _emit_material():
+    m = bpy.data.materials.new("hbake_emit")
+    m.use_nodes = True
+    nt = m.node_tree
+    for n in list(nt.nodes):
+        nt.nodes.remove(n)
+    at = nt.nodes.new("ShaderNodeAttribute")
+    at.attribute_name = "Col"
+    em = nt.nodes.new("ShaderNodeEmission")
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    nt.links.new(at.outputs["Color"], em.inputs["Color"])
+    nt.links.new(em.outputs[0], out.inputs["Surface"])
+    return m
+
+
+def _horse_material(name, nrm, base_img=None, base=(1, 1, 1), rough=0.26, metal=0.0):
+    """Principled with the shared normal map; base colour from the coat map (or a flat colour).
+    No vertex-colour multiply: the masters carry no colour attribute."""
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    L = nt.links
+    bsdf = nt.nodes["Principled BSDF"]
+    uv = nt.nodes.new("ShaderNodeUVMap")
+    uv.uv_map = "UVMap"
+    if base_img is not None:
+        tc = nt.nodes.new("ShaderNodeTexImage")
+        tc.image = base_img
+        L.new(uv.outputs[0], tc.inputs[0])
+        L.new(tc.outputs["Color"], bsdf.inputs["Base Color"])
+    else:
+        bsdf.inputs["Base Color"].default_value = (*base, 1)
+    bsdf.inputs["Roughness"].default_value = rough
+    bsdf.inputs["Metallic"].default_value = metal
+    tn = nt.nodes.new("ShaderNodeTexImage")
+    tn.image = nrm
+    L.new(uv.outputs[0], tn.inputs[0])
+    nm = nt.nodes.new("ShaderNodeNormalMap")
+    nm.uv_map = "UVMap"
+    L.new(tn.outputs["Color"], nm.inputs["Color"])
+    L.new(nm.outputs[0], bsdf.inputs["Normal"])
+    return m
 
 
 class Herd:
-    """Builds the master once per LOD and hands out horse objects that share meshes."""
+    """Builds the master once per LOD, bakes its normal map and one colour map per coat, and
+    hands out horse objects that share meshes."""
 
-    def __init__(self, lite):
+    def __init__(self, lite, coats=range(6)):
         self.lite = lite
-        self.low, self.regions, self.harness = master(lite)
+        self.low, self.regions, hi, dregions, self.harness, self.nrm = master(lite)
+        sfx = "_lite" if lite else ""
+        self.gilt = _horse_material(f"horse_gilt{sfx}", self.nrm, base=(0.90, 0.60, 0.21), rough=0.30, metal=0.5)
+        # every coat painted on the dense sculpt, then baked onto the master's UVs
+        coll = _scratch()
+        low_ob = bpy.data.objects.new("horse_bake_low", self.low)
+        coll.objects.link(low_ob)
+        emit = _emit_material()
+        hi.data.materials.clear()
+        hi.data.materials.append(emit)
+        ca = hi.data.color_attributes.new("Col", 'FLOAT_COLOR', 'POINT')
+        verts = hi.data.vertices
         self.coats = {}
+        px = COL_PX[lite]
+        for ci in coats:
+            cols = []
+            for v, reg in zip(verts, dregions):
+                c = coat_color(v.co, reg, ci)
+                cols.extend((c.x, c.y, c.z, 1.0))
+            ca.data.foreach_set("color", cols)
+            hi.data.update()
+            img = bpy.data.images.new(f"horse_coat{ci}{sfx}", px, px)
+            _bake('EMIT', hi, low_ob, img, BAKE_EXT[lite], 3 if lite else 4)
+            mat = _horse_material(f"horse_coat{ci}{sfx}", self.nrm, base_img=img)
+            self.coats[ci] = self._painted(ci, mat)
+        bpy.data.objects.remove(low_ob)
+        bpy.data.objects.remove(hi)
+        bpy.data.materials.remove(emit)
+
+    def _painted(self, ci, mat):
+        coat, mane, *_ = COATS[ci % len(COATS)]
+        me = self.low.copy()
+        me.name = f"horse_coat{ci}"
+        me.materials.clear()
+        me.materials.append(mat)
+        me.materials.append(self.gilt)
+        if mane == "gilt":
+            for f in me.polygons:
+                rs = [self.regions[i] for i in f.vertices]
+                f.material_index = 1 if sum(r in ("mane", "tail") for r in rs) >= 2 else 0
+        me.update()
+        return me
 
     def horse(self, k, coat_idx, parent, coll=None):
         coll = coll or state.export_collection()
-        if coat_idx not in self.coats:
-            self.coats[coat_idx] = paint(self.low, self.regions, coat_idx, f"horse_coat{coat_idx}")
         objs = []
-        ob = bpy.data.objects.new(f"h{k}_carved", self.coats[coat_idx])
+        ob = bpy.data.objects.new(f"h{k}_carved", self.coats[coat_idx % 6])
         coll.objects.link(ob)
         ob["nm_mat"] = "enamel"
         objs.append(ob)

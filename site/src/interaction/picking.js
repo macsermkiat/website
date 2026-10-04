@@ -95,8 +95,12 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
       tip.hidden = false;
       tip.textContent = p.link ? `Open: ${p.linkText || p.link}` : p.sign ? signLabel(p.sign) : p.readable ? readLabel(p.readable) : p.item ? p.item.label : p.id ? labelFor(p.id) : p.label || '';
       tip.classList.toggle('item', !!p.item || !!p.readable || !!p.link);
-      tip.style.left = p.x + 'px';
-      tip.style.top = p.y + 'px';
+      // kept inside the canvas: the tip is centred over the pointer and lifted above it (translate -50%, -150%),
+      // so near an edge it slides in, and near the top it drops below the pointer
+      const W = overlay.clientWidth || window.innerWidth, Hh = overlay.clientHeight || window.innerHeight;
+      const tw = tip.offsetWidth, th = tip.offsetHeight, m = 8;
+      tip.style.left = Math.min(Math.max(p.x, tw / 2 + m), Math.max(tw / 2 + m, W - tw / 2 - m)) + 'px';
+      tip.style.top = (p.y - th * 1.5 < m ? Math.min(p.y + th * 2.2, Hh - m) : p.y) + 'px';
       dom.style.cursor = 'pointer';
     } else {
       tip.hidden = true;

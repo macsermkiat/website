@@ -27,7 +27,7 @@ from mathutils import Euler, Matrix, Vector  # noqa: E402
 import pipeline  # noqa: E402
 from hut import COUNTER_TOP, Hut, grime  # noqa: E402
 from nmlib import carpentry as cp  # noqa: E402
-from nmlib import export, render, state  # noqa: E402
+from nmlib import boards, export, render, state  # noqa: E402
 from nmlib.geo import Part  # noqa: E402
 
 NAME = "stall_bratwurst"
@@ -229,11 +229,79 @@ def build(lite):
         h.iron.box((x, h.yB - 0.12, 1.96), (0.01, 0.01, 0.16), bevel=0)
     h.eave_bulbs(sides=False)
     h.interior_bulbs(xs=(0.1, 1.2), z=2.05)
+    menu_board(h, lite)
     h.markers(sign_pos=tuple(sign_c + Vector((0, -0.05, 0))),
               lights=[(0.6, 0.0, 2.1), (GX, yF - 0.3, 1.5)], cam_dist=3.5, cam_h=1.75)
     export.empty("smoke_origin", smoke)
     export.empty("slot_grill", (BOWL_X, counter_y, COUNTER_TOP))
     return h.finish()
+
+
+# round 6: the menu board (Speisekarte) on its own stand at the front-left corner, where people
+# queue for the grill; the writing pieces are listed on it like dishes (docs/adr/0003)
+BOARD_W, BOARD_H = 0.92, 0.70                       # writing area (write_writing_menu)
+BOARD_XY = (-2.58, -2.0)                            # clear of the counter's left end and the eave
+BOARD_Z = 1.36
+BOARD_YAW = math.radians(25)                        # turned toward the queue in front of the grill
+LAMP = {}                                           # lantern positions from the build (for the preview)
+
+
+def menu_board(h, lite):
+    """A soot-stained blackboard between two stout posts on cross feet with braces, a black
+    header plank with 'Speisekarte' in cream, a chalk tray, a little snow on the header and the
+    post caps. Lit by the grill's light_1. Exports write_writing_menu and the cam_read pair."""
+    F = boards.face_frame((BOARD_XY[0], BOARD_XY[1], BOARD_Z), yaw=BOARD_YAW)
+    ex, ey, ez = boards.frame_axes(F)
+    wood = h.part("menu_wood", "wood", shade=grime(0.5, 0.45), var=0.1, bevel=0.006)
+    chalk = h.part("chalk", "fabric_white", var=0.03)
+    b = boards.chalkboard("writing_menu", F, BOARD_W, BOARD_H, frame=wood, back=wood, chalk=chalk,
+                          iron=h.iron, frame_tint="dark", rail=0.06)
+    W_, H_ = b["outer"]
+    c = Vector((BOARD_XY[0], BOARD_XY[1], 0))
+    post_top = BOARD_Z + H_ / 2 + 0.25
+    rot = (0, 0, BOARD_YAW)
+    for sgn in (-1, 1):
+        p = c + ex * sgn * (W_ / 2 + 0.035) - ez * 0.005
+        wood.box((p.x, p.y, post_top / 2), (0.07, 0.07, post_top), rot=rot, tint="walnut", segs=3)
+        wood.box((p.x, p.y, post_top + 0.012), (0.085, 0.085, 0.024), rot=rot, tint="walnut")   # cap
+        # cross foot on the ground along the face normal, and two braces up to the post
+        f0, f1 = p - ez * 0.32, p + ez * 0.32
+        wood.slab(Vector((f0.x, f0.y, 0.035)), Vector((f1.x, f1.y, 0.035)), 0.07, 0.07, tint="walnut")
+        for f in (f0, f1):
+            a = p + (f - p) * 0.78
+            wood.slab(Vector((a.x, a.y, 0.06)), Vector((p.x, p.y, 0.36)) + (f - p) * 0.08, 0.045, 0.035,
+                      up=(ex.x, ex.y, 0), tint="walnut")
+    # stretcher between the posts just above the feet
+    s0 = c - ex * (W_ / 2 + 0.035) - ez * 0.005
+    s1 = c + ex * (W_ / 2 + 0.035) - ez * 0.005
+    wood.slab(Vector((s0.x, s0.y, 0.42)), Vector((s1.x, s1.y, 0.42)), 0.06, 0.03, up=(ez.x, ez.y, 0), tint="walnut")
+    # header plank: black paint, cream letters (not soot-shaded, so the cream stays clean)
+    sg = h.part("menu_sign", "paint_lit", var=0.03)  # lit like the main sign: cream letters glow
+    sg.flat_text = True          # painted lettering: one face per glyph (keeps the stall in budget)
+    hz = BOARD_Z + H_ / 2 + 0.115
+    hc = Vector((BOARD_XY[0], BOARD_XY[1], hz)) - ez * 0.0
+    cp.sign(sg, sg, "Speisekarte", state.font("alegreya_sc"), hc, W_ + 0.1, 0.17, depth=0.03, rot_z=BOARD_YAW,
+            board_band="black", text_band="cream", text_size=0.105, max_fill=0.86, text_depth=0.008,
+            text_bevel=0.0, resolution=1)
+    # a little snow on the header plank and the two post caps
+    sn = Part("snow_2", "snow", var=0.02)
+    top = hz + 0.085
+    sn.box((hc.x, hc.y, top + 0.012), (W_ + 0.06, 0.035, 0.026), rot=rot, bevel=0.01, bevel_segments=2)
+    for sgn in (-1, 1):
+        p = c + ex * sgn * (W_ / 2 + 0.035)
+        sn.sphere((p.x, p.y, post_top + 0.03), 0.045, seg=8, rings=4, scale=(1, 1, 0.42))
+    h.snow.append(sn)
+    # an iron lantern on a bracket off the left post, so the board has a visible light at night
+    # (its glass is emissive 'lamp_glass': it glows in the browser; the preview lights it)
+    pl = c - ex * (W_ / 2 + 0.035) - ez * 0.005
+    a0 = Vector((pl.x, pl.y, post_top - 0.12))
+    a1 = a0 - ex * 0.26 + ez * 0.12
+    h.iron.slab(a0, a1, 0.018, 0.012, up=(0, 0, 1), bevel=0)
+    h.iron.slab(a0 + Vector((0, 0, -0.12)), a1 - ex * 0.0 + Vector((0, 0, -0.005)), 0.012, 0.01,
+                up=(ex.x, ex.y, 0), bevel=0)                                   # diagonal stay
+    glass = h.part("lantern_glass", "lamp_glass", var=0.0)
+    LAMP["menu"] = tuple(boards.lantern(h.iron, glass, a1 + Vector((0, 0, -0.01)), size=0.1, yaw=BOARD_YAW))
+    boards.read_camera("writing_menu", F, BOARD_W, BOARD_H, lift=0.08)
 
 
 def preview(objs):
@@ -255,9 +323,13 @@ def preview(objs):
         render.add_light("env_signlamp", 'SPOT', (x, -0.88, 3.98), 40, size=0.04, spot_size=math.radians(40),
                          spot_blend=0.35, target=(x * 0.6 + 0.2, -0.58, 3.68))
     render.add_light("env_neighbour", 'POINT', (-5.0, -1.5, 2.6), 150, size=0.6)
+    if "menu" in LAMP:   # the menu board's lantern (its glass glows in the browser; here it lights)
+        render.add_light("env_lantern", 'POINT', LAMP["menu"], 20, (1.0, 0.72, 0.42), size=0.05)
     if not props:
         print("[bratwurst] preview without the vendor's props")
-    return render.camera((-4.4, -6.9, 2.35), (0.0, -0.5, 1.9), lens=30)
+    # round 6: pulled back and aimed higher, so the roof sign no longer touches the top edge
+    # (round 4 judges) and the menu board at the front-left corner is in the picture
+    return render.camera((-5.0, -7.6, 2.4), (-0.5, -0.7, 2.1), lens=28)
 
 
 if __name__ == "__main__":

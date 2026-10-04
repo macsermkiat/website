@@ -136,7 +136,9 @@ def lebkuchen_heart(m, M, size, k):
     dough = vlib.R(reg, sub=(0.0, 0.0, 0.08, 0.08))
     # heart polygon spans x +-size/2, y from -size*0.53 to +size*0.36 roughly; face UVs by bbox. Lite drops
     # the back face (every heart faces the visitor: hanging, leaning on the board or lying in the basket)
-    m.extrude(poly, 0.012, M, reg, dough, WHITE, "glaze", bevel=0.0 if (vlib.lite() or size < 0.17) else 0.003,
+    # round 6: the plain atlas material (the dough's sheen is in its roughness map), no clear coat: in three.js the
+    # coat mirrored the night sky over the hearts and, with the round-4 dark dough, they read near-black
+    m.extrude(poly, 0.012, M, reg, dough, WHITE, "atlas", bevel=0.0 if (vlib.lite() or size < 0.17) else 0.003,
               back_region=dough, back=not vlib.lite())
 
 

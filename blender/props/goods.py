@@ -148,21 +148,76 @@ def bottle(m, M, label="label_wine", glass=C("1e3a22"), kind="bordeaux", foil=C(
     m.lathe(cap if not lite() else [cap[0], cap[1], cap[3]], seg(8, 6), "sw_metal", M, foil, "atlas")
 
 
-def wine_glass(m, M, wine=None, glass_col=C("f2f6f4")):
-    """A stemmed wine glass (19 cm), optionally with a pour of wine. Origin at the foot."""
+BACK_ARC = 0.17          # a back label's width as a fraction of a full turn (round 6)
+
+
+def back_label(m, w, M, kind, region, wr):
+    """Round 6: a back label on the bottle's back (+Y), in the same band as the front label, as five pieces: the
+    printed surround (estate on top, small print below, side margins; region from the print atlas) drawn into
+    the bottle's mesh `m`, and the blank writing strip into `w` (the write_label_<n> mesh, UVs 0..1, u to the
+    right as seen from behind, v up). wr = (u0, v0, u1, v1), the writing area as fractions of the label.
+    Returns (centre (x, y, z) of the writing strip on its surface, chord width, height) in the bottle's frame."""
     M = M or Matrix()
-    n = seg(12, 7)
-    outer = [(0.0, 0.0), (0.035, 0.0015), (0.008, 0.005), (0.0035, 0.012), (0.0035, 0.085),
+    prof, lab, arc, sy = BOTTLE_KINDS[kind]
+    if sy != 1.0:
+        M = M @ Matrix.Diagonal((1.0, sy, 1.0, 1.0))
+
+    def r_at(z):
+        for (r0, z0), (r1, z1) in zip(prof[:-1], prof[1:]):
+            if z0 <= z <= z1 and z1 > z0:
+                return r0 + (r1 - r0) * (z - z0) / (z1 - z0)
+        return prof[3][0]
+    z0, z1 = lab[0] + 0.004, lab[1] - 0.006
+    a_tot = TWO_PI * BACK_ARC
+    a0 = math.pi / 2 - a_tot / 2
+    u0, v0, u1, v1 = wr
+    zs = lambda va, vb, k=2: [z0 + (z1 - z0) * (va + (vb - va) * i / (k - 1)) for i in range(k)]
+    curved = kind == "bocksbeutel"
+    full = lambda va, vb: [(r_at(z) + 0.0008, z) for z in zs(va, vb, 3 if curved else 2)]
+    reg = lambda a, b, c, d: vlib.Reg(region, sub=(a, b, c, d))
+    nb = seg(10, 4)
+    # bottom and top bands across the whole width, the side margins between them
+    for va, vb in ((0.0, v0), (v1, 1.0)):
+        m.lathe(full(va, vb), nb, reg(0, va, 1, vb), M, WHITE, "print", v_by="z", arc=a_tot, u0=a0)
+    for ua, ub in ((0.0, u0), (u1, 1.0)):
+        m.lathe(full(v0, v1), 1, reg(ua, v0, ub, v1), M, WHITE, "print", v_by="z", arc=a_tot * (ub - ua),
+                u0=a0 + a_tot * ua)
+    nw = seg(6, 3)
+    w.lathe(full(v0, v1), nw, vlib.Reg(list(vprint_uv01())), M, vprint_wcol("label"), "write_label", v_by="z",
+            arc=a_tot * (u1 - u0), u0=a0 + a_tot * u0, smooth=True)
+    zc = (zs(v0, v1)[0] + zs(v0, v1)[1]) / 2
+    rc = r_at(zc) + 0.0008
+    half = a_tot * (u1 - u0) / 2
+    ry = rc * sy
+    return (0.0, ry, zc), 2 * rc * math.sin(half), (z1 - z0) * (v1 - v0)
+
+
+def vprint_uv01():
+    return [0.0, 0.0, 1.0, 1.0]
+
+
+def vprint_wcol(kind):
+    return C(vlib.print_meta()["write_colours"][kind])
+
+
+def wine_glass(m, M, wine=None, glass_col=C("f2f6f4")):
+    """A stemmed wine glass (19 cm), optionally with a pour of wine. Origin at the foot. (10 sides since round 6:
+    the Glühwein stall grew; lite keeps its 6.)"""
+    M = M or Matrix()
+    n = seg(10, 7)
+    # round 6 pass 2 (headroom): the foot meets the stem in one step and the bowl's floor is one cone (two
+    # profile rows fewer, 40 triangles a glass)
+    outer = [(0.0, 0.0), (0.035, 0.0015), (0.0035, 0.012), (0.0035, 0.085),
              (0.012, 0.097), (0.034, 0.122), (0.041, 0.152), (0.037, 0.19)]
-    inner = [(0.0362, 0.19), (0.0398, 0.152), (0.0328, 0.123), (0.011, 0.1), (0.0, 0.097)]
+    inner = [(0.0362, 0.19), (0.0398, 0.152), (0.0328, 0.123), (0.0, 0.099)]
     if lite():
-        outer = [outer[i] for i in (0, 1, 3, 4, 6, 8)]
-        inner = [inner[i] for i in (0, 2, 4)]
+        outer = [outer[i] for i in (0, 1, 2, 3, 5, 7)]
+        inner = [inner[i] for i in (0, 2, 3)]
     m.lathe(outer + inner, n, "sw_vgloss", M, glass_col, "glass")
     if wine:
         lvl = 0.128
-        fill = [(0.0, 0.1), (0.012, 0.102), (0.031, 0.121), (0.0335, lvl), (0.0, lvl)]
-        m.lathe(fill if not lite() else [fill[0], fill[3], fill[4]], n, "sw_wet", M, wine, "liquid")
+        fill = [(0.0, 0.1), (0.031, 0.121), (0.0335, lvl), (0.0, lvl)]
+        m.lathe(fill if not lite() else [fill[0], fill[2], fill[3]], n, "sw_wet", M, wine, "liquid")
 
 
 def jar(m, M, label, content_col, content_region="almonds", h=0.12, r=0.038, lid=C("b89a5a"), n_lo=5):
@@ -304,10 +359,10 @@ def mass(m, M, glass_col=C("eef4f0"), n=None, lo=7, mat="glass"):
 
 
 def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foam", spill=0.0, seed=0.0, dome=None):
-    """Beer up to `level` (m) in m, and in foam_m a separate foam head: a creamy band rising from the beer
-    along the inner wall, then a lumpy, softly domed crown that stays inside the rim and swells only a
-    couple of millimetres over its edge, and, when `spill` (radians) is given, a run of foam over the rim
-    and down the outside ending in a bead."""
+    """Beer up to `level` (m) in m, and in foam_m a separate foam head: one soft, continuous skin that rises
+    from the beer up the inner wall, meets the glass along a wavy line a little under the rim and swells to a
+    low, uneven dome (round 6 pass 2), and, when `spill` (radians) is given, a run of foam over the rim and
+    down the outside."""
     from mathutils import noise
     inner, rim_z, rim_r = glass
     n = seg(14, 7)
@@ -322,7 +377,7 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
     prof = [(0.0, zb)]
     for z in (zb + 0.004, zb + (level - zb) * 0.5, level):
         prof.append((r_at(z) - 0.0008, z))
-    prof.append((0.0, level))
+    # (round 6 pass 2: no top cap - the foam head closes the column, its wall ring starts 2 mm under `level`)
     f0 = len(m.F)
     m.lathe(prof, seg(12, 6), "sw_wet", M, beer_col, "beer")
     # round 4: a colour gradient up the column, per corner, so the beer reads as a clear liquid lit through
@@ -346,84 +401,94 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
         m.C[fi] = cs
     ri = r_at(rim_z - 0.003)
     cream = C("f3e6c8")
-    wet = C("ebdcbc")                      # the wetter cream where the head meets the glass (soft, not gold)
     reg = vlib.R(region_foam)
     # the foam region holds two textures (atlas_goods.g_foam): a wet edge strip along its bottom quarter
-    # (v 0..0.25: larger, glossier bubbles and lacing) and the dry crown in the square above (u, v 0.25..1)
+    # (v 0..0.25, used by the spill) and the dry head seen from above in the square over it (u, v 0.25..1)
     edge = lambda u, v: reg.uv(u, 0.02 + 0.21 * v)
-    crown_uv = lambda x, y, ext: reg.uv(0.25 + 0.75 * (0.5 + x / (2 * ext)), 0.25 + 0.75 * (0.5 + y / (2 * ext)))
-    # the foam's side against the glass, from the beer up to just under the rim
-    side = [(r_at(level) - 0.0006, level - 0.002), (r_at(level + 0.004) - 0.0005, level + 0.004),
-            (ri - 0.0004, rim_z - 0.003)]
-    # round 3 pass 2: the band takes a strip of the dry crown texture (fine pale bubbles), not the wet edge
-    # strip, whose darker lacing read as a tan collar through the tinted glass
-    band = lambda u, v: reg.uv(0.25 + 0.75 * u, 0.3 + 0.12 * v)
-    sv, sf, su = [], [], []
-    for i, (r, z) in enumerate(side):
-        for j in range(n + 1):
-            a = TWO_PI * j / n
-            sv.append((r * math.cos(a), r * math.sin(a), z))
-    for i in range(len(side) - 1):
-        for j in range(n):
-            q = (i * (n + 1) + j, i * (n + 1) + j + 1, (i + 1) * (n + 1) + j + 1, (i + 1) * (n + 1) + j)
-            sf.append(q)
-            su.append([band(j / n, i / 2), band((j + 1) / n, i / 2), band((j + 1) / n, (i + 1) / 2),
-                       band(j / n, (i + 1) / 2)])
-    # seen through the glass this band sits in the glass's own shade, so it is painted a little brighter than
-    # the crown (round 3: it read as a khaki collar); only the upper, paler part of the wet strip is used
-    foam_m.add(sv, sf, su, M, C("fff6e6"), "foam", True)
-    # the crown: rings from the rim in to the top. (radius, height over the rim, lump weight). Every glass
-    # gets its own dome height and a peak pushed off centre, so the heads do not read as stamped pads.
-    dome = dome if dome is not None else min(0.02, rim_r * 0.36)
+    ext = rim_r * 1.15
+    head_uv = lambda x, y: reg.uv(0.25 + 0.75 * (0.5 + x / (2 * ext)), 0.25 + 0.75 * (0.5 + y / (2 * ext)))
+    # round 6 pass 2 (judges: "a hard cap with a band"): the head is now ONE soft, continuous skin. It rises from
+    # the beer up the inner wall, meets the glass a little under the rim along a wavy line (higher where the
+    # pour left it, lower where it has settled), rolls over a soft shoulder and swells to a low, uneven dome
+    # whose top is pushed off centre. Nothing sits on or over the rim, there is no second "crown" mesh and no
+    # texture or colour seam at the rim: one bubble texture, and a colour that runs from a beer-tinted cream
+    # where the head meets the beer to pale cream on top. Every glass gets its own edge line, dome and lean.
     vr = 0.5 + 0.5 * noise.noise(Vector((seed * 0.37, 4.1, 0.0)))          # 0..1 per glass
-    dome *= 0.8 + 0.45 * vr
-    lean = Vector((math.cos(seed * 2.3), math.sin(seed * 2.3))) * rim_r * 0.12 * (0.4 + vr)
-    # round 3: the head stays inside the glass's inner wall all the way up (round 2 swelled over the rim to the
-    # outer diameter and read as a tan collar); it domes up from just inside the rim
-    rings = [(ri - 0.0004, -0.003, 0.0), (ri - 0.0006, 0.0025, 0.4), (ri - 0.0012, 0.0065, 0.8),
-             (ri * 0.9, 0.35, 1.0), (ri * 0.72, 0.66, 1.0), (ri * 0.48, 0.86, 1.0),
-             (ri * 0.23, 0.97, 0.8)]
-    # lite keeps every other ring; `orig` is the ring's index in the full list, which decides how its height
-    # reads (rings 0-2 give metres over the rim, rings 3+ a fraction of the dome)
-    keep = [0, 2, 4, 6] if lite() else list(range(len(rings)))
-    verts, faces, uvs, cols = [], [], [], []
+    dome = dome if dome is not None else min(0.0095, rim_r * 0.17)
+    dome *= 0.75 + 0.5 * vr
+    lean = Vector((math.cos(seed * 2.3), math.sin(seed * 2.3))) * ri * 0.18 * (0.4 + vr)
+    # the head's rings use the glass's own sides, vertex for vertex (mass/willi/weizen: seg(12, 7)), so its edge
+    # follows the inner wall exactly; a 14-gon in a 12-sided glass left dark slits between them (the dashed
+    # line round the rim in round 6 pass 1)
+    n = seg(12, 7)
+    wall_lo = level - 0.002
+    # (kind, radius, base height, lump weight): "w" rings hug the wall at an absolute height, "d" rings are
+    # the dome (height = fraction of the dome over the edge line)
+    rings = [("w", r_at(level) - 0.0006, wall_lo, 0.0),
+             ("e", ri - 0.0004, 0.0, 1.0),                  # the edge line against the glass, under the rim
+             ("d", ri * 0.93, 0.30, 0.8), ("d", ri * 0.74, 0.62, 1.0), ("d", ri * 0.48, 0.86, 1.0),
+             ("d", ri * 0.22, 0.97, 0.7)]
+    keep = [0, 1, 2, 4] if lite() else list(range(len(rings)))
+    light = (min(1.0, beer_col[0] * 1.08), min(1.0, beer_col[1] * 1.22), beer_col[2] * 0.9)
+    lowc = tuple(0.5 * light[k] + 0.5 * cream[k] for k in range(3))        # where the head meets the beer
+    top_c = C("f8eedb")
+    verts, vcol = [], []
+
+    def edge_z(a):
+        # the line where the head meets the glass: 1-3.5 mm under the rim, wandering slowly round the glass,
+        # pulled up to the lip where the spill runs over
+        w = noise.noise(Vector((math.cos(a) * 0.9, math.sin(a) * 0.9, seed * 0.61 + 7.0)))
+        w2 = noise.noise(Vector((math.cos(a) * 2.2, math.sin(a) * 2.2, seed * 0.61 + 3.0)))
+        z = rim_z - 0.0022 + 0.0012 * w + 0.0005 * w2
+        if spill:
+            d = abs(math.atan2(math.sin(a - spill), math.cos(a - spill)))
+            z = max(z, rim_z + 0.0006 - 0.002 * d)
+        return min(z, rim_z + 0.0006)
     for orig in keep:
-        rr, hz, lw = rings[orig]
+        kind, rr, hz, lw = rings[orig]
         for j in range(n):
             a = TWO_PI * j / n
-            p = Vector((math.cos(a) * 2.6, math.sin(a) * 2.6, seed + orig * 0.41))
-            lump = noise.noise(p) * 0.6 + noise.noise(p * 2.7 + Vector((seed, 0, 0))) * 0.3
-            big = noise.noise(Vector((math.cos(a) * 1.1, math.sin(a) * 1.1, seed * 0.7 + 2.0)))   # broad swells
-            r = rr * (1.0 + 0.05 * lump * lw)
-            if orig == 0:
-                z = rim_z + hz
-            elif orig <= 2:
-                z = rim_z + hz + 0.0018 * lump + 0.0012 * big * lw
+            p = Vector((math.cos(a) * 2.0, math.sin(a) * 2.0, seed + orig * 0.47))
+            soft = noise.noise(p) * 0.65 + noise.noise(p * 2.6 + Vector((seed, 0, 0))) * 0.35     # broad, soft lumps
+            ez = edge_z(a)
+            if kind == "w":
+                z, r = hz + (ez - rim_z) * 0.15 * lw, rr
+            elif kind == "e":
+                z, r = ez, rr
             else:
-                z = rim_z + 0.0065 + (dome - 0.0065) * hz + (0.0042 * lump + 0.0035 * big) * lw
-            off = lean * (hz if orig > 2 else 0.0)
+                z = ez + (rim_z + dome - ez) * hz + (0.0028 * soft) * lw
+                r = rr * (1.0 + 0.06 * soft * lw)
+            off = lean * (hz if kind == "d" else 0.0)
             verts.append((r * math.cos(a) + off.x, r * math.sin(a) + off.y, z))
+            t = {"w": 0.0, "e": 0.85}.get(kind, 1.0)
+            vcol.append(tuple(lowc[k] + (top_c[k] - lowc[k]) * t for k in range(3)))
     top = len(verts)
-    verts.append((lean.x, lean.y, rim_z + dome + 0.0018 * noise.noise(Vector((seed, 1.3, 0.2)))))
-    R = len(keep)
-    ext = rim_r * 1.1
-    cw, cc = jit(wet, 0.02), jit(cream, 0.02)
-    for i in range(R - 1):
+    verts.append((lean.x, lean.y, rim_z + dome + 0.0008 * noise.noise(Vector((seed, 1.3, 0.2)))))
+    vcol.append(top_c)
+    R_ = len(keep)
+    faces, uvs = [], []
+    # the wall rings take the head texture spread round the glass (fine bubbles against the glass); the
+    # rest is planar-mapped from above, so the bubbles keep one size over the whole skin
+    wall_uv = lambda j, z: reg.uv(0.25 + 0.75 * (j / n), 0.25 + 0.75 * min(1.0, max(0.0, (z - wall_lo) / 0.06)))
+    for i in range(R_ - 1):
         for j in range(n):
             a, b = i * n + j, i * n + (j + 1) % n
-            faces.append((a, b, b + n, a + n))
-            if i == 0:
-                # the band from inside the rim up over it: the wet edge strip
-                uvs.append([edge(j / n, 0.5), edge((j + 1) / n, 0.5), edge((j + 1) / n, 1.0), edge(j / n, 1.0)])
-                cols.append(cw)
+            f = (a, b, b + n, a + n)
+            faces.append(f)
+            if rings[keep[i]][0] == "w":
+                uvs.append([wall_uv(j, verts[a][2]), wall_uv(j + 1, verts[b][2]), wall_uv(j + 1, verts[b + n][2]),
+                            wall_uv(j, verts[a + n][2])])
             else:
-                uvs.append([crown_uv(verts[k][0], verts[k][1], ext) for k in faces[-1]])
-                cols.append(cc)
+                uvs.append([head_uv(verts[k][0], verts[k][1]) for k in f])
     for j in range(n):
-        faces.append(((R - 1) * n + j, (R - 1) * n + (j + 1) % n, top))
-        uvs.append([crown_uv(verts[k][0], verts[k][1], ext) for k in faces[-1]])
-        cols.append(cc)
-    foam_m.add(verts, faces, uvs, M, cream, "foam", True, cols=cols)
+        f = ((R_ - 1) * n + j, (R_ - 1) * n + (j + 1) % n, top)
+        faces.append(f)
+        uvs.append([head_uv(verts[k][0], verts[k][1]) for k in f])
+    f0 = len(foam_m.F)
+    foam_m.add(verts, faces, uvs, M, cream, "foam", True)
+    jj = jit((1.0, 1.0, 1.0), 0.02)
+    for fi, f in zip(range(f0, len(foam_m.F)), faces):
+        foam_m.C[fi] = [tuple(vcol[k][c] * jj[c] for c in range(3)) + (1.0,) for k in f]
     if spill:
         # round 3: a thin, flat run of foam that hugs the outside of the glass (1 mm off the wall), widest at the
         # lip and tapering to nothing about 3.5 cm down, with a soft wavy edge; it starts over the rim from the
@@ -435,7 +500,7 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
         sv, sf, su = [], [], []
         for k in range(rows + 1):
             t = k / rows
-            z = rim_z + 0.003 - (drop + 0.003) * t
+            z = rim_z + 0.0015 - (drop + 0.0015) * t
             ro = (r_at(min(z, rim_z)) + wall if z < rim_z else rim_r) + 0.001 + 0.002 * (1 - t) ** 3
             half = 0.5 * w0 * (1 - t) ** 1.4 + 0.0003
             wob = 0.0015 * math.sin(t * 7.0 + seed) * (1 - t)
@@ -504,20 +569,22 @@ def barrel(m, M, L=0.36, r_end=0.12, r_belly=0.14, staves=16, lying=True, hoop_c
 
 
 # ------------------------------------------------------------------ sausages and bread
-def sausage(m, M, L=0.2, r=0.013, bend=0.02, dark=False, seed=0.0, raw=False):
+def sausage(m, M, L=0.2, r=0.013, bend=0.02, dark=False, seed=0.0, raw=False, cut=False):
     """Bratwurst along local X centred on the origin, gently curved in XY, slightly irregular in
     girth. Its skin region runs once around (u) and once along (v), see atlas_goods.g_sausage.
-    raw=True: an uncooked one, raw-pork pink-beige satin skin, no browning or grate marks."""
+    raw=True: an uncooked one, raw-pork pink-beige satin skin, no browning or grate marks.
+    cut=True: a short Currywurst slice, a straight drum with flat cut faces (round 6 pass 2: the slices
+    were whole 12-segment sausages squeezed to 2.4 cm, 256 triangles each; now 36)."""
     from mathutils import noise
     M = M or Matrix()
-    k = seg(12, 5)
+    k = 1 if cut else seg(12, 5)
     ring_n = seg(10, 5)
     rings = []
     for i in range(k + 1):
         t = i / k
         x = -L / 2 + L * t
         y = bend * (1 - (2 * t - 1) ** 2)
-        tip = min(1.0, math.sin(math.pi * t) * 3.2) ** 0.7
+        tip = 1.0 if cut else min(1.0, math.sin(math.pi * t) * 3.2) ** 0.7
         lumpy = 1.0 + 0.05 * noise.noise(Vector((t * 6.0, seed, 0.3)))
         rr = max(0.003, r * tip * lumpy)
         rings.append([(x, y + rr * math.cos(TWO_PI * j / ring_n), rr * math.sin(TWO_PI * j / ring_n))
@@ -530,9 +597,10 @@ def sausage(m, M, L=0.2, r=0.013, bend=0.02, dark=False, seed=0.0, raw=False):
 
 
 def roll(m, M, L=0.12, W=0.07, H=0.045):
-    """Brötchen: a squashed ellipsoid, top planar-mapped to the roll texture."""
+    """Brötchen: a squashed ellipsoid, top planar-mapped to the roll texture. Round 6 pass 2: four rings
+    from the foot to the crown (was six, 156 -> 108 triangles; the outline from above keeps its 12 sides)."""
     M = M or Matrix()
-    n, rings = seg(12, 8), seg(6, 4)
+    n, rings = seg(12, 8), seg(4, 3)
     verts, faces, uvs = [], [], []
     reg = vlib.R("roll")
     prof = []

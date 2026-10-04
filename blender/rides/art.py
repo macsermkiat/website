@@ -241,6 +241,87 @@ def rug():
     return _save(img, "rug")
 
 
+def cork():
+    """Cork board face: warm granules of two or three browns, a few darker flecks, old pin holes
+    and the pale ghosts of notes that hung there before (the sun faded the cork round them)."""
+    import numpy as np
+    W = H = 512
+    rnd = np.random.default_rng(31)
+    base = np.array([150, 104, 62], np.float32)
+    img = np.ones((H, W, 3), np.float32) * base
+    # granules: blobs of 2-6 px in light and dark browns
+    for _ in range(9000):
+        x, y = rnd.integers(0, W), rnd.integers(0, H)
+        r = int(rnd.integers(1, 4))
+        c = rnd.choice([0.70, 0.82, 1.0, 1.12, 1.22], p=[0.12, 0.22, 0.3, 0.24, 0.12])
+        img[max(0, y - r):y + r, max(0, x - r):x + r] *= c
+    img = np.clip(img, 0, 255)
+    pil = Image.fromarray(img.astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.7))
+    d = ImageDraw.Draw(pil, "RGBA")
+    rs = random.Random(7)
+    # sun-faded ghosts of old notes (lighter rectangles) and pin holes
+    for _ in range(7):
+        x, y = rs.uniform(0, W - 120), rs.uniform(0, H - 90)
+        w, h = rs.uniform(60, 150), rs.uniform(50, 110)
+        d.rectangle((x, y, x + w, y + h), fill=(205, 160, 110, 34))
+    for _ in range(140):
+        x, y = rs.uniform(0, W), rs.uniform(0, H)
+        d.ellipse((x - 1.4, y - 1.4, x + 1.4, y + 1.4), fill=(40, 24, 12, 200))
+    noise = Image.effect_noise((W, H), 26).convert("L")
+    pil = Image.blend(pil, Image.merge("RGB", (noise, noise, noise)), 0.06)
+    return _save(pil, "cork")
+
+
+def spruce():
+    """Spruce top of the double bass under amber varnish: straight, fine, slightly uneven grain
+    lines running along the instrument (image V), wider and softer toward the edges (u = 0, 1),
+    the way a book-matched top is cut, with a faint seam down the centre."""
+    import numpy as np
+    W, H = 256, 512
+    rnd = np.random.default_rng(12)
+    u = np.linspace(0, 1, W, dtype=np.float32)
+    # book-matched: the grain is mirrored about the centre, narrow at the centre joint
+    t = np.abs(u - 0.5) * 2
+    pos = (t ** 1.25) * 70.0
+    lines = np.zeros(W, np.float32)
+    phase = rnd.uniform(0, 1, 200)
+    frac = (pos + 0.15 * np.sin(pos * 0.7)) % 1.0
+    lines = np.exp(-((frac - 0.5) / 0.13) ** 2)
+    row = np.tile(lines[None, :], (H, 1))
+    # slight run-out wander along the length
+    wav = (np.sin(np.linspace(0, 3.1, H) * 2.0)[:, None] * 0.4)
+    row = np.roll(row, 0, axis=1) * (0.9 + 0.1 * np.cos(wav))
+    light = np.array([214, 138, 60], np.float32)      # varnished spruce (sRGB)
+    dark = np.array([150, 82, 30], np.float32)
+    img = light[None, None, :] * (1 - 0.55 * row[..., None]) + dark[None, None, :] * (0.55 * row[..., None])
+    # varnish pooling: a touch darker toward the edges, and the centre seam
+    edge = np.clip((t - 0.75) / 0.25, 0, 1) ** 2
+    img *= (1 - 0.18 * edge)[None, :, None]
+    seam = np.exp(-((u - 0.5) / 0.004) ** 2)
+    img *= (1 - 0.25 * seam)[None, :, None]
+    pil = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))
+    noise = Image.effect_noise((W, H), 20).convert("L")
+    pil = Image.blend(pil, Image.merge("RGB", (noise, noise, noise)), 0.04)
+    return _save(pil, "spruce_top")
+
+
+def paper_plain():
+    """A plain sheet of warm card for the writing surfaces (write_*): faint fibres and a little
+    unevenness, no marks. A texture (not a flat colour) so the web optimiser keeps the UVs the
+    engine needs to find the writing area."""
+    import numpy as np
+    W = H = 128
+    rnd = np.random.default_rng(3)
+    base = np.array([232, 220, 196], np.float32)
+    from scipy.ndimage import gaussian_filter
+    cloud = gaussian_filter(rnd.normal(0, 1, (H, W)), 10)
+    cloud = cloud / (np.abs(cloud).max() + 1e-6)
+    fib = gaussian_filter(rnd.normal(0, 1, (H, W)), (0.6, 2.5))
+    fib = fib / (np.abs(fib).max() + 1e-6)
+    img = base[None, None, :] * (1 + 0.025 * cloud[..., None] + 0.02 * fib[..., None])
+    return _save(Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)), "rides_paper")
+
+
 def _save(img, name):
     os.makedirs(ART_DIR, exist_ok=True)
     p = os.path.join(ART_DIR, name + ".png")

@@ -36,7 +36,7 @@ from nmlib import state  # noqa: E402
 TWO_PI = 2 * math.pi
 ATLAS_DIR = os.path.join(REPO, "blender", "out", "vendor")
 MODELS = os.path.join(REPO, "site", "public", "models")
-REVIEW = os.path.join(REPO, "review", "round-4", "vendor")
+REVIEW = os.path.join(REPO, "review", "round-6", "vendor")
 _REG = None
 LITE = {"on": False}
 # Two random streams. `rng` is the layout stream: where goods stand, their sizes and which book is which.
@@ -68,7 +68,24 @@ def regions():
             meta = json.load(f)
         _REG = dict(meta["regions"])
         _REG.update(meta["books"]["regions"])      # books_* atlas (spines, covers, pages)
+        _REG.update(print_meta()["regions"])         # print_* atlas (round 6: coasters, Marktblatt, back labels)
     return _REG
+
+
+_PRINT = None
+
+
+def print_meta():
+    """The round-6 print atlas (blender/props/atlas_print.py): regions plus the shared print geometry."""
+    global _PRINT
+    if _PRINT is None:
+        path = os.path.join(ATLAS_DIR, "print_regions.json")
+        if not os.path.exists(path):
+            import atlas_print
+            atlas_print.build()
+        with open(path) as f:
+            _PRINT = json.load(f)
+    return _PRINT
 
 
 def srgb_to_lin(c):
@@ -513,6 +530,18 @@ def _atlas_nodes(m, color=True, rm=True, normal=True, normal_strength=1.0, atlas
     return b
 
 
+def _grain(m, b):
+    """Base colour = COLOR_0 x a faint paper grain on UV 0 (write_grain.png, shared as prop_tex_write_grain.webp).
+    The texture also keeps the UVs: the web optimiser drops TEXCOORD_0 from a mesh whose material samples none."""
+    nt = m.node_tree
+    uv = nt.nodes.new("ShaderNodeUVMap")
+    uv.uv_map = "UVMap"
+    tx = nt.nodes.new("ShaderNodeTexImage")
+    tx.image = _img("vendor_write_grain", "write_grain.png", False)
+    nt.links.new(uv.outputs[0], tx.inputs[0])
+    _vcol_mult(nt, tx.outputs["Color"], b)
+
+
 def _blend(m, alpha):
     m.node_tree.nodes["Principled BSDF"].inputs["Alpha"].default_value = alpha
     for attr, val in (("blend_method", 'BLEND'), ("surface_render_method", 'BLENDED')):
@@ -531,6 +560,35 @@ def material(key):
         m = bpy.data.materials.new(f"book_cover_{key[5:]}" if key != "books" else "vendor_books")
         m.use_nodes = True
         _atlas_nodes(m, atlas="books")
+        _MATS[key] = m
+        return m
+    if key == "print":
+        m = bpy.data.materials.new("vendor_print")
+        m.use_nodes = True
+        _atlas_nodes(m, atlas="print")
+        _MATS[key] = m
+        return m
+    if key == "book_cover_open":
+        # book_open.glb's front cover: plain cloth colour (COLOR_0) on UVs 0..1 across the cover, so the engine
+        # can put the clicked book's own cover (books atlas + its cover_uv) on it
+        m = bpy.data.materials.new(key)
+        m.use_nodes = True
+        b = m.node_tree.nodes["Principled BSDF"]
+        _grain(m, b)
+        b.inputs["Roughness"].default_value = 0.8
+        _MATS[key] = m
+        return m
+    if key.startswith("write_"):
+        # round 6: the plain writing faces (write_<name> meshes, docs/adr/0003). One flat colour (from COLOR_0,
+        # the same sRGB value as the printed card or paper round it), matte, no texture, no baked AO, so the
+        # engine's text sits on a clean surface. UVs run 0..1 across the writing area, +V up the text.
+        m = bpy.data.materials.new(key)
+        m.use_nodes = True
+        b = m.node_tree.nodes["Principled BSDF"]
+        _grain(m, b)
+        b.inputs["Roughness"].default_value = {"write_label": 0.7, "write_paper": 0.62}.get(key, 0.88)
+        if "Specular IOR Level" in b.inputs:
+            b.inputs["Specular IOR Level"].default_value = 0.35
         _MATS[key] = m
         return m
     names = {"atlas": "vendor_atlas", "glaze": "vendor_glaze", "glass": "vendor_glass", "liquid": "vendor_liquid",
@@ -574,7 +632,8 @@ def material(key):
             # so this shell is dark grey (0.2) at 0.15: its highlights stay, the beer keeps its colour.
             # Bottles, jars and the clean glasses keep 0.28. (Not named *beer*: the engine finds a glass's
             # beer by /beer|lager|ale/ in the material name.)
-            _blend(m, 0.15 if key == "glass_pint" else 0.28)
+            # round 6 (judges, round 4): the emptied pints read too faintly at 0.15; 0.2 keeps the beer's colour
+            _blend(m, 0.2 if key == "glass_pint" else 0.28)
             if key == "glass_pint":
                 for nd in m.node_tree.nodes:
                     if nd.type == 'MIX' and nd.data_type == 'RGBA':
@@ -767,7 +826,7 @@ def tex_uri(lite_mode):
     return lambda name: "prop_tex_" + name + (".lite" if lite_mode else "") + ".webp"
 
 
-SHARED_TEX = ("atlas_", "coal_", "books_")   # images shipped once as prop_tex_*.webp for all sets
+SHARED_TEX = ("atlas_", "coal_", "books_", "print_", "write_")   # images shipped once as prop_tex_*.webp for all sets
 TEX_FULL, TEX_LITE = 2048, 512                # the contract: lite textures are 512 px
 AO_FULL, AO_LITE = 512, 256                   # per-set AO atlas (occlusion texture, TEXCOORD_1)
 
@@ -793,7 +852,7 @@ def export_set(name, lite_mode, items=None):
     return rep
 
 
-EXTRA_KEYS = ("name", "kind", "title", "author", "cover_material")
+EXTRA_KEYS = ("name", "kind", "title", "author", "cover_material", "project", "write")
 
 
 def add_node_extras(path, items):

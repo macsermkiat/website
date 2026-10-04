@@ -88,11 +88,28 @@ def buecher_required():
             + [f"cam_cat_{k}_target" for k in keys])
 
 
+# round 6 (docs/adr/0003): the writing surfaces each section stall carries
+# (write_<name> mesh, cam_read_<name> and cam_read_<name>_target empties)
+WRITE_REQUIRED = {"stall_gluehwein": ["about"], "stall_bier": ["projects_board"],
+                  "stall_bratwurst": ["writing_menu"]}
+
+
+def write_required(base):
+    names = []
+    for stall, keys in WRITE_REQUIRED.items():
+        if base == stall + ".glb" or base == stall + ".lite.glb":
+            for k in keys:
+                names += [f"write_{k}", f"cam_read_{k}", f"cam_read_{k}_target"]
+    return names
+
+
 def check_stall(path, extra_required=()):
     js, _ = read_glb(path)
     names = node_names(js)
-    if os.path.basename(path).startswith("stall_buecher"):
+    base = os.path.basename(path)
+    if base.startswith("stall_buecher"):
         extra_required = list(extra_required) + buecher_required()
+    extra_required = list(extra_required) + write_required(base)
     missing = [r for r in list(STALL_REQUIRED) + list(extra_required) if r not in names]
     for p in STALL_PREFIXES:
         if not any(n.startswith(p) for n in names):

@@ -322,6 +322,8 @@ def args():
     ap.add_argument("--only", default=None)
     ap.add_argument("--cam", default=None, help="x,y,z,tx,ty,tz,lens debug camera")
     ap.add_argument("--preview-name", default=None)
+    ap.add_argument("--count", action="store_true",
+                    help="build lite and full and print triangle counts and named nodes, no bake or export")
     a, _ = ap.parse_known_args(sys.argv[1:])
     return a
 
@@ -379,6 +381,19 @@ def share_kit_textures(glb_path):
     return {u: os.path.getsize(os.path.join(state.MODELS_DIR, u)) for u in written}
 
 
+def check_uris(glb_path):
+    """Every external image a ride glb points at (shared deco_kit_* / rides_kit_* maps) must exist
+    next to it, or the market shows it untextured (round 2 judges). Raises on a missing file."""
+    sys.path.insert(0, os.path.join(state.REPO, "blender", "lib"))
+    import glb_tools
+    js, _ = glb_tools.read_glb(glb_path)
+    missing = [im["uri"] for im in js.get("images", []) if "uri" in im
+               and not os.path.exists(os.path.join(os.path.dirname(glb_path), im["uri"]))]
+    if missing:
+        raise RuntimeError(f"{os.path.basename(glb_path)} points at missing textures: {missing}")
+    return [im["uri"] for im in js.get("images", []) if "uri" in im]
+
+
 def build_and_export(name, build, seed, lite, ao_res=None, texture_size=None, ao_samples=None):
     """ao_res defaults to 768 (full) / 384 (lite): an AO atlas the size of a kit roughness map
     (1024, or 512 for rsteel, iron and every lite kit map) is packed into that map by the glTF
@@ -401,6 +416,7 @@ def build_and_export(name, build, seed, lite, ao_res=None, texture_size=None, ao
     ext = share_kit_textures(os.path.join(state.MODELS_DIR, out + ".glb"))
     rep["bytes"] = os.path.getsize(os.path.join(state.MODELS_DIR, out + ".glb"))
     rep["external"] = ext
+    rep["uris"] = check_uris(os.path.join(state.MODELS_DIR, out + ".glb"))
     print(f"[{name}] {out}.glb {rep['bytes'] / 1e6:.2f} MB after sharing kit maps: {sorted(ext)}")
     return objs, rep
 
@@ -413,6 +429,19 @@ def run(name, build, preview=None, seed=1, ao_full=768, ao_lite=384, tex_full=10
         mats.ensure_kit()
         build(False)
         do_preview(name, mesh_objs(), preview, a, ground=ground)
+        return {}
+    if a.count:
+        for lite in ((True,) if a.no_full else (False,) if a.no_lite else (True, False)):
+            state.reset(seed, lite_mode=lite)
+            mats.ensure_kit()
+            build(lite)
+            objs = mesh_objs()
+            print(f"[{name}] COUNT {'lite' if lite else 'full'}: {export.triangles()} tris")
+            for o in sorted(objs, key=lambda o: -export.triangles([o]))[:int(os.environ.get("RC_TOP", "16"))]:
+                print(f"     {o.name:30s} {export.triangles([o]):7d}")
+            names = sorted(o.name for o in state.export_collection().all_objects
+                           if o.name.startswith(("write_", "cam_", "slot_", "rot_", "light_", "gondola_seat", "horse_seat")))
+            print(f"[{name}] nodes: {names}")
         return {}
     rep_path = os.path.join(state.OUT_DIR, f"{name}_report.json")
     reports = {}
@@ -442,6 +471,19 @@ def do_preview(name, objs, preview, a, ground=60):
         render.camera(v[0:3], v[3:6], lens=v[6] if len(v) > 6 else 35)
     os.makedirs(REVIEW, exist_ok=True)
     w, h = (int(v) for v in a.res.split("x"))
+    reads = [r for r in os.environ.get("NM_READ", "").split(",") if r]
+    if reads:
+        # reading views: the camera at cam_read_<name>, looking at its target, with the site's
+        # 42 degree vertical field of view (26.3 mm on a 36 mm sensor at 16:9)
+        for r in reads:
+            bpy.context.view_layer.update()
+            p = bpy.data.objects[f"cam_read_{r}"].matrix_world.translation
+            t = bpy.data.objects[f"cam_read_{r}_target"].matrix_world.translation
+            render.camera(tuple(p), tuple(t), lens=26.3)
+            bpy.context.scene.camera.data.clip_start = 0.02
+            render.render(os.path.join(state.OUT_DIR, "renders", f"{name}_read_{r}.png"), samples=a.samples,
+                          res=(w, h), jpeg=os.path.join(REVIEW, f"{name}_read_{r}.jpg"))
+        return cam
     pn = a.preview_name or f"{name}_preview"
     render.render(os.path.join(state.OUT_DIR, "renders", f"{pn}.png"), samples=a.samples,
                   res=(w, h), jpeg=os.path.join(REVIEW, f"{pn}.jpg"))

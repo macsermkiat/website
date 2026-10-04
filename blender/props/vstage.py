@@ -38,7 +38,8 @@ def setup_device(scene=None, var="NM_DEVICE"):
 
 
 # materials that get no occlusion texture: see-through or self-lit
-AO_SKIP = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade")
+AO_SKIP = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade",
+           "write_")
 
 
 def bake_ao(name, res, samples=32, distance=0.12, floor=0.4):
@@ -49,7 +50,9 @@ def bake_ao(name, res, samples=32, distance=0.12, floor=0.4):
     import time
     from nmlib import bake as nb
     t0 = time.time()
-    targets = [o for o in state.export_collection().all_objects if o.type == 'MESH' and o.data.polygons]
+    # the plain write_ faces get no AO (docs/adr/0003: a clean surface for the engine's text)
+    targets = [o for o in state.export_collection().all_objects if o.type == 'MESH' and o.data.polygons
+               and not o.name.startswith("write_")]
     if not targets:
         return None
     scene = bpy.context.scene
@@ -333,3 +336,89 @@ def shot_at(cam, origin, out_jpg, samples=128, res=(1920, 1080), png_name=None):
     render.render(png, samples=samples, res=res, jpeg=out_jpg, jpeg_width=1280)
     return png
 
+
+
+# ------------------------------------------------------------------ round 6: preview-only text on write_ faces
+def preview_texts(texts, tag="r6"):
+    """Preview only (nothing exported changes; the glbs are written before any render): draw stand-in text on
+    write_ faces, the way the engine will print a section's words on them, to show each face's writing area,
+    its size and that its UVs read upright. texts = {write_node: [(text, rel_size, font, colour_hex), ...]}:
+    rel_size is the line height as a fraction of the face's height; long lines wrap."""
+    import numpy as np
+    from PIL import Image, ImageDraw
+    import vendor_atlas as va
+    out = []
+    for wname, lines in texts.items():
+        ob = bpy.data.objects.get(f"{wname}_mesh")
+        if ob is None or not lines:
+            continue
+        me = ob.data
+        uv = me.uv_layers["UVMap"].data
+        # face size from the UV-to-position map: metres per unit u and v
+        import mathutils
+        p = [me.vertices[l.vertex_index].co for l in me.loops]
+        uvs = [uv[i].uv for i in range(len(me.loops))]
+        iu0 = min(range(len(uvs)), key=lambda i: uvs[i][0] + uvs[i][1])
+        iu1 = max(range(len(uvs)), key=lambda i: uvs[i][0] - uvs[i][1])
+        iv1 = max(range(len(uvs)), key=lambda i: uvs[i][1] - uvs[i][0])
+        w = max(1e-4, (p[iu1] - p[iu0]).length)
+        h = max(1e-4, (p[iv1] - p[iu0]).length)
+        W = 1024
+        H = max(64, int(W * h / w))
+        mat0 = me.materials[0]
+        col = None
+        for nd in mat0.node_tree.nodes:
+            if nd.type == 'VERTEX_COLOR':
+                col = me.color_attributes["Col"].data[0].color
+        to_s = lambda c: 12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
+        bg = tuple(int(round(255 * min(1.0, to_s(c)))) for c in (col[:3] if col else (0.85, 0.82, 0.75)))
+        ss = 2
+        im = Image.new("RGB", (W * ss, H * ss), bg)
+        d = ImageDraw.Draw(im)
+        y = H * 0.04 * ss
+        for text, rel, fn, ink in lines:
+            size = rel * H * ss
+            f = va.font(fn, size, 500)
+            words, row = text.split(), ""
+            rows = []
+            for wd in words:
+                if f.getlength((row + " " + wd).strip()) > W * ss * 0.96 and row:
+                    rows.append(row)
+                    row = wd
+                else:
+                    row = (row + " " + wd).strip()
+            rows.append(row)
+            for r in rows:
+                d.text((W * ss * 0.02, y), r, fill=tuple(int(ink[i:i + 2], 16) for i in (0, 2, 4)), font=f)
+                y += size * 1.18
+            y += size * 0.25
+        im = im.resize((W, H), Image.LANCZOS)
+        path = os.path.join(RENDERS, f"_preview_{tag}_{wname}.png")
+        os.makedirs(RENDERS, exist_ok=True)
+        im.save(path)
+        img = bpy.data.images.load(path)
+        m = bpy.data.materials.new(f"preview_{wname}")
+        m.use_nodes = True
+        nt = m.node_tree
+        b = nt.nodes["Principled BSDF"]
+        tx = nt.nodes.new("ShaderNodeTexImage")
+        tx.image = img
+        uvn = nt.nodes.new("ShaderNodeUVMap")
+        uvn.uv_map = "UVMap"
+        nt.links.new(uvn.outputs[0], tx.inputs[0])
+        nt.links.new(tx.outputs["Color"], b.inputs["Base Color"])
+        b.inputs["Roughness"].default_value = 0.85
+        me.materials.clear()
+        me.materials.append(m)
+        out.append(wname)
+    print(f"[props] preview text on {len(out)} write_ faces")
+    return out
+
+
+def preview_turn(names, angle=math.pi):
+    """Preview only: turn act_ nodes about their base (e.g. bottles round to show their back labels)."""
+    for n in names:
+        o = bpy.data.objects.get(n)
+        if o is not None:
+            o.rotation_euler.z += angle
+    bpy.context.view_layer.update()

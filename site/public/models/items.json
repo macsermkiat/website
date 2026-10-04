@@ -1,6 +1,92 @@
 {
  "about": "Display names for the vendor's act_ nodes (node names are unique across all prop sets; the full and the lite glb of a set carry the same act_ nodes at the same places). 'pivot' says where the node's origin is: 'base' is the point the item rests on (sausages too: their 'turn_axis' gives the long axis's height above the base, for turning them on the grate). Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV rect [u_min, v_min, u_max, v_max] in glTF texture space (origin top-left, as three.js samples glTF textures) in prop_tex_books_color.webp.",
  "items": {
+  "act_page_turn": {
+   "set": "book_open",
+   "stall": "",
+   "name": "The page that turns",
+   "kind": "page_turn",
+   "pivot": "the spine (hinge) axis",
+   "turn": {
+    "axis_blender": "local Z",
+    "axis_threejs": "local Y",
+    "rest": 0.0,
+    "turned": -2.7925,
+    "note": "0.4 mm under the right page at rest and under the left page when turned"
+   },
+   "write": {
+    "front": "write_page_turn_front",
+    "back": "write_page_turn_back"
+   }
+  },
+  "act_coaster_0": {
+   "set": "prop_bier_counter",
+   "stall": "bierstand",
+   "name": "Bierdeckel: ProtoCol",
+   "kind": "coaster",
+   "pivot": "base",
+   "colourway": "gold",
+   "write": {
+    "front": "write_coaster_0_front",
+    "back": "write_coaster_0_back"
+   },
+   "size_cm": 10.7,
+   "project": "ProtoCol"
+  },
+  "act_coaster_1": {
+   "set": "prop_bier_counter",
+   "stall": "bierstand",
+   "name": "Bierdeckel: Target Trial Emulation",
+   "kind": "coaster",
+   "pivot": "base",
+   "colourway": "brown",
+   "write": {
+    "front": "write_coaster_1_front",
+    "back": "write_coaster_1_back"
+   },
+   "size_cm": 10.7,
+   "project": "Target Trial Emulation"
+  },
+  "act_coaster_2": {
+   "set": "prop_bier_counter",
+   "stall": "bierstand",
+   "name": "Bierdeckel: Transfusion Audit",
+   "kind": "coaster",
+   "pivot": "base",
+   "colourway": "green",
+   "write": {
+    "front": "write_coaster_2_front",
+    "back": "write_coaster_2_back"
+   },
+   "size_cm": 10.7,
+   "project": "Transfusion Audit"
+  },
+  "act_coaster_3": {
+   "set": "prop_bier_counter",
+   "stall": "bierstand",
+   "name": "A spare Bierdeckel",
+   "kind": "coaster",
+   "pivot": "base",
+   "colourway": "red",
+   "write": {
+    "front": "write_coaster_3_front",
+    "back": "write_coaster_3_back"
+   },
+   "size_cm": 10.7
+  },
+  "act_coaster_4": {
+   "set": "prop_bier_counter",
+   "stall": "bierstand",
+   "name": "A spare Bierdeckel",
+   "kind": "coaster",
+   "pivot": "base",
+   "colourway": "red",
+   "write": {
+    "front": "write_coaster_4_front",
+    "back": "write_coaster_4_back"
+   },
+   "size_cm": 10.7
+  },
   "act_glass_0": {
    "set": "prop_bier_counter",
    "stall": "bierstand",
@@ -58,22 +144,13 @@
   "act_glass_6": {
    "set": "prop_bier_counter",
    "stall": "bierstand",
-   "name": "Half litre of Dunkles",
-   "kind": "glass",
-   "pivot": "base",
-   "glass": "Willibecher",
-   "beer": "Dunkles"
-  },
-  "act_glass_7": {
-   "set": "prop_bier_counter",
-   "stall": "bierstand",
    "name": "Maß of Helles",
    "kind": "glass",
    "pivot": "base",
    "glass": "Maßkrug",
    "beer": "Helles"
   },
-  "act_glass_8": {
+  "act_glass_7": {
    "set": "prop_bier_counter",
    "stall": "bierstand",
    "name": "Half litre of Helles",
@@ -2766,7 +2843,10 @@
    "vintage": 2022,
    "producer": "Weingut am Laternenberg",
    "colour": "white",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_0"
+   }
   },
   "act_bottle_1": {
    "set": "prop_gluehwein_wine",
@@ -2781,7 +2861,10 @@
    "vintage": 2021,
    "producer": "Weinhaus Glockenhof",
    "colour": "white",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_1"
+   }
   },
   "act_bottle_10": {
    "set": "prop_gluehwein_wine",
@@ -2796,7 +2879,10 @@
    "vintage": 2023,
    "producer": "Winzerkeller Lichterglanz",
    "colour": "rosé",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_10"
+   }
   },
   "act_bottle_11": {
    "set": "prop_gluehwein_wine",
@@ -2811,7 +2897,10 @@
    "vintage": 2018,
    "producer": "Weingut Eiszapfen",
    "colour": "white",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_11"
+   }
   },
   "act_bottle_2": {
    "set": "prop_gluehwein_wine",
@@ -2826,7 +2915,10 @@
    "vintage": 2023,
    "producer": "Kellerei Sternschnuppe",
    "colour": "white",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_2"
+   }
   },
   "act_bottle_3": {
    "set": "prop_gluehwein_wine",
@@ -2841,7 +2933,10 @@
    "vintage": 2020,
    "producer": "Weingut Mondscheinhang",
    "colour": "red",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_3"
+   }
   },
   "act_bottle_4": {
    "set": "prop_gluehwein_wine",
@@ -2856,7 +2951,10 @@
    "vintage": 2019,
    "producer": "Winzerhof Tannenleite",
    "colour": "red",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_4"
+   }
   },
   "act_bottle_5": {
    "set": "prop_gluehwein_wine",
@@ -2871,7 +2969,10 @@
    "vintage": 2022,
    "producer": "Weingut Schneehang",
    "colour": "red",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_5"
+   }
   },
   "act_bottle_6": {
    "set": "prop_gluehwein_wine",
@@ -2886,7 +2987,10 @@
    "vintage": 2021,
    "producer": "Kellerei Kerzenschein",
    "colour": "red",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_6"
+   }
   },
   "act_bottle_7": {
    "set": "prop_gluehwein_wine",
@@ -2901,7 +3005,10 @@
    "vintage": 2022,
    "producer": "Weingut zum Weihnachtsstern",
    "colour": "white",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_7"
+   }
   },
   "act_bottle_8": {
    "set": "prop_gluehwein_wine",
@@ -2916,7 +3023,10 @@
    "vintage": 2023,
    "producer": "Hof Nachtigallenruh",
    "colour": "white",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_8"
+   }
   },
   "act_bottle_9": {
    "set": "prop_gluehwein_wine",
@@ -2931,7 +3041,10 @@
    "vintage": 2020,
    "producer": "Weingut Rauhreif",
    "colour": "white",
-   "country": "Germany"
+   "country": "Germany",
+   "write": {
+    "back_label": "write_label_9"
+   }
   },
   "act_wineglass_0": {
    "set": "prop_gluehwein_wine",
@@ -3426,6 +3539,21 @@
    "name": "Smoke from the grill",
    "kind": "effect",
    "pivot": "the point where steam or smoke starts"
+  },
+  "act_writing_paper": {
+   "set": "prop_wurst_counter",
+   "stall": "bratwurst",
+   "name": "Marktblatt (market paper for wrapping)",
+   "kind": "paper",
+   "pivot": "base",
+   "write": {
+    "main": "write_writing_paper"
+   },
+   "size_cm": [
+    28.0,
+    21.0
+   ],
+   "detail": "Greaseproof market paper printed with the Nachtmarkt-Blatt masthead; the Bratwurst is wrapped in it."
   }
  }
 }

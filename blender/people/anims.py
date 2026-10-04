@@ -427,7 +427,10 @@ class Clips:
         pz.set("hips", Q(0.12 * k, 0.0, 0.0))
         pz.set("spine", Q(0.12 * k + 0.02, 0.0, 0.0))
         pz.set("chest", Q(0.06 * k, 0.0, 0.1 * k))
-        self.look(pz, -0.1 * k, 0.15 * k + 0.03, 0.0)
+        # round 6: the trunk leans ~0.3 rad over the counter; the neck and head take most of it back so the face
+        # meets the customer (and a close-up camera) instead of looking down at the counter under the hat brim
+        pz.set("neck", Q(-0.08 * k - 0.02, 0.0, -0.03 * k))
+        self.look(pz, -0.1 * k, -0.14 * k + 0.02, 0.0)
         hold = self.poser(dict(pz.pose))
         self.mug_hold(hold)
         W1 = hold.G("forearm.R") @ f.rest.tail["forearm.R"]
@@ -448,7 +451,9 @@ class Clips:
         self.stance(pz, t, T, 0.4)
         pz.set("hips", Q(0.08, 0.0, 0.0))
         pz.set("spine", Q(0.1, 0.0, 0.0))
-        self.look(pz, 0.3 * osc(t, T, 1, 0.5), 0.12, 0.0)
+        # round 6: eyes on the square, not on the rag: the neck and head lift against the lean
+        pz.set("neck", Q(-0.06, 0.0, 0.0))
+        self.look(pz, 0.3 * osc(t, T, 1, 0.5), -0.06 + 0.04 * max(0.0, osc(t, T, 2, 0.2)), 0.0)
         a = TAU * 2 * t / T
         WL = Vector(((0.12 + 0.07 * math.cos(a)) * s, (-0.5 + 0.04 * math.sin(a)) * s, 0.98))
         pz.ik("upperarm.L", "forearm.L", WL, Vector((0.8, 0.6, -0.6)), end="hand.L",

@@ -27,6 +27,7 @@ from mathutils import Matrix, Vector, noise
 
 import goods as G
 import vlib
+import vprint
 from vlib import C, T, WHITE, drng, jit, rng, seg
 
 TWO_PI = 2 * math.pi
@@ -207,12 +208,13 @@ def grill(s):
                vlib.Reg([0.0, 0.0, 1.0, 1.0]), None, C("6a6560"), "coal_glow")
     # burning lumps: each its own patch of the glow map (bright cracks on the sides, ash on most tops);
     # about one in five burns right through its top
-    kn = 40 if not vlib.lite() else 12
+    # round 6 pass 2 (headroom): 30 larger lumps instead of 40, the same bed coverage for 25 % fewer triangles
+    kn = 30 if not vlib.lite() else 12
     for i in range(kn):
         rr = 0.18 * math.sqrt(drng.random())
         a = drng.uniform(0, TWO_PI)
         z = 0.058 + (0.18 - rr) * 0.12 + drng.uniform(0, 0.012)
-        coal_lump(coal, T(rr * math.cos(a), rr * math.sin(a), z, rz=drng.uniform(0, 6)), drng.uniform(0.02, 0.032),
+        coal_lump(coal, T(rr * math.cos(a), rr * math.sin(a), z, rz=drng.uniform(0, 6)), drng.uniform(0.023, 0.036),
                   jit(WHITE, 0.12), seed=i * 1.3, hot_top=drng.random() < 0.2)
     # a few dead, grey coals near the rim (burnt out, no glow: plain atlas charcoal under ash) and a fine
     # layer of pale ash drifted over the bed and against the bowl's wall
@@ -294,8 +296,8 @@ def served(s, i, x, y, rz, curry=False):
         return
     for k in range(7):
         # slices lying at a slant, overlapping, under a pool of curry ketchup
-        G.sausage(node, T(-0.075 + k * 0.025, 0.0, 0.012, ry=0.35, rz=math.pi / 2), L=0.024, r=0.0125, bend=0.0,
-                  dark=k % 3 == 0, seed=30 + k)
+        G.sausage(node, T(-0.075 + k * 0.025, 0.0, 0.012, ry=0.35, rz=math.pi / 2), L=0.016, r=0.0125, bend=0.0,
+                  dark=k % 3 == 0, seed=30 + k, cut=True)
     node.lathe([(0.0, 0.02), (0.075, 0.018), (0.085, 0.012), (0.0, 0.028)], seg(14, 6), "sw_wet",
                Matrix.Diagonal((1.2, 0.42, 1.0, 1.0)), C("8a1a0c"), "liquid")
     for k in range(9 if not vlib.lite() else 3):
@@ -332,6 +334,41 @@ def chalk_sign(m, M):
         m.box((w, 0.01, h), Ms, "wurst_sign", WHITE, faces={"ny" if side < 0 else "py": "wurst_sign"})
         m.box((w + 0.02, 0.014, 0.015), Ms @ T(0, 0, h / 2), vlib.RW("wood"), C("6a4228"))
         m.box((w + 0.02, 0.014, 0.015), Ms @ T(0, 0, -h / 2 + 0.008), vlib.RW("wood"), C("6a4228"))
+
+
+def marktblatt(s, x0, x1, y=-0.128):
+    """The Marktblatt pad: a stack of greaseproof sheets printed with the market's masthead and border, and the
+    top sheet as its own node, act_writing_paper (origin at the middle of its underside, on the stack), with the
+    plain writing face write_writing_paper over its blank middle and cam_read_writing_paper leaning over it
+    from the front, as a visitor leans over the counter."""
+    pm = vlib.print_meta()
+    W = min(0.28, x1 - x0 - 0.012)
+    H = W * 0.75
+    cx = (x0 + x1) / 2
+    m = s.static
+    stack_h = 0.007
+    Ms = T(cx - 0.004, y + 0.003, 0, rz=0.05)
+    # the sheets under the top one: printed top (peeking out where the top sheet sits askew), edge of many sheets
+    m.box((W * 0.995, H * 0.995, stack_h), Ms @ T(0, 0, stack_h / 2), "pr_page_edge", vlib.WHITE, mat="print",
+          faces={"pz": "pr_marktblatt"}, skip=("nz",))
+    node = s.node("act_writing_paper", (cx, y, stack_h), rot=(0, 0, -0.03))
+    wr = pm["marktblatt_write"]
+    lift = 0.0004
+    vprint.rect_ring(node, W, H, wr, "pr_marktblatt", T(0, 0, lift))
+    node.quad([(-W / 2, H / 2, 0.0), (W / 2, H / 2, 0.0), (W / 2, -H / 2, 0.0), (-W / 2, -H / 2, 0.0)],
+              "pr_paper", vlib.WHITE, "print")                                      # the sheet's underside
+    ww, wh = (wr[2] - wr[0]) * W, (wr[3] - wr[1]) * H
+    wx, wy = ((wr[0] + wr[2]) / 2 - 0.5) * W, ((wr[1] + wr[3]) / 2 - 0.5) * H
+    face = vprint.write_node(s, "write_writing_paper", "act_writing_paper", (wx, wy, lift))
+    vprint.write_rect(face, ww, wh, kind="paper")
+    d = vprint.reading_distance(ww, wh, fill=0.82)
+    el = math.radians(62)
+    vprint.cam_read(s, "writing_paper", (wx, wy, lift), (wx, wy - d * math.cos(el), lift + d * math.sin(el)),
+                    parent="act_writing_paper")
+    s.item("act_writing_paper", "Marktblatt (market paper for wrapping)", "paper",
+           write={"main": "write_writing_paper"}, size_cm=[round(W * 100, 1), round(H * 100, 1)],
+           detail="Greaseproof market paper printed with the Nachtmarkt-Blatt masthead; the Bratwurst is wrapped in it.")
+    return node
 
 
 DESIGN_X0, DESIGN_X1 = -0.13, 1.87      # the counter the layout was drawn for (round 1 stall, slot frame)
@@ -412,6 +449,10 @@ def counter():
             drng.random(), drng.random()     # keep drng's stream for the goods after the tray as before
             sausage_node(s, f"act_sausage_{16 + k}", tuple(Mt @ Vector((dx, y, z))), "Raw Bratwurst, ready for the grill",
                          L=0.13, bend=0.005, seed=40 + k, rz=-0.04 + jr, raw=True)
+    # round 6: a stack of printed market paper (Marktblatt) in front of the raw tray, between the tongs and the
+    # rolls; the top sheet is act_writing_paper with its writing face write_writing_paper (the engine prints the
+    # chosen piece on it) and cam_read_writing_paper over it
+    marktblatt(s, tx + 0.17, bx - 0.175)
     # basket of rolls, stacked two deep, each roll its own node
     G.crate(m, T(bx, by, 0), 0.34, 0.26, 0.07, C("b48c5c"), slats=2)
     m.box((0.3, 0.22, 0.004), T(bx, by, 0.014), "towel", WHITE, faces={"pz": "towel"}, skip=("nz",))
@@ -476,7 +517,12 @@ def counter():
 SETS = {
     "prop_wurst_counter": dict(fn=counter, slot="slot_counter", stall="bratwurst", kind="counter", section=True,
                                seed=41, cam=((0.2, -2.05, 0.68), (0.2, 0.0, 0.2), 25),
-                               hero=((-0.55, -0.95, 0.58), (-0.62, 0.0, 0.2), 32),
+                               # round 6: the Marktblatt pad in front, the warming tray and the grill behind
+                               hero=((-0.1, -0.64, 0.4), (-0.26, -0.03, 0.05), 30),
+                               preview_text=lambda: {"write_writing_paper": [
+                                   ("Off the grill", 0.13, "garamond", "2a1810"),
+                                   ("This is where short essays on research, music and ideas will go. Nothing is "
+                                    "off the grill yet.", 0.065, "garamond", "2a1810")]},
                                in_stall="stall_bratwurst.glb",
                                # the coals' own glow does the work; a small ember light just over the bed lights the grate from below
                                stall_lights=(("env_ember", 'POINT', (-0.9, 0.0, 0.2), 6, (1.0, 0.36, 0.08), 0.15),),

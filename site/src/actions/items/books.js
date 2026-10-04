@@ -11,6 +11,7 @@ import { actionNote, LIBRARY } from '../../content.js';
 import { libraryBook, fetchPage } from '../../ui/reading.js';
 import { paginate } from '../../world/text.js';
 import { bookBlocks } from '../../world/sections.js';
+import { loadVendorBook, buildVendorBook } from './bookOpen.js';
 
 const _p = new THREE.Vector3(), _q = new THREE.Quaternion();
 const BOOK_HOLD = 14; // seconds an open book stays out before the bookseller puts it back (not while it is being read)
@@ -47,6 +48,12 @@ export function createBooks(ctx) {
     return { mac: false, slug: '', title: b?.title || 'A secondhand book', author: b?.author || '', note: b?.note || 'A secondhand copy from the bookseller’s stock, not one of Mac’s.' };
   }
 
+  // the vendor's open hardback (book_open.glb): fetched once, after the market is up or at the first click
+  let vendor = null, vendorP = null;
+  const wantVendor = () => (vendorP ||= loadVendorBook({ lite: ctx.lite, warn: ctx.warn }).then((t) => (vendor = t)));
+  // (a long first frame can starve idle callbacks: a plain timer; the guide also asks for it on the way here)
+  if (typeof window !== 'undefined') setTimeout(() => wantVendor(), 12000);
+
   let open = null; // { n, item, group, left, state }
   function openBook(n, { focus = true } = {}) {
     if (!n) return;
@@ -75,10 +82,15 @@ export function createBooks(ctx) {
     const o = { n, item, d, r0, pull, left: BOOK_HOLD, state: 'pulling', group: null };
     open = o;
     o.focus = focus;
-    anim.add(0.45, pull, () => {
+    const tplReady = Promise.race([wantVendor(), new Promise((r) => setTimeout(r, 5000))]);
+    anim.add(0.45, pull, () => tplReady.then(() => {
       if (open !== o) return; // closed while it was coming out
-      // 2. the book itself is swapped for a copy that can open, which comes to the front of the counter
-      const book = buildOpenBook(n, d, place.holder);
+      // 2. the book itself is swapped for a copy that can open (the vendor's hardback, with this book's cover;
+      // the engine's own when that model is missing), which comes to the front of the counter
+      let book = null;
+      console.info('[market] opening a book; vendor model', !!vendor);
+      if (vendor) { try { book = buildVendorBook(vendor, n, d, place.holder); } catch (e) { console.warn('[market] book_open could not be dressed; the engine\'s own book opens', e); } }
+      book ||= buildOpenBook(n, d, place.holder);
       o.group = book;
       if (item) book.group.userData.itemProxy = item; // a click on the open book is a click on that book
       n.visible = false;
@@ -96,7 +108,7 @@ export function createBooks(ctx) {
         // 3. open to the title page
         anim.add(0.7, (k) => book.setOpen(k), () => { if (open === o) { o.state = 'open'; readOpenBook(o); } });
       });
-    });
+    }));
   }
 
   /** In front of the middle of the counter, facing the stall's close-up view, leaning back a little. */
@@ -217,11 +229,13 @@ export function createBooks(ctx) {
       pickBook: pickForMe,
       openBook: (n) => openBook(n),
       openBySlug,
+      /** Fetch the vendor's open hardback ahead of a click (the stroll calls this on the way to the Bücherstand). */
+      prefetchBook: () => wantVendor(),
       bookOf: (n) => describe(n),
       /** Mac's books with a spine (tests): slug -> node name. */
       macSpines: () => Object.fromEntries([...spineOf].map(([k, n]) => [k, n.name])),
       /** The book standing open (for tests): its node name, title and state. */
-      openedBook: () => (open ? { name: open.n.name, slug: open.d.slug, title: open.d.title, author: open.d.author, note: open.d.note, mac: !!open.d.mac, state: open.state } : null),
+      openedBook: () => (open ? { name: open.n.name, slug: open.d.slug, title: open.d.title, author: open.d.author, note: open.d.note, mac: !!open.d.mac, state: open.state, model: open.group?.fromModel ? 'book_open.glb' : open.group ? 'engine' : null } : null),
     },
     retract: () => { shelfOpen = null; close({ retract: true }); },
     update(dt) {
@@ -249,7 +263,7 @@ export function createBooks(ctx) {
     // the pages are measured in the faces the text is drawn with: wait for them if they are still on their way
     if (w.started === false) { w.start(); w.ready.then(() => { if (open === o) readOpenBook(o); }); return; }
     const surface = { id: 'books.book', placeId: 'books', kind: 'book', label: 'the open book', faces: book.faces, theme: 'print', base: book.base, rough: false, glow: [book.paper] };
-    const piece = { id: 'books.book', placeId: 'books', surface: 'books.book', title: o.d.title, where: 'an open book at the Bücherstand', html: bookCopy(o.d, null), views: spreads(o.d, null, book), readView: () => book.readView(ctx.camera), turn: (dir, mid) => book.turn(dir, mid, anim), onClose: () => { if (open === o) close({ fromReader: true }); } };
+    const piece = { id: 'books.book', placeId: 'books', surface: 'books.book', title: o.d.title, where: 'an open book at the Bücherstand', html: bookCopy(o.d, null), views: spreads(o.d, null, book), readView: () => book.readView(ctx.camera), turn: (dir, mid, from, to) => book.turn(dir, mid, anim, from, to), onClose: () => { if (open === o) close({ fromReader: true }); } };
     w.addSurface(surface);
     w.addPiece(piece);
     w.open('books.book', { focus: o.focus !== false });

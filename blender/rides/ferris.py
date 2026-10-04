@@ -19,10 +19,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import rcommon as rc  # noqa: E402
+import rwrite  # noqa: E402
 from rcommon import TAU, Part, node, rod, state  # noqa: E402
 from mathutils import Euler, Matrix, Vector  # noqa: E402
 from nmlib import carpentry as cp  # noqa: E402
-from nmlib import geo, render  # noqa: E402
+from nmlib import boards, geo, render  # noqa: E402
 
 NAME = "ferris"
 
@@ -32,6 +33,7 @@ def register_art():
     rc.IMAGE_MATS["poster_riesenrad"] = (art.poster_riesenrad(), 0.75)
     rc.IMAGE_MATS["poster_nachtmarkt"] = (art.poster_nachtmarkt(), 0.75)
     rc.IMAGE_MATS["price_board"] = (art.price_board(), 0.6)
+    rc.IMAGE_MATS["cork"] = (art.cork(), 0.9)
 
 
 register_art()
@@ -46,6 +48,11 @@ CREAM = (0.93, 0.88, 0.76)
 DARK = (0.30, 0.30, 0.31)
 GONDOLA_COLS = [(0.60, 0.05, 0.05), (0.07, 0.16, 0.50), (0.06, 0.30, 0.14), (0.80, 0.52, 0.14)]
 DECK = 0.42
+# the big questions (content/questions.md) hang on placards inside three gondolas, the three at the
+# bottom of the wheel when it stands still: gondola index -> question number (left to right)
+QUESTION_GONDOLAS = {15: 1, 0: 2, 1: 3}
+PLAC_W, PLAC_H = 0.40, 0.272        # placard writing area, modelled size (x GS in the world)
+PLAC_Y, PLAC_Z = 0.705, -1.10       # its face: just in front of the back pane, mid-window
 
 
 def P(r, a, y):
@@ -231,6 +238,20 @@ def build_gondola(i, g, lite):
         a = TAU * k / seg + math.pi / seg
         r = 0.955 / math.cos(math.pi / seg)
         rc.bulb(bulbs, O + Vector((r * math.cos(a), r * math.sin(a), -0.70)), 0.038)
+    q = QUESTION_GONDOLAS.get(i)
+    if q:
+        # a placard hung inside on two brass chains from the window header, in front of the back
+        # pane, facing the door: a honey board with a card face (write_question_<q>)
+        bw, bh = PLAC_W + 0.04, PLAC_H + 0.04
+        wood.box(O + Vector((0, PLAC_Y + 0.007, PLAC_Z)), (bw, 0.012, bh), grain=0, tint="honey")
+        wood.box(O + Vector((0, PLAC_Y + 0.0145, PLAC_Z)), (bw - 0.012, 0.004, bh - 0.012), grain=0, tint="dark")
+        for sx in (-1, 1):
+            top = O + Vector((sx * (bw / 2 - 0.03), PLAC_Y + 0.007, PLAC_Z + bh / 2))
+            hook = O + Vector((sx * 0.17, 0.735, -0.752))
+            rod(gilt, top, hook, 0.0035, seg=4)
+            if not lite:
+                gilt.torus(top + Vector((0, 0, 0.006)), 0.008, 0.002, seg=6, tseg=3, rot=(0, math.pi / 2, 0))
+                gilt.torus(hook + Vector((0, 0, -0.004)), 0.008, 0.002, seg=6, tseg=3, rot=(0, math.pi / 2, 0))
     # snow on the roof (engine shows it only when snow is on)
     rc.lathe_poly(snow, [(0.001, -0.20), (0.16, -0.235), (0.42, -0.345), (0.66, -0.45),
                          (0.84, -0.545), (0.90, -0.585), (0.86, -0.61)], seg, M=T)
@@ -239,6 +260,11 @@ def build_gondola(i, g, lite):
     for ob in objs:
         ob.data.transform(S)
         rc.attach(ob, g)
+    if q:
+        # the writing area in world size, its reading camera inside the cabin (a seated rider's eye,
+        # 0.57 m from the card), all children of the gondola so they travel with it
+        F = boards.face_frame(Ow + GS * Vector((0, PLAC_Y - 0.001, PLAC_Z)), yaw=0.0)
+        rwrite.surface(f"question_{q}", F, PLAC_W * GS, PLAC_H * GS, fill=0.78, lift=0.03, parent=g, margin=0.025)
     return objs
 
 
@@ -448,6 +474,15 @@ def build_frame(lite):
     cp.sign(paint, paint, "Kasse", state.font("alegreya_sc"), (bx, by - D / 2 - 0.05, 2.18), 0.9, 0.22,
             depth=0.03, board_band="cream", text_band="red", board_shape="rect", text_size=0.15,
             text_depth=0.01, max_fill=0.8)
+    # a gooseneck lamp under the eave lights the Kasse sign (round 2: the sign was in shadow)
+    lampi = Part("booth_lamp", "blackmetal")
+    ys_ = by - D / 2
+    arm = [Vector((bx, ys_ - 0.03, H - 0.02)), Vector((bx, ys_ - 0.16, H + 0.02)), Vector((bx, ys_ - 0.30, H - 0.02)),
+           Vector((bx, ys_ - 0.34, H - 0.08))]
+    lampi.tube(arm, 0.009, tseg=4 if lite else 6)
+    lampi.cyl(arm[-1] + Vector((0, 0.01, -0.03)), 0.075, 0.025, 0.08, seg=8 if lite else 14, caps=False,
+              rot=(-0.5, 0, 0))
+    rc.bulb(bulbs, arm[-1] + Vector((0, 0.025, -0.075)), 0.03)
     # ticket window grille: bars in front of the pane, a round speaking grille, a brass money dish
     iron = Part("booth_iron", "blackmetal")
     yg = by - D / 2 - 0.03
@@ -515,7 +550,90 @@ def build_frame(lite):
     for k in range(4):
         bm.faces.new((sv[k], sv[(k + 1) % 4], sv[4]))
     snow.from_bmesh(bm, grain=2)
-    return rc.finish_all([st, darks, red, wood, sleepers, paint, gilt, bulbs, gpane, roofp, snow, iron, brass])
+    return rc.finish_all([st, darks, red, wood, sleepers, paint, gilt, bulbs, gpane, roofp, snow, iron, brass, lampi])
+
+
+# ------------------------------------------------------------------ noticeboard (write_questions_board)
+NB_POS = (-2.25, -4.75)       # right of the Kasse, between the booth and the entrance lane
+NB_YAW = 0.27                 # turned toward the stroll stop at the foot of the wheel
+NB_W, NB_H = 0.92, 0.62       # writing area (the pinned sheet)
+CORK_W, CORK_H = 1.30, 0.95
+NB_Z = 1.52
+
+
+def build_noticeboard(lite):
+    """A freestanding cork noticeboard on two oak posts with a little gabled roof and a gooseneck
+    lamp, by the Kasse. The questions' notes go on a large pinned sheet (write_questions_board);
+    a few old slips and a ticket stub are pinned round it."""
+    F = boards.face_frame((NB_POS[0], NB_POS[1], NB_Z), yaw=NB_YAW)
+    oak = Part("notice_posts", "wood", tint="oak")
+    frame = Part("notice_frame", "wood", tint="dark")
+    roofp = Part("notice_roof", "paint")
+    iron = Part("notice_iron", "blackmetal")
+    paper = Part("notice_slips", "paper")
+    brass = Part("notice_pins", "brass")
+    bulbs = Part("bulbs_notice", "bulb_warm")
+    snow = Part("snow_notice", "snow")
+    L = rwrite.local_box
+    rail = 0.065
+    W, H = CORK_W + 2 * rail, CORK_H + 2 * rail
+    px = W / 2 + 0.045
+    # posts from the ground (local y = -NB_Z) to above the board, with iron shoes
+    for sx in (-1, 1):
+        L(oak, F, sx * px, (2.42 - NB_Z) / 2 - NB_Z / 2 + 0.0, -0.03, 0.09, 2.42, 0.09, grain=1, var=0.08)
+        L(iron, F, sx * px, -NB_Z + 0.12, -0.03, 0.11, 0.24, 0.11)
+    # frame and backing board
+    for sy in (-1, 1):
+        L(frame, F, 0, sy * (CORK_H / 2 + rail / 2), 0.012, W + 0.02, rail, 0.045, grain=0, var=0.1)
+        L(frame, F, sy * (CORK_W / 2 + rail / 2), 0, 0.010, rail, CORK_H, 0.042, grain=1, var=0.1)
+    L(oak, F, 0, 0, -0.03, W, H, 0.025, grain=1, tint="soot")
+    # two cross rails that tie the posts behind the board
+    for yy in (-H / 2 + 0.1, H / 2 - 0.1):
+        L(oak, F, 0, yy, -0.058, 2 * px + 0.09, 0.07, 0.03, grain=0)
+    # the cork face (a picture quad, UVs 0-1)
+    c = [boards.at(F, x, y, -0.004) for x, y in ((-CORK_W / 2, -CORK_H / 2), (CORK_W / 2, -CORK_H / 2),
+                                                 (CORK_W / 2, CORK_H / 2), (-CORK_W / 2, CORK_H / 2))]
+    rc.picture("notice_cork", "cork", c)
+    # gabled roof: two painted boards over the posts, a ridge board, snow on top
+    ridge_y = 2.50 - NB_Z
+    for sz in (-1, 1):
+        a = math.radians(32)
+        M = F @ Matrix.Translation((0, ridge_y - 0.17 * math.sin(a), sz * 0.17 * math.cos(a))) @ \
+            Matrix.Rotation(sz * (math.pi / 2 - a), 4, 'X')
+        roofp.mbox(M, (2 * px + 0.34, 0.37, 0.025), band="green", grain=0)
+        Ms = F @ Matrix.Translation((0, ridge_y - 0.17 * math.sin(a) + 0.03, sz * (0.17 * math.cos(a) + 0.012))) @ \
+            Matrix.Rotation(sz * (math.pi / 2 - a), 4, 'X')
+        snow.mbox(Ms, (2 * px + 0.30, 0.33, 0.03), bevel=0.0)
+    L(roofp, F, 0, ridge_y + 0.01, 0, 2 * px + 0.36, 0.04, 0.05, band="red", grain=0)
+    L(roofp, F, 0, H / 2 + 0.06, 0.005, 2 * px + 0.1, 0.12, 0.03, band="cream", grain=0)   # name batten
+    # gooseneck lamp from the batten, out over the board
+    o = boards.at(F, 0, H / 2 + 0.06, 0.03)
+    ez = boards.frame_axes(F)[2]
+    arm = [o, o + ez * 0.14 + Vector((0, 0, 0.08)), o + ez * 0.30 + Vector((0, 0, 0.06)),
+           o + ez * 0.36 + Vector((0, 0, -0.02))]
+    iron.tube(arm, 0.010, tseg=4 if lite else 6)
+    sh = arm[-1]
+    iron.cyl(sh + Vector((0, 0, -0.03)), 0.085, 0.028, 0.08, seg=8 if lite else 14, caps=False)
+    rc.bulb(bulbs, sh + Vector((0, 0, -0.07)), 0.032)
+    # a second, larger sheet behind the writing sheet, and old slips pinned in the margin
+    rwrite.paper_slip(paper, F, 0.012, -0.012, NB_W + 0.03, NB_H + 0.02, rot=-0.012, z=0.001,
+                      tint=(0.92, 0.88, 0.80))
+    slips = [(-0.555, 0.375, 0.13, 0.085, 0.09, (1.05, 0.95, 0.55)),       # yellow card
+             (0.565, -0.385, 0.12, 0.06, -0.14, (1.05, 0.80, 0.80)),       # pink ticket
+             (0.56, 0.39, 0.10, 0.055, 0.05, (0.95, 0.93, 0.85))]          # ticket stub
+    if lite:
+        slips = slips[:2]
+    for x, y, w, h, r, t in slips:
+        rwrite.paper_slip(paper, F, x, y, w, h, rot=r, z=0.0025, tint=t)
+        if not lite:
+            rwrite.pins(brass, F, [(x, y + h * 0.32)], 0.003, r=0.006)
+    if not lite:
+        rwrite.pins(brass, F, [(-NB_W / 2 + 0.02, NB_H / 2 - 0.02), (NB_W / 2 - 0.02, NB_H / 2 - 0.02),
+                               (-NB_W / 2 + 0.02, -NB_H / 2 + 0.02), (NB_W / 2 - 0.02, -NB_H / 2 + 0.02)],
+                   0.0045, r=0.0075)
+    objs = rc.finish_all([oak, frame, roofp, iron, paper, brass, bulbs, snow])
+    rwrite.surface("questions_board", F, NB_W, NB_H, z=0.0035, fill=0.78, lift=0.05, margin=0.045)
+    return objs
 
 
 def build(lite):
@@ -537,14 +655,18 @@ def build(lite):
             eye = face - d * 0.20
             node("gondola_seat_0", tuple(P(RO, a, 0) + Vector((eye.x, eye.y, -1.15))), parent=g)
     build_frame(lite)
+    build_noticeboard(lite)
     node("light_0", (0, -3.4, 3.2))
     node("light_1", (-4.1, -5.2, 2.6))
     # a warm wash on the wheel face from in front of the hub (the Cycles preview's hub glow):
     # without it the cream steel reads black against the night sky in the browser
     node("light_2", (0, -3.2, HUB))
-    node("cam_target", (0, 0, 11.0))
-    export_cam = node("cam_view", (9.0, -31.0, 4.5))
-    d = Vector((0, 0, 11.0)) - Vector((9.0, -31.0, 4.5))
+    # the guided stroll's Riesenrad stop (site/src/layout.json 'stroll', review/round-5/architect):
+    # at the foot of the wheel by the queue, looking up at the hub. three.js local eye (0, 1.7, 12.5),
+    # target (0, 9, 0)
+    node("cam_target", (0, 0, 9.0))
+    export_cam = node("cam_view", (0.0, -12.5, 1.7))
+    d = Vector((0, 0, 9.0)) - Vector((0.0, -12.5, 1.7))
     export_cam.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
     return rc.mesh_objs()
 
@@ -625,6 +747,10 @@ def preview(objs):
         return render.camera(tuple(eye), tuple(market_in_local()), lens=26)   # the engine camera: 42 deg vertical
     market_strings()
     render.add_light("env_hubglow", 'POINT', (0, -3.2, HUB), 900, size=1.5)
+    # the noticeboard's and the Kasse's gooseneck lamps
+    F = boards.face_frame((NB_POS[0], NB_POS[1], NB_Z), yaw=NB_YAW)
+    render.add_light("env_notice_lamp", 'POINT', tuple(boards.at(F, 0, (CORK_H + 0.13) / 2 + 0.03, 0.36)), 25, size=0.05)
+    render.add_light("env_kasse_lamp", 'POINT', (-4.1, -4.3 - 1.35 / 2 - 0.34, 2.18), 15, size=0.04)
     if pose == "turned":
         # a quarter turn, seen from the side, to show the gondolas swinging clear between the rims
         turn_wheel(math.radians(-90))

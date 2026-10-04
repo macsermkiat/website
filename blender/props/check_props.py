@@ -13,7 +13,7 @@ FAIL (exit 1):
 - every set fits a 0.5 m deep counter or shelf, stands on the slot (z >= 0) and stays under the
   1.15 m front opening; clickable goods have their origin at their base
 - every material except glass, liquids and emissives has a baked occlusion texture (TEXCOORD_1)
-- section stall + its props <= 60k triangles with >= 2k headroom, and <= 3 MB with shared textures
+- section stall + its props <= 60k triangles with >= 2000 headroom (500 in round 6 pass 1), and <= 3 MB with shared textures
 - deco stall + its goods <= 20k triangles (BUILD.md budget)
 - the full and lite glb of a set carry the same act_ nodes, at the same place, with the same extras
   (name, kind, title, author, cover_material), and items.json lists no act_ node a glb lacks
@@ -53,12 +53,16 @@ SECTION_SETS = ["prop_gluehwein_counter", "prop_gluehwein_shelf", "prop_gluehwei
 # BUILD.md: the Bücherstand with all its props may use 80k triangles and 4 MB; the other section stalls 60k / 3 MB
 STALL_BUDGET = {"buecherstand": (80000, 4.0)}
 DECO_KEYS = ["lebkuchen", "mandeln", "kerzen", "spielzeug", "schmuck", "kaese", "crepes", "maroni", "puffer"]
-NO_AO = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade")
-BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|sausage)_\d+$|^act_grill$")
+NO_AO = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade",
+         "write_")
+BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|sausage|coaster)_\d+$|^act_grill$"
+                        r"|^act_writing_paper$")
+# round 6 pass 2 (judges): back to 2k of headroom under each section stall's 60k, after trimming the props
+# (round 6 pass 1 had dropped it to 500 when the carpenter's stalls grew by about 1.7k each)
 HEADROOM, SECTION_TRIS, SECTION_MB, DECO_TRIS = 2000, 60000, 3.0, 20000
 LITE_RATIO = 0.38
 ACT_BBOX_TOL, MESH_BBOX_TOL = 0.01, 0.02          # m: full vs lite bounds of act_ subtrees / mesh nodes
-NOTES = os.path.join(REPO, "review", "round-4", "vendor", "NOTES.md")
+NOTES = os.path.join(REPO, "review", "round-6", "vendor", "NOTES.md")
 SEAT = os.path.join(HERE, "seat_check.mjs")
 
 fails, warns = [], []
@@ -355,6 +359,149 @@ def seat_check(sets):
     return res
 
 
+# ------------------------------------------------------------ round 6: writing surfaces (docs/adr/0003)
+_DECODED = {}
+
+
+def decoded(path):
+    """The glb with its meshopt compression undone (blender/lib/decode.mjs) as (json, bin), cached."""
+    if path not in _DECODED:
+        tmp = os.path.join(tempfile.mkdtemp(prefix="vendor_check_"), os.path.basename(path))
+        subprocess.run(["node", os.path.join(REPO, "blender", "lib", "decode.mjs"), path, tmp], check=True,
+                       capture_output=True, timeout=300)
+        _DECODED[path] = glb_tools.read_glb(tmp)
+    return _DECODED[path]
+
+
+def _accessor_values(js, binchunk, ai):
+    import struct
+    acc = js["accessors"][ai]
+    bv = js["bufferViews"][acc["bufferView"]]
+    fmt = {5126: "f", 5123: "H", 5121: "B", 5122: "h", 5120: "b"}[acc["componentType"]]
+    size = struct.calcsize(fmt)
+    n = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}[acc["type"]]
+    stride = bv.get("byteStride", size * n)
+    base = bv.get("byteOffset", 0) + acc.get("byteOffset", 0)
+    k = _CT_MAX.get(acc["componentType"], 1.0) if acc.get("normalized") else 1.0
+    return [tuple(v / k for v in struct.unpack_from("<" + fmt * n, binchunk, base + i * stride))
+            for i in range(acc["count"])]
+
+
+def uv_range(js, mesh_index, binchunk=None):
+    """(min u, min v, max u, max v) of a mesh's TEXCOORD_0, read from the decoded data."""
+    lo, hi = [1e9, 1e9], [-1e9, -1e9]
+    for p in js["meshes"][mesh_index]["primitives"]:
+        a = p["attributes"].get("TEXCOORD_0")
+        if a is None:
+            return None
+        for u, v in _accessor_values(js, binchunk, a):
+            lo[0], lo[1] = min(lo[0], u), min(lo[1], v)
+            hi[0], hi[1] = max(hi[0], u), max(hi[1], v)
+    return lo[0], lo[1], hi[0], hi[1]
+
+
+def check_write_nodes(label, path, want):
+    """Every write_ node named in `want` exists with a mesh child whose UVs span 0..1, and the parent (if
+    given) is right: want = {write_name: parent_name or None}."""
+    js, binchunk = decoded(path)
+    nodes = js.get("nodes", [])
+    by = {nd.get("name"): nd for nd in nodes}
+    par = parents(js)
+    for w, parent in want.items():
+        nd = by.get(w)
+        if nd is None:
+            fail(f"{label}: no {w}")
+            continue
+        if parent and par.get(w) != parent:
+            fail(f"{label}: {w} is under {par.get(w)}, not {parent}")
+        mesh = nd.get("mesh")
+        if mesh is None:
+            for c in nd.get("children", []):
+                if "mesh" in nodes[c]:
+                    mesh = nodes[c]["mesh"]
+                    break
+        if mesh is None:
+            fail(f"{label}: {w} has no mesh")
+            continue
+        r = uv_range(js, mesh, binchunk)
+        if r is None or max(abs(r[0]), abs(r[1]), abs(r[2] - 1), abs(r[3] - 1)) > 0.01:
+            fail(f"{label}: {w} UVs do not span 0..1 ({r})")
+        mats = {js["materials"][p.get("material", 0)].get("name", "") for p in js["meshes"][mesh]["primitives"]}
+        if not all(m.startswith("write_") for m in mats):
+            fail(f"{label}: {w} is not on a plain write_ material ({sorted(mats)})")
+
+
+def check_writing(sets, items, pj):
+    """Round 6: a Bierdeckel per project (content/projects.md ### headings) plus spares, each with a front and
+    a back write_ face; the Marktblatt; a back label per wine bottle; book_open.glb with its pages, the leaf
+    and the reading camera; all in full and lite."""
+    sys.path.insert(0, HERE)
+    import content_projects
+    projects = content_projects.projects()
+    for variant in ("model", "lite"):
+        bpath = os.path.join(MODELS, sets["prop_bier_counter"][variant])
+        js, _ = glb_tools.read_glb(bpath)
+        nodes = glb_tools.node_names(js)
+        cs = acts(nodes, "act_coaster_")
+        if len(cs) != len(projects) + content_projects.N_SPARES:
+            fail(f"prop_bier_counter ({variant}): {len(cs)} coasters for {len(projects)} projects "
+                 f"+ {content_projects.N_SPARES} spares")
+        want = {}
+        for c in cs:
+            n = c.rsplit("_", 1)[1]
+            want[f"write_coaster_{n}_front"] = c
+            want[f"write_coaster_{n}_back"] = c
+        check_write_nodes(f"prop_bier_counter ({variant})", bpath, want)
+    for p in projects:
+        it = items.get(f"act_coaster_{p['i']}", {})
+        if it.get("project") != p["name"]:
+            fail(f"items.json: act_coaster_{p['i']} is not the coaster of {p['name']!r} ({it.get('project')!r})")
+    for variant in ("model", "lite"):
+        wpath = os.path.join(MODELS, sets["prop_wurst_counter"][variant])
+        js, _ = glb_tools.read_glb(wpath)
+        nodes = glb_tools.node_names(js)
+        check_write_nodes(f"prop_wurst_counter ({variant})", wpath, {"write_writing_paper": "act_writing_paper"})
+        for e in ("cam_read_writing_paper", "cam_read_writing_paper_target"):
+            if e not in nodes:
+                fail(f"prop_wurst_counter ({variant}): no {e}")
+        gpath = os.path.join(MODELS, sets["prop_gluehwein_wine"][variant])
+        js, _ = glb_tools.read_glb(gpath)
+        nodes = glb_tools.node_names(js)
+        bottles = acts(nodes, "act_bottle_")
+        check_write_nodes(f"prop_gluehwein_wine ({variant})", gpath,
+                          {f"write_label_{b.rsplit('_', 1)[1]}": b for b in bottles})
+        for b in bottles:
+            if f"cam_read_label_{b.rsplit('_', 1)[1]}" not in nodes:
+                fail(f"prop_gluehwein_wine ({variant}): no cam_read_label for {b}")
+    alone = {e.get("root"): e for e in pj.get("standalone", [])}
+    if "book_open" not in alone:
+        fail("props.json: book_open.glb is not listed under 'standalone'")
+        return
+    jss = {}
+    for variant in ("model", "lite"):
+        path = os.path.join(MODELS, alone["book_open"][variant])
+        if not os.path.exists(path):
+            fail(f"missing {os.path.basename(path)}")
+            return
+        js, _ = glb_tools.read_glb(path)
+        jss[variant] = js
+        nodes = glb_tools.node_names(js)
+        check_write_nodes(f"book_open ({variant})", path, {"write_page_left": "book_open", "write_page_right": "book_open",
+                                                          "write_page_turn_front": "act_page_turn",
+                                                          "write_page_turn_back": "act_page_turn"})
+        for e in ("act_page_turn", "cam_read_book", "cam_read_book_target", "book_open_cover"):
+            if e not in nodes:
+                fail(f"book_open ({variant}): no {e}")
+        mats = {m.get("name") for m in js.get("materials", [])}
+        if "book_cover_open" not in mats:
+            fail(f"book_open ({variant}): no book_cover_open material")
+        rf = glb_tools.report(path)
+        print(f"book_open ({variant}): {rf['triangles']} triangles, {rf['bytes'] / 1e3:.0f} kB")
+    check_parity("book_open", jss["model"], jss["lite"])
+    if "act_page_turn" not in items:
+        fail("items.json has no act_page_turn")
+
+
 def check_books(items, seen):
     """Mac's 55 books: each title in categories.json is exactly one act_book_<nn> in its category's set
     prop_books_<key>, items.json carries name, author, slug and category, every slug has its summary file, and
@@ -401,7 +548,7 @@ def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite
     L += ["", f"All prop glbs together: {glb_full / 1e6:.2f} MB full and {glb_lite / 1e6:.2f} MB lite. Shared textures "
           f"(`prop_tex_*`): {tex / 1e6:.2f} MB full and {tex_lite / 1e6:.2f} MB lite, loaded once for all sets.", "",
           "Section stalls, the carpenter's current stall glb plus my props (60k triangles and 3 MB with the shared "
-          "textures the sets use, the Bücherstand 80k and 4 MB; check_props fails under 2k headroom):", "",
+          "textures the sets use, the Bücherstand 80k and 4 MB; check_props fails under 2000 headroom):", "",
           "| stall | stall tris | + props | total / budget | headroom | MB / budget |", "|---|---|---|---|---|---|"]
     for st, a, b, tot, room, mb, lt, lmb in section_rows:
         L.append(f"| {st} | {a} | {b} | {tot} / {lt // 1000}k {'OK' if room >= HEADROOM else 'FAIL'} | {room} | "
@@ -426,8 +573,8 @@ def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite
 def main():
     with open(os.path.join(MODELS, "props.json")) as f:
         pj = json.load(f)
-    if set(pj) - {"about", "sets", "by_set"}:
-        fail(f"props.json has extra top-level keys {sorted(set(pj) - {'about', 'sets', 'by_set'})}")
+    if set(pj) - {"about", "sets", "by_set", "standalone"}:
+        fail(f"props.json has extra top-level keys {sorted(set(pj) - {'about', 'sets', 'by_set', 'standalone'})}")
     by = pj.get("by_set", {})
     if {e.get("set") for e in pj.get("sets", [])} != set(by) or any(
             by[e["set"]] != {k: e[k] for k in ("slot", "stall", "model", "lite", "asset")} for e in pj.get("sets", [])):
@@ -528,6 +675,7 @@ def main():
             fail(f"deco {d}: stall {sr['triangles']} + goods {pt} = {tot} > {DECO_TRIS} "
                  f"({'the stall alone leaves ' + str(max(0, DECO_TRIS - sr['triangles'])) + ' for goods'})")
     check_books(items, seen)
+    check_writing(sets, items, pj)
     # the beer heads as the browser decodes them (meshopt, quantised node transforms): no tall foam columns
     fc = subprocess.run(["node", os.path.join(HERE, "foam_check.mjs")], capture_output=True, text=True, timeout=300)
     print("\nfoam check: " + " | ".join(fc.stdout.strip().splitlines()))

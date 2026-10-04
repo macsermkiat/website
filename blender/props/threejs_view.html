@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#111}</style>
+<script type="importmap">{"imports":{"three":"/site/node_modules/three/build/three.module.js","three/addons/":"/site/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+const W = 1280, H = 720;
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setSize(W, H); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.AgXToneMapping; r.toneMappingExposure = 1.0;
+document.body.appendChild(r.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0b0d14);
+scene.add(new THREE.HemisphereLight(0x8090b0, 0x302018, 0.35));
+const key = new THREE.PointLight(0xffcf9a, 9, 0, 2); key.position.set(0.3, 2.3, 1.3); scene.add(key);
+const fill = new THREE.PointLight(0xffc890, 2.5, 0, 2); fill.position.set(-0.8, 1.4, 1.4); scene.add(fill);
+const cam = new THREE.PerspectiveCamera(36, W / H, 0.01, 50); cam.position.set(0.0, 1.55, 2.35); cam.lookAt(0.0, 1.55, 0);
+const counter = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.04, 0.6), new THREE.MeshStandardMaterial({ color: 0x8a5a30, roughness: 0.7 }));
+counter.position.set(0, 1.03, 0); scene.add(counter);
+const l = new GLTFLoader(); l.setMeshoptDecoder(MeshoptDecoder);
+const url = new URLSearchParams(location.search).get('glb');
+l.load(url, (g) => { g.scene.position.set(0, 1.05, 0); scene.add(g.scene); r.render(scene, cam); document.title = 'done'; }, undefined, (e) => { document.title = 'err ' + e; });
+</script></body></html>

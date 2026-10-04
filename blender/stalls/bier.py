@@ -20,7 +20,7 @@ from mathutils import Euler, Matrix, Vector  # noqa: E402
 import pipeline  # noqa: E402
 from hut import COUNTER_TOP, Hut  # noqa: E402
 from nmlib import carpentry as cp  # noqa: E402
-from nmlib import render, state  # noqa: E402
+from nmlib import boards, render, state  # noqa: E402
 from nmlib.geo import Part  # noqa: E402
 
 NAME = "stall_bier"
@@ -86,7 +86,7 @@ def build(lite):
     h.build_shelves()
     RA = h.part("rauten", "rauten", var=0.03)      # dedicated two-colour lozenge texture
     h.build_roof(cover="shingles", fascia_part=RA)
-    h.build_snow(drifts=3)
+    h.build_snow(drifts=2)
     P = h.paint
 
     # ------------------------------------------------------------ barrel front
@@ -155,12 +155,73 @@ def build(lite):
     # ------------------------------------------------------------ wreath of fir with bulbs in the opening
     cp.fir_garland(h.fir, h.beads, (-W / 2 + 0.1, yF - 0.07, 2.2), (W / 2 - 0.1, yF - 0.07, 2.2), sag=0.1,
                    radius=0.04, bead_bands=("ornament_gold",), bead_every=0.28,
-                   tufts_per_m=None if lite else 34)
+                   tufts_per_m=None if lite else 20)
     h.eave_bulbs(sides=True)
     h.interior_bulbs(xs=(-1.2, 0.0, 1.2), z=2.3)
+    tap_board(h, RA, lite)
     h.markers(sign_pos=tuple(sign_c + Vector((0, -0.06, 0))),
               lights=[(0, 0.1, 2.35), (0, yF - 0.8, 2.3)], cam_dist=3.7, cam_h=1.75)
     return h.finish()
+
+
+# round 6: the 'vom Fass' chalkboard on an upturned barrel at the front-left corner (the side that
+# faces the middle of the square); the projects are chalked up like beers on tap (docs/adr/0003)
+BOARD_W, BOARD_H = 0.92, 0.70                       # writing area (write_projects_board)
+BOARD_XY = (-2.95, -2.2)                            # clear of the counter's left end and the eave
+BOARD_YAW = math.radians(30)                        # turned toward the bar front
+BARREL_H = 0.92
+LAMP = {}                                           # lamp head and aim point from the build (preview)
+
+
+def tap_board(h, RA, lite):
+    """A blackboard in a blue-painted frame with a white bead, on two posts standing on a barrel
+    head, under an arched cream crest 'Frisch vom Fass' in blue Fraktur with a Rauten strip.
+    Snow on the barrel head. Lit by the bar's front light_1. Exports write_projects_board and the
+    cam_read pair."""
+    P = h.paint
+    bz = BARREL_H + 0.10 + BOARD_H / 2 + 0.065
+    F = boards.face_frame((BOARD_XY[0], BOARD_XY[1], bz), yaw=BOARD_YAW)
+    ex, ey, ez = boards.frame_axes(F)
+    staves = h.part("board_barrel", "wood", var=0.12)
+    boards.barrel(staves, h.iron, (BOARD_XY[0], BOARD_XY[1] - 0.02, 0.0), height=BARREL_H)
+    chalk = h.part("chalk", "fabric_white", var=0.03)
+    b = boards.chalkboard("projects_board", F, BOARD_W, BOARD_H, frame=P, back=h.wood, chalk=chalk,
+                          iron=h.iron, frame_band="blue", bead=(P, "white"), rail=0.06)
+    W_, H_ = b["outer"]
+    # two posts on the barrel head behind the board, up into the crest
+    c = Vector((BOARD_XY[0], BOARD_XY[1], 0))
+    post_top = bz + H_ / 2 + 0.2
+    for sgn in (-1, 1):
+        p = c + ex * sgn * 0.2 - ez * 0.05
+        h.frame.box((p.x, p.y, (BARREL_H - 0.03 + post_top) / 2), (0.06, 0.045, post_top - BARREL_H + 0.03),
+                    rot=(0, 0, BOARD_YAW), tint="honey")
+    # crest: arched cream board, blue Fraktur, Rauten strip under it
+    cz = bz + H_ / 2 + 0.13
+    cc = Vector((BOARD_XY[0], BOARD_XY[1], cz)) - ez * 0.012
+    CR = h.part("crest", "paint_lit", var=0.03)     # lit like the main sign: the cream glows
+    CR.flat_text = True          # painted lettering: one face per glyph (keeps the stall in budget)
+    cp.sign(CR, CR, "Frisch vom Fass", state.font("fraktur_bold"), cc, W_ - 0.04, 0.24, depth=0.03,
+            rot_z=BOARD_YAW, board_band="cream", text_band="blue", frame_band="blue", board_shape="arch",
+            text_size=0.11, max_fill=0.84, text_depth=0.008, text_dy=-0.03, text_tint=(0.22, 0.24, 0.36),
+            text_bevel=0.0, resolution=1)
+    sp = cc + ez * 0.012 + Vector((0, 0, -0.12 - 0.02))
+    RA.box((sp.x, sp.y, sp.z), (W_ - 0.06, 0.02, 0.05), rot=(0, 0, BOARD_YAW), grain=0, uv_off=RAUTEN_UV)
+    # snow lying on the barrel head: one soft, slightly lopsided cap the posts stand through
+    sn = Part("snow_2", "snow", var=0.02)
+    q = c + Vector((0.02, -0.04, 0))
+    sn.sphere((q.x, q.y, BARREL_H - 0.035), 0.235, seg=14, rings=6, scale=(1.0, 0.93, 0.16), rot=(0, 0, 0.4))
+    sn.sphere((q.x - 0.08, q.y + 0.06, BARREL_H - 0.01), 0.1, seg=8, rings=4, scale=(1.2, 1.0, 0.3))
+    h.snow.append(sn)
+    # a gooseneck lamp over the crest, reaching forward over the board (bulb in bulbs_0)
+    lp = c - ez * 0.06 + Vector((0, 0, post_top))
+    tip = lp + ez * 0.3 + Vector((0, 0, 0.1))
+    h.iron.slab(lp, lp + Vector((0, 0, 0.12)), 0.018, 0.018, up=(ex.x, ex.y, 0), bevel=0)
+    h.iron.slab(lp + Vector((0, 0, 0.12)), tip, 0.016, 0.016, up=(ex.x, ex.y, 0), bevel=0)
+    h.iron.cyl(tip + Vector((0, 0, -0.03)), 0.02, 0.075, 0.075, seg=10, caps=False,
+               rot=(math.radians(-25), 0, BOARD_YAW))
+    h.bulbs.sphere(tip + ez * 0.01 + Vector((0, 0, -0.07)), 0.028, seg=8, rings=6)
+    LAMP["board"] = (tuple(tip + Vector((0, 0, -0.08))), tuple(boards.at(F, 0, 0.05)))
+    boards.read_camera("projects_board", F, BOARD_W, BOARD_H, lift=0.1)
 
 
 def preview(objs):
@@ -192,6 +253,10 @@ def _lights_and_camera():
         render.add_light("env_signlamp", 'SPOT', (x, -0.74, zc + 0.35), 22, size=0.04,
                          spot_size=math.radians(36), spot_blend=0.35, target=(x * 0.6, ys, zc + 0.06))
     render.add_light("env_neighbour", 'POINT', (-5.2, -1.6, 2.7), 170, size=0.6)
+    if "board" in LAMP:   # the board's gooseneck lamp (its bulb glows in the browser; here it lights)
+        head, aim = LAMP["board"]
+        render.add_light("env_boardlamp", 'SPOT', head, 14, size=0.04, spot_size=math.radians(70),
+                         spot_blend=0.5, target=aim)
     return render.camera((-4.6, -7.4, 2.1), (0.1, -0.5, 2.05), lens=29)
 
 

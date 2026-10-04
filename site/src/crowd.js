@@ -609,7 +609,12 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
     speak,
     /** Up to five standing people near `center` say `text`, one after another, and raise their mugs if they have one. */
     say(text, center, radius) {
-      standing.filter((p) => p.g.visible && p.g.position.distanceTo(center) < radius).slice(0, 5).forEach((p, i) => setTimeout(() => { speak(p, text); gesture(p, 'drink', 2.6); }, i * 280));
+      // the nearest who are in view; when nobody in view stands that close (the close-up has sent the queue out of
+      // the shot), the nearest in view a little further off answer instead, so a Prost is never met with silence
+      const near = (r) => standing.filter((p) => p.g.visible && p.g.position.distanceTo(center) < r).sort((a, b) => a.g.position.distanceTo(center) - b.g.position.distanceTo(center));
+      let who = near(radius);
+      if (!who.length) who = near(radius * 2.5).slice(0, 2);
+      who.slice(0, 5).forEach((p, i) => setTimeout(() => { speak(p, text); gesture(p, 'drink', 2.6); }, i * 280));
     },
     update(dt, t, camera, w, h, { still, chatter = true, look = null }) {
       T = t;

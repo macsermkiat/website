@@ -616,6 +616,31 @@ class Figure:
             p = p + nrm * off
         return self.C + p
 
+    def face_col(self):
+        """Vertex colour for the head of a close-up figure (spec face_detail): warm cold-flushed cheeks and a
+        slightly darker jaw shadow under the cheekbones, painted on the skin so no lighting is baked."""
+        rx, ry, rz = self.P["head"]
+        C, sk = self.C, self.skin
+        fwd = -math.pi / 2
+
+        def col(p, i, j):
+            q = p - C
+            az = math.atan2(q.y / ry, q.x / rx)
+            el = math.asin(max(-1.0, min(1.0, q.z / rz)))
+            c = list(sk)
+            for k in (-1, 1):
+                d2 = ((az - (fwd + k * 0.62)) / 0.34) ** 2 + ((el - math.radians(-14)) / 0.3) ** 2
+                g = 0.95 * math.exp(-d2)
+                tint = (1.04, 0.79, 0.73)
+                c = [c[n] * (1 + (tint[n] - 1) * g) for n in range(3)]
+            # a soft shadow under the cheekbones toward the jaw, the back of the head unchanged
+            dfront = abs(((az - fwd + math.pi) % TAU) - math.pi)
+            if dfront < 1.3 and -0.9 < el < -0.35:
+                g = 0.12 * (1 - dfront / 1.3)
+                c = [c[n] * (1 - g) for n in range(3)]
+            return tuple(c)
+        return col
+
     def head_deform(self, p):
         rx, ry, rz = self.P["head"]
         q = p.copy()
@@ -648,7 +673,8 @@ class Figure:
             el = -math.pi / 2 + math.pi * i / rings
             el = max(min(el, math.pi / 2 - 0.02), -math.pi / 2 + 0.02)
             rows.append([self.head_pt(math.pi / 2 + TAU * j / seg, el) for j in range(seg)])
-        self.m.grid(rows, "body", wv, col=self.skin, closed=True, cap_start=True, cap_end=True)
+        self.m.grid(rows, "body", wv, col=self.face_col() if self.spec.get("face_detail") else self.skin,
+                    closed=True, cap_start=True, cap_end=True)
         # neck
         nb = Vector((0, 0.02 * s, P["z_neck"] - 0.03 * s))
         nt = C + Vector((0, 0.012 * s, -rz * 0.5))
@@ -662,7 +688,13 @@ class Figure:
         base = self.head_pt(f, math.radians(-30), 0.006 * s)
         wl = self.head_pt(f - 0.2, math.radians(-26), 0.001)
         wr = self.head_pt(f + 0.2, math.radians(-26), 0.001)
-        ids = [self.m.vert(q, mul(self.skin, 1.0), {"head": 1.0}) for q in (br, tip, base, wl, wr)]
+        if self.spec.get("face_detail"):
+            # cold-reddened tip, shaded underside and wings: the nose reads as a form, not a flat wedge
+            sk = self.skin
+            ncol = [sk, (sk[0] * 1.0, sk[1] * 0.84, sk[2] * 0.8), mul(sk, 0.62), mul(sk, 0.8), mul(sk, 0.8)]
+        else:
+            ncol = [mul(self.skin, 1.0)] * 5
+        ids = [self.m.vert(q, c, {"head": 1.0}) for q, c in zip((br, tip, base, wl, wr), ncol)]
         for tri in ((0, 3, 1), (0, 1, 4), (3, 2, 1), (1, 2, 4)):
             self.m.face([ids[x] for x in tri], [(0, 0)] * 3, "body", smooth=False)
         # ears
@@ -675,13 +707,22 @@ class Figure:
         # eyes, brows, mouth
         if not L:
             eyec = lin(self.spec.get("eye_color", "#2a1d17"))
+            fd = self.spec.get("face_detail")
             for k in (-1, 1):
-                e = self.head_pt(f + k * 0.42, math.radians(2), -0.002 * s)
+                if fd:
+                    # eye socket: a shallow lens of shaded skin around the eye, so the eye sits in a hollow
+                    sc = self.head_pt(f + k * 0.42, math.radians(3), -0.0035 * s)
+                    M = Matrix.Translation(sc) @ Matrix.Rotation(-k * 0.42, 4, "Z")
+                    self.m.sphere((0, 0, 0), 1.0, "body", wv, seg=7, rings=3, M=M,
+                                  scale=(0.0165 * s, 0.006 * s, 0.0125 * s),
+                                  col=(self.skin[0] * 0.8, self.skin[1] * 0.7, self.skin[2] * 0.7))
+                e = self.head_pt(f + k * 0.42, math.radians(2), (0.0005 if fd else -0.002) * s)
                 self.m.sphere(e, 0.0075 * s, "body", wv, seg=6, rings=3, scale=(1.25, 0.6, 0.8), col=eyec)
-                b = self.head_pt(f + k * 0.42, math.radians(14), 0.001 * s)
-                M = Matrix.Translation(b) @ Matrix.Rotation(-k * 0.42, 4, "Z") @ Matrix.Rotation(k * 0.12, 4, "Y")
-                self.m.box((0, 0, 0), (0.026 * s, 0.006 * s, 0.005 * s), "body", wv, M=M,
-                           col=mul(self.hair, 0.85 if self.spec.get("hair") != "bald" else 1.4))
+                b = self.head_pt(f + k * 0.42, math.radians(15 if fd else 14), (0.0025 if fd else 0.001) * s)
+                M = Matrix.Translation(b) @ Matrix.Rotation(-k * 0.42, 4, "Z") @ Matrix.Rotation(k * (0.03 if fd else 0.12), 4, "Y")
+                bald = self.spec.get("hair") == "bald"
+                self.m.box((0, 0, 0), ((0.029 if fd else 0.026) * s, 0.007 * s, (0.0065 if fd else 0.005) * s), "body", wv,
+                           M=M, col=mul(self.hair, (0.6 if fd else 0.85) if not bald else (1.0 if fd else 1.4)))
             mth = self.head_pt(f, math.radians(-44), -0.001 * s)
             self.m.box(mth, (0.026 * s, 0.006 * s, 0.0045 * s), "body", wv,
                        col=lin(self.spec.get("lip", "#9b5a52")))
@@ -898,7 +939,7 @@ class Figure:
         C = self.C
         rx, ry, rz = self.P["head"]
         zb = C.z + rz * 0.34
-        tilt = 0.08
+        tilt = spec.get("tilt", 0.08)           # + tips the front brim down; the Bier vendor's is pushed back
         base = []
         for az in ats:
             base.append(Vector((math.cos(az) * (rx + 0.014 * s), math.sin(az) * (ry + 0.014 * s), 0)))

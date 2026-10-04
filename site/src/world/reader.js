@@ -36,10 +36,28 @@ export function createWorldReader({ camera, rig, motion, sfx = () => {}, els, on
     for (const face of order) {
       const f = surface.faces[face] || surface.faces.main;
       if (!f || !piece.faces[face]) continue;
-      const pages = paginate(piece.faces[face], { w: f.w, h: f.h, base: surface.base, theme: surface.theme });
+      const pages = pagesFor(piece.faces[face], f, surface);
       pages.forEach((pg, i) => out.push({ face, page: pg, index: i, of: pages.length }));
     }
     return out.length ? out : [{ face: 'main', page: { lines: [] }, index: 0, of: 1 }];
+  }
+
+  /** A face's pages; a surface with a `fit` range gets the largest type in it that puts the words on one page. */
+  function pagesFor(blocks, f, surface) {
+    const at = (base) => paginate(blocks, { w: f.w, h: f.h, base, theme: surface.theme });
+    if (!surface.fit) return at(surface.base);
+    const [lo, hi] = surface.fit;
+    let pages = at(hi);
+    if (pages.length < 2) return pages;
+    // bisect between the smallest and largest size (a few measures; each is a canvas measureText per word)
+    let a = lo, b = hi, best = at(lo);
+    if (best.length > 1) return best;
+    for (let k = 0; k < 7; k++) {
+      const m = (a + b) / 2;
+      const p = at(m);
+      if (p.length < 2) { a = m; best = p; } else b = m;
+    }
+    return best;
   }
 
   function draw(surface, view, { fade = true } = {}) {
@@ -50,7 +68,7 @@ export function createWorldReader({ camera, rig, motion, sfx = () => {}, els, on
       const f = surface.faces[face] || surface.faces.main;
       if (!f) continue;
       const old = st.handles[face];
-      const h = renderPage(page, { theme: surface.theme, glow: surface.theme === 'chalk' ? 0.32 : 0, rough: surface.rough, align: page.align || 'left', w: f.w });
+      const h = renderPage(page, { theme: surface.theme, glow: surface.theme === 'chalk' ? 0.32 : 0, rough: surface.rough, align: page.align || surface.align || 'left', w: f.w, z: surface.lift });
       h.setOpacity(0);
       f.area.add(h.group);
       st.handles[face] = h;
@@ -124,7 +142,7 @@ export function createWorldReader({ camera, rig, motion, sfx = () => {}, els, on
       flipCoaster(c.surface, next.face === 'back', () => draw(c.surface, next, { fade: false }));
       sfx('card');
     } else if (c.surface.kind === 'book' && c.piece.turn && !first) {
-      c.piece.turn(dir, () => draw(c.surface, next, { fade: true }));
+      c.piece.turn(dir, () => draw(c.surface, next, { fade: true }), prev, next);
       sfx('page');
     } else {
       if (!first) sfx(c.surface.theme === 'chalk' ? 'chalk' : 'page');
@@ -156,41 +174,78 @@ export function createWorldReader({ camera, rig, motion, sfx = () => {}, els, on
   // ---------- the coaster: picked up, held to the eye, flipped ----------
   function holdCoaster(s, up) {
     const g = s.root;
-    const holder = g.parent;
+    const parent = g.parent;
+    const stall = s.holder || parent; // the stall's frame (the hold point is in it)
     if (!s.home) s.home = { p: g.position.clone(), q: g.quaternion.clone() };
     const from = { p: g.position.clone(), q: g.quaternion.clone() };
     let to = s.home;
     if (up) {
-      // in front of the counter, at a leaning eye's height, its face toward the stop's view
+      // how the front's writing sits on this coaster (the engine's or the vendor's, whatever its axes)
+      g.position.copy(s.home.p); g.quaternion.copy(s.home.q); g.updateMatrixWorld(true);
+      const gInv = g.getWorldQuaternion(new THREE.Quaternion()).invert();
+      const rel = gInv.clone().multiply(s.faces.front.area.getWorldQuaternion(new THREE.Quaternion()));
+      const relB = gInv.clone().multiply((s.faces.back || s.faces.front).area.getWorldQuaternion(new THREE.Quaternion()));
+      // the back reads upright after a turn about the vertical when its text runs the same way up as the front's,
+      // else after a turn about the horizontal (like a page)
+      const upF = new THREE.Vector3(0, 1, 0).applyQuaternion(rel), upB = new THREE.Vector3(0, 1, 0).applyQuaternion(relB);
+      // in front of the counter, at a leaning eye's height, the front's writing upright toward the stop's view
       const stop = stopView?.();
-      const hold = new THREE.Vector3(-1.05, 1.36, 1.82);
-      const holdW = holder.localToWorld(hold.clone());
+      const holdW = stall.localToWorld(new THREE.Vector3(-1.05, 1.36, 1.82));
       const view = stop?.pos || camera.position;
-      const n = view.clone().sub(holdW); n.y *= 0.35; n.normalize();
-      const Y = n; // the front's normal (the coaster's +Y) toward the eye
-      const Z = UP.clone().negate().addScaledVector(Y, Y.y).normalize(); // its -Z is text-up
-      const X = new THREE.Vector3().crossVectors(Y, Z).normalize();
-      const qW = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z));
-      const qH = holder.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(qW);
-      to = { p: hold, q: qH };
+      const Zd = view.clone().sub(holdW); Zd.y *= 0.35; Zd.normalize();
+      const Yd = UP.clone().addScaledVector(Zd, -UP.dot(Zd)).normalize();
+      const Xd = new THREE.Vector3().crossVectors(Yd, Zd).normalize();
+      s.flipAxisW = upF.dot(upB) >= 0 ? UP.clone() : Xd.clone();
+      const qArea = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(Xd, Yd, Zd));
+      const qG = qArea.multiply(rel.invert());
+      const qLocal = parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(qG);
+      // the writing's middle at the hold point
+      const f = s.faces.front;
+      const mid = new THREE.Vector3(f.w / 2, -f.h / 2, 0).applyMatrix4(f.area.matrixWorld);
+      const offW = mid.sub(g.getWorldPosition(new THREE.Vector3())).applyQuaternion(gInv.clone().premultiply(qG)); // rotated with the coaster
+      const pLocal = parent.worldToLocal(holdW.clone().sub(offW));
+      to = { p: pLocal, q: qLocal };
       s.flipQ = new THREE.Quaternion();
     }
     // move it now for the read view's sake, then animate from where it was
     g.position.copy(to.p); g.quaternion.copy(to.q); g.updateMatrixWorld(true);
     const end = { p: to.p.clone(), q: to.q.clone() };
+    const lit = s.fromModel ? coasterLight(s) : [];
     tween(0.6, (k) => {
       const e = k * k * (3 - 2 * k);
+      lit.forEach((m) => { m.emissiveIntensity = 0.32 * (up ? e : 1 - e); });
       g.position.lerpVectors(from.p, end.p, e);
       g.position.y += Math.sin(e * Math.PI) * 0.05;
       g.quaternion.slerpQuaternions(from.q, end.q, e);
     });
     s.held = up ? end : null;
   }
+  /**
+   * A model's coaster, held up to read, turns its face from the stall's lamps; it gets a soft light of its own (its
+   * own print as emissive) on its own copy of the material. Done at each pick-up: the stream's graft swaps
+   * materials when the full model arrives.
+   */
+  function coasterLight(s) {
+    const out = [];
+    const skip = new Set();
+    s.root.traverse((o) => { if (o.name === 'engine_write_area') o.traverse((c) => skip.add(c)); });
+    s.root.traverse((o) => {
+      // the coaster's own meshes only: never the words written on it (troika's material is derived, not copied)
+      if (!o.isMesh || o.isText || skip.has(o) || !o.material || Array.isArray(o.material)) return;
+      if (o.userData.readMat !== o.material) {
+        const m = o.material.clone();
+        if (m.emissive) { m.emissive.set(0xfff4e6); m.emissiveMap = m.map || null; m.emissiveIntensity = 0; }
+        o.material = o.userData.readMat = m;
+      }
+      if (o.material.emissive) out.push(o.material);
+    });
+    return out;
+  }
   function flipCoaster(s, toBack, mid) {
     const g = s.root;
     if (!s.held) { mid(); return; }
     const base = s.held.q.clone();
-    const axisW = UP.clone();
+    const axisW = (s.flipAxisW || UP).clone();
     const axisL = axisW.clone().applyQuaternion(g.parent.getWorldQuaternion(new THREE.Quaternion()).invert());
     const a0 = toBack ? 0 : Math.PI, a1 = toBack ? Math.PI : 0;
     let swapped = false;
