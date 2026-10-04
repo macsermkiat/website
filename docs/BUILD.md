@@ -68,6 +68,17 @@ Don't commit; the market owner commits and pushes.
   - `rot_<name>`: a part that the engine spins (for example `rot_wheel` or `rot_platform`). Gondolas are `gondola_<n>` and horses are `horse_<n>`.
   - `snow_<n>`: snow caps that the engine shows only when snow is on.
 - The standard counter top is 1.05 m high. The stall front opening sits between 1.05 m and 2.2 m.
+- A reading lamp or other small glow inside a stall that already has its two `light_` empties gets an emissive `bulb_warm` material, not another `light_`.
+- 2048 px atlases are fine in the desktop glb as long as the stall stays inside its file budget. Lite files use 512 px.
+
+## Bücherstand categories
+
+The Bücherstand (Reading) holds Mac's 55 Audible books, grouped into the six categories in `content/books/categories.json`. That file is the only source for titles, authors, slugs and categories.
+
+- Carpenter: enlarge the stall with side racks and book carts so it has six labelled category sections, one per category key. Each section has a sign with its German label (`label_de`) and an empty `slot_cat_<key>` at the left end of its lowest usable shelf board. Size each section for its book count plus some room. Write the section dimensions (board widths, number of boards, board spacing, depth) to `blender/stalls/buecher_sections.json` so the vendor can fill them.
+- Vendor: one prop set per category, `prop_books_<key>`, parented to `slot_cat_<key>`, with one book per title in that category. Each book is a separate `act_book_<nn>` node pivoted at its base, with a spine that shows the short title and author legibly in a close-up. Untitled filler books are allowed but are not `act_` nodes. Every book's entry in `site/public/models/items.json` carries `name` (title), `author`, `slug` and `category`. The invented titles from earlier rounds go.
+- Engineer: clicking a book opens a reading view that shows `content/books/<slug>.md` (summary, key ideas) with a close button and keyboard access, and the plain HTML version lists the same summaries.
+- Budget: the Bücherstand with all its props may use 80k triangles and 4 MB.
 
 ## Lighting approach
 
