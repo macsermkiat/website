@@ -158,7 +158,9 @@ def heart_item(s, n, x, size, k, base=None):
     cm = round(size * 100)
     origin = base if base else (x, ROD_Y, ROD_Z)
     label = f"Lebkuchen heart “{text}”"
-    with item(s, f"act_heart_{n}", origin, label, f"{detail} About {cm} cm, on a ribbon to hang around your neck.",
+    where = ("Leaning on the display board, ribbon tucked behind." if base else
+             "It hangs on a ribbon, to wear around your neck.")
+    with item(s, f"act_heart_{n}", origin, label, f"{detail} About {cm} cm across. {where}",
               pivot="base" if base else "hang", icing=text, size_cm=cm) as hm:
         yield hm
 
@@ -235,6 +237,8 @@ def lebkuchen():
 def almond_heap(m, M, r, h, col=WHITE, k=None):
     k = k or seg(8, 5)
     prof = [(r, 0.0), (r * 0.85, h * 0.55), (r * 0.35, h * 0.95), (0.0, h * 1.02)]
+    if vlib.lite():
+        prof = [prof[0], prof[1], prof[3]]
     m.lathe(prof, k, "almonds", M, col, "glaze", v_by="z")
 
 
@@ -276,7 +280,8 @@ def mandeln():
                   grams=grams) as cm:
             cm.lathe([(0.004, 0.0), (0.042, 0.2), (0.044, 0.205)], seg(8, 6), "cone_paper", Mc, jit(WHITE, 0.04),
                      "atlas")
-            cm.lathe([(0.0405, 0.2), (0.004, 0.02)], seg(8, 6), "paper", Mc, C("e8e0d0"))
+            if not vlib.lite():
+                cm.lathe([(0.0405, 0.2), (0.004, 0.02)], seg(8, 6), "paper", Mc, C("e8e0d0"))
             almond_heap(cm, Mc @ T(0, 0, 0.19), 0.042, 0.045, jit(C(nut[2]), 0.08), k=seg(8, 6))
     # filled cones lying ready on a paper in front of the rack
     m.box((0.62, 0.1, 0.002), T(0.17, -0.18, 0.001), "paper", C("f4efe4"), skip=("nz",))
@@ -526,7 +531,7 @@ def spielzeug():
     # a stepped riser along the back of the left half, with a row of shaving trees on it
     m.box((1.22, 0.1, 0.07), T(-0.4, 0.18, 0.035), vlib.RW("wood"), C("8a5a34"), skip=("nz",))
     for k, x in enumerate((-0.94, -0.78, -0.62, -0.3, -0.14, 0.02)):
-        if vlib.lite() and k % 2:
+        if vlib.lite() and k != 2:
             continue
         spanbaum(m, T(x, 0.18, 0.07, rz=k), h=0.1 + (k % 3) * 0.03, col=C(["e8d0a0", "d8e0c0", "e0c8a0"][k % 3]))
     # round 4: the nutcrackers, the train, the spinning tops and the rocking horse are items (all of them in
@@ -642,7 +647,7 @@ def schmuck():
             label, detail = "Straw star", ("A straw star (Strohstern) of two crossed layers of split straw, bound with "
                                           "thread: the oldest tree ornament on the stall.")
         elif i % 4 == 1:
-            label, detail = "Glass icicle", "A blown-glass icicle, clear and twisted, with a gold cap."
+            label, detail = "Glass icicle", "A blown-glass icicle, clear and tapering to a fine point, with a gold cap."
         else:
             cname = BAUBLE_NAMES[i % len(BAUBLE_NAMES)]
             label = f"{cname[0].upper() + cname[1:]} glass bauble"
@@ -827,16 +832,25 @@ def crepes():
             seg(20, 10), "steel", Mb, WHITE)
     m.disc(0.095, seg(20, 10), "sw_wet", Mb @ T(0, 0, 0.07), C("f0dca0"), "liquid")
     m.tube([(0.0, 0.0, 0.06), (0.03, 0.02, 0.1), (0.09, 0.06, 0.2)], 0.005, 5, "steel", Mb, WHITE)
-    G.jar(m, T(0.34, 0.12, 0), "jar_orange", C("3a1a0a"), "sw_wet", h=0.1, r=0.04, lid=C("d8b048"))
+    # round 4: the jars, the shakers and the folded crêpes are items. The jars wear plain kraft labels (round 3
+    # reused the spice shelf's "Orangenschale" label, which a visitor reading the tag would find odd)
+    with item(s, "act_jar_0", (0.34, 0.12, 0.0), "Jar of nut-nougat cream",
+              "A big jar of nut-nougat cream (Nuss-Nougat-Creme), spread on with a palette knife: the most "
+              "asked-for crêpe on the board.") as jm:
+        G.jar(jm, T(0.34, 0.12, 0), "kraft", C("3a1a0a"), "sw_wet", h=0.1, r=0.04, lid=C("d8b048"), n_lo=6)
     m.lathe([(0.0, 0.0), (0.03, 0.0), (0.03, 0.09), (0.02, 0.12), (0.0, 0.125)], seg(12, 5), "sw_vgloss", T(0.44, 0.12, 0),
             C("f0f4f4"), "glass")
     m.lathe([(0.0, 0.002), (0.027, 0.002), (0.027, 0.06), (0.0, 0.06)], seg(10, 5), "wax", T(0.44, 0.12, 0), C("fbfaf6"))
     m.lathe([(0.0, 0.0), (0.12, 0.0), (0.13, 0.012), (0.0, 0.006)], seg(20, 10), "ceramic", T(0.35, -0.1, 0),
             C("f4f0e8"), "glaze")
-    for k in range(4 if not vlib.lite() else 2):
+    for k, (nm, dt) in enumerate((("Crêpe mit Zucker und Zimt", "sugar and cinnamon, 3 €"),
+                                  ("Crêpe mit Nuss-Nougat", "nut-nougat cream, 3,50 €"),
+                                  ("Crêpe mit Apfelmus", "warm apple purée, 3,50 €"),
+                                  ("Crêpe mit Zitrone und Zucker", "lemon juice and sugar, 3 €"))):
         tri = [(0.0, 0.0), (0.16, 0.0), (0.0, 0.16)]
-        m.extrude(tri, 0.006, T(0.3 + k * 0.012, -0.16 + k * 0.01, 0.012 + k * 0.006, rz=0.6 + k * 0.2), "crepe",
-                  "crepe", WHITE)
+        at = (0.3 + k * 0.012, -0.16 + k * 0.01, 0.012 + k * 0.006)
+        with item(s, f"act_crepe_{k}", at, nm, f"A thin buttery crêpe folded in quarters, with {dt}.") as cm:
+            cm.extrude(tri, 0.006, T(*at, rz=0.6 + k * 0.2), "crepe", "crepe", WHITE)
     # paper cones for crêpes to go, standing in a wire rack
     for k in range(5 if not vlib.lite() else 2):
         m.lathe([(0.004, 0.0), (0.04, 0.17)], seg(10, 5), "paper", T(0.72 + k * 0.06, 0.12, 0), C("f4f0e8"))
@@ -849,7 +863,9 @@ def crepes():
         pts = [(-0.08, 0.0, 0.045), (-0.03, 0.02, 0.03), (0.03, 0.02, 0.03), (0.08, 0.0, 0.05)]
         m.tube(pts, 0.017, seg(6, 4), "sw_satin", Mb @ T(0, 0, k * 0.012, rz=a), C("e8c83a"),
                radii=[0.008, 0.017, 0.017, 0.007])
-    G.jar(m, T(0.53, 0.14, 0), "jar_orange", C("d8b060"), "sw_wet", h=0.09, r=0.035, lid=C("b0282a"))
+    with item(s, "act_jar_1", (0.53, 0.14, 0.0), "Jar of apple purée",
+              "Homemade apple purée (Apfelmus) for the apple crêpes, a little cinnamon in it.") as jm:
+        G.jar(jm, T(0.53, 0.14, 0), "kraft", C("d8b060"), "sw_wet", h=0.09, r=0.035, lid=C("b0282a"), n_lo=6)
     for k in range(6 if not vlib.lite() else 2):
         m.lathe([(0.0, k * 0.006), (0.1, k * 0.006), (0.11, k * 0.006 + 0.01)], seg(16, 8), "ceramic",
                 T(0.98, -0.08, 0), C("f4f0e8"), "glaze")
@@ -863,12 +879,15 @@ def crepes():
     # paper napkins
     G.board(m, T(0.05, -0.165, 0, rz=0.04), 0.2, 0.1, 0.015, C("c49a6c"))
     for k, (x, col, cap) in enumerate(((-0.01, "f8f6f0", "c8c8c8"), (0.035, "8a4a22", "c8c8c8"))):
-        m.lathe([(0.0, 0.015), (0.02, 0.015), (0.021, 0.08), (0.0, 0.08)], seg(10, 6), "sw_vgloss",
-                T(x, -0.16, 0), C("f0f4f4"), "glass")
-        m.lathe([(0.0, 0.017), (0.019, 0.017), (0.019, 0.06), (0.0, 0.06)], seg(10, 6), "sw_matte", T(x, -0.16, 0),
-                C(col))
-        m.lathe([(0.021, 0.08), (0.021, 0.095), (0.012, 0.105), (0.0, 0.107)], seg(10, 6), "steel", T(x, -0.16, 0),
-                C(cap))
+        nm, dt = (("Sugar shaker", "A glass shaker of fine sugar with a steel cap, for dusting the crêpes."),
+                  ("Cinnamon shaker", "A glass shaker of ground cinnamon with a steel cap."))[k]
+        with item(s, f"act_shaker_{k}", (x, -0.16, 0.015), nm, dt) as sm:
+            sm.lathe([(0.0, 0.015), (0.02, 0.015), (0.021, 0.08), (0.0, 0.08)], seg(10, 6), "sw_vgloss",
+                     T(x, -0.16, 0), C("f0f4f4"), "glass")
+            sm.lathe([(0.0, 0.017), (0.019, 0.017), (0.019, 0.06), (0.0, 0.06)], seg(10, 6), "sw_matte",
+                     T(x, -0.16, 0), C(col))
+            sm.lathe([(0.021, 0.08), (0.021, 0.095), (0.012, 0.105), (0.0, 0.107)], seg(10, 6), "steel",
+                     T(x, -0.16, 0), C(cap))
     for k in range(2):
         # lemon half lying cut face up on the board: a peel dome and a pale flesh disc
         Ml = T(0.1 + k * 0.05, -0.172 + k * 0.012, 0.015)
@@ -922,10 +941,15 @@ def maroni():
         a, rr = rng.uniform(0, TWO_PI), 0.1 * math.sqrt(rng.random())
         chestnut(m, T(0.05 + rr * math.cos(a), rr * math.sin(a), 0.02 + (0.1 - rr) * 0.3,
                       rx=rng.uniform(-0.8, 0.8), rz=rng.uniform(0, 6)), 0.016, jit(WHITE, 0.1))
+    # round 4: the four standing bags are items
     for k in range(4):
-        Mb = T(0.38 + k * 0.1, 0.08 - (k % 2) * 0.04, 0, rz=rng.uniform(-0.2, 0.2))
-        m.box((0.08, 0.05, 0.15), Mb @ T(0, 0, 0.075), "kraft_maroni", WHITE, faces={"ny": "kraft_maroni"})
-        m.box((0.082, 0.052, 0.03), Mb @ T(0, 0, 0.16, rx=0.3), "kraft", WHITE)
+        x, y = 0.38 + k * 0.1, 0.08 - (k % 2) * 0.04
+        Mb = T(x, y, 0, rz=irng("mb", k).uniform(-0.2, 0.2))
+        with item(s, f"act_bag_{k}", (x, y, 0.0), "Bag of heiße Maroni",
+                  "A kraft bag printed “Heiße Maroni”: sweet chestnuts roasted over charcoal until the shells "
+                  "split, about 200 g for 4 €. Peel them while they are hot.") as bm:
+            bm.box((0.08, 0.05, 0.15), Mb @ T(0, 0, 0.075), "kraft_maroni", WHITE, faces={"ny": "kraft_maroni"})
+            bm.box((0.082, 0.052, 0.03), Mb @ T(0, 0, 0.16, rx=0.3), "kraft", WHITE)
     m.lathe([(0.0, 0.0), (0.05, 0.0), (0.055, 0.04), (0.0, 0.045)], 12, "steel", T(0.8, -0.1, 0, rz=0.9), WHITE)
     m.cyl(0.008, 0.008, 0.12, 6, vlib.RW("wood"), T(0.84, -0.14, 0.03, ry=math.pi / 2 - 0.2, rz=-0.6), C("5a3622"))
     # filled bags lying in a heap in front of the ready bags, rolled shut
@@ -945,6 +969,11 @@ def maroni():
     # the middle of the counter: a red-enamelled shop scale with a brass pan of chestnuts, a wooden stand of
     # filled kraft cones, and a stack of flat folded bags beside the bowl
     Mw = T(-0.27, 0.13, 0, rz=0.08)
+    sc = s.node("act_scale_0", (-0.27, 0.13, 0.0))
+    s.item("act_scale_0", "Shop scale", "deco", pivot="base",
+           detail="An old red-enamelled shop scale with a brass pan: the chestnuts are sold by weight.")
+    m, m_set = sc, m
+    Mw = T(0, 0, 0, rz=0.08)
     m.box((0.16, 0.11, 0.05), Mw @ T(0, 0, 0.025), "sw_satin", C("8a1c18"), skip=("nz",))
     m.box((0.12, 0.07, 0.03), Mw @ T(0, 0.01, 0.06), "sw_satin", C("8a1c18"))
     m.disc(0.032, seg(14, 8), "sw_satin", Mw @ T(0, -0.0565, 0.034, rx=math.pi / 2), C("f2ecdc"))
@@ -956,6 +985,7 @@ def maroni():
         a, rr = drng.uniform(0, TWO_PI), 0.05 * math.sqrt(drng.random())
         chestnut(m, Mw @ T(rr * math.cos(a), 0.01 + rr * math.sin(a), 0.099, rx=drng.uniform(-0.5, 0.5),
                            rz=drng.uniform(0, 6)), 0.016, jit(WHITE, 0.1))
+    m = m_set
     Mc = T(-0.3, -0.13, 0, rz=-0.05)
     m.box((0.24, 0.07, 0.045), Mc @ T(0, 0, 0.0225), vlib.RW("wood"), C("9a6a40"), skip=("nz",))
     for k in range(4 if not vlib.lite() else 2):
@@ -982,26 +1012,27 @@ def maroni():
 
 
 # ------------------------------------------------------------------ Kartoffelpuffer
-def pancake(m, M, r):
+def pancake(m, M, r, rand=None, n=None):
     """A Kartoffelpuffer: thick and bumpy in the middle, thinning to a ragged, lacy edge where strands of
     potato stick out (round 3; round 2's extruded discs read as tarts). The texture is mapped flat across it,
     so the golden middle and the crisp dark-brown rim of the puffer region land where they belong."""
     from mathutils import noise as mnoise
-    n = seg(18, 8)
+    rng_ = rand or rng                    # an item's own generator keeps its outline the same in lite
+    n = n or seg(18, 8)
     reg = vlib.R("puffer")
-    seed = rng.uniform(0, 100)
+    seed = rng_.uniform(0, 100)
     outer = []
     for j in range(n):
         a = TWO_PI * j / n
         k = 1 + 0.1 * mnoise.noise(Vector((math.cos(a) * 1.7, math.sin(a) * 1.7, seed)))
-        if rng.random() < 0.3:
-            k += rng.uniform(0.08, 0.2)               # a strand of potato sticking out
-        outer.append((r * k * math.cos(a), r * k * math.sin(a), 0.0015 + rng.uniform(0, 0.0015)))
+        if rng_.random() < 0.3:
+            k += rng_.uniform(0.08, 0.2)              # a strand of potato sticking out
+        outer.append((r * k * math.cos(a), r * k * math.sin(a), 0.0015 + rng_.uniform(0, 0.0015)))
     rings = [outer]
     if not vlib.lite():
-        rings.insert(0, [(r * 0.62 * math.cos(TWO_PI * j / n) * (1 + rng.uniform(-0.05, 0.05)),
-                          r * 0.62 * math.sin(TWO_PI * j / n) * (1 + rng.uniform(-0.05, 0.05)),
-                          0.0062 + rng.uniform(-0.0012, 0.0012)) for j in range(n)])
+        rings.insert(0, [(r * 0.62 * math.cos(TWO_PI * j / n) * (1 + rng_.uniform(-0.05, 0.05)),
+                          r * 0.62 * math.sin(TWO_PI * j / n) * (1 + rng_.uniform(-0.05, 0.05)),
+                          0.0062 + rng_.uniform(-0.0012, 0.0012)) for j in range(n)])
     verts = [(0.0, 0.0, 0.0085)] + [v for ring in rings for v in ring] + [(0.0, 0.0, 0.0)]
     uv = lambda v: reg.uv(0.5 + 0.5 * v[0] / (r * 1.25), 0.5 + 0.5 * v[1] / (r * 1.25))
     faces = []
@@ -1034,9 +1065,14 @@ def puffer():
     pancake(m, Mp @ T(0, 0, 0.082), 0.042)
     # a steel tray of finished Puffer, applesauce bowl, batter bowl with ladle, paper plates
     m.box((0.36, 0.26, 0.012), T(-0.1, 0.02, 0.006), "steel", WHITE)
-    for k in range(9 if not vlib.lite() else 5):
-        pancake(m, T(-0.2 + (k % 3) * 0.1, -0.07 + (k // 3) * 0.09, 0.012 + (0.009 if k == 4 else 0),
-                     rz=rng.uniform(0, 6)), 0.045)
+    # round 4: each finished Puffer on the tray is an item (the same nine in lite, 14 sides in both)
+    for k in range(9):
+        g = irng("pf", k)
+        at = (-0.2 + (k % 3) * 0.1, -0.07 + (k // 3) * 0.09, 0.012 + (0.009 if k == 4 else 0))
+        with item(s, f"act_puffer_{k}", at, "Kartoffelpuffer",
+                  "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge "
+                  "goes crisp. Three with applesauce for 5 €.") as pm:
+            pancake(pm, T(*at, rz=g.uniform(0, 6)), 0.045, rand=g, n=14)
     Ma = T(0.28, 0.05, 0)
     m.lathe([(0.0, 0.0), (0.05, 0.0), (0.09, 0.05), (0.095, 0.07), (0.088, 0.07), (0.0, 0.01)], seg(18, 10), "ceramic",
             Ma, C("f4f0e8"), "glaze")
@@ -1059,18 +1095,24 @@ def puffer():
     m.lathe([(0.0, 0.0), (0.02, 0.0), (0.02, 0.07), (0.012, 0.085), (0.0, 0.088)], seg(10, 5), "sw_vgloss",
             T(0.1, 0.17, 0), C("f0f4f4"), "glass")
     for k in range(3):
-        G.jar(m, T(0.2 + k * 0.08, 0.2, 0), "jar_orange", C("d8b060"), "sw_wet", h=0.09, r=0.034, lid=C("b0282a"))
+        with item(s, f"act_jar_{2 + k}", (0.2 + k * 0.08, 0.2, 0.0), "Jar of applesauce",
+                  "A jar of homemade applesauce (Apfelmus) to take home, 3 €.") as jm:
+            G.jar(jm, T(0.2 + k * 0.08, 0.2, 0), "kraft", C("d8b060"), "sw_wet", h=0.09, r=0.034, lid=C("b0282a"),
+                  n_lo=6)
     # front middle: a served paper plate of three Puffer with a dollop of applesauce, a wooden fork, and a
     # spatula resting beside the pan
     Ms = T(0.52, -0.125, 0)
-    m.lathe([(0.0, 0.0), (0.075, 0.0), (0.09, 0.012), (0.0, 0.004)], seg(16, 8), "paper", Ms, C("f6f2ea"))
-    for k in range(3):
-        a = TWO_PI * k / 3 + 0.4
-        pancake(m, Ms @ T(0.03 * math.cos(a), 0.03 * math.sin(a), 0.005 + k * 0.004, rz=drng.uniform(0, 6),
-                          rx=drng.uniform(-0.06, 0.06)), 0.04)
-    m.lathe([(0.0, 0.0), (0.03, 0.0), (0.024, 0.012), (0.0, 0.018)], seg(10, 6), "sw_satin",
-            Ms @ T(-0.035, -0.03, 0.02), C("d8b060"), "liquid")
-    m.box((0.1, 0.008, 0.002), Ms @ T(0.02, -0.06, 0.016, rz=0.3), vlib.RW("wood"), C("d8b890"))
+    with item(s, "act_plate_0", (0.52, -0.125, 0.0), "Three Kartoffelpuffer with applesauce",
+              "Three Kartoffelpuffer on a paper plate with a spoonful of applesauce and a wooden fork, 5 €.") as m_p:
+        m_p.lathe([(0.0, 0.0), (0.075, 0.0), (0.09, 0.012), (0.0, 0.004)], seg(16, 8), "paper", Ms, C("f6f2ea"))
+        for k in range(3):
+            a = TWO_PI * k / 3 + 0.4
+            g = irng("pf_plate", k)
+            pancake(m_p, Ms @ T(0.03 * math.cos(a), 0.03 * math.sin(a), 0.005 + k * 0.004, rz=g.uniform(0, 6),
+                                rx=g.uniform(-0.06, 0.06)), 0.04, rand=g, n=14)
+        m_p.lathe([(0.0, 0.0), (0.03, 0.0), (0.024, 0.012), (0.0, 0.018)], seg(10, 6), "sw_satin",
+                  Ms @ T(-0.035, -0.03, 0.02), C("d8b060"), "liquid")
+        m_p.box((0.1, 0.008, 0.002), Ms @ T(0.02, -0.06, 0.016, rz=0.3), vlib.RW("wood"), C("d8b890"))
     m.box((0.09, 0.06, 0.003), T(-0.37, -0.15, 0.012, rz=0.5, ry=0.1), "steel", WHITE)
     m.box((0.14, 0.02, 0.016), T(-0.29, -0.185, 0.008, rz=0.5), vlib.RW("wood"), C("3a2414"))
     for k, (x, y) in enumerate(((-0.1, -0.2), (0.28, -0.12), (0.85, -0.2))):

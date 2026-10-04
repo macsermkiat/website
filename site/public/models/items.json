@@ -1605,6 +1605,883 @@
     0.162
    ]
   },
+  "act_crepe_0": {
+   "set": "prop_deco_crepes",
+   "stall": "deco-crepes",
+   "name": "Crêpe mit Zucker und Zimt",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A thin buttery crêpe folded in quarters, with sugar and cinnamon, 3 €."
+  },
+  "act_crepe_1": {
+   "set": "prop_deco_crepes",
+   "stall": "deco-crepes",
+   "name": "Crêpe mit Nuss-Nougat",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A thin buttery crêpe folded in quarters, with nut-nougat cream, 3,50 €."
+  },
+  "act_crepe_2": {
+   "set": "prop_deco_crepes",
+   "stall": "deco-crepes",
+   "name": "Crêpe mit Apfelmus",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A thin buttery crêpe folded in quarters, with warm apple purée, 3,50 €."
+  },
+  "act_crepe_3": {
+   "set": "prop_deco_crepes",
+   "stall": "deco-crepes",
+   "name": "Crêpe mit Zitrone und Zucker",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A thin buttery crêpe folded in quarters, with lemon juice and sugar, 3 €."
+  },
+  "act_jar_0": {
+   "set": "prop_deco_crepes",
+   "stall": "deco-crepes",
+   "name": "Jar of nut-nougat cream",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A big jar of nut-nougat cream (Nuss-Nougat-Creme), spread on with a palette knife: the most asked-for crêpe on the board."
+  },
+  "act_jar_1": {
+   "set": "prop_deco_crepes",
+   "stall": "deco-crepes",
+   "name": "Jar of apple purée",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Homemade apple purée (Apfelmus) for the apple crêpes, a little cinnamon in it."
+  },
+  "act_shaker_0": {
+   "set": "prop_deco_crepes",
+   "stall": "deco-crepes",
+   "name": "Sugar shaker",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A glass shaker of fine sugar with a steel cap, for dusting the crêpes."
+  },
+  "act_shaker_1": {
+   "set": "prop_deco_crepes",
+   "stall": "deco-crepes",
+   "name": "Cinnamon shaker",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A glass shaker of ground cinnamon with a steel cap."
+  },
+  "act_cheese_0": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Allgäuer Bergkäse",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Allgäuer Bergkäse, a whole 44 cm wheel aged twelve months, opened at the front: nutty, a little crystalline. Cut to order, 100 g for 3,50 €.",
+   "cut": true
+  },
+  "act_cheese_1": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Butterkäse",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Butterkäse: mild, soft and creamy, the cheese every child at the counter asks to taste."
+  },
+  "act_cheese_10": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Mini Gouda in red wax",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A round mini Gouda in red wax, about 400 g: a cheese to take home as a present."
+  },
+  "act_cheese_11": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Räucherkäse",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A small smoked cheese (Räucherkäse) with a brown, beech-smoked rind."
+  },
+  "act_cheese_12": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Mini Gouda in red wax",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A round mini Gouda in red wax, about 400 g: a cheese to take home as a present."
+  },
+  "act_cheese_2": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Tilsiter",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Tilsiter: a washed golden rind and a sharp, spicy paste."
+  },
+  "act_cheese_3": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Edamer in red wax",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A small Edamer sealed in red wax, mild and firm."
+  },
+  "act_cheese_4": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Weißlacker",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Weißlacker: an Allgäu beer cheese, soft, salty and strong."
+  },
+  "act_cheese_5": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Romadur",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Romadur: a washed-rind soft cheese, milder than it smells."
+  },
+  "act_cheese_6": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Limburger",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Limburger: a ripe washed-rind cheese with a big smell and a mild heart."
+  },
+  "act_cheese_7": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Räucherkäse",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A small smoked cheese (Räucherkäse) with a brown, beech-smoked rind."
+  },
+  "act_cheese_8": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Mini Gouda in red wax",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A round mini Gouda in red wax, about 400 g: a cheese to take home as a present."
+  },
+  "act_cheese_9": {
+   "set": "prop_deco_kaese",
+   "stall": "deco-kaese",
+   "name": "Räucherkäse",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A small smoked cheese (Räucherkäse) with a brown, beech-smoked rind."
+  },
+  "act_candle_0": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "Royal blue pillar candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Royal blue pillar candle, 12 cm tall, 6 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
+   "colour": "royal blue",
+   "lit": false
+  },
+  "act_candle_1": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "Royal blue pillar candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Royal blue pillar candle, 17 cm tall, 6 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
+   "colour": "royal blue",
+   "lit": false
+  },
+  "act_candle_10": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "Fir-green pillar candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Fir-green pillar candle, 11 cm tall, 8 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
+   "colour": "fir-green",
+   "lit": false
+  },
+  "act_candle_11": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "Ivory pillar candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Ivory pillar candle, 20 cm tall, 5 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
+   "colour": "ivory",
+   "lit": false
+  },
+  "act_candle_2": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "White block candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "White block candle, 7 cm tall, 8 cm across. A short, wide block for a windowsill; burns for about 40 hours.",
+   "colour": "white",
+   "lit": false
+  },
+  "act_candle_3": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "Plum pillar candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Plum pillar candle, 14 cm tall, 5 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
+   "colour": "plum",
+   "lit": false
+  },
+  "act_candle_4": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "Royal blue pillar candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Royal blue pillar candle, 17 cm tall, 6 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat. Lit, to show the flame.",
+   "colour": "royal blue",
+   "lit": true
+  },
+  "act_candle_5": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "Sky-blue pillar candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Sky-blue pillar candle, 20 cm tall, 7 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
+   "colour": "sky-blue",
+   "lit": false
+  },
+  "act_candle_6": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "Fir-green pillar candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Fir-green pillar candle, 21 cm tall, 7 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
+   "colour": "fir-green",
+   "lit": false
+  },
+  "act_candle_7": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "White pillar candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "White pillar candle, 13 cm tall, 8 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
+   "colour": "white",
+   "lit": false
+  },
+  "act_candle_8": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "Fir-green block candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Fir-green block candle, 6 cm tall, 8 cm across. A short, wide block for a windowsill; burns for about 40 hours.",
+   "colour": "fir-green",
+   "lit": false
+  },
+  "act_candle_9": {
+   "set": "prop_deco_kerzen",
+   "stall": "deco-kerzen",
+   "name": "Sky-blue pillar candle",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Sky-blue pillar candle, 19 cm tall, 9 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
+   "colour": "sky-blue",
+   "lit": false
+  },
+  "act_heart_0": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Ich liebe Dich”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Ich liebe Dich” (I love you), piped in white icing inside a scalloped border, with sugar flowers. About 24 cm, on a ribbon to hang around your neck.",
+   "icing": "Ich liebe Dich",
+   "size_cm": 24
+  },
+  "act_heart_1": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Frohe Weihnachten”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 20 cm, on a ribbon to hang around your neck.",
+   "icing": "Frohe Weihnachten",
+   "size_cm": 20
+  },
+  "act_heart_10": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Frohe Weihnachten”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 12 cm, on a ribbon to hang around your neck.",
+   "icing": "Frohe Weihnachten",
+   "size_cm": 12
+  },
+  "act_heart_11": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Für Dich”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Für Dich” (for you), white icing in a pink scalloped border, with sugar roses. About 12 cm, on a ribbon to hang around your neck.",
+   "icing": "Für Dich",
+   "size_cm": 12
+  },
+  "act_heart_12": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Schatz”",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "“Schatz” (sweetheart), white icing in a blue piped border. About 17 cm, on a ribbon to hang around your neck.",
+   "icing": "Schatz",
+   "size_cm": 17
+  },
+  "act_heart_13": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Prost!”",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "“Prost!” (cheers!), in yellow icing: a heart for the Glühwein crowd. About 15 cm, on a ribbon to hang around your neck.",
+   "icing": "Prost!",
+   "size_cm": 15
+  },
+  "act_heart_14": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Nachtmarkt”",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "“Nachtmarkt” (night market), in white icing in a pink border: a souvenir of the evening. About 17 cm, on a ribbon to hang around your neck.",
+   "icing": "Nachtmarkt",
+   "size_cm": 17
+  },
+  "act_heart_15": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Ich liebe Dich”",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "“Ich liebe Dich” (I love you), piped in white icing inside a scalloped border, with sugar flowers. About 15 cm, on a ribbon to hang around your neck.",
+   "icing": "Ich liebe Dich",
+   "size_cm": 15
+  },
+  "act_heart_16": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Frohe Weihnachten”",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 17 cm, on a ribbon to hang around your neck.",
+   "icing": "Frohe Weihnachten",
+   "size_cm": 17
+  },
+  "act_heart_2": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Für Dich”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Für Dich” (for you), white icing in a pink scalloped border, with sugar roses. About 20 cm, on a ribbon to hang around your neck.",
+   "icing": "Für Dich",
+   "size_cm": 20
+  },
+  "act_heart_3": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Schatz”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Schatz” (sweetheart), white icing in a blue piped border. About 15 cm, on a ribbon to hang around your neck.",
+   "icing": "Schatz",
+   "size_cm": 15
+  },
+  "act_heart_4": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Prost!”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Prost!” (cheers!), in yellow icing: a heart for the Glühwein crowd. About 12 cm, on a ribbon to hang around your neck.",
+   "icing": "Prost!",
+   "size_cm": 12
+  },
+  "act_heart_5": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Nachtmarkt”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Nachtmarkt” (night market), in white icing in a pink border: a souvenir of the evening. About 15 cm, on a ribbon to hang around your neck.",
+   "icing": "Nachtmarkt",
+   "size_cm": 15
+  },
+  "act_heart_6": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Ich liebe Dich”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Ich liebe Dich” (I love you), piped in white icing inside a scalloped border, with sugar flowers. About 15 cm, on a ribbon to hang around your neck.",
+   "icing": "Ich liebe Dich",
+   "size_cm": 15
+  },
+  "act_heart_7": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Frohe Weihnachten”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 17 cm, on a ribbon to hang around your neck.",
+   "icing": "Frohe Weihnachten",
+   "size_cm": 17
+  },
+  "act_heart_8": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Für Dich”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Für Dich” (for you), white icing in a pink scalloped border, with sugar roses. About 17 cm, on a ribbon to hang around your neck.",
+   "icing": "Für Dich",
+   "size_cm": 17
+  },
+  "act_heart_9": {
+   "set": "prop_deco_lebkuchen",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchen heart “Schatz”",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "“Schatz” (sweetheart), white icing in a blue piped border. About 14 cm, on a ribbon to hang around your neck.",
+   "icing": "Schatz",
+   "size_cm": 14
+  },
+  "act_cone_0": {
+   "set": "prop_deco_mandeln",
+   "stall": "deco-mandeln",
+   "name": "Paper cone of gebrannte Mandeln",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Gebrannte Mandeln: almonds turned in bubbling sugar, vanilla and cinnamon until they crackle, still warm. 100 g in a paper cone, 3,50 €.",
+   "grams": 100
+  },
+  "act_cone_1": {
+   "set": "prop_deco_mandeln",
+   "stall": "deco-mandeln",
+   "name": "Paper cone of Zimtmandeln",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Zimtmandeln: the same almonds with an extra coat of cinnamon sugar. 100 g in a paper cone, 3,50 €.",
+   "grams": 100
+  },
+  "act_cone_2": {
+   "set": "prop_deco_mandeln",
+   "stall": "deco-mandeln",
+   "name": "Paper cone of gebrannte Cashews",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Gebrannte Cashews: cashews in the same crackling sugar coat. 100 g in a paper cone, 3,50 €.",
+   "grams": 100
+  },
+  "act_cone_3": {
+   "set": "prop_deco_mandeln",
+   "stall": "deco-mandeln",
+   "name": "Paper cone of Schokomandeln",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Schokomandeln: roasted almonds dipped in dark chocolate. 100 g in a paper cone, 3,50 €.",
+   "grams": 100
+  },
+  "act_cone_4": {
+   "set": "prop_deco_mandeln",
+   "stall": "deco-mandeln",
+   "name": "Paper cone of gebrannte Erdnüsse",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Gebrannte Erdnüsse: peanuts in a crackling sugar coat, the cheapest bag on the counter. 100 g in a paper cone, 3,50 €.",
+   "grams": 100
+  },
+  "act_cone_5": {
+   "set": "prop_deco_mandeln",
+   "stall": "deco-mandeln",
+   "name": "Paper cone of gebrannte Mandeln",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Gebrannte Mandeln: almonds turned in bubbling sugar, vanilla and cinnamon until they crackle, still warm. 200 g in a paper cone, 6 €.",
+   "grams": 200
+  },
+  "act_cone_6": {
+   "set": "prop_deco_mandeln",
+   "stall": "deco-mandeln",
+   "name": "Paper cone of Zimtmandeln",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Zimtmandeln: the same almonds with an extra coat of cinnamon sugar. 200 g in a paper cone, 6 €.",
+   "grams": 200
+  },
+  "act_cone_7": {
+   "set": "prop_deco_mandeln",
+   "stall": "deco-mandeln",
+   "name": "Paper cone of gebrannte Cashews",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Gebrannte Cashews: cashews in the same crackling sugar coat. 200 g in a paper cone, 6 €.",
+   "grams": 200
+  },
+  "act_cone_8": {
+   "set": "prop_deco_mandeln",
+   "stall": "deco-mandeln",
+   "name": "Paper cone of Schokomandeln",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Schokomandeln: roasted almonds dipped in dark chocolate. 200 g in a paper cone, 6 €.",
+   "grams": 200
+  },
+  "act_cone_9": {
+   "set": "prop_deco_mandeln",
+   "stall": "deco-mandeln",
+   "name": "Paper cone of gebrannte Erdnüsse",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Gebrannte Erdnüsse: peanuts in a crackling sugar coat, the cheapest bag on the counter. 200 g in a paper cone, 6 €.",
+   "grams": 200
+  },
+  "act_bag_0": {
+   "set": "prop_deco_maroni",
+   "stall": "deco-maroni",
+   "name": "Bag of heiße Maroni",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A kraft bag printed “Heiße Maroni”: sweet chestnuts roasted over charcoal until the shells split, about 200 g for 4 €. Peel them while they are hot."
+  },
+  "act_bag_1": {
+   "set": "prop_deco_maroni",
+   "stall": "deco-maroni",
+   "name": "Bag of heiße Maroni",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A kraft bag printed “Heiße Maroni”: sweet chestnuts roasted over charcoal until the shells split, about 200 g for 4 €. Peel them while they are hot."
+  },
+  "act_bag_2": {
+   "set": "prop_deco_maroni",
+   "stall": "deco-maroni",
+   "name": "Bag of heiße Maroni",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A kraft bag printed “Heiße Maroni”: sweet chestnuts roasted over charcoal until the shells split, about 200 g for 4 €. Peel them while they are hot."
+  },
+  "act_bag_3": {
+   "set": "prop_deco_maroni",
+   "stall": "deco-maroni",
+   "name": "Bag of heiße Maroni",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A kraft bag printed “Heiße Maroni”: sweet chestnuts roasted over charcoal until the shells split, about 200 g for 4 €. Peel them while they are hot."
+  },
+  "act_scale_0": {
+   "set": "prop_deco_maroni",
+   "stall": "deco-maroni",
+   "name": "Shop scale",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "An old red-enamelled shop scale with a brass pan: the chestnuts are sold by weight."
+  },
+  "act_jar_2": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Jar of applesauce",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A jar of homemade applesauce (Apfelmus) to take home, 3 €."
+  },
+  "act_jar_3": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Jar of applesauce",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A jar of homemade applesauce (Apfelmus) to take home, 3 €."
+  },
+  "act_jar_4": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Jar of applesauce",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A jar of homemade applesauce (Apfelmus) to take home, 3 €."
+  },
+  "act_plate_0": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Three Kartoffelpuffer with applesauce",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "Three Kartoffelpuffer on a paper plate with a spoonful of applesauce and a wooden fork, 5 €."
+  },
+  "act_puffer_0": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Kartoffelpuffer",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
+  },
+  "act_puffer_1": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Kartoffelpuffer",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
+  },
+  "act_puffer_2": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Kartoffelpuffer",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
+  },
+  "act_puffer_3": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Kartoffelpuffer",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
+  },
+  "act_puffer_4": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Kartoffelpuffer",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
+  },
+  "act_puffer_5": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Kartoffelpuffer",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
+  },
+  "act_puffer_6": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Kartoffelpuffer",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
+  },
+  "act_puffer_7": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Kartoffelpuffer",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
+  },
+  "act_puffer_8": {
+   "set": "prop_deco_puffer",
+   "stall": "deco-kartoffelpuffer",
+   "name": "Kartoffelpuffer",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
+  },
+  "act_bauble_0": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Deep red glass bauble",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A mouth-blown glass bauble, deep red, mirror-silvered inside, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
+  },
+  "act_bauble_1": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Glass icicle",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A blown-glass icicle, clear and twisted, with a gold cap."
+  },
+  "act_bauble_10": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Midnight blue glass bauble",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A mouth-blown glass bauble, midnight blue, mirror-silvered inside, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
+  },
+  "act_bauble_11": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Straw star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A straw star (Strohstern) of two crossed layers of split straw, bound with thread: the oldest tree ornament on the stall."
+  },
+  "act_bauble_12": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Deep red glass bauble",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A mouth-blown Lauscha glass bauble, deep red, lying on the counter where a customer put it down. 5 €."
+  },
+  "act_bauble_13": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Gold glass bauble",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A mouth-blown Lauscha glass bauble, gold, lying on the counter where a customer put it down. 5 €."
+  },
+  "act_bauble_14": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Midnight blue glass bauble",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A mouth-blown Lauscha glass bauble, midnight blue, lying on the counter where a customer put it down. 5 €."
+  },
+  "act_bauble_2": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Midnight blue glass bauble",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A mouth-blown glass bauble, midnight blue, satin matt, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
+  },
+  "act_bauble_3": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Straw star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A straw star (Strohstern) of two crossed layers of split straw, bound with thread: the oldest tree ornament on the stall."
+  },
+  "act_bauble_4": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Fir green glass bauble",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A mouth-blown glass bauble, fir green, mirror-silvered inside, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
+  },
+  "act_bauble_5": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Glass icicle",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A blown-glass icicle, clear and twisted, with a gold cap."
+  },
+  "act_bauble_6": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Silver glass bauble",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A mouth-blown glass bauble, silver, mirror-silvered inside, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
+  },
+  "act_bauble_7": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Straw star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A straw star (Strohstern) of two crossed layers of split straw, bound with thread: the oldest tree ornament on the stall."
+  },
+  "act_bauble_8": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Deep red glass bauble",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A mouth-blown glass bauble, deep red, satin matt, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
+  },
+  "act_bauble_9": {
+   "set": "prop_deco_schmuck",
+   "stall": "deco-schmuck",
+   "name": "Glass icicle",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
+   "detail": "A blown-glass icicle, clear and twisted, with a gold cap."
+  },
+  "act_nutcracker_0": {
+   "set": "prop_deco_spielzeug",
+   "stall": "deco-spielzeug",
+   "name": "Erzgebirge nutcracker",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A turned and painted nutcracker from the Erzgebirge: a king's guard in a red coat, 34 cm tall. Lift the lever at his back and he cracks a walnut."
+  },
+  "act_nutcracker_1": {
+   "set": "prop_deco_spielzeug",
+   "stall": "deco-spielzeug",
+   "name": "Erzgebirge nutcracker",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A turned and painted nutcracker from the Erzgebirge: a soldier in a blue coat and red shako, 29 cm tall. Lift the lever at his back and he cracks a walnut."
+  },
+  "act_nutcracker_2": {
+   "set": "prop_deco_spielzeug",
+   "stall": "deco-spielzeug",
+   "name": "Erzgebirge nutcracker",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A turned and painted nutcracker from the Erzgebirge: a forester in a green coat, 24 cm tall. Lift the lever at his back and he cracks a walnut."
+  },
+  "act_rockinghorse_0": {
+   "set": "prop_deco_spielzeug",
+   "stall": "deco-spielzeug",
+   "name": "Little rocking horse",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A little white rocking horse with a red saddle on curved rockers. Give it a push."
+  },
+  "act_top_0": {
+   "set": "prop_deco_spielzeug",
+   "stall": "deco-spielzeug",
+   "name": "Spinning top",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A turned wooden spinning top in red lacquer with a cream stripe."
+  },
+  "act_top_1": {
+   "set": "prop_deco_spielzeug",
+   "stall": "deco-spielzeug",
+   "name": "Spinning top",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A turned wooden spinning top in blue lacquer with a cream stripe."
+  },
+  "act_top_2": {
+   "set": "prop_deco_spielzeug",
+   "stall": "deco-spielzeug",
+   "name": "Spinning top",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A turned wooden spinning top in yellow lacquer with a cream stripe."
+  },
+  "act_train_0": {
+   "set": "prop_deco_spielzeug",
+   "stall": "deco-spielzeug",
+   "name": "Wooden toy train",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A painted wooden train: a red engine with a black boiler and two wagons loaded with blocks."
+  },
   "act_ladle": {
    "set": "prop_gluehwein_counter",
    "stall": "gluehwein",

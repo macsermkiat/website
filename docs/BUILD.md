@@ -68,6 +68,9 @@ Don't commit; the market owner commits and pushes.
   - `act_<name>`: a node that an action animates (for example `act_tap_0`, `act_pot_lid`, `act_book_12`, `act_grill`).
   - `rot_<name>`: a part that the engine spins (for example `rot_wheel` or `rot_platform`). Gondolas are `gondola_<n>` and horses are `horse_<n>`.
   - `snow_<n>`: snow caps that the engine shows only when snow is on.
+  - `write_<name>`: a flat rectangular mesh (a chalkboard face, a coaster face, a book page, a ticket, a sheet of music) where the engine draws text. Its UVs run 0–1 across the writing area, with +V up the text. Give it a plain surface material (chalk, card, paper) and keep it unlit by baked text.
+  - `cam_read_<name>`: an empty for the reading camera in front of `write_<name>`, with `cam_read_<name>_target` on the surface's centre. The writing area should fill most of a 16:9 frame from there.
+  - `path_<n>`: ordered empties along the lane that the guided-stroll camera follows between stops (architect, in `square.glb`). See docs/adr/0003-guided-stroll-navigation.md.
 - The standard counter top is 1.05 m high. The stall front opening sits between 1.05 m and 2.2 m.
 - A reading lamp or other small glow inside a stall that already has its two `light_` empties gets an emissive `bulb_warm` material, not another `light_`.
 - 2048 px atlases are fine in the desktop glb as long as the stall stays inside its file budget. Lite files use 512 px.

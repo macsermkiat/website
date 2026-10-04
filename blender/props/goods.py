@@ -165,9 +165,9 @@ def wine_glass(m, M, wine=None, glass_col=C("f2f6f4")):
         m.lathe(fill if not lite() else [fill[0], fill[3], fill[4]], n, "sw_wet", M, wine, "liquid")
 
 
-def jar(m, M, label, content_col, content_region="almonds", h=0.12, r=0.038, lid=C("b89a5a")):
+def jar(m, M, label, content_col, content_region="almonds", h=0.12, r=0.038, lid=C("b89a5a"), n_lo=5):
     M = M or Matrix()
-    n = seg(9, 5)
+    n = seg(9, n_lo)
     body = [(0.0, 0.0), (r - 0.004, 0.0), (r, 0.006), (r, h - 0.012), (r - 0.006, h - 0.004), (r - 0.006, h)]
     m.lathe(body if not lite() else [body[0], body[2], body[3], body[5]], n, "sw_vgloss", M, C("e8f0ec"), "glass")
     # contents fill most of the jar

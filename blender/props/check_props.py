@@ -157,6 +157,17 @@ def check_geometry(name, r):
         z = p.get("rest_min_z", p["local_min"][2])
         if BASE_PIVOT.match(node) and not (-0.004 <= z <= 0.004):
             fail(f"{name}: {node} pivot is not at its base (geometry starts at z {z:+.3f})")
+        # round 4: deco goods. "base" items rest on their origin; "hang" items have it at the ribbon's knot on
+        # the rod (nothing but the knot above it, everything else below)
+        it = r.get("items", {}).get(node, {})
+        if it.get("kind") == "deco":
+            pv = str(it.get("pivot", "base"))
+            if pv == "base" and not (-0.004 <= z <= 0.004):
+                fail(f"{name}: {node} pivot is not at its base (geometry starts at z {z:+.3f})")
+            if pv.startswith("hang") and not (0.0 <= p["local_max"][2] <= 0.012 and p["local_min"][2] < -0.05):
+                fail(f"{name}: {node} does not hang from its origin (z {p['local_min'][2]:+.3f}..{p['local_max'][2]:+.3f})")
+            if not it.get("detail"):
+                fail(f"{name}: {node} has no detail line for the engine's tag")
 
 
 def act_nodes(js):
