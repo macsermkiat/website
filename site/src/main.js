@@ -549,6 +549,8 @@ async function boot() {
     /** Resolves when the after-first-frame work is done (LOD figures, deferred models). */
     settled: () => Promise.all([lodReady, deferredReady]).then(([lod, deferred]) => ({ lod, deferred })),
     featuredBooks: () => actions.featuredBooks.map((n) => n.name),
+    /** The books "Pick a book for me" offers first, as [title, author] (tests compare a clicked spine with them). */
+    bookPicks: () => bookPicks().map((b) => [b[0], b[1]]),
     /** The items (tests): click one by node name as a visitor would, read an item's state. */
     items: () => itemCounts(),
     clickItem(name, { focus = false } = {}) { const it = actions.items.all().find((i) => i.node.name === name); if (!it) throw new Error(`no item ${name}`); picking.setEnabled(true); if (it.placeId && market.places[it.placeId] && panel.current !== it.placeId) openPlace(it.placeId); const r = actions.items.click(it); if (focus) focusItem(it); return r; },

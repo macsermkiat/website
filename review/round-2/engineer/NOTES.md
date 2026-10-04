@@ -244,6 +244,13 @@ One asset is over a budget:
 - **Writer.** A `note` field for each book and bottle in items.json would replace the grape-based tasting
   notes and the generic book lines.
 - **Lighting designer.** The Bücherstand has one light marker too many (see the contract notes).
+- **Carpenter.** The cabinet books in `stall_buecher.glb` are still one merged mesh (`buecher_books`), so they cannot
+  be clicked (Codex round 2, point 5). Export each one as an `act_book_*` pivot with an items.json entry (`kind: book`,
+  `title`, `author`), as the vendor's counter set does. The engine reads `act_` nodes from the stall's own glb as
+  well as from its props sets, so they become clickable with no engine change.
+- **Organizer.** The figures can now ship without their own clips: the engine plays `people_anims.glb` on every
+  figure. Dropping the repeated clips from the 24 figure files saves their bytes (Codex round 2, point 9).
+- **Ride builder / organizer.** The bandstand with its instruments and players is 66.8k triangles against 50k.
 
 ## Still open
 

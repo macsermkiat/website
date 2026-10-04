@@ -176,9 +176,10 @@ try {
     await shot(page, 'panel_gluehwein.jpg');
     await go(() => { window.__market.openPlace('books'); window.__market.act('books', 'book'); });
     await frames(page, 3);
-    // Mac's five spines are in clear view: nobody visible stands on the line from the camera to any of them
+    // Mac's picks on the shelf (the front-matter books that are on his own shelf) are in clear view: nobody visible
+    // stands on the line from the camera to any of them
     const five = await page.evaluate(() => window.__market.featuredBooks().map((n) => ({ n, who: window.__market.blockers(n) })));
-    check('Bücherstand view: all five of Mac\'s spines in clear view (the bookseller stands aside)', five.length === 5 && five.every((b) => !b.who.length), JSON.stringify(five));
+    check('Bücherstand view: every one of Mac\'s featured spines in clear view (the bookseller stands aside)', five.length >= 1 && five.every((b) => !b.who.length), JSON.stringify(five));
     const out = await page.evaluate(() => window.__market.openedBook());
     check('the chosen book is open in front of the counter when the picture is taken', out?.name === five[0]?.n && out.state === 'open', `${JSON.stringify(out)} vs ${five[0]?.n}`);
     await shot(page, 'panel_buecherstand.jpg');
@@ -261,11 +262,13 @@ try {
     // Bücherstand: a clicked book opens at the counter, showing its own title
     await M(() => { window.__market.openPlace('books'); window.__market.advance(2.5); });
     const five = await M(() => window.__market.featuredBooks());
-    await M((n) => { window.__market.clickItem(n); window.__market.advance(1.55); }, five[1]);
+    const picks = await M(() => window.__market.bookPicks());
+    const k = five.length > 1 ? 1 : 0; // the second of Mac's spines when there are two or more
+    await M((n) => { window.__market.clickItem(n); window.__market.advance(1.55); }, five[k]);
     const mid = await M(() => window.__market.openedBook());
-    check('Bücherstand: the clicked book is opening, and it is that book', mid?.name === five[1] && /Gödel/.test(mid.title), JSON.stringify(mid));
+    check('Bücherstand: the clicked book is opening, and it is that book', !!five[k] && mid?.name === five[k] && mid.title === picks[k]?.[0], `${JSON.stringify(mid)} vs ${JSON.stringify(picks[k])}`);
     await M(() => window.__market.advance(0.8));
-    check('Bücherstand: the note gives its title and author', /Gödel/.test(await note(page)) && /Hofstadter/.test(await note(page)), await note(page));
+    { const n = await note(page); check('Bücherstand: the note gives its title and author', !!picks[k] && n.includes(picks[k][0]) && n.includes(picks[k][1]), n); }
     await pose('item_books_open.jpg', () => {});
     // a spine that is one of the books on Mac's own shelf (content/bookshelf.json) shows the writer's one-line summary
     // (a title the writer has already summarised in content/books/, when there is one)
@@ -341,26 +344,28 @@ try {
     check('pull a book', /Rovelli|Hofstadter|Feynman|Seth|Pearl|·/.test(await note(page)), await note(page));
     // each of Mac's books sits on its own spine: aim at the second one and click it in 3D
     const spines = await page.evaluate(() => window.__market.featuredBooks());
-    check('five named spines for the five books', spines.length === 5, spines.join(' '));
+    const pickList = await page.evaluate(() => window.__market.bookPicks());
+    check('a named spine for each of Mac\'s picks', spines.length >= 1 && spines.length === pickList.length, `${spines.join(' ')} for ${pickList.map((b) => b[0]).join(', ')}`);
     await page.evaluate(() => window.__market.advance(4)); // finish the flight to the bookshop
     await frames(page, 2);
     await page.evaluate(() => window.__market.resetView());
     await page.click('#places button[data-place="books"]');
     await page.evaluate(() => window.__market.advance(4));
     await frames(page, 2);
-    const aim = await aimAt(page, spines[1]);
+    const si = spines.length > 1 ? 1 : 0, want = pickList[si] || ['', ''];
+    const aim = await aimAt(page, spines[si]);
     if (aim) {
       await page.mouse.move(aim.x, aim.y);
       await frames(page, 3);
-      check('hovering a book lifts it and names it', (await page.evaluate(() => window.__market.hoveredItem)) === spines[1] && /Gödel/.test(await page.textContent('.tip')), await page.textContent('.tip'));
+      check('hovering a book lifts it and names it', (await page.evaluate(() => window.__market.hoveredItem)) === spines[si] && (await page.textContent('.tip')).includes(want[0]), await page.textContent('.tip'));
       await page.mouse.click(aim.x, aim.y);
       await page.evaluate(() => window.__market.advance(3));
       const ob = await page.evaluate(() => window.__market.openedBook());
-      check('clicking a named spine opens that book, showing its own title', ob?.name === spines[1] && /Gödel/.test(ob.title) && /Hofstadter|Gödel/.test(await note(page)), `${JSON.stringify(ob)} ${await note(page)}`);
-      const again = await aimAt(page, spines[1], `open_${spines[1]}`); // a click on the open book itself
+      check('clicking a named spine opens that book, showing its own title', ob?.name === spines[si] && ob.title === want[0] && (await note(page)).includes(want[0]), `${JSON.stringify(ob)} ${await note(page)}`);
+      const again = await aimAt(page, spines[si], `open_${spines[si]}`); // a click on the open book itself
       if (again) { await page.mouse.click(again.x, again.y); await page.evaluate(() => window.__market.advance(3)); }
       check('clicking the open book again puts it back', (await page.evaluate(() => window.__market.openedBook())) === null);
-    } else check('clicking a named spine opens that book, showing its own title', false, `no clear pixel on ${spines[1]}`);
+    } else check('clicking a named spine opens that book, showing its own title', false, `no clear pixel on ${spines[si]}`);
     // a book from the bookseller's stock names itself too (items.json)
     await page.evaluate(() => window.__market.clickItem('act_book_201'));
     await page.evaluate(() => window.__market.advance(3));
@@ -551,7 +556,8 @@ try {
     const credit = { test: (t) => !!want && t.replace(/\s+/g, ' ').includes(want) };
     check('plain.html credits the music (the manifest\'s credit line)', credit.test(await page.textContent('#credits')), await page.textContent('#credits'));
     check('plain.html lists every third-party asset with its source URL', (await page.locator('.credits-all a[href^="https://github.com/"]').count()) > 5);
-    check('plain.html carries the books the 3D shelf features', /Gödel, Escher, Bach/.test(await page.textContent('#books')), (await page.textContent('#books')).slice(0, 200));
+    { const t = await page.textContent('#books');
+      check('plain.html carries the books the 3D shelf features (they are on Mac\'s shelf), and not the unconfirmed list', /The Order of Time/.test(t) && /The Book of Why/.test(t) && !/On the shelf in the market/.test(t) && !/Gödel, Escher, Bach/.test(t), t.slice(0, 200)); }
     const shelfN = JSON.parse(readFileSync(path.resolve('../content/bookshelf.json'), 'utf8')).books.length;
     const libN = await page.locator('#books .library li').count();
     check('plain.html lists Mac\'s whole bookshelf, with the writer\'s one-line summaries', libN === shelfN && (await page.locator('#books .library .one-line').count()) > 0, `${libN} of ${shelfN}`);

@@ -215,6 +215,9 @@ export function placeWarmLights(scene, spots, N, { lite = false, budget, focus =
         if (!lit.has(s.id)) lit.set(s.id, 'unshadowed');
       }
       if (L.isSpotLight) L.position.set(0, 0, 0);
+      // round 2, pass 3: the wash hangs a further `washOut` m out along the model's +Z, so the steel
+      // round the hub is not many times brighter than the rim (it bloomed into a white star)
+      if (s.wash && K.washOut && !L0offset) L0offset = new THREE.Vector3(0, 0, K.washOut).applyQuaternion(holder.getWorldQuaternion(new THREE.Quaternion()));
       if (L0offset) {
         // the offset is in world axes; the light is a child of the empty
         const w = s.obj.getWorldPosition(new THREE.Vector3()).add(L0offset);
@@ -424,6 +427,10 @@ export function retargetLight(L, s, N, { lite = false } = {}) {
       L.distance = Number(ud.distance) || K.spotDistance;
       target = Number(ud.intensity) || (type === 'spot' ? K.spot : K.point);
     } else if (isWash(s, K)) {
+      if (K.washOut) {
+        const off = new THREE.Vector3(0, 0, K.washOut).applyQuaternion(s.holder.getWorldQuaternion(new THREE.Quaternion()));
+        L.position.copy(s.obj.worldToLocal(s.obj.getWorldPosition(new THREE.Vector3()).add(off)));
+      }
       L.distance = Number(ud.distance) || K.washDistance;
       target = Number(ud.intensity) || K.wash;
     } else {

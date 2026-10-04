@@ -192,7 +192,11 @@ export const NIGHT = {
     // round 2: wash/washDistance/washHeight: a landmark light_ higher than washHeight m (the Ferris
     // wheel's hub, 14.7 m up) is a point wash over the steel instead of a downward stage spot (the rides
     // builder: the wheel read near black). It is the landmark's first light.
-    landmark: { point: 26, spot: 40, pointDistance: 10, spotDistance: 12, wash: 60, washDistance: 16, washHeight: 8 },
+    // round 2, pass 3: washOut moves the wash a further 3 m out from the wheel (the rides builder's
+    // light_2 is 3.2 m in front of the hub). From 3.2 m the steel round the hub took 13x the rim's light
+    // and, with the hub's bulbs, bloomed into a white star in the home view; from 6.2 m it is 4x.
+    // 60 -> 70 and reach 16 -> 18 m keep the rim (11 m radius) as lit as before
+    landmark: { point: 26, spot: 40, pointDistance: 10, spotDistance: 12, wash: 70, washDistance: 18, washHeight: 8, washOut: 3 },
     deco: { point: 18, front: 6, frontAngle: 1.4, frontPenumbra: 0.25, frontAim: 1.7, frontLift: 0.4, frontOut: 0.8, spot: 20, pointDistance: 3.6, frontDistance: 6, spotDistance: 7 },
     lamp: { point: 7, spot: 12, pointDistance: 10, spotDistance: 10 },
     tree: { point: 16, spot: 20, pointDistance: 10, spotDistance: 10 },

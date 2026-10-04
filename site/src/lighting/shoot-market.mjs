@@ -40,17 +40,20 @@ try {
     // the rides and the deco stalls arrive after the first frame: wait for them
     await page.evaluate(() => window.__market?.settled?.()).catch(() => {});
     await page.waitForTimeout(+opt('--settle', 8000));
+    // the loading overlay must be gone before a place is opened: the intro resets the view when it fades
+    await page.waitForFunction(() => getComputedStyle(document.getElementById('loading')).opacity === '0' || document.getElementById('loading').classList.contains('done'));
     for (const a of acts) {
       const [k, v] = a.split('=');
-      if (k === 'open') await page.evaluate((id) => { window.__market.openPlace(id); window.__market.advance(4); }, v);
+      // the engine does not call focusPlace yet, and software GL draws too few frames for the camera-based
+      // detection to fire before the capture: call it as the engine would from openPlace
+      if (k === 'open') await page.evaluate((id) => { window.__market.openPlace(id); window.__market.advance(4); window.__lighting?.focusPlace?.(id); window.__market.advance(0.5); }, v);
       // "@cam=x,y,z,tx,ty,tz": any view (the lighting module's debugCamera; the round-1 module lacks it)
       if (k === 'cam') await page.evaluate((c) => { const n = c.split(',').map(Number); window.__lighting?.debugCamera?.(n.slice(0, 3), n.slice(3)); window.__market.advance(0.2); }, v);
     }
     // software GL draws the full market slowly: wait for a few real frames so the capture is current
     await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n >= 2 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }));
-    await page.waitForFunction(() => getComputedStyle(document.getElementById('loading')).opacity === '0' || document.getElementById('loading').classList.contains('done'));
     await page.waitForTimeout(3000);
-    const rep = await page.evaluate(() => ({ lighting: window.__market?.report?.lighting, lights: window.__market?.report?.lights, warnings: window.__market?.report?.warnings, focus: window.__lighting?.focus, moves: window.__lighting?.focusMoves }));
+    const rep = await page.evaluate(() => ({ lighting: window.__market?.report?.lighting, lights: window.__market?.report?.lights, warnings: window.__market?.report?.warnings, panel: window.__market?.panel, focus: window.__lighting?.focus, moves: window.__lighting?.focusMoves }));
     const file = path.join(OUT, `${name}.png`);
     // hold the last drawn frame, so the screenshot does not wait for another 20 s software-GL frame
     await page.evaluate(() => new Promise((r) => { let n = 0; const f = () => (++n >= 2 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }));

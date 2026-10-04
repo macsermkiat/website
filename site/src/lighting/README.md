@@ -114,12 +114,14 @@ The light colour is linear (1.0, 0.6, 0.3), the colour of the Cycles previews' l
 | Section stall | **34** (40 in pass 3) | **9**, cone 1.4 rad, penumbra 0.25 | 34 | 4.2 / 9 / 8 m |
 | Deco stall | 18 | 6, cone 1.4 rad, penumbra 0.25 | 20 | 3.6 / 6 / 7 m |
 | Landmark | 26 | – | 40 (stage lights above 2.8 m point down) | 10 / – / 12 m |
+| Landmark wash (a `light_` above 8 m: the Ferris wheel's hub light) | **70**, hung a further **3 m** out along the model's +Z (`washOut`) | – | – | 18 m |
 | Lamp (`light_lamp_*`) | 7 | – | – | 10 m |
 | Tree (`light_tree_*`) | 16 | – | – | 10 m |
 
 How the helper places them:
 
 - **Front or interior.** A `light_` empty more than 0.9 m in front of its model's origin (model +Z) is the front fill: a wide spot hung 0.4 m above and 0.8 m in front of the empty (`frontLift`, `frontOut`) and aimed at the ground 1.7 m out (`frontAim`), which lights the counter front, the sign and the cobbles but not the fascia (outside its 80° cone). Its core is wide (penumbra 0.25), so its pool reaches about a metre further than pass 3's. Anything else inside the model is the interior light.
+- **The Ferris wheel's wash (round 2, pass 3).** The rides builder's `light_2` sits 3.2 m in front of the hub. From there the steel round the hub took 13 times the light of the 11 m rim and, with the hub's own bulbs, bloomed into a white star in the home view. The light now hangs another 3 m out (6.2 m from the hub), where the hub gets 4 times the rim's light, and goes from 60 to 70 with an 18 m reach so the rim is as lit as before.
 - **Spots.** A spot is used when an empty's `userData.type` is `'spot'`, when its name contains `spot`, or for high landmark lights. `userData.intensity`, `userData.distance`, `userData.color` and `userData.aim` override the defaults.
 - **Interior shadows.** On the full market, the interior lights of the **4 section stalls** get a 512² cube shadow map, drawn **once** (`shadow.autoUpdate = false`), with shadow intensity **0.95**. Only stall interiors get these slots (pass 2 gave one to the tree). The kernel is wide (radius **8** texels, taken with **16** taps instead of three's 5; a lamp has a size). Round 2, pass 3 (radius 5, 12 taps before): close up, the shelf boards threw shadows with a hard 2–3 px edge onto the back wall; a stall lamp is a 10 cm bulb about a metre from the shelf, so the penumbra should be a few centimetres wide. The four maps are drawn once, so the wider kernel costs only the 4 extra taps per shaded fragment, the near plane is 0.15 m and the bias -0.0003. The bias is in perspective depth: pass 2's -0.002 with a 5 cm near plane was about 0.3 m at the wall base, which let the light out onto a pale strip of ground around the stall.
 - **Shadow-only shell.** Each of those stalls also gets a shadow-only shell (`shadowBlocker`): a floor 5 cm over the base and planes 12 mm outside the side walls, the back wall and the lower front wall, found by casting rays at the stall from outside. It draws nothing on screen and nothing into the moon's shadow (its depth material culls every vertex). It closes the hairline gaps between wall planks, which a 512² cube map otherwise lets through as sharp streaks across the ground.
@@ -242,7 +244,7 @@ URL options:
 Tools (software GL on this machine):
 
 - `node src/lighting/shoot.mjs` shoots the bench views (after, before, lite, snow, snow_lite, wide, wide_snow, sky, sky_lite, capture, plus `--var name='?query'` experiments).
-- `node src/lighting/shoot-market.mjs` shoots the real market through the site's dev server with `vite.market.config.js` (live reload off).
+- `node src/lighting/shoot-market.mjs` shoots the real market through the site's dev server with `vite.market.config.js` (live reload off). `--shot "name=quality=lite&snow=0@open=glueh"` opens a place (the engine's short ids: `glueh`, `wurst`, `bier`, `books`, `band`, `ferris`, `carousel`) and calls `focusPlace` as the engine would; `@cam=x,y,z,tx,ty,tz` sets any view. A full-market frame takes about 45 minutes on the shared 4-CPU machine, a lite one about 2.
 - `node src/lighting/diag-market.mjs [--q ...] [--places id,...]` dumps the market's placed lights, pools, glows and shadow casters to `diag.json`, and can shoot close views of places.
 - `node src/lighting/perf.mjs [--gpu --headed] [--fixed]` profiles the real market: rAF frame times, GPU time of the composer (timer queries), draw calls and the adaptive level. Run it with `--gpu --headed` on a machine with a real GPU.
 - `python3 site/src/lighting/measure.py <shot.png>` compares patch colours (counter, sign, walls, pot, roof strip, ground beside and in front, sky) with the Cycles reference, and measures the bulb row. Compare 1280×720 shots only: bloom is sized in pixels.

@@ -39,7 +39,7 @@ bpy may segfault on exit after `build_props.py` has written everything; the outp
 
 | # | Panel's fix | What I did | Checked by |
 |---|---|---|---|
-| P1 | Lite beer foam rose into a 65 cm column on all nine glasses (lite bbox height 0.92 m against 0.63 m) | The bug was in `goods.beer_fill`: lite keeps crown rings 0, 2, 4, 6, and the height branch keyed off the position in the trimmed list, so old ring 4 (a dome fraction, 0.66) was read as metres. The loop now carries each ring's original index (`orig`), so only old rings 1–2 use their height as metres. The lite head also gets a coarser spill on the same glasses as the full one, so both have the same reach. `prop_bier_counter.lite.glb` was rebuilt: its bbox height is now **0.628 m**, the same as the full set, and each `foam_<n>` sits inside its glass (max y within 1.4 cm of the full head). | check_props bounds parity |
+| P1 | Lite beer foam rose into a 65 cm column on all nine glasses (lite bbox height 0.92 m against 0.63 m) | The bug was in `goods.beer_fill`: lite keeps crown rings 0, 2, 4, 6, and the height branch keyed off the position in the trimmed list, so old ring 4 (a dome fraction, 0.66) was read as metres. The loop now carries each ring's original index (`orig`), so only old rings 1–2 use their height as metres. The lite head also gets a coarser spill on the same glasses as the full one, so both have the same reach. `prop_bier_counter.lite.glb` was rebuilt: its bbox height is now **0.628 m**, the same as the full set, and each `foam_<n>` sits inside its glass: the lite heads' top heights match the full ones within 1 mm (0.224–0.281 m). The worst full/lite difference in the whole set is now 1.4 cm, on a mesh, under the 2 cm limit. | check_props bounds parity |
 | P2 | check_props must catch a lite set whose shapes diverge | New check `check_bounds_parity`: for every set it compares each **act_ node's subtree** world bbox, full against lite (fails over **1 cm**), and each **named mesh node's** bbox (fails over **2 cm**). It reads the glTF accessor min/max through the node transforms, so the quantised positions are handled. On the round-2 glbs it caught the foam (64 cm) and four smaller ones: the ladle's hook dropped in lite (2.4 cm), the 10-sided lite kettle lid (1.0 cm), the books-counter cash box losing two loose coins (3.6 cm) and the 7-sided lite almond kettle (2.3 cm). All four are fixed: the lite hook is kept, and the lid and kettle use 12 and 8 sides (multiples of 4 keep the front, back and side extremes). The worst difference per set is printed on every run. | check_props |
 | P3 | Re-render the Bratwurst hero from the final glb; grilled sausages browned and charred, raw ones pale | The grilled skins are darker (base `#72361a`, the warming tray's `#4a1e0c`), with heavier black grate stripes, a wider scorched halo round them and black flecks where fat flared. The raw tray now uses a pale, pinkish-beige satin skin (`goods.sausage(raw=True)`) with no browning and no marks. The hero, wide and both in-stall shots were rendered from the glb written in the same run. | `prop_wurst_counter_hero.jpg` |
 | P4 | Coals should read as embers | The coal maps are split in two. The left half is the burning sides: bright cracks and a red ember glow on the char between them. The right half is ash: grey-white, dark, with only faint lines. `set_wurst.coal_lump` maps each lump's side faces into its own random window of the hot half and its upward faces into a window of the ash half (one lump in five burns through its top). Every lump is different: bright cracks, dark ash tops. The bed also has six grey dead coals near the rim (plain charcoal under ash, no glow), a ring of pale ash drifted against the bowl wall and seven flat ash flakes on top. Measured emission coverage (`coal_emit.png`, red above 0.3): **36 % of the map; 71.5 % of the hot half, 0.4 % of the ash half**. (The round-2 note claimed about 28 %; this is the measured figure for the new map.) The in-stall grill close-up is rendered with the stall lamps and fill at 20 % (`stall_dim` in set_wurst) so the bed's own glow shows. The full-lit wide in-stall shot is unchanged. | `prop_wurst_counter_hero.jpg`, `prop_wurst_counter_in_stall_grill.jpg` |
@@ -47,7 +47,7 @@ bpy may segfault on exit after `build_props.py` has written everything; the outp
 | P6 | Fill the middle of the Maroni, Käse and Kerzen counters (and Crêpes and Kartoffelpuffer); win back Maroni's margin | **Maroni:** a red-enamelled shop scale with a brass pan of chestnuts, a wooden stand of four kraft cones heaped with chestnuts, and a stack of flat folded bags beside the bowl. The roaster's ribbed chestnuts were replaced by a smooth, flattened five-sided nut with a pale base (about 33 triangles, was 70), and the striae that read as ribs were toned down in the atlas. The roaster went from 32 to 24 segments and from 10 to 6 hidden coal lumps, and the pan holds 19 chestnuts instead of 24. Maroni is now under its old count with the new goods on it (see the deco table). **Käse:** three wedges wrapped in wax paper (the paper up the rind, the cut face showing) and a round board with a piece of Bergkäse and a cheese knife. **Kerzen:** an open white box of dinner candles with its lid leaning behind, and five ribboned gift boxes of tealights along the front of the risers. **Crêpes:** a little board with sugar and cinnamon shakers and two lemon halves, and a stack of paper napkins. **Kartoffelpuffer:** a served paper plate of three Puffer with applesauce and a wooden fork, and a spatula by the pan. | contact sheet, deco frames, deco table |
 | P7 | NOTES: drop the turn_axis request; make preview recency match the files | The request is gone: `site/src/actions/items/wurst.js` `turnCentre()` already turns each sausage about `turn_axis`. *Previews* now gives every file's timestamp and the pass it comes from. | this file |
 | P8 | Ask the market owner to delete /books_deco.log; guard build launches | See *Requests to the market owner*, and the guard note at the top. | `run_build.sh`, `build_props.guard_paths()` |
-| P9 | Optional: lite ratios near 35 %; the remaining wide shots | Lebkuchen lite hearts drop their back face (every heart faces the visitor) and use 10 sides, and the Schmuck lite cartons keep 5 baubles of 12. Bier back, Mandeln and Spielzeug are unchanged (see the table for the ratios). New wide shots: `prop_bier_counter.jpg`, `prop_wurst_counter.jpg`, `prop_books_counter.jpg`. | table, previews |
+| P9 | Optional: lite ratios near 35 %; the remaining wide shots | Lebkuchen lite hearts drop their back face (every heart faces the visitor) and use 10 sides, and the Schmuck lite cartons keep 5 baubles of 12. Lebkuchen lite went from 41 % to **34 %**. Schmuck only went from 45 % to 43 %. Bier back, Mandeln and Spielzeug are unchanged (see *Open issues*). New wide shots: `prop_bier_counter.jpg`, `prop_wurst_counter.jpg`, `prop_books_counter.jpg`. | table, previews |
 
 ## Sets, slots and budgets
 
@@ -59,36 +59,36 @@ Triangles are after optimisation. kB is the glb alone (full / lite), which embed
 
 | set | stall | slot | tris | lite tris (ratio) | kB full / lite | size x × y × z m |
 |---|---|---|---|---|---|---|
-| prop_gluehwein_counter | gluehwein | slot_counter | 7450 | 2546 (34%) | 183 / 98 | 1.99 × 0.47 × 0.57 |
+| prop_gluehwein_counter | gluehwein | slot_counter | 7450 | 2610 (35%) | 183 / 99 | 1.99 × 0.47 × 0.57 |
 | prop_gluehwein_shelf | gluehwein | slot_shelf_1 | 6254 | 2051 (33%) | 164 / 82 | 2.29 × 0.24 × 0.34 |
 | prop_gluehwein_wine | gluehwein | slot_shelf_2 | 5268 | 1856 (35%) | 111 / 66 | 2.33 × 0.23 × 0.42 |
-| prop_bier_counter | bierstand | slot_counter | 9498 | 3202 (34%) | 180 / 103 | 2.01 × 0.39 × 0.63 |
+| prop_bier_counter | bierstand | slot_counter | 9498 | 3442 (36%) | 183 / 108 | 2.01 × 0.39 × 0.63 |
 | prop_bier_back | bierstand | slot_shelf_1 | 4356 | 1812 (42%) | 102 / 53 | 2.33 × 0.25 × 0.34 |
 | prop_bier_shelf | bierstand | slot_shelf_2 | 3746 | 1380 (37%) | 58 / 33 | 1.91 × 0.23 × 0.26 |
-| prop_wurst_counter | bratwurst | slot_counter | 20646 | 5674 (27%) | 413 / 190 | 3.42 × 0.48 × 0.64 |
+| prop_wurst_counter | bratwurst | slot_counter | 20946 | 5808 (28%) | 427 / 197 | 3.42 × 0.48 × 0.64 |
 | prop_books_shelf_1 | buecherstand | slot_shelf_1 | 1300 | 408 (31%) | 132 / 102 | 1.86 × 0.23 × 0.30 |
 | prop_books_shelf_2 | buecherstand | slot_shelf_2 | 1444 | 464 (32%) | 150 / 116 | 1.86 × 0.22 × 0.30 |
-| prop_books_counter | buecherstand | slot_counter | 2078 | 756 (36%) | 91 / 59 | 2.05 × 0.43 × 0.40 |
-| prop_deco_lebkuchen | deco-lebkuchen | slot_counter | 5102 | 2070 (41%) | 127 / 58 | 2.20 × 0.45 × 1.15 |
-| prop_deco_mandeln | deco-mandeln | slot_counter | 2774 | 1162 (42%) | 78 / 40 | 1.98 × 0.48 × 0.44 |
-| prop_deco_kerzen | deco-kerzen | slot_counter | 3386 | 1284 (38%) | 84 / 38 | 2.11 × 0.47 × 1.15 |
+| prop_books_counter | buecherstand | slot_counter | 2078 | 796 (38%) | 91 / 60 | 2.05 × 0.43 × 0.40 |
+| prop_deco_lebkuchen | deco-lebkuchen | slot_counter | 5102 | 1750 (34%) | 127 / 53 | 2.20 × 0.45 × 1.15 |
+| prop_deco_mandeln | deco-mandeln | slot_counter | 2774 | 1184 (43%) | 78 / 41 | 1.98 × 0.48 × 0.44 |
+| prop_deco_kerzen | deco-kerzen | slot_counter | 3790 | 1428 (38%) | 95 / 44 | 2.11 × 0.48 × 1.15 |
 | prop_deco_spielzeug | deco-spielzeug | slot_counter | 2836 | 1196 (42%) | 102 / 49 | 2.01 × 0.46 × 0.42 |
-| prop_deco_schmuck | deco-schmuck | slot_counter | 2788 | 1248 (45%) | 79 / 41 | 2.16 × 0.39 × 1.15 |
-| prop_deco_kaese | deco-kaese | slot_counter | 4140 | 1572 (38%) | 84 / 42 | 2.02 × 0.48 × 0.24 |
-| prop_deco_crepes | deco-crepes | slot_counter | 3088 | 1062 (34%) | 74 / 38 | 2.06 × 0.46 × 0.20 |
-| prop_deco_maroni | deco-maroni | slot_counter | 5186 | 1473 (28%) | 119 / 46 | 2.18 × 0.46 × 0.26 |
-| prop_deco_puffer | deco-kartoffelpuffer | slot_counter | 3872 | 1245 (32%) | 93 / 43 | 2.06 × 0.48 × 0.27 |
+| prop_deco_schmuck | deco-schmuck | slot_counter | 2788 | 1188 (43%) | 79 / 39 | 2.16 × 0.39 × 1.15 |
+| prop_deco_kaese | deco-kaese | slot_counter | 4556 | 1768 (39%) | 92 / 46 | 2.02 × 0.48 × 0.24 |
+| prop_deco_crepes | deco-crepes | slot_counter | 3648 | 1386 (38%) | 83 / 45 | 2.06 × 0.47 × 0.20 |
+| prop_deco_maroni | deco-maroni | slot_counter | 4104 | 1656 (40%) | 110 / 51 | 2.18 × 0.47 × 0.26 |
+| prop_deco_puffer | deco-kartoffelpuffer | slot_counter | 4220 | 1413 (33%) | 99 / 47 | 2.06 × 0.48 × 0.27 |
 
-All prop glbs together: 2.42 MB full and 1.30 MB lite. Shared textures (`prop_tex_*`): 1.31 MB full and 0.20 MB lite, loaded once for all sets.
+All prop glbs together: 2.47 MB full and 1.33 MB lite. Shared textures (`prop_tex_*`): 1.33 MB full and 0.20 MB lite, loaded once for all sets.
 
 Section stalls, the carpenter's current stall glb plus my props (60k triangles and 3 MB with the shared textures the sets use; check_props fails under 2k headroom):
 
 | stall | stall tris | + props | total / 60k | headroom | MB / 3 |
 |---|---|---|---|---|---|
-| gluehwein | 37603 | 18972 | 56575 OK | 3425 | 1.87 |
-| bierstand | 39745 | 17600 | 57345 OK | 2655 | 1.82 |
-| bratwurst | 36391 | 20646 | 57037 OK | 2963 | 1.76 |
-| buecherstand | 34583 | 4822 | 39405 OK | 20595 | 2.59 |
+| gluehwein | 37603 | 18972 | 56575 OK | 3425 | 1.89 |
+| bierstand | 39745 | 17600 | 57345 OK | 2655 | 1.85 |
+| bratwurst | 36391 | 20946 | 57337 OK | 2663 | 1.80 |
+| buecherstand | 34583 | 4822 | 39405 OK | 20595 | 2.62 |
 
 Deco stalls, stall plus goods against 20k (check_props fails over):
 
@@ -96,13 +96,13 @@ Deco stalls, stall plus goods against 20k (check_props fails over):
 |---|---|---|---|---|
 | lebkuchen | 13433 | 5102 | 18535 OK | 1465 |
 | mandeln | 15985 | 2774 | 18759 OK | 1241 |
-| kerzen | 14143 | 3386 | 17529 OK | 2471 |
+| kerzen | 14143 | 3790 | 17933 OK | 2067 |
 | spielzeug | 15938 | 2836 | 18774 OK | 1226 |
 | schmuck | 15799 | 2788 | 18587 OK | 1413 |
-| kaese | 13380 | 4140 | 17520 OK | 2480 |
-| crepes | 13283 | 3088 | 16371 OK | 3629 |
-| maroni | 14346 | 5186 | 19532 OK | 468 |
-| puffer | 14978 | 3872 | 18850 OK | 1150 |
+| kaese | 13380 | 4556 | 17936 OK | 2064 |
+| crepes | 13283 | 3648 | 16931 OK | 3069 |
+| maroni | 14346 | 4104 | 18450 OK | 1550 |
+| puffer | 14978 | 4220 | 19198 OK | 802 |
 
 <!-- check_props:end -->
 
@@ -124,14 +124,40 @@ The five reading-list titles stand together on shelf 1, left of the middle brace
 
 ## Previews
 
-All in `review/round-2/vendor/`, rendered on this machine in this round (Cycles, CPU, 1280×720, 48 samples).
+All in `review/round-2/vendor/`, rendered on this machine (Cycles, CPU, 1280×720, 48 samples). The times are the files' modification times (UTC).
 
-**Staging.** Every counter, shelf and deco shot stands the set on a **generic plain wooden counter or shelf board** built by `vstage.env_counter()` at night with two warm point lights where the stall's light_ empties are, not in the carpenter's stall glb. The exception is the Bratwurst counter, where the grill has to prove it sits in the stall: `prop_wurst_counter_in_stall.jpg` and `prop_wurst_counter_in_stall_grill.jpg` load the carpenter's shipped `site/public/models/stall_bratwurst.glb` and put the set at its `slot_counter` (`vstage.stall_scene`), lit by the stall's own light_ empties plus an ember light in the bowl.
+**Staging.** Every counter, shelf and deco shot stands the set on a **generic plain wooden counter or shelf board**, not in the carpenter's stall glb. The board is built by `vstage.env_counter()`, shot at night with two warm point lights where the stall's light_ empties are. The exception is the Bratwurst counter, where the grill has to prove it sits in the stall. `prop_wurst_counter_in_stall.jpg` and `prop_wurst_counter_in_stall_grill.jpg` load the carpenter's shipped `site/public/models/stall_bratwurst.glb` and put the set at its `slot_counter` (`vstage.stall_scene`). They are lit by the stall's own light_ empties plus an ember light in the bowl. The grill close-up has the lamps and fill at 20 %.
 
-- One close-up per section set (the Bratwurst, Bücher and deco frames were re-rendered after the machine restarted mid-round, with the final glbs): `prop_gluehwein_counter_hero.jpg` (kettle, ladle, mugs), `prop_gluehwein_shelf_hero.jpg`, `prop_gluehwein_wine_hero.jpg` (labels), `prop_bier_counter_hero.jpg` (tap handles and foam), `prop_bier_back_hero.jpg` (barrels), `prop_bier_shelf_hero.jpg` (clean glasses), `prop_wurst_counter_hero.jpg` (grill with the glowing coal bed, warming tray, raw sausages), `prop_books_shelf_1_hero.jpg` (the five titles), `prop_books_shelf_2_hero.jpg`, `prop_books_counter_hero.jpg`
-- Only one wide shot this round (`prop_gluehwein_counter.jpg`, the whole Glühwein counter): the machine was shared (load average near 19 on 4 cores, about 8 minutes per 1280×720 frame), so I rendered what the brief asks for: the close-ups, the two in-stall shots and the deco frames. `build_props.py --shots wide` renders the wide shots when there is time.
-- In the real stall: `prop_wurst_counter_in_stall.jpg`, `prop_wurst_counter_in_stall_grill.jpg`
-- Deco: `deco_lebkuchen.jpg`, `deco_mandeln.jpg`, `deco_kerzen.jpg`, `deco_spielzeug.jpg`, `deco_schmuck.jpg`, `deco_kaese.jpg`, `deco_crepes.jpg`, `deco_maroni.jpg`, `deco_puffer.jpg`, and all nine in `deco_goods_contact_sheet.jpg` (built only from the vendor's own frames in `blender/out/vendor/renders/prop_deco_*.png`). These frames show the goods on the plain counter, not in the carpenter's deco stalls.
+**Pass 2 (2026-10-04), rendered from the glbs written in the same build run:**
+
+| file | time | shows |
+|---|---|---|
+| `prop_bier_counter.jpg` | 00:23 | wide: the whole Bier counter (new) |
+| `prop_bier_counter_hero.jpg` | 00:36 | close-up: tap handles, the new foam heads with wet edges and spills |
+| `prop_wurst_counter.jpg` | 00:49 | wide: the whole Bratwurst counter (new) |
+| `prop_wurst_counter_hero.jpg` | 01:00 | close-up: ember bed, charred sausages on the grate, warming tray, pale raw tray |
+| `prop_wurst_counter_in_stall.jpg` | 01:16 | the set in the carpenter's stall, full stall light |
+| `prop_wurst_counter_in_stall_grill.jpg` | 01:34 | grill close-up in the stall, lamps dimmed so the coal glow reads |
+| `prop_books_counter.jpg` | 01:41 | wide: the whole Bücher counter (new) |
+| `prop_books_counter_hero.jpg` | 01:45 | close-up: open books, banker's lamp, cash box (unchanged set, re-rendered) |
+| `deco_lebkuchen.jpg`, `deco_mandeln.jpg`, `deco_kerzen.jpg`, `deco_schmuck.jpg`, `deco_kaese.jpg`, `deco_crepes.jpg`, `deco_maroni.jpg`, `deco_puffer.jpg` | 00:21–01:38 | the eight deco frames whose sets were rebuilt this pass |
+| `deco_goods_contact_sheet.jpg` | 01:45 | all nine deco frames (built only from the vendor's own frames in `blender/out/vendor/renders/`) |
+
+**From round 2, pass 1 (2026-09-30).** These sets were not changed in pass 2. The atlas regions pass 2 repainted (foam, sausage skin, coal, chestnut) do not appear in these shots.
+
+| file | time | shows |
+|---|---|---|
+| `prop_gluehwein_counter.jpg` | 00:36 | wide: the whole Glühwein counter |
+| `prop_gluehwein_counter_hero.jpg` | 00:48 | kettle, ladle, mugs. In pass 2 the full set is unchanged; only its lite lid and ladle hook changed. |
+| `prop_gluehwein_shelf_hero.jpg` | 00:59 | bottles, spices, oranges |
+| `prop_gluehwein_wine_hero.jpg` | 01:08 | wine labels |
+| `prop_bier_back_hero.jpg` | 01:27 | barrels and chalkboard |
+| `prop_bier_shelf_hero.jpg` | 01:36 | clean glasses |
+| `prop_books_shelf_1_hero.jpg` | 02:43 | the five reading-list spines |
+| `prop_books_shelf_2_hero.jpg` | 02:58 | shelf 2 |
+| `deco_spielzeug.jpg` | 03:37 | Holzspielzeug (set unchanged) |
+
+There are still no wide shots for the Glühwein shelves, the Bier back and shelf, and the two Bücher shelves. Their hero shots already frame most of each shelf.
 
 ## Requests to the market owner
 
@@ -141,11 +167,11 @@ All in `review/round-2/vendor/`, rendered on this machine in this round (Cycles,
 
 ## Open issues
 
-- **Headroom depends on the carpenter's stalls.** The tables above are measured against the stall glbs on disk today. Bier is the tightest section stall; if it grows, the first cuts are the shelf glasses and the bottle crate on the back shelf.
+- **Headroom depends on the carpenter's stalls.** The tables above are measured against the stall glbs on disk today. Bier and Bratwurst are the tightest section stalls (2655 and 2663 triangles of headroom). If Bier grows, the first cuts are the shelf glasses and the bottle crate on the back shelf; if Bratwurst grows, the raw-sausage tray and the paper-tray stack.
 - **Grill seat follows the carpenter.** `set_wurst` reads `slot_grill` from `stall_bratwurst.glb` at build time (falling back to a probe of the counter and hood). If the carpenter moves `slot_grill`, rebuild `prop_wurst_counter`; the whole serving line then shifts to start right of the grill.
-- **Lite glass.** Full glbs use transmission glass; lite keeps the same material names with alpha blending. The site's lite path must not expect KHR_materials_transmission.
-- **Lite ratios.** A few small deco sets and the Bier back shelf are just above the 38 % lite target (small figures and bags have few segments to cut); these are WARNs, not FAILs.
-- **Coal glow in the in-stall close-up** reads weaker than in the counter close-up: in the stall the carpenter's two light_ lamps and the fill light the coal tops, so the bed looks lit rather than burning. The glb is the same; the engine's grill flare pulses the `coal_glow` emission on top. A darker in-stall preview (lamps dimmed) would show it better.
-- **Maroni deco room** is 468 triangles under 20k (the roaster and its chestnuts are the cost). If the carpenter's deco_maroni grows, the first cut is the burlap sack's chestnuts. Käse and Maroni still read a little sparse in the middle of the counter; more goods there need budget from the stall.
-- **Build process.** The machine restarted mid-round; `build_props.py` now merges each set's entry into `blender/out/props_report.json` on write (re-read, atomic replace), so two builds for different sets can run side by side without losing each other's items.
+- **Lite glass and foam.** Full glbs use transmission glass; lite keeps the same material names with alpha blending, so the site's lite path must not expect KHR_materials_transmission. `vendor_foam`'s subsurface scatter shows only in the Cycles previews (glTF has no subsurface); the glb carries its atlas textures and KHR_materials_sheen.
+- **Lite ratios (WARN, not FAIL).** Lebkuchen is now at 34 %. Still above the 38 % warning line: Bier back 42 %, Mandeln 43 %, Spielzeug 42 %, Schmuck 43 % (its cartons were trimmed, but the hanging baubles and the tree are already at their minimum segments), and Käse 39 % and Maroni 40 %, because the new middle goods are boxes and low-segment lathes that lite cannot cut further.
+- **Raw sausages may read too white** in the warm wide shots. They are a pale pinkish beige (`#dcc4b0`, satin), which the warm key light pushes toward white; a slightly pinker tone is a one-line change in `goods.sausage(raw=True)`.
+- **Maroni room** is back to about 1550 triangles under 20k (it was 468), with the new middle goods on the counter. Puffer is now the tightest deco stall (802 left).
+- **Build process.** `build_props.py` merges each set's entry into `blender/out/props_report.json` on write (re-read, atomic replace), so two builds for different sets can run side by side, as they did in this pass. Launches go through `run_build.sh` (see the guard note at the top).
 - **Seat-check limits.** `seat_check.mjs` flags prop triangles crossing stall triangles and objects buried under a stall top; it does not flag a prop floating above a surface.
