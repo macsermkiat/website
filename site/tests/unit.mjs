@@ -7,7 +7,7 @@ import { songPlan } from '../src/audio/songplan.js';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { contentGate, assetCredits, buildLibrary, libraryHtml } from '../plugins/market.js';
+import { contentGate, assetCredits, buildLibrary, libraryHtml, buildContent, setNotesMode, normTitle } from '../plugins/market.js';
 import { mkdirSync } from 'node:fs';
 import { readGlb, budget } from '../scripts/budget.mjs';
 
@@ -86,9 +86,26 @@ check('the song is about ten minutes before it rests and starts again', plan.len
   check('no bookshelf file: an empty library, no error', buildLibrary(path.join(dir, 'nowhere')).books.length === 0);
   const credits = assetCredits();
   check('asset credits from CREDITS.md carry source URLs and licences', /<details class="credits-all"/.test(credits) && /href="https:\/\/github\.com\/mrdoob\/three\.js"/.test(credits) && /MIT/.test(credits));
+  // the Bücherstand's unconfirmed front-matter list is never written into the panel or the text page, and a
+  // notes-hidden build keeps only the 3D shelf's books that are on Mac's own shelf
+  setNotesMode('hide');
+  const built = buildContent();
+  const mine = new Set(built.library.books.map((x) => normTitle(x.title)));
+  const shelf = built.sections.books?.meta?.books || [];
+  check('production content: the unconfirmed book list is not reinstated in the bookshop panel', !/On the shelf in the market/.test(built.sections.books?.html || ''));
+  check('production content: the 3D shelf keeps only books on Mac\'s own shelf', shelf.every((x) => mine.has(normTitle(typeof x === 'string' ? x : x.title))), shelf.map((x) => x.title || x).join(', '));
+  setNotesMode('show');
   const b = budget();
   const glb = readGlb(new URL('../public/models/deco_lebkuchen.glb', import.meta.url).pathname);
-  check('budget: a glb\'s external textures are counted with it', glb.images.length > 0 && b.rows.find((r) => r.id === 'deco-lebkuchen').full.textures > 0, glb.images.join(' '));
+  const leb = b.rows.find((r) => r.id === 'deco-lebkuchen');
+  check('budget: a glb\'s external textures are counted with it', glb.images.length > 0 && leb.full.textures + leb.full.sharedTextures > 0, glb.images.join(' '));
+  // the deco kit's textures are shared by nine stalls: charged once (the shared row), not to each stall
+  const kit = b.shared.find((s) => /deco_kit_wood_color/.test(s.file));
+  check('budget: a texture several assets share is charged once', !!kit && kit.users.length > 1 && leb.full.sharedTextures > 0, kit ? `${kit.file}: ${kit.users.length} users` : 'no shared kit texture');
+  check('budget: deferred assets and the crowd\'s distance level are counted', b.totals.full.deferred > 0 && b.totals.full.everything === b.totals.full.firstLoad + b.totals.full.deferred, JSON.stringify(b.totals.full));
+  check('budget: the shared clips (people_anims.glb) are counted', b.rows.some((r) => r.id === 'people_anims'));
+  const noDist = budget({ dist: '/nonexistent-dist' });
+  check('budget: it reports a missing dist (the CLI then exits 1)', noDist.hasDist === false && b.hasDist === true);
   check('budget: both first loads are under their aims', !b.totals.full.over && !b.totals.lite.over, `${(b.totals.full.firstLoad / 1e6).toFixed(2)} / ${(b.totals.lite.firstLoad / 1e6).toFixed(2)} MB`);
 }
 

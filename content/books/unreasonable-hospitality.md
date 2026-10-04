@@ -12,6 +12,8 @@ sources:
   - https://www.iansanders.com/blog/serving-up-nine-slices-of-unreasonable-hospitality
   - https://www.supersummary.com/unreasonable-hospitality/summary/
   - https://en.wikipedia.org/wiki/Eleven_Madison_Park
+  - https://risewithdrew.com/how-one-act-of-kindness-became-a-lifelong-lesson-in-service/
+  - https://karriere.mckinsey.de/featured-insights/mckinsey-on-books/author-talks-hospitality-lessons-from-a-michelin-star-restaurateur
 review: "done"
 ---
 
@@ -21,7 +23,7 @@ Will Guidara ran the dining room at Eleven Madison Park in New York from 2006 un
 
 ## Summary
 
-Guidara grew up in the restaurant trade. His father, Frank, was a senior executive at big restaurant companies, and for his twelfth birthday he took Will to dinner at the Four Seasons in Manhattan. Being looked after that well, as a boy, decided his career on the spot. His mother had been ill for most of his childhood and died soon after he left college, and a few weeks later the chef Daniel Boulud gave him a table, a meal and no bill. He remembers it as the moment he understood what hospitality can do for someone at a bad time.
+Guidara grew up in the restaurant trade. His father, Frank, was a senior executive at big restaurant companies, and for his twelfth birthday he took Will to dinner at the Four Seasons in Manhattan. Being looked after that well, as a boy, decided his career on the spot. His mother was quadriplegic and later died of cancer while he was a senior at Cornell. The week after her death, before flying out to an internship in Spain, he took his father to dinner at Daniel in New York. Daniel Boulud, whom Will had once fed scrambled eggs and truffles at his college apartment, narrated each course over the intercom, gave them a tour, and sent no check. Guidara remembers it as the moment he understood what hospitality can do for someone at the worst time.
 
 After the hotel school at Cornell, he took his father's advice and learned the business side first. At Restaurant Associates he worked as an assistant purchaser and then at Nick + Stef's steakhouse in Madison Square Garden, where he learned to watch costs. He then joined Danny Meyer's Union Square Hospitality Group to run the cafés at the Museum of Modern Art. Meyer's idea of "enlightened hospitality", that you look after your staff first so they can look after guests, became Guidara's foundation. At MoMA he also worked out what he later called the 95/5 rule: manage almost everything to the penny, and then spend the last bit freely on the touches guests will remember.
 

@@ -35,15 +35,15 @@ jobs:
       # The Pages base path ("/website" for this repository; "" with a custom domain) becomes Vite's base
       - id: pages
         uses: actions/configure-pages@v5
-      # Notes for Mac ([[Mac: ...]] in content/*.md) never ship: the build leaves out every paragraph and list
-      # item that holds one. Repository variables (Settings > Secrets and variables > Actions > Variables):
-      #   STRICT_CONTENT=1    fail the build while any note or check marker (<!-- check -->, [check]) is left
-      #                       (a release gate)
+      # The content gate is on for every deploy: the build fails while content/*.md holds a note for Mac
+      # ([[Mac: ...]]), a check marker (<!-- check -->, [check]) or a book page marked `review: check`. Nothing
+      # unconfirmed can reach the public site; resolve the markers (or run a local preview build) to publish.
+      # Repository variable (Settings > Secrets and variables > Actions > Variables):
       #   CONTENT_NOTES=show  publish the notes as marked gaps (only for a private preview; off unless set)
       # GITHUB_REPOSITORY (set by Actions) points the footer's "All credits" link at this repository.
       - run: npm run build
         env:
-          STRICT_CONTENT: ${{ vars.STRICT_CONTENT || '0' }}
+          STRICT_CONTENT: '1'
           CONTENT_NOTES: ${{ vars.CONTENT_NOTES || 'hide' }}
           PAGES_BASE: ${{ steps.pages.outputs.base_path }}/
       # Download budgets (docs/BUILD.md), counting every external texture: the first load of each market must stay

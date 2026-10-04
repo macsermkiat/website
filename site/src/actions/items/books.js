@@ -26,7 +26,7 @@ export function createBooks(ctx) {
   banded.forEach((n, k) => { pickOf.set(n, untitled[k]); const b = paperBand(n); if (b) b.name = `band_pick_${untitled[k]}`; });
   const spineFor = picks.map((_, i) => [...pickOf.entries()].filter(([, j]) => j === i).map(([n]) => n).sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }))[0] || null);
   const featured = spineFor.filter(Boolean);
-  const where = banded.length ? 'His picks wear a red paper band.' : 'His five stand together in the middle of the lower shelf.';
+  const where = banded.length ? 'His picks wear a red paper band.' : `His ${['', 'one', 'two', 'three', 'four', 'five', 'six'][picks.length] || picks.length} ${picks.length === 1 ? 'stands' : 'stand together'} in the middle of the lower shelf.`;
   let turn = 0;
 
   /**

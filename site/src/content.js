@@ -99,6 +99,12 @@ export function bookPicks() {
     const b = m.map((x) => (typeof x === 'string' ? [x, '', ''] : [x.title || '', x.author || '', x.note || x.why || ''])).filter((x) => x[0]);
     if (b.length) return b;
   }
+  // A notes-hidden build keeps only the front-matter books that are on Mac's own shelf; with none left, his shelf
+  // itself supplies the picks (each with the writer's one-line summary).
+  if (Array.isArray(m) && LIBRARY.books.length) {
+    const lib = LIBRARY.books.filter((b) => b.title && b.oneLine).slice(0, 5).map((b) => [b.title, b.author || '', b.oneLine]);
+    if (lib.length) return lib;
+  }
   const items = SECTIONS.books?.items || [];
   const books = items.map((raw) => {
     const s = strip(raw);

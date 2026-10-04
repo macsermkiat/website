@@ -180,7 +180,7 @@ def grill(s):
         g.disc(rr - 0.03, seg(16, 8), "sw_matte", T(0, 0, rz + 0.006), C("9a948c"), "atlas")
     # coal bed: glowing chunks with ash, piled in the bowl
     coal = s.node("coals", (0, 0, zb), parent="act_grill")
-    coal.lathe([(0.0, 0.05), (0.17 * k_, 0.05), (0.185 * k_, 0.062), (0.0, 0.066)], seg(20, 8),
+    coal.lathe([(0.0, 0.05), (0.17 * k_, 0.05), (0.185 * k_, 0.062), (0.0, 0.066)], 20 if not vlib.lite() else 8,
                vlib.Reg([0.0, 0.0, 1.0, 1.0]), None, C("6a6560"), "coal_glow")
     # burning lumps: each its own patch of the glow map (bright cracks on the sides, ash on most tops);
     # about one in five burns right through its top
@@ -199,7 +199,8 @@ def grill(s):
         lump(coal, T(rr * math.cos(a), rr * math.sin(a), 0.064 + drng.uniform(0, 0.006), rz=drng.uniform(0, 6)),
              drng.uniform(0.016, 0.024), vlib.R("coal", sub=(0.55, 0.05, 0.95, 0.95)), jit(C("a8a49e"), 0.1),
              "atlas", subd=1, seed=50 + i * 1.9)
-    coal.lathe([(0.15 * k_, 0.062), (0.18 * k_, 0.066), (0.19 * k_, 0.072), (0.186 * k_, 0.074)], seg(20, 8),
+    coal.lathe([(0.15 * k_, 0.062), (0.18 * k_, 0.066), (0.19 * k_, 0.072), (0.186 * k_, 0.074)],
+               20 if not vlib.lite() else 8,
                "sw_matte", None, C("8e8a84"), "atlas")
     for i in range(7 if not vlib.lite() else 2):
         a = drng.uniform(0, TWO_PI)

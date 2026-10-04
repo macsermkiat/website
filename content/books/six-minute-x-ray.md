@@ -32,7 +32,7 @@ The Decision Map covers how people choose. Its six styles are deviance (wanting 
 
 The last sections are the most openly tactical. On deception, Hughes asks readers to look for clusters of stress behaviour and scores them on a rating scale instead of trusting any one tell. Verbal hints include dropping contractions ("I did not"), answering with a list of one's own virtues, or confessing to something small. On elicitation, he teaches ways to get information without asking direct questions: making a slightly wrong statement so the other person corrects you, acting naive, or offering a range of numbers for them to narrow. He also describes the hourglass approach, where you tuck the sensitive part into the middle of a conversation because people remember beginnings and endings best. A final chapter covers small physical nudges meant to make people more likely to comply.
 
-Readers should know that the needs and decision maps come from Hughes's own field experience, not peer-reviewed research, and some of the physiological claims go further than the science. The book is most useful as a checklist for paying closer attention.
+Hughes presents the needs and decision maps as field-tested tools drawn from his own experience, not as peer-reviewed research.
 
 ## Key ideas
 

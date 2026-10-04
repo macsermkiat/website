@@ -603,8 +603,10 @@ async function boot() {
 }
 
 // the home view on a phone (see phoneHome in boot)
-// (x shifted by a metre and a half so the string-light pole in front of the bandstand is not on the centre line)
-const PHONE_HOME = { position: [2.3, 5.0, 19.5], target: [0.6, 2.7, -4] };
+// Between the front row's string-light poles at [0, 7.5] and [7.5, 6.5] (blender/lib/architect_plan.py POLES_THREE),
+// close enough that both stand outside a portrait frame (more than 20 degrees off the axis): no pole runs down the
+// picture. The bandstand sits left of centre, the Bierstand and the tree to the right.
+const PHONE_HOME = { position: [3.75, 5.6, 16], target: [3.4, 2.4, -4] };
 // the full market holds back one real light for each ride until the ride's model arrives
 const DEFERRED_LIGHTS = 2;
 

@@ -32,13 +32,18 @@ export function createCameraRig({ camera, dom, home, motion }) {
       controls.autoRotate = false;
       controls.enabled = true;
       controls.minDistance = v.near ?? 3; // an item close-up may come nearer than a stall view
+      if (ride) { camera.near = 0.1; camera.updateProjectionMatrix(); }
       ride = null;
       flight = { t: motion.reduced ? 1 : 0, fromP: camera.position.clone(), fromT: controls.target.clone(), toP: v.pos.clone(), toT: v.target.clone() };
       if (motion.reduced) rig.update(0);
     },
     /** Follow a moving pose: poseFn() -> { pos, look }. */
-    startRide(type, poseFn) {
+    startRide(type, poseFn, { near = 0.1 } = {}) {
       flight = null;
+      // a rider's eye sits inside the gondola or among the carousel's poles: a longer near plane clips the
+      // rail, roof edge or pole right in front of the eye instead of drawing it as a dark bar across the view
+      camera.near = near;
+      camera.updateProjectionMatrix();
       controls.enabled = false;
       controls.autoRotate = false;
       ride = { type, poseFn, ease: 0 };
@@ -47,6 +52,8 @@ export function createCameraRig({ camera, dom, home, motion }) {
       if (!ride) return;
       ride = null;
       controls.enabled = true;
+      camera.near = 0.1;
+      camera.updateProjectionMatrix();
       if (view) {
         controls.target.copy(view.target);
         flight = { t: motion.reduced ? 1 : 0, fromP: camera.position.clone(), fromT: view.target.clone(), toP: view.pos.clone(), toT: view.target.clone() };

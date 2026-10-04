@@ -23,12 +23,51 @@ load average of 15 to 18. The market owner should commit them; they are untracke
   - Smoke checks that assert node movement and book identity.
 - **Round 1 judge points.**
   - The crowd steps out of close-ups.
-  - The phone home view is moved so the string-light pole is off the centre line.
+  - The phone home view now stands between two string-light poles, so no pole is in the frame (see "Codex round 2").
   - The flake cap is removed from main.js.
-  - Stripped book lists now have a fallback.
+  - The unconfirmed book list is no longer written back into the panel (see "Codex round 2").
   - `lfs: true` is gone from pages.yml.
   - The lite light count is documented.
   - The Bücherstand's third light marker is resolved.
+
+## Codex round 2 (`review/round-2/CODEX_JUDGE_WIP.md`), last pass of the round
+
+- **The content gate is on for every deploy.** `pages.yml` sets `STRICT_CONTENT: '1'`; it is no longer a repository
+  variable. The build fails while content/*.md holds a `[[Mac: ...]]` note, a `<!-- check -->` or `[check]` marker, or a
+  book page marked `review: check`. **Today that stops the deploy**: about, contact, music, projects, questions, reading
+  and writing still carry 18 notes and 11 check markers, and 35 book pages are still `review: check`. This is the
+  intended state: nothing unconfirmed reaches the public site. The writer and Mac clear the markers to publish.
+  `npm run build` without the variable still builds locally, with the notes left out.
+- **The unconfirmed book list is not reinstated** (`plugins/market.js`). Round 1's "On the shelf in the market"
+  fallback is gone. A notes-hidden build also keeps only the front-matter `books:` that are on Mac's own shelf
+  (`content/bookshelf.json`): today The Order of Time and The Book of Why. "Pick a book for me" goes on to his
+  shelf's other books after those. With no front-matter book left, it picks from his shelf (`content.js` `bookPicks`).
+  Two unit checks cover this: no "On the shelf" block in the production panel, and every 3D pick is on Mac's shelf.
+- **Budgets** (`scripts/budget.mjs`, rewritten):
+  - It counts the deferred part of each market as well: the deco stalls, both rides and, on the full market, the
+    crowd's distance level (each figure's `.lite.glb`, loaded after the first frame).
+  - It counts the shared clips (`people_anims.glb`).
+  - Textures are deduped by content hash, so two names with the same bytes count once. In the per-asset rows, a
+    texture two or more assets use is charged once, to a "shared textures" row, and not to every stall.
+  - It fails (exit 1) when `dist/assets` is missing, because the site's own code counts towards each first load.
+  - Five new unit checks cover these.
+- **Phone framing.** `PHONE_HOME` is now position [3.75, 5.6, 16] and target [3.4, 2.4, −4]. That is between the front
+  row's poles at [0, 7.5] and [7.5, 6.5] and close enough that both stand more than 20° off the axis, outside a
+  portrait frame. A new smoke check projects every string-light pole into the phone's home camera and fails if one is
+  in the frame within 14 m.
+- **Ride framing.** On the Riesenrad the rider leans 0.5 m out over the gondola's front rail toward the view, and the
+  camera's near plane goes from 0.1 to 0.45 m while riding (`camera.js` `startRide`, restored on `endRide`/`flyTo`).
+  The gondola's roof edge and the rim no longer draw as a dark beam across the top corner.
+- **Shared clips** (`crowd.js` `loadSharedAnims`, `clipsFor`). The crowd loads `people_anims.glb` once, as
+  crowd.json `shared_anims` describes. Every figure plays its own clips plus every shared clip it lacks, retargeted
+  to its hips: each `hips.position` key moves by the figure's hips rest minus the reference's. So a lite figure gains
+  laugh, the `_free` set, serve and wipe, and a figure shipped with no clips at all plays the whole shared set.
+  The organizer can now drop the repeated clips from the figure files with no engine change.
+  `__market.crowd().sharedAnims` reports the file, the clip count and how many retargets were made.
+- **Clones no longer copy keyframes.** `Object3D.copy()` clones `userData` through JSON. Every clone of a figure
+  used to serialise all its keyframe arrays. The loader now keeps the clips on a non-enumerable
+  `userData.animations` (`engine/loader.js` `setClips`).
+- **VERIFY_PLACEHOLDER** is replaced by the results of this pass's smoke run (see "Verification").
 
 ## After the restart (3 October): snow caps merged, everything re-verified
 
@@ -56,7 +95,7 @@ load average of 15 to 18. The market owner should commit them; they are untracke
     title page) with the writer's summary on the right page. Seven of the vendor's current spines match (The Order
     of Time, The Book of Why, The Black Swan, Surely You're Joking, Man's Search for Meaning, Chaos, Reality Is Not
     What It Seems). When the vendor prints Mac's titles on the spines, every one of them matches with no engine
-    change. "Pick a book for me" goes through the writer's five picks, then these spines.
+    change. "Pick a book for me" goes through the writer's picks that are on Mac's shelf, then these spines.
   - Section loading no longer reads sub-folders, so a book page's heading can never be taken for a section.
   - The strict gate counts a book page still marked `review: check`. The build's warning reduces them to one line.
 - **Sausages turn about their own axis.** The vendor moved the sausage pivots to their base and asked for this.
@@ -124,7 +163,8 @@ the vendor can check their rebuild against it.
 
 - **Budgets** (`scripts/budget.mjs`, `npm run budget`, and a CI step `npm run budget -- --strict`).
   - The script counts each glb and every external texture it references, since the deco kit and the vendor
-    atlases are separate `.webp` files. Each shared texture is counted once per market.
+    atlases are separate `.webp` files. Each shared texture is counted once per market (rewritten again in the last
+    pass, see "Codex round 2").
   - It adds the site's own js, css and fonts from `dist/assets`.
   - First loads follow what the engine actually defers: the deco stalls and both rides.
   - Only the first-load totals fail the strict run. The per-asset rows are reported for the owning roles.
@@ -135,7 +175,7 @@ the vendor can check their rebuild against it.
 - **Canvas.** It gets `role="img"` and an `aria-label` that says what the scene is and that the places are also listed as buttons below it.
 - **Mute.** A "Sound: on/off" button drives one master gain that the band, the generative bed, the stems and
   every stall sound pass through. It is remembered in localStorage (in try/catch).
-- **Strict content.** `STRICT_CONTENT=1` fails the build on `[[notes]]`, `<!-- check -->` comments and
+- **Strict content.** `STRICT_CONTENT=1` (always on in `pages.yml` since the last pass) fails the build on `[[notes]]`, `<!-- check -->` comments and
   `[check]` tags in content/*.md. Unit tests cover the gate.
 - **Smoke checks.** They assert that the node moves (ladle, bottle, glass, sausage), that the neighbour
   sausage does not, that the opened book is the one clicked (title and author), that the mug and glass end
@@ -146,13 +186,11 @@ the vendor can check their rebuild against it.
 - **Crowd in close-ups.** `crowd.inCloseUp()` hides anyone who is not a vendor inside a 46° cone from the
   camera, closer than the target plus 0.8 m, whenever the camera is within 12 m. The Glühwein check "nobody
   between the camera and the vendor" stays in the smoke run.
-- **Phone home.** The view is moved to position [2.3, 5.0, 19.5] and target [0.6, 2.7, −4], so the
-  string-light pole is off the centre line (`phone_home.jpg`).
+- **Phone home.** See "Codex round 2": the view now stands between two poles, and a smoke check keeps poles out of it.
 - **Flake cap.** `capFlakes` and `SNOW_FOG_MAX` are removed from main.js. The lighting designer's settings.js
   already holds both caps.
-- **Stripped book list.** When a notes-hidden build strips the list in content/reading.md, the build appends
-  "On the shelf in the market" from the front-matter `books`. The same list goes in the panel and on
-  plain.html.
+- **Stripped book list.** Round 1 appended the front-matter `books` when the body list was stripped. Codex round 2
+  asked for that to stop, because the list is not confirmed. It is gone (see "Codex round 2").
 - **pages.yml.** `lfs: true` is dropped, and the budget step is added.
 - **Lite light count.** The lite market runs **5 real-time lights**: one inside each of the four section
   stalls, plus the close-up key spot. The key spot is always in the scene, fades in under the open stall's
@@ -169,30 +207,30 @@ VERIFY_PLACEHOLDER
 
 ## Budgets (`npm run budget`)
 
-Measured on the files in `site/public/models` at the end of this round. Each row covers the glb, its props
-and every external texture it references, counted in full for that row.
+Measured on the files in `site/public/models` on 4 October 00:15, after the vendor's 00:00 props build. Shared
+textures are charged once; deferred means loaded just after the first frame.
 
-| | First load | Everything | Aim |
+| | First load | Deferred | Everything | Aim (first load) |
+|---|---|---|---|---|
+| Full market | 18.99 MB | 6.93 MB | 25.92 MB | 25 MB |
+| Lite market | 6.99 MB | 2.50 MB | 9.48 MB | 8 MB |
+
+- The site's own code, styles and fonts are 1.48 MB of each first load.
+- The 32 shared textures (the deco kit, the vendor atlases) are 1.13 MB, charged once.
+- The full market's "everything" includes the crowd's distance level (the 12 figures' `.lite.glb`).
+- The lite total counts every crowd figure, although the lite market aliases three of them away. It is an upper bound.
+
+Charged only their own files, every asset is inside its byte budget. Charged their shared textures as well, the
+section stalls come to 2.06–3.03 MB: the Bücherstand is 0.03 MB over its 3 MB, and its own spine and cover textures
+are most of it (Codex's 3.04 MB). The deco stalls are 0.39–0.52 MB of their own, plus the kit they share.
+
+One asset is over a budget:
+
+| Asset | Triangles | Budget | Owner |
 |---|---|---|---|
-| Full market | 19.20 MB | 25.86 MB | 25 MB |
-| Lite market | 7.00 MB | 9.61 MB | 8 MB |
+| bandstand with instruments and players | 66.8k | 50k | ride builder / organizer |
 
-Site code, styles and fonts come to 1.34 MB.
-
-Over their per-asset budgets (full glb, props and textures):
-
-| Asset | Size | Budget | Triangles |
-|---|---|---|---|
-| gluehwein | 3.24 MB | 3 MB | 56.6k |
-| bierstand | 3.19 MB | 3 MB | 57.3k |
-| buecherstand | 5.60 MB | 3 MB | 39.4k (its spine and cover textures) |
-| bandstand with instruments and players | 1.97 MB | 2 MB | 66.8k, against a 50k budget |
-| each deco stall | 1.34–1.42 MB | 1 MB | under 20k |
-
-- Every deco stall counts the whole shared deco kit. In the market that kit loads once, which is why the
-  first-load totals are well under their aims.
-- Everything else is inside its budget: square, town, tree, bratwurst, both rides and the 12 people variants.
-- `npm run budget -- --strict` passes and runs in CI.
+`npm run budget -- --strict` passes and runs in CI after the build.
 
 ## For the other roles
 

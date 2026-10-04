@@ -9,6 +9,7 @@ sources:
   - https://www.blinkist.com/en/books/how-to-know-a-person-en
   - https://richardblackaby.com/book-review-how-to-know-a-person/
   - https://medium.com/@peterbidstrup/book-review-david-brooks-how-to-know-a-person-ebba816a12c1
+  - https://www.goodreads.com/notes/112974860-how-to-know-a-person/8104923-ronald-holt/d86410e2-bad4-42d5-b1e0-c76573aff666
 review: "done"
 ---
 
@@ -20,13 +21,13 @@ review: "done"
 
 Brooks begins with himself. He describes growing up in a reserved family and becoming a man who lived in his head, good at ideas and bad at intimacy. In middle age he decided to change, partly out of worry about his country, where he saw loneliness, distrust and political contempt all rising at once. His diagnosis is that people increasingly fail to see each other, and that the fix starts with individual skill.
 
-Part One, "I See You," lays out the basics. Brooks divides people into Diminishers and Illuminators. Diminishers stereotype, ignore and talk over others, leaving them feeling small and unseen. Illuminators are curious about you, and you come away from them feeling larger. He mentions the novelist E. M. Forster, whose friends said his quiet attention seemed to bring out their best selves. Brooks also argues that everyone builds their own version of reality from their past, a view psychologists call constructionism, so to know someone you have to understand how they see the world, not just what happens to them.
+Part One, "I See You," lays out the basics. Brooks divides people into Diminishers and Illuminators. Diminishers stereotype, ignore and talk over others, leaving them feeling small and unseen. Illuminators are curious about you, and you come away from them feeling larger. Brooks also argues that everyone builds their own version of reality from their past, a view psychologists call constructionism, so to know someone you have to understand how they see the world, not just what happens to them.
 
 From there he gets practical. He speaks up for accompaniment, simply being with someone in ordinary activities, as the ground on which deeper talk later grows. In conversation he recommends treating attention as a gift, asking "big" open-ended questions such as what crossroads someone is at or what they would do if they were not afraid, and resisting the urge to top their story with your own. One technique he likes is looping: repeating back what you think the other person meant so they can correct you, which shows you are actually listening. He also notes that every conversation has an official topic and an actual one underneath, and the second is usually the one that matters.
 
 Part Two, "I See You in Your Struggles," is the emotional core. Brooks writes about his closest friend from childhood, Peter Marks, who fell into severe depression and later took his own life. Brooks admits he often tried to cheer Pete up or offer solutions, and he came to believe that what helps is plainer: staying present, acknowledging how bad the pain is and not trying to argue someone out of it. Around this chapter he discusses empathy as a skill that can be practised, how to handle hard conversations across disagreement, and how suffering shapes people, sometimes making them deeper.
 
-Part Three, "I See You with Your Strengths," widens the lens to a person's whole life. He introduces the Big Five personality traits as a rough guide to the energy someone brings into a room, using George W. Bush as an example. He then turns to the developmental tasks adults face at different ages, from forming an identity to building a career to caring for the next generation and finally making peace with one's life. Knowing which task someone is working on explains a great deal about them.
+Part Three, "I See You with Your Strengths," widens the lens to a person's whole life. He introduces the Big Five personality traits as a rough guide to the energy someone brings into a room. One example is George W. Bush, who, the psychologist Dan McAdams argues, would score very high on extraversion but low on curiosity. He then turns to the developmental tasks adults face at different ages, from forming an identity to building a career to caring for the next generation and finally making peace with one's life. Knowing which task someone is working on explains a great deal about them.
 
 He also stresses life stories. People make sense of themselves through the narratives they tell, and these change over time. Understanding someone means hearing their story and noticing how they tell it. He adds that we carry our ancestors and our cultures with us, and uses the writer Zora Neale Hurston to show how someone can both inherit a culture and remake it.
 

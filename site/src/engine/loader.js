@@ -30,7 +30,7 @@ async function fetchGlb(rel, manager) {
   THREE.Cache.remove(url); // keep the decoded images, not the glb's bytes
   const root = gltf.scene || gltf.scenes?.[0];
   if (!root) throw new Error(`${rel} has no scene`);
-  root.userData.animations = gltf.animations || [];
+  setClips(root, gltf.animations || []);
   shareSources(root);
   return root;
 }
@@ -55,12 +55,20 @@ function shareSources(root) {
 }
 
 /** Load a glb once; later requests for the same file get a clone (the deco stalls share one model). */
+/**
+ * A model's clips live on userData.animations, but not as an enumerable field: Object3D.copy() clones userData
+ * through JSON, and every clone of a figure would otherwise serialise all its keyframe arrays.
+ */
+function setClips(obj, clips) {
+  Object.defineProperty(obj.userData, 'animations', { value: clips, enumerable: false, writable: true, configurable: true });
+}
+
 export async function loadGlb(rel, manager) {
   if (!cache.has(rel)) cache.set(rel, fetchGlb(rel, manager).then((root) => ({ root, used: false })));
   const c = await cache.get(rel);
   if (!c.used) { c.used = true; return c.root; }
   const copy = cloneSkinned(c.root);
-  copy.userData.animations = c.root.userData.animations;
+  setClips(copy, c.root.userData.animations);
   return copy;
 }
 

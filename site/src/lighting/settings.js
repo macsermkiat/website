@@ -72,10 +72,10 @@ export const NIGHT = {
   // tail, so the bulbs read as dots with a soft rim, as in the Cycles preview, not as blobs.
   // pass 4: strength 0.4 -> 0.32 and the second level 0.3 -> 0.2: the bulbs were 17-21 px blobs (Cycles
   // 13-16) and the left ones merged into one 143 px run (now 12-19 px; see README for what is left)
-  bloom: { strength: 0.32, radius: 0.0, threshold: 1.6, knee: 1.2, clamp: 5, factors: [1.0, 0.2, 0.07, 0.025, 0.01] },
+  bloom: { strength: 0.34, radius: 0.0, threshold: 1.6, knee: 1.2, clamp: 5, factors: [1.0, 0.2, 0.07, 0.025, 0.01] },
   // the lite profile blooms at half resolution, where every level is twice as wide on screen:
   // shift the weight toward the tight levels so the moon halo and lamp glows match full
-  bloomHalf: { strength: 0.32, factors: [1.0, 0.1, 0.025, 0.005, 0.0] },
+  bloomHalf: { strength: 0.34, factors: [1.0, 0.1, 0.025, 0.005, 0.0] },
 
   // "size" of the point and spot lights for direct specular (see shading.js): a roughness floor
   lightSize: { minRoughness: 0.32, minClearcoatRoughness: 0.3 },
@@ -135,7 +135,12 @@ export const NIGHT = {
     // Round 2: 6 -> 4.8. Entered, a stall's bulbs are 2-3 m from the camera and fill 15-20 px each;
     // at 6 their white cores and halos were the glare the Codex judge saw close up (and they washed the
     // sign board above them). 4.8 keeps a warm-white core that still blooms.
-    warm: { color: [1.0, 0.62, 0.3], intensity: 4.8 },
+    // Round 2, pass 3: 4.8 -> 3.9 and a deeper amber (1, .62, .30 -> 1, .55, .24). AgX turns any
+    // channel past ~4 white, so at 4.8 every bulb seen from 2-3 m was a white disc with an orange rim.
+    // At 3.9 the red channel still clears the bloom threshold (1.6) but green and blue stay below
+    // white, so the core reads warm cream and the halo stays amber. Bloom strength goes up a hair
+    // (0.32 -> 0.34) so the glow from the home view is unchanged.
+    warm: { color: [1.0, 0.55, 0.24], intensity: 3.9 },
     cold: { color: [0.62, 0.76, 1.0], intensity: 5.0 },
     window: 1.5,
     // round 2: bulb bounce on the Ferris wheel (lights.js bulbBounce). Its rim, spokes and legs carry
@@ -159,7 +164,10 @@ export const NIGHT = {
     // The bias is in perspective depth, so it must be tiny: pass 2's -0.002 with a 5 cm near plane
     // was about 0.3 m at 2.7 m, which let the light through the wall base onto a pale strip of ground.
     // With near 0.15 m, -0.0003 is about 1.4 cm at 2.7 m and 2 mm at 1 m.
-    shadowMap: { size: 512, radius: 5, near: 0.15, bias: -0.0003, normalBias: 0.02, taps: 12 },
+    // Round 2, pass 3: radius 5 -> 8 texels (taps 12 -> 16): the shelf boards' shadows on the back
+    // wall had a hard 2-3 px edge close up; a real stall lamp is a 10 cm bulb a metre away, so the
+    // penumbra should be a few centimetres wide
+    shadowMap: { size: 512, radius: 8, near: 0.15, bias: -0.0003, normalBias: 0.02, taps: 16 },
     // a shadow-only shell just outside the walls of a stall with a shadowed interior light (lights.js
     // shadowBlocker): closes the plank gaps and the slot under the walls. floor: height over the base
     blocker: { pad: 0.012, floor: 0.05 },

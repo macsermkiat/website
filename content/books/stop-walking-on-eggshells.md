@@ -1,6 +1,6 @@
 ---
 title: "Stop Walking on Eggshells"
-author: "Randi Kreger and Paul T. Mason"
+author: "Paul T. Mason and Randi Kreger"
 category: people
 year: 1998
 one_line: "A practical guide for the partners, parents, children and friends of someone with borderline personality disorder, about understanding the behaviour and taking their own lives back."
@@ -18,7 +18,7 @@ review: "done"
 
 ## In short
 
-*Stop Walking on Eggshells* is written for the people around someone with borderline personality disorder (BPD): the ones who never know which version of their partner, parent or child will walk through the door. Paul Mason, a former therapist, and Randi Kreger, a writer who has spent decades collecting families' stories, explain the disorder and then shift the focus to the reader. You can't cure the other person, they argue, but you can change how you respond, set limits, stay safe and decide what you want. The book first appeared in 1998, and the third edition (2020) adds material on narcissism, men with BPD and children.
+*Stop Walking on Eggshells* is written for the people around someone with borderline personality disorder (BPD): the ones who never know which version of their partner, parent or child will walk through the door. Paul T. Mason, a psychotherapist, and Randi Kreger, a writer who has spent decades collecting families' stories, explain the disorder and then shift the focus to the reader. You can't cure the other person, they argue, but you can change how you respond, set limits, stay safe and decide what you want. The book first appeared in 1998, and the third edition (2020) adds material on narcissism, men with BPD and children.
 
 ## Summary
 

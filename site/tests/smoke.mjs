@@ -140,6 +140,7 @@ try {
     const sceneNow = await page.evaluate(() => window.__market.sceneStats());
     console.log('full scene after LOD', JSON.stringify(sceneNow), JSON.stringify(crowd));
     check('crowd distance LOD: far people use their lite figure', settled.lod > 0 && crowd.lite > 0, JSON.stringify({ settled, crowd }));
+    check('crowd: the shared clips (people_anims.glb) are loaded and retargeted', !!crowd.sharedAnims && crowd.sharedAnims.clips > 0 && crowd.sharedAnims.retargets > 0, JSON.stringify(crowd.sharedAnims));
     const after = await page.evaluate(() => window.__market.report);
     const lp = after.lights.places;
     check('full: the second light pass gives each ride its real light when it arrives', lp.includes('riesenrad') && lp.includes('karussell') && after.lights.realtime === 12, lp.join(' '));
@@ -493,6 +494,21 @@ try {
     check('reduced motion: no auto-rotate', cam0.every((v, i) => Math.abs(v - cam1[i]) < 1e-3));
     await page.evaluate(() => window.__market.settled());
     check('phone: the home view comes in closer than the desktop one', cam0[2] < 25 && cam0[1] < 7, JSON.stringify(cam0));
+    // no string-light pole (architect_plan.py POLES_THREE) stands in the phone's home frame within 14 m of the eye
+    const poles = await page.evaluate(() => {
+      const P = [[-15, 4], [-7.5, 6.5], [0, 7.5], [7.5, 6.5], [15, 4], [-10.5, -6.5], [10.5, -6.5], [-2.6, -9.6], [2.6, -9.6], [-17.5, -3], [-17.5, 5], [-17.5, 13], [17.5, -3], [17.5, 5], [17.5, 13]];
+      const cam = window.__market.camera;
+      cam.updateMatrixWorld();
+      const out = [];
+      for (const [x, z] of P) for (const y of [1, 3, 5]) {
+        const v = cam.position.clone().set(x, y, z);
+        const d = v.distanceTo(cam.position);
+        v.project(cam);
+        if (d < 14 && Math.abs(v.x) < 1 && Math.abs(v.y) < 1 && v.z < 1) out.push(`[${x}, ${z}] ${d.toFixed(1)} m`);
+      }
+      return [...new Set(out)];
+    });
+    check('phone: no string-light pole in the near part of the home view', poles.length === 0, poles.join('; '));
     await frames(page, 3);
     await shot(page, 'phone_home.jpg', null, { keepScroll: true });
     await page.click('#places button[data-place="carousel"]');

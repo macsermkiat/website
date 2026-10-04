@@ -208,22 +208,20 @@ export function buildContent() {
       ? { ...w, name: w.name || f?.name || '', sub: w.sub || f?.sub || '', title: w.title || f?.title || '', fromWriter: true }
       : { ...f, fromWriter: false };
   }
-  // The Bücherstand's shelf: the books the 3D shelf features (front matter `books:`) are listed in the panel and
-  // on the text page too, when the body's own list did not ship (a note for Mac shares its block), so the text
-  // version carries everything the market shows.
+  // The Bücherstand's front-matter `books:` list is not confirmed by Mac (content/reading.md says so, and its body
+  // list shares a block with a note for Mac). It is never written back into the panel or the text page. In a
+  // notes-hidden build the 3D shelf keeps only the entries that are on Mac's own shelf (content/bookshelf.json);
+  // "Pick a book for me" then goes on to his shelf's other books.
   const bk = sections.books;
-  if (bk && Array.isArray(bk.meta?.books) && bk.meta.books.length) {
-    const first = typeof bk.meta.books[0] === 'string' ? bk.meta.books[0] : bk.meta.books[0]?.title;
-    if (first && !bk.html.includes(esc(first).replace(/&amp;/g, '&')) && !bk.html.includes(esc(first))) {
-      const li = bk.meta.books.map((b) => (typeof b === 'string' ? { title: b } : b)).filter((b) => b?.title)
-        .map((b) => `<li><em>${esc(b.title)}</em>${b.author ? ` · ${esc(b.author)}` : ''}${b.note ? `. ${esc(b.note)}` : ''}</li>`).join('');
-      bk.html += `\n<h3>On the shelf in the market</h3>\n<ul class="shelf-list">${li}</ul>\n`;
-      bk.shelfAdded = true;
-    }
+  const library = buildLibrary();
+  if (bk && Array.isArray(bk.meta?.books) && NOTES_MODE === 'hide' && library.books.length) {
+    const mine = new Set(library.books.map((b) => normTitle(b.title)));
+    const kept = bk.meta.books.filter((b) => mine.has(normTitle(typeof b === 'string' ? b : b?.title)));
+    bk.shelfDropped = bk.meta.books.length - kept.length;
+    bk.meta = { ...bk.meta, books: kept };
   }
   // Mac's own bookshelf (content/bookshelf.json, the writer's content/books/): listed under the bookshop in the panel
   // and on the text page, and used by the 3D shelf to tell which spines are Mac's and what each book is about.
-  const library = buildLibrary();
   if (bk && library.books.length) {
     bk.html += libraryHtml(library);
     bk.libraryAdded = library.books.length;

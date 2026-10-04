@@ -50,6 +50,7 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
   }
   // from a gondola: over the square toward the church, the stalls below and the town beyond
   const lookAtMarket = new THREE.Vector3(8, 3, 4);
+  const FERRIS_LEAN = 0.5;
   const tmp = new THREE.Vector3();
   let riding = null;
 
@@ -76,7 +77,14 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
     if (r.wheel) r.wheel.boost = 1;
     riding = { type: 'ferris', place: ferris, rides: r, gondola: best.obj, bottom: by, top, held: 0, peak: -Infinity };
     stage = r.wheel ? 'rising' : 'top';
-    rig.startRide('ferris', () => ({ pos: best.obj.localToWorld(seat.clone()), look: lookAtMarket }));
+    // the rider leans out over the gondola's front rail toward the view (FERRIS_LEAN metres, level), so the
+    // gondola's own roof edge and the wheel's rim stay out of the top of the picture
+    const lean = new THREE.Vector3();
+    rig.startRide('ferris', () => {
+      const pos = best.obj.localToWorld(seat.clone());
+      lean.set(lookAtMarket.x - pos.x, 0, lookAtMarket.z - pos.z).setLength(FERRIS_LEAN);
+      return { pos: pos.add(lean), look: lookAtMarket };
+    }, { near: 0.45 });
     sfx('whoosh');
     say(actionNote('ferris', 'ride', 'Riding up. The whole market opens out below you.'));
   }

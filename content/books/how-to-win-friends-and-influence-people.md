@@ -40,7 +40,7 @@ Carnegie is open that none of this is new. His point is that most people know th
 
 **Start from what they want.** To move someone, talk about their interests, not yours. Bait the hook with what the fish likes.
 
-**Be genuinely interested.** You make more friends in two months by being interested in others than in two years by trying to interest them in you.
+**Be genuinely interested.** Curiosity about other people wins friends far faster than trying to impress them. Carnegie's own version is that you can make more friends "in two months" this way than "in two years" of trying to get people interested in you.
 
 **Names and listening.** Remembering someone's name and letting them talk about themselves are among the simplest ways to make them feel valued.
 

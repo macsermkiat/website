@@ -299,12 +299,12 @@ def kerzen():
                                                            0.022 + layer * 0.022, ry=math.pi / 2), C("e8b050"))
     # candle boxes: an open white card box of dinner candles at the left end with its lid leaning behind it,
     # and tied gift boxes of tealights stacked along the front of the risers
-    Mb = T(-0.975, -0.08, 0, rz=0.12)
-    m.box((0.13, 0.21, 0.04), Mb @ T(0, 0, 0.02), "paper", C("f4f0e6"), skip=("nz",))
-    m.box((0.13, 0.008, 0.21), Mb @ T(0.0, 0.14, 0.1, rx=-0.18), "paper", C("ece6d8"))
-    for k in range(5 if not vlib.lite() else 2):
+    Mb = T(-0.945, -0.08, 0, rz=0.05)
+    m.box((0.1, 0.2, 0.04), Mb @ T(0, 0, 0.02), "paper", C("f4f0e6"), skip=("nz",))
+    m.box((0.1, 0.008, 0.2), Mb @ T(0.0, 0.135, 0.108, rx=-0.18), "paper", C("ece6d8"))
+    for k in range(4 if not vlib.lite() else 2):
         col = C(CANDLE_COLS[(k * 3) % len(CANDLE_COLS)])
-        m.cyl(0.0105, 0.0105, 0.2, seg(8, 5), vlib.RW("wax"), Mb @ T(-0.046 + k * 0.023, -0.1, 0.044,
+        m.cyl(0.0105, 0.0105, 0.19, seg(8, 5), vlib.RW("wax"), Mb @ T(-0.033 + k * 0.022, -0.095, 0.044,
               rx=-math.pi / 2), jit(col, 0.04))
     for k, (x, dz) in enumerate(((-0.42, 0.0), (-0.42, 0.036), (0.32, 0.0), (0.42, 0.0), (0.37, 0.036))):
         if vlib.lite() and dz:
@@ -617,9 +617,9 @@ def kaese():
                   C(["f4e0a0", "e8c878", "f8ecc0", "e0c070"][k]))
     # the middle: wedges wrapped in wax paper (the paper folded up the rind, the cut face showing over it)
     # and a small round board with a piece of Bergkäse and a cheese knife
-    for k, (x, y, rz, col) in enumerate(((-0.12, -0.11, 1.35, "f0d890"), (-0.2, -0.2, 0.25, "f6e8b8"),
-                                         (-0.04, -0.205, -0.2, "e8c870"))):
-        Mw = T(x, y, 0.0, rz=rz) @ T(-0.05, 0, 0)
+    for k, (x, y, z, rz, col) in enumerate(((-0.12, -0.1, 0.0, 1.35, "f0d890"), (-0.21, -0.17, 0.0, 0.25, "f6e8b8"),
+                                            (0.03, -0.15, 0.025, -0.2, "e8c870"))):
+        Mw = T(x, y, z, rz=rz) @ T(-0.05, 0, 0)
         m.extrude([(0.0, -0.036), (0.1, 0.0), (0.0, 0.036)], 0.046, Mw, "cheese_cut", "sw_gloss", C(col))
         m.extrude([(-0.003, -0.04), (0.106, 0.0), (-0.003, 0.04)], 0.032, Mw, "paper", "paper", C("efe6cc"))
     Mr = T(-0.075, 0.165, 0)
@@ -719,7 +719,7 @@ def crepes():
 def chestnut(m, M, r=0.016, col=WHITE):
     """A roasted chestnut: flat pale base, rounded belly, a short pointed tip, flattened on one side
     (y 0.74). Six sides and three bands, smooth-shaded (about 40 triangles, half the old ribbed lathe)."""
-    n = seg(6, 5)
+    n = 5
     prof = [(0.62 * r, 0.0), (r, 0.62 * r), (0.6 * r, 1.45 * r), (0.0, 1.9 * r)]
     m.lathe(prof, n, "chestnut", M @ Matrix.Diagonal((1.0, 0.74, 1.0, 1.0)), col, "glaze", v_by="z", cap0=True)
 
@@ -729,13 +729,13 @@ def maroni():
     m = s.static
     # brazier drum with a fire door showing glowing coals; a perforated roasting pan on top
     Md = T(-0.7, 0.0, 0)
-    n = seg(32, 14)
+    n = seg(24, 12) if not vlib.lite() else 12
     m.lathe([(0.2, 0.0), (0.21, 0.01), (0.21, 0.2), (0.205, 0.21)], n, vlib.RW("iron"), Md, WHITE, arc=TWO_PI * 0.8,
             u0=-math.pi / 2 + TWO_PI * 0.1)
     m.lathe([(0.19, 0.0), (0.19, 0.2)], n, "iron", Md, C("4a4a4a"), arc=TWO_PI * 0.8, u0=-math.pi / 2 + TWO_PI * 0.1)
     m.disc(0.2, n, "iron", Md @ T(0, 0, 0.012), C("3a3a3a"))
     hot = vlib.Reg([0.0, 0.0, 0.5, 1.0])               # the glowing half of the coal maps (atlas_goods.coal_emit)
-    for k in range(10 if not vlib.lite() else 4):
+    for k in range(6 if not vlib.lite() else 3):
         a, rr = rng.uniform(0, TWO_PI), 0.16 * math.sqrt(rng.random())
         lump(m, Md @ T(rr * math.cos(a), rr * math.sin(a), 0.03 + rng.uniform(0, 0.02)), rng.uniform(0.025, 0.035), hot,
              jit(WHITE, 0.2), "coal_glow", seed=k * 0.7)
@@ -744,7 +744,7 @@ def maroni():
     m.lathe(pan, n, vlib.RW("iron"), Md, C("5a5a5a"))
     m.cyl(0.012, 0.012, 0.3, 8, "iron", Md @ T(0.22, 0, 0.245, ry=math.pi / 2), WHITE)
     m.cyl(0.016, 0.016, 0.12, 8, vlib.RW("wood"), Md @ T(0.5, 0, 0.245, ry=math.pi / 2), C("5a3622"))
-    for k in range(24 if not vlib.lite() else 8):
+    for k in range(19 if not vlib.lite() else 7):
         a, rr = rng.uniform(0, TWO_PI), 0.17 * math.sqrt(rng.random())
         chestnut(m, Md @ T(rr * math.cos(a), rr * math.sin(a), 0.212 + (0.17 - rr) * 0.08,
                            rx=rng.uniform(-0.6, 0.6), ry=rng.uniform(-0.6, 0.6), rz=rng.uniform(0, 6)),
@@ -867,8 +867,8 @@ def puffer():
         G.jar(m, T(0.2 + k * 0.08, 0.2, 0), "jar_orange", C("d8b060"), "sw_wet", h=0.09, r=0.034, lid=C("b0282a"))
     # front middle: a served paper plate of three Puffer with a dollop of applesauce, a wooden fork, and a
     # spatula resting beside the pan
-    Ms = T(0.52, -0.15, 0)
-    m.lathe([(0.0, 0.0), (0.085, 0.0), (0.1, 0.012), (0.0, 0.004)], seg(16, 8), "paper", Ms, C("f6f2ea"))
+    Ms = T(0.52, -0.125, 0)
+    m.lathe([(0.0, 0.0), (0.075, 0.0), (0.09, 0.012), (0.0, 0.004)], seg(16, 8), "paper", Ms, C("f6f2ea"))
     for k in range(3):
         a = TWO_PI * k / 3 + 0.4
         pancake(m, Ms @ T(0.03 * math.cos(a), 0.03 * math.sin(a), 0.005 + k * 0.004, rz=drng.uniform(0, 6),
@@ -877,7 +877,7 @@ def puffer():
             Ms @ T(-0.035, -0.03, 0.02), C("d8b060"), "liquid")
     m.box((0.1, 0.008, 0.002), Ms @ T(0.02, -0.06, 0.016, rz=0.3), vlib.RW("wood"), C("d8b890"))
     m.box((0.09, 0.06, 0.003), T(-0.37, -0.15, 0.012, rz=0.5, ry=0.1), "steel", WHITE)
-    m.box((0.14, 0.02, 0.016), T(-0.29, -0.2, 0.008, rz=0.5), vlib.RW("wood"), C("3a2414"))
+    m.box((0.14, 0.02, 0.016), T(-0.29, -0.185, 0.008, rz=0.5), vlib.RW("wood"), C("3a2414"))
     for k, (x, y) in enumerate(((-0.1, -0.2), (0.28, -0.12), (0.85, -0.2))):
         price_tag(m, T(x, y, 0.0), (7, 5, 0)[k])
     s.finish()

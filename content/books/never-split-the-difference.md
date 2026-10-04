@@ -9,6 +9,8 @@ sources:
   - https://www.runn.io/blog/never-split-the-difference-summary
   - https://bagerbach.com/books/never-split-the-difference/
   - https://growthabit.com/never-split-the-difference-book-summary/
+  - https://www.penguinrandomhouse.co.za/node/258939
+  - https://risewithdrew.com/how-emotion-impacts-high-stakes-negotiations/
 review: "done"
 ---
 
@@ -18,7 +20,7 @@ review: "done"
 
 ## Summary
 
-Voss opens at Harvard, where he took a negotiation course taught by Robert Mnookin. In role-plays against law students and professors trained in the classic "getting to yes" method, the cop with no formal training kept winning. He explains why. The standard approach assumes people calmly weigh interests and options, but research by psychologists such as Daniel Kahneman shows that we decide with our emotions and biases. Negotiation, then, is less about arguing and more about discovering what the other person wants and fears.
+Voss opens at Harvard, where he had gone for a short executive negotiation course. Robert Mnookin, director of the Harvard Negotiation Research Project, invited him for coffee and then, with his colleague Gabriella Blum, sprang a mock kidnapping on him: they had his son, and they wanted a million dollars. Voss held his own, and in the role-plays of Mnookin's class he went on to beat students trained in the classic "getting to yes" method. The cop with no academic training kept winning, and he explains why. The standard approach assumes people calmly weigh interests and options, but research by psychologists such as Daniel Kahneman shows that we decide with our emotions and biases. Negotiation, then, is less about arguing and more about discovering what the other person wants and fears.
 
 Chapter two introduces mirroring. Using a 1993 bank robbery in Brooklyn, Voss shows how repeating the last few words someone said, with an upward tone, gets them to keep talking and reveal more. He pairs it with the "late-night FM DJ voice": slow, low and calm, which soothes a tense counterpart. Chapter three is about labelling. Instead of saying you feel someone's pain, you name it: "It seems like you're worried that..." He describes a 1998 standoff in Harlem, where he spent six hours labelling the fears of three fugitives through an apartment door until they came out peacefully. He also teaches the accusation audit, where you list every bad thing the other person might think about you before they can say it, which takes the sting out.
 

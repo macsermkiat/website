@@ -309,6 +309,60 @@ function stepVendors(people) {
   }
 }
 
+/**
+ * The shared clips (crowd.json "shared_anims": people_anims.glb, every crowd and vendor clip on one skeleton with no
+ * mesh). Loaded once per market; null when the file or the entry is missing. Its hips rest height is kept, because
+ * the clips' hips.position keys are absolute for the reference figure.
+ */
+async function loadSharedAnims(manager, warn) {
+  const file = rel(RAW?.shared_anims?.file || 'people_anims.glb');
+  if (!modelExists(file)) return null;
+  try {
+    const root = await loadGlb(file, manager);
+    const clips = root.userData.animations || [];
+    if (!clips.length) return null;
+    root.updateMatrixWorld(true);
+    const hips = root.getObjectByName('hips');
+    return { file, clips, hipsRest: hips ? hips.position.clone() : new THREE.Vector3(), byOffset: new Map() };
+  } catch {
+    warn(`crowd: could not load ${file}; each figure plays only its own clips.`);
+    return null;
+  }
+}
+
+/**
+ * A figure's clips: its own, plus every shared clip it does not carry, retargeted to its hips (each hips.position
+ * key moves by the figure's hips rest minus the reference's). A figure shipped without clips plays the shared set;
+ * a lite figure gains the clips its file leaves out (laugh, the _free set, serve and wipe).
+ */
+const WITH_SHARED = new WeakMap();
+export function clipsFor(src, shared) {
+  const own = src.userData.animations || [];
+  if (!shared) return own;
+  if (WITH_SHARED.has(src)) return WITH_SHARED.get(src);
+  const have = new Set(own.map((c) => c.name));
+  const hips = src.getObjectByName('hips');
+  const d = hips ? hips.position.clone().sub(shared.hipsRest) : new THREE.Vector3();
+  const key = d.toArray().map((v) => v.toFixed(3)).join(',');
+  let set = shared.byOffset.get(key);
+  if (!set) {
+    set = shared.clips.map((c) => {
+      if (d.lengthSq() < 1e-8) return c;
+      const copy = c.clone();
+      for (const t of copy.tracks) {
+        if (!/(^|\.|\/)hips\.position$/.test(t.name)) continue;
+        const v = t.values;
+        for (let i = 0; i < v.length; i += 3) { v[i] += d.x; v[i + 1] += d.y; v[i + 2] += d.z; }
+      }
+      return copy;
+    });
+    shared.byOffset.set(key, set);
+  }
+  const out = own.concat(set.filter((c) => !have.has(c.name)));
+  WITH_SHARED.set(src, out);
+  return out;
+}
+
 export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, phrases, lodFar = LOD_FAR }) {
   const lod = { far: lodFar, near: Math.max(0, lodFar - 2) };
   const isOrganizer = RAW && RAW.version && ['vendors', 'queues', 'walkers', 'groups'].some((k) => Array.isArray(RAW[k]));
@@ -324,11 +378,13 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
   const alias = (v) => (lite && LITE_ALIAS[v] && modelExists(liteVariant(LITE_ALIAS[v]) || LITE_ALIAS[v]) ? LITE_ALIAS[v] : v);
   const want = new Set(people.map((p) => p.model).filter(Boolean));
   if (!lite) plan.variants.forEach((v) => want.add(v));
+  const sharedAnims = loadSharedAnims(manager, warn);
   await Promise.all([...new Set([...want].map(alias))].map(async (v) => {
     const file = (lite && liteVariant(v)) || v;
     if (!modelExists(file)) return;
     try { byFile.set(v, await loadGlb(file, manager)); } catch (e) { warn(`crowd: could not load ${file}.`); }
   }));
+  const shared = await sharedAnims;
   for (const v of want) if (alias(v) !== v && byFile.has(alias(v))) byFile.set(v, byFile.get(alias(v)));
   const variantRoots = plan.variants.map((v) => byFile.get(v)).filter(Boolean);
   const sourceFor = (p, i) => (p.model && byFile.get(p.model)) || (Number.isInteger(p.variant) && byFile.get(plan.variants[p.variant])) || (variantRoots.length ? variantRoots[i % variantRoots.length] : null);
@@ -346,7 +402,7 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
     if (noMug(p)) fig.traverse((o) => { if (o.isMesh && /^mug/i.test(o.name)) o.visible = false; });
     fig.traverse((o) => { if (o.isMesh) { o.castShadow = !lite; o.receiveShadow = false; } });
     const level = { root: fig, mixer: null, clips: null };
-    const clips = src.userData.animations || [];
+    const clips = clipsFor(src, shared);
     if (clips.length) {
       const mixer = new THREE.AnimationMixer(fig);
       const named = (n) => n && clips.find((c) => c.name === n);
@@ -544,7 +600,7 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
     stats() {
       let hidden = 0, far = 0;
       for (const p of crowd) { if (!p.g.visible) hidden++; if (p.levels.length > 1 && p.lvl === p.levels[1]) far++; }
-      return { people: crowd.length, hidden, lite: far, lodFar: lod.far, vendorsVisible: vendors.filter((v) => v.g.visible).length };
+      return { people: crowd.length, hidden, lite: far, lodFar: lod.far, vendorsVisible: vendors.filter((v) => v.g.visible).length, sharedAnims: shared ? { file: shared.file, clips: shared.clips.length, retargets: shared.byOffset.size } : null };
     },
     /** For tests: the people stepped out of the current shot. */
     hiddenIds: () => crowd.filter((p) => !p.g.visible).map((p) => p.g.name),
