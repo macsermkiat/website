@@ -54,7 +54,9 @@ is done and the rest waits on the role that owns it.
 3. **The reading view at 960 px and below.** It is now a sheet along the bottom (at most 44% of the screen height,
    46% on a phone), not a panel over the right side. This applies at 960 px wide and below, and on any screen taller
    than it is wide. Once the book is out, the camera comes to it (`main.js` `frameRegion`), and the picture moves up
-   so the book stands in the free part above the sheet. There it can be clicked again to put it back. When the book
+   so the book stands in the free part above the sheet. There it can be clicked again to put it back. While the
+   sheet is open the side panel steps aside (`html.reading`), so nothing covers the book. The reading view is modal,
+   so the panel's buttons could not be used at that moment anyway. When the book
    closes, the camera goes back to where it was. Above 960 px nothing changes: the open book stands beside the
    reading view. The smoke run now asserts this at 960 × 640 (`item_books_sheet_960.jpg`) and on a phone
    (`phone_books_reading.jpg`). The run no longer falls back to the close button.
@@ -63,7 +65,8 @@ is done and the rest waits on the role that owns it.
    Bücherstand panel has a new row, "Look along a shelf", with one button per category, labelled in German. A button
    flies to `cam_cat_<key>` when the stall has one. Without one, the view is worked out from the section's own
    books: square to the shelf, from the side the stall's close-up looks from, and far enough back that every spine
-   of the section fits the part of the screen the panel leaves free. The smoke run checks that every physics and
+   of the section fits the part of the screen the panel leaves free. On the lite market the close-up key light
+   turns to that shelf, because the side racks face away from the stall's own lights. The smoke run checks that every physics and
    craft spine is in that free part at 960 px, and every craft spine above the sheet on a phone
    (`item_books_shelf_craft_960.jpg`, `phone_books_shelf_craft.jpg`). Proposed text for BUILD.md, "Scene
    conventions":
@@ -92,7 +95,7 @@ is done and the rest waits on the role that owns it.
 - **The content gate is on for every deploy.** `pages.yml` sets `STRICT_CONTENT: '1'`; it is no longer a repository
   variable. The build fails while content/*.md holds a `[[Mac: ...]]` note, a `<!-- check -->` or `[check]` marker, or a
   book page marked `review: check`. **Today that stops the deploy**: about, contact, music, projects, questions, reading
-  and writing carry 18 notes and 18 check markers (build of 4 October, 09:40), and 35 book pages are still `review: check`. This is the
+  and writing carry 18 notes and 15 check markers (pass 2, `npm run content:check`), and 35 book pages are still `review: check`. This is the
   intended state: nothing unconfirmed reaches the public site. The writer and Mac clear the markers to publish.
   `npm run build` without the variable still builds locally, with the notes left out.
 - **The unconfirmed book list is not reinstated** (`plugins/market.js`). Round 1's "On the shelf in the market"
@@ -300,40 +303,47 @@ the vendor can check their rebuild against it.
 
 ## Verification
 
-All runs are on the production build of this last pass (`npm run build`, notes hidden), served from a copy of `dist/`
-by `tests/smoke.mjs` on SwiftShader. The machine is shared, with a load average of 9 to 14. `npm ci && npm run build`
-succeeds. `npm run test:unit` passes all its checks, and `npm run budget -- --strict` passes.
+Pass 2 (4 October, 09:45–11:15). Every run used the production build (`npm run build`, notes hidden), served from a
+copy of `dist/` by `tests/smoke.mjs` on SwiftShader. The machine was shared, with a load average of 3 to 9.
+`npm ci && npm run build` succeeds. `npm run test:unit` passes 58/58, and `npm run budget -- --strict` passes.
+`STRICT_CONTENT=1 npm run build` fails on the content gate, as intended.
 
 | Smoke section | Result | Console errors |
 |---|---|---|
-| unit (inside the smoke run) | 55/55 | none |
 | shots, items, audio (full market, 1280 px) | 45/45 | none |
-| interact (lite, 960 × 640: every panel action, both rides, snow, reset, keyboard, clicks in 3D, the reading view) | 49/49 | none |
-| lite, phone (reduced motion and touch), missing models | all passed | none |
+| interact (lite, 960 × 640: every panel action, both rides, snow, reset, keyboard, clicks in 3D, the reading sheet, both shelf views) | 54/54 | none |
+| phone (reduced motion, touch, the craft shelf and a tapped book above the sheet) | 10/10 | none |
+| lite | 5/5 | none |
+| missing models | 6/6 | none |
 | plain.html and the 3D page's links and credits | 14/14 | none |
 
-Each section ran in its own invocation, so two of them could share the machine. Earlier runs in this pass found
-three things, all fixed before the runs above:
+The interact and phone sections ran again on the final build, after the last two changes (the panel steps aside
+while the sheet is open, and the key light goes back to the counter when a book opens). The full-market section
+ran on the build before those two changes. Neither change touches the full market at 1280 px.
 
-- **Stall clicks fell through** on merged stall bodies. This was a real bug, fixed in the picker (see above).
-- **The wrong spine opened** when a hovered spine was lifted: a click could land on its neighbour's edge. Also a real
-  bug. A click now goes to the hovered item when the ray still meets it within 8 cm of the first hit.
-- **plain.html counted 8 sections**: the book notes were wrapped in a `<section>`. They are a `<div role="region">`
-  now.
+New in pass 2:
 
-At 960 px the reading view covers the open book, so the smoke run closes it with the view's own button there. At
-1280 px the open book stands beside the view (`item_books_open.jpg`, `item_books_category.jpg`).
+- at 960 px the reading view is a bottom sheet, and the open book stands above it, where it can be clicked again to
+  put it back (no fallback to the close button any more);
+- the Bücherstand panel has one shelf button per category, and the physics and craft views put every spine of
+  their section in the free part of the picture;
+- on a phone, the craft shelf is framed above the panel, and a tapped book opens above its reading sheet;
+- unit checks for `content:check`, the bandstand players charged as person variants, and shared textures charged in
+  equal parts.
 
-What the smoke run asserts for the items:
+What the smoke run asserts for the items (unchanged):
 
 - the ladle, bottle, glass and sausage nodes move, and the neighbouring sausage does not;
 - the opened book is the one clicked (title, author, slug), and its reading view shows its own page;
 - the mug and glass end full, and a roll gets its sausage.
 
-The previews in this folder are from these runs: the home view (full, snow, lite), the Glühwein, Bücherstand and
-bandstand panels, one close-up per item action (ladle, bottle, pouring, Prost, turning, bun, an open pick and an open
-category book with its reading view, a Lebkuchen heart), both rides, the phone views, the missing-models stand-ins
-and plain.html.
+Previews in this folder:
+
+- retaken this pass: the home view (full, snow, lite); the Glühwein, Bücherstand and bandstand panels; one
+  close-up per item action (ladle, bottle, pouring, Prost, turning, bun, an open pick, an open category book, a
+  Lebkuchen heart); both rides; the phone views; the missing-models stand-ins; plain.html;
+- new this pass: `item_books_sheet_960.jpg`, `item_books_shelf_craft_960.jpg`, `phone_books_shelf_craft.jpg` and
+  `phone_books_reading.jpg`.
 
 ## Budgets (`npm run budget`)
 

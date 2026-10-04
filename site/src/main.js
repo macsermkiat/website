@@ -154,7 +154,7 @@ async function boot() {
     crowdSay: (text, center, radius) => crowd.say(text, center, radius),
     togglePlay: () => togglePlay(),
     frame: (o) => frameRegion(o),
-    keyAt: (center, facing) => key?.aim(center, facing),
+    keyAt: (center, facing) => (center ? key?.aim(center, facing) : key?.follow(market.places[panel.current])),
     flyBack: (v) => { if (!rig.riding && v) rig.flyTo(v); },
   });
 

@@ -64,6 +64,7 @@ Don't commit; the market owner commits and pushes.
   - `bulbs_<n>`: a mesh of fairy bulbs. Its material is named `bulb_warm` or `bulb_cold` and is emissive. The engine makes it glow with bloom.
   - `slot_<name>`: an empty where props go. Stalls must provide `slot_counter` (on the counter top, centred), `slot_shelf_1` and `slot_shelf_2` (back shelves), `slot_vendor` (standing spot behind the counter), `slot_sign` and `slot_front` (ground in front of the counter).
   - `cam_view`: an empty where the camera goes when a visitor enters this place. It looks toward `cam_target`.
+  - `cam_cat_<key>` / `cam_cat_<key>_target`: optional close-up camera and target for one Bücherstand category section, used on narrow screens and when a book in that section opens.
   - `act_<name>`: a node that an action animates (for example `act_tap_0`, `act_pot_lid`, `act_book_12`, `act_grill`).
   - `rot_<name>`: a part that the engine spins (for example `rot_wheel` or `rot_platform`). Gondolas are `gondola_<n>` and horses are `horse_<n>`.
   - `snow_<n>`: snow caps that the engine shows only when snow is on.
@@ -100,7 +101,7 @@ The Bücherstand (Reading) holds Mac's 55 Audible books, grouped into the six ca
 | Section stall with its props | 60k | 3 MB |
 | Deco stall | 20k | 1 MB (shares the kit's textures where possible) |
 | Ferris wheel / carousel | 80k each | 3 MB each |
-| Bandstand with instruments | 50k | 2 MB |
+| Bandstand with instruments (band players count as person variants, not against this) | 50k | 2 MB |
 | Square ground, lamps, string-light poles | 40k | 3 MB |
 | Town ring (all buildings) and church | 150k | 5 MB |
 | One person variant | 5k | 0.4 MB (the engine instances them) |

@@ -52,6 +52,8 @@ export function createBooks(ctx) {
     if (open?.n === n) { close(); return; }
     if (item?.busy) return;
     if (open) close();
+    // the key light was turned to a shelf: back to the counter, where the book will stand open
+    if (shelfOpen) { shelfOpen = null; ctx.keyAt?.(null); }
     const d = describe(n);
     sfx('page');
     const text = d.mac
