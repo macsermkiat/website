@@ -145,13 +145,12 @@ export function createStallActions(ctx) {
   }
 
   // ---------- Bücherstand ----------
-  const banded = market.places.books ? !!market.places.books.root.getObjectByName('band_pick_0') : false;
 
   return {
     glueh: { hint: actionHint('glueh', 'Pour a cup of Glühwein, then raise it with the crowd.') + itemHint('glueh'), acts: [{ key: 'pour', label: 'Pour a cup', fn: pourMug }, { key: 'prost', label: 'Prost!', fn: prostGlueh }] },
     bier: { hint: actionHint('bier', 'Pull a pint from the middle tap.') + itemHint('bier'), acts: [{ key: 'pint', label: 'Pull a pint', fn: pullPint }, { key: 'prost', label: 'Prost!', fn: prostBier }] },
     wurst: { hint: actionHint('wurst', 'Turn the sausages on the grill.') + itemHint('wurst'), acts: [{ key: 'turn', label: 'Turn the sausages', fn: turnSausages }, { key: 'bun', label: 'One in a bun, please', fn: bun }] },
-    books: { hint: actionHint('books', 'Click any spine on the shelves, or let the bookseller choose.') + (banded ? ' <em>Mac’s picks wear a red paper band.</em>' : ''), acts: [{ key: 'book', label: 'Pick a book for me', fn: () => H.pickBook?.() }] },
+    books: { hint: actionHint('books', 'Click any spine on the shelves, or let the bookseller choose.') + ' <em>Every titled spine is a book Mac has read; it opens with his notes on it.</em>', acts: [{ key: 'book', label: 'Pick a book for me', fn: () => H.pickBook?.() }] },
     update(dt, t, still) {
       emitters.forEach((e) => e.update(dt, still));
     },

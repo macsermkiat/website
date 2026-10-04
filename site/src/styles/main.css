@@ -117,3 +117,17 @@ mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-rad
 .library .shelf-list { margin: 0; padding-left: 18px; }
 .library .shelf-list li { margin: 3px 0; line-height: 1.35; }
 .library .one-line { color: var(--muted); }
+
+/* the reading view: a book's page from content/books/<slug>.md, over the panel while the book is open */
+.reader { z-index: 11; background: #f3ead6; color: #2b1f16; border-color: #cdb991; }
+.reader .eyebrow { color: #8a2a20; }
+.reader h2 { font-style: italic; }
+.reader .byline { margin: 4px 0 0; color: #5b4532; font-size: 16px; }
+.reader .close { color: #2b1f16; border-color: #b9a47c; }
+.reader a { color: #8a2a20; }
+.reader .prose h3 { font-size: 19px; margin: 8px 0 -6px; color: #2b1f16; }
+.reader .prose strong { color: #3a2412; }
+.reader .lead { font-style: italic; color: #4a3828; }
+.reader .sources, .reader .more { font-size: 13.5px; color: #6b5a48; border-top: 1px solid #d8c7a3; padding-top: 8px; }
+.reader .close:focus-visible, .reader a:focus-visible { outline-color: #8a2a20; }
+@media (max-width: 640px) { .reader { max-height: min(62vh, 600px); max-height: min(62svh, 600px); } }

@@ -20,10 +20,11 @@ What was built:
 - **Two side racks ("wings").** Each is an open green bookcase with two bays. They stand at the hut's front corners, splayed 50° so their faces turn toward a visitor in front of the counter.
   - Construction: walnut boards with worn edges, plank backs, a framed plinth, cream edge strips and cornice.
   - Each rack has a little shingled pent roof on back posts with knee braces, a cream fascia, a bulb string (`bulbs_0`) under the front edge, and its own snow cap (`snow_2`, `snow_3`).
-- **Two wheeled book carts** in front of the glazed cabinets. Each has two stepped tiers (the upper tier stands behind the lower tier's books), stepped oak side panels, iron corner straps, two spoked wheels with iron tyres, front legs, a push bar, and a sign on two iron rods with finials.
+- **Two wheeled book carts** in front of the glazed cabinets. Each has two stepped tiers (the upper tier stands behind the lower tier's books), stepped oak side panels with turned finials, iron corner straps, two spoked wheels with iron tyres, front legs, a push bar, and its section's name board hung on the front apron from two iron hooks.
+  - The cart signs first stood on two iron rods above the back tier. From the 3/4 preview view the right cart's sign covered half of the right rack's "Menschen & Gespräche" sign, and both rod signs hid the cabinets' glass. After the restart I moved them to the carts' front aprons (centre 0.47 m, 0.24 m tall, 5 cm wider than the cart each side). No sign now covers another from the front or the 3/4 views, and the cabinets show again above the carts. The slots and boards did not move, so the vendor's sets are unaffected.
 - **One sign per section, as its own mesh `sign_cat_<key>`.**
   - A cream board with a thin gold border and deep-green Alegreya SC lettering.
-  - Labels with " & " are set on two lines ("Physik &" / "Kosmos") so the letters stay large: 15 cm text block, about 6.6 cm a line. "Lebensgeschichten" is a single line on a wider cart sign (85 x 6.3 cm).
+  - Labels with " & " are set on two lines ("Physik &" / "Kosmos") so the letters stay large: 15 cm text block, about 6.6 cm a line. "Lebensgeschichten" is a single line across the 0.70 m cart board (65 x 4.8 cm).
   - The letters are painted (flat front faces, the new `Part.flat_text`). The board material is `paint_glow`, so the signs stay legible under the site's moonlight (see `stall_buecher_threejs.jpg`).
   - Spelling comes straight from `label_de`.
 - **One empty `slot_cat_<key>` per section,** at the left end of its lowest board, on the board's top surface at its front edge, rotated with its rack (+X along the board, -Y toward the visitor).
@@ -122,7 +123,8 @@ What was built:
 
 ## Open issues and what I would improve next
 
-- **The racks and carts make the Bücherstand busier from the home view.** The carts hide the lower half of the glazed cabinets. The cabinets still show their upper three shelves.
+- **The racks and carts make the Bücherstand busier from the home view.** The carts hide the lower half of the glazed cabinets. The cabinets still show their upper three shelves, and since the cart signs moved to the aprons nothing covers the glass above the carts.
+- **The cart signs sit at knee height (0.35-0.59 m).** They read well from the front and from `cam_view`, but they are less visible from far away than the rack signs. The main "Bücher" sign carries the stall from the home view.
 - **`cam_view` can't show every section.** At 4.2 m it frames the counter and both carts, and the outer bays (physics, craft) sit at the frame edge. The engineer may want per-section close-ups. I can add optional `cam_cat_<key>` empties if that helps; I did not invent a node prefix without the market owner.
 - **Capacity is generous** (2–4x the shelf length the titles need), as BUILD.md asks for "some room". The vendor's sets fill the gaps with face-out covers and fillers.
 - **The rack canopies cast a shadow on the upper boards** under the site's `light_1`. Their bulb strings glow but light nothing in the browser. A lighting pass, or a stand-in on the book boards, would help the upper boards read.

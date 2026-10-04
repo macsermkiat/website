@@ -7,7 +7,7 @@ import { songPlan } from '../src/audio/songplan.js';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { contentGate, assetCredits, buildLibrary, libraryHtml, buildContent, setNotesMode, normTitle } from '../plugins/market.js';
+import { contentGate, assetCredits, buildLibrary, libraryHtml, bookFragment, libraryPagesHtml, buildContent, setNotesMode, normTitle } from '../plugins/market.js';
 import { mkdirSync } from 'node:fs';
 import { readGlb, budget } from '../scripts/budget.mjs';
 
@@ -77,13 +77,15 @@ check('the song is about ten minutes before it rests and starts again', plan.len
   check('the strict content gate counts <!-- check --> comments and [check] tags', g.left.length === 1 && g.left[0].checks === 2 && /check marker/.test(g.message), g.message);
   mkdirSync(path.join(dir, 'books'));
   writeFileSync(path.join(dir, 'books', 'chaos.md'), '---\ntitle: "Chaos"\nauthor: "James Gleick"\none_line: "Order in disorder."\nreview: "check"\n---\n\n## In short\n\nText.\n');
-  writeFileSync(path.join(dir, 'bookshelf.json'), JSON.stringify({ books: [{ title: 'Chaos', author: 'James Gleick' }, { title: 'Grit', author: 'Angela Duckworth' }] }));
+  writeFileSync(path.join(dir, 'books', 'categories.json'), JSON.stringify({ categories: [{ key: 'physics', label_en: 'Physics', label_de: 'Physik & Kosmos', books: [{ title: 'Chaos', author: 'James Gleick', slug: 'chaos' }, { title: 'Grit', author: 'Angela Duckworth', slug: 'grit' }] }] }));
   const g2 = contentGate(dir);
   check('the strict content gate counts a book page still marked review: check', g2.left.some((l) => l.file === 'books/chaos.md' && l.checks === 1), g2.message);
   const lib = buildLibrary(dir);
-  check('Mac\'s bookshelf: every chosen title, with its one-line summary where the writer has one', lib.books.length === 2 && lib.books[0].oneLine === 'Order in disorder.' && lib.books[1].oneLine === '', JSON.stringify(lib.books));
-  check('Mac\'s bookshelf renders as a list for the panel and the text page', /<details class="library"[\s\S]*<em>Chaos<\/em> · James Gleick\. <span class="one-line">Order in disorder\.<\/span>/.test(libraryHtml(lib)));
-  check('no bookshelf file: an empty library, no error', buildLibrary(path.join(dir, 'nowhere')).books.length === 0);
+  check('Mac\'s bookshelf comes from categories.json, with the one-line summary where the writer has one', lib.books.length === 2 && lib.books[0].oneLine === 'Order in disorder.' && lib.books[0].category === 'physics' && lib.books[1].oneLine === '' && !lib.books[1].page, JSON.stringify(lib.books));
+  check('Mac\'s bookshelf renders as a list whose titles link to their reading pages', /<details class="library"[\s\S]*<a href="plain\.html#book-chaos" data-book="chaos"><em>Chaos<\/em><\/a> · James Gleick\. <span class="one-line">Order in disorder\.<\/span>/.test(libraryHtml(lib)) && /<em>Grit<\/em> · Angela/.test(libraryHtml(lib)));
+  check('a book\'s reading page is its markdown body under the title (In short as an h3)', /<h3>In short<\/h3>\s*<p>Text\.<\/p>/.test(bookFragment(lib, 'chaos')) && bookFragment(lib, 'grit') === '');
+  check('the text page carries every book\'s reading page with an anchor', /<article class="bookpage" id="book-chaos"[\s\S]*<h5>In short<\/h5>/.test(libraryPagesHtml(lib)));
+  check('no categories file: an empty library, no error', buildLibrary(path.join(dir, 'nowhere')).books.length === 0);
   const credits = assetCredits();
   check('asset credits from CREDITS.md carry source URLs and licences', /<details class="credits-all"/.test(credits) && /href="https:\/\/github\.com\/mrdoob\/three\.js"/.test(credits) && /MIT/.test(credits));
   // the Bücherstand's unconfirmed front-matter list is never written into the panel or the text page, and a
@@ -94,6 +96,7 @@ check('the song is about ten minutes before it rests and starts again', plan.len
   const shelf = built.sections.books?.meta?.books || [];
   check('production content: the unconfirmed book list is not reinstated in the bookshop panel', !/On the shelf in the market/.test(built.sections.books?.html || ''));
   check('production content: the 3D shelf keeps only books on Mac\'s own shelf', shelf.every((x) => mine.has(normTitle(typeof x === 'string' ? x : x.title))), shelf.map((x) => x.title || x).join(', '));
+  check('production content: all 55 books from categories.json, each with its reading page', built.library.books.length === 55 && built.library.books.every((x) => x.page && built.library.pages[x.slug]), `${built.library.books.length} books, ${built.library.books.filter((x) => !x.page).map((x) => x.slug).join(' ')} without a page`);
   setNotesMode('show');
   const b = budget();
   const glb = readGlb(new URL('../public/models/deco_lebkuchen.glb', import.meta.url).pathname);

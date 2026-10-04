@@ -210,7 +210,7 @@ export function buildContent() {
   }
   // The Bücherstand's front-matter `books:` list is not confirmed by Mac (content/reading.md says so, and its body
   // list shares a block with a note for Mac). It is never written back into the panel or the text page. In a
-  // notes-hidden build the 3D shelf keeps only the entries that are on Mac's own shelf (content/bookshelf.json);
+  // notes-hidden build the 3D shelf keeps only the entries that are on Mac's own shelf (content/books/categories.json);
   // "Pick a book for me" then goes on to his shelf's other books.
   const bk = sections.books;
   const library = buildLibrary();
@@ -220,8 +220,8 @@ export function buildContent() {
     bk.shelfDropped = bk.meta.books.length - kept.length;
     bk.meta = { ...bk.meta, books: kept };
   }
-  // Mac's own bookshelf (content/bookshelf.json, the writer's content/books/): listed under the bookshop in the panel
-  // and on the text page, and used by the 3D shelf to tell which spines are Mac's and what each book is about.
+  // Mac's own bookshelf (content/books/categories.json and the writer's content/books/<slug>.md): listed under the
+  // bookshop in the panel and on the text page (with every book's reading page there), and read by the 3D shelf.
   if (bk && library.books.length) {
     bk.html += libraryHtml(library);
     bk.libraryAdded = library.books.length;
@@ -238,64 +238,99 @@ export const normTitle = (t) => String(t || '').toLowerCase().normalize('NFC').r
 const slugTitle = (t) => String(t || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[’']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 /**
- * Mac's bookshelf: the titles he chose (content/bookshelf.json), in the writer's categories
- * (content/books/categories.json) when they exist, each with its one-line summary from content/books/<slug>.md.
- * Every part is optional: no shelf file means an empty library, a book without a page has no summary yet.
+ * Mac's bookshelf: content/books/categories.json is the only source of titles, authors, slugs and categories
+ * (BUILD.md, "Bücherstand categories"). Each book gets its one-line summary and its reading page from
+ * content/books/<slug>.md when the writer has done it. No categories file means an empty library.
  * A book page marked `review: check` is counted by the content gate (STRICT_CONTENT=1 stops on it).
  */
 export function buildLibrary(dir = CONTENT_DIR) {
-  const shelf = readJson(path.join(dir, 'bookshelf.json'));
   const cats = readJson(path.join(dir, 'books', 'categories.json'));
-  const pages = {};
   const bookDir = path.join(dir, 'books');
-  if (fs.existsSync(bookDir)) {
-    for (const f of fs.readdirSync(bookDir).filter((f) => f.endsWith('.md'))) {
-      const { data } = frontMatter(fs.readFileSync(path.join(bookDir, f), 'utf8'));
-      const page = { slug: f.replace(/\.md$/, ''), title: str(data.title), author: str(data.author), category: str(data.category), oneLine: str(data.one_line || data.oneline || data.note), review: str(data.review) };
-      pages[page.slug] = page;
-      if (page.title) pages['t:' + normTitle(page.title)] = page;
-    }
-  }
-  const shelfBooks = Array.isArray(shelf?.books) ? shelf.books.filter((b) => b && (b.title || b.full_title)) : [];
-  const byTitle = new Map(shelfBooks.map((b) => [normTitle(b.title || b.full_title), b]));
   const books = [];
   const categories = [];
-  const add = (b, cat) => {
-    const slug = b.slug || slugTitle(b.title);
-    const page = pages[slug] || pages['t:' + normTitle(b.title)];
-    const own = byTitle.get(normTitle(b.title));
-    const entry = {
-      title: String(b.title || own?.title || ''),
-      author: String(b.author || own?.author || page?.author || ''),
-      slug,
-      category: cat?.key || page?.category || '',
-      oneLine: NOTES_MODE === 'hide' && NOTE_RE.test(page?.oneLine || '') ? '' : (page?.oneLine || '').replace(CHECK_RE, '').trim(),
-    };
-    books.push(entry);
-    return entry;
-  };
-  if (Array.isArray(cats?.categories) && shelfBooks.length) {
-    const seen = new Set();
-    for (const c of cats.categories) {
-      const list = (c.books || []).filter((b) => b?.title && byTitle.has(normTitle(b.title))).map((b) => { seen.add(normTitle(b.title)); return add(b, c); });
-      if (list.length) categories.push({ key: c.key || '', label: String(c.label_en || c.label || c.key || ''), labelDe: String(c.label_de || ''), books: list });
+  const pages = {};
+  for (const c of Array.isArray(cats?.categories) ? cats.categories : []) {
+    const list = [];
+    for (const b of Array.isArray(c.books) ? c.books : []) {
+      if (!b?.title) continue;
+      const slug = String(b.slug || slugTitle(b.title));
+      const file = path.join(bookDir, `${slug}.md`);
+      const page = fs.existsSync(file) ? bookPage(fs.readFileSync(file, 'utf8')) : null;
+      const entry = {
+        title: String(b.title),
+        author: String(b.author || page?.author || ''),
+        slug,
+        category: String(c.key || ''),
+        categoryDe: String(c.label_de || ''),
+        oneLine: page?.oneLine || '',
+        page: !!page,
+      };
+      if (page) pages[slug] = page.html;
+      books.push(entry);
+      list.push(entry);
     }
-    const rest = shelfBooks.filter((b) => !seen.has(normTitle(b.title))).map((b) => add(b, null));
-    if (rest.length) categories.push({ key: 'more', label: 'More from the shelf', labelDe: '', books: rest });
-  } else if (shelfBooks.length) {
-    categories.push({ key: 'all', label: '', labelDe: '', books: shelfBooks.map((b) => add(b, null)) });
+    if (list.length) categories.push({ key: String(c.key || ''), label: String(c.label_en || c.label || c.key || ''), labelDe: String(c.label_de || ''), books: list });
   }
-  return { books, categories, source: shelf?.source ? String(shelf.source) : '' };
+  return { books, categories, pages, source: 'content/books/categories.json' };
 }
 
-/** The bookshelf as HTML for the panel and the text page: one list per category, a one-line summary per book. */
-export function libraryHtml(lib) {
+/** One book's reading page: its markdown body (In short, Summary, Key ideas, ...) with notes handled as elsewhere. */
+export function bookPage(src) {
+  const { data, body } = frontMatter(src);
+  const meta = NOTES_MODE === 'hide' ? stripMetaNotes(data) : data;
+  // the page's own headings sit under the book's title: "## Summary" becomes an h3
+  const md = markChecks(body.trim().replace(/^#\s+.+\r?\n+/, ''));
+  const html = marked.parse(md, { async: false }).replace(/<(\/?)h([1-5])>/g, (_, sl, n) => `<${sl}h${Math.min(6, +n + 1)}>`);
+  const one = str(meta.one_line || meta.oneline || meta.note);
+  const sources = Array.isArray(meta.sources) ? meta.sources.filter((u) => typeof u === 'string' && /^https?:\/\//.test(u)) : [];
+  const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
+  const srcHtml = sources.length ? `<p class="sources">Sources: ${sources.map((u) => `<a href="${esc(u)}" rel="noopener">${esc(host(u))}</a>`).join(', ')}</p>` : '';
+  return {
+    author: str(meta.author),
+    oneLine: NOTES_MODE === 'hide' && NOTE_RE.test(one) ? '' : one.replace(CHECK_RE, '').trim(),
+    html: html + srcHtml,
+    sources,
+  };
+}
+
+/** A book's reading page as an HTML fragment (fetched by the 3D reading view, inlined in the text page). */
+export function bookFragment(lib, slug, { level = 3 } = {}) {
+  const b = lib.books.find((x) => x.slug === slug);
+  if (!b || !lib.pages?.[slug]) return '';
+  const shift = (html) => html.replace(/<(\/?)h([1-6])>/g, (_, sl, n) => `<${sl}h${Math.min(6, +n + level - 3)}>`);
+  return shift(lib.pages[slug]);
+}
+
+/**
+ * The bookshelf as HTML for the panel and the text page: one list per category. Each title links to its reading
+ * page (on the text page an anchor further down; in the 3D market the link opens the book on its shelf).
+ */
+export function libraryHtml(lib, { open = false } = {}) {
   if (!lib?.books?.length) return '';
   const groups = lib.categories.map((c) => {
-    const li = c.books.map((b) => `<li><em>${esc(b.title)}</em>${b.author ? ` · ${esc(b.author)}` : ''}${b.oneLine ? `. <span class="one-line">${esc(b.oneLine)}</span>` : ''}</li>`).join('');
+    const li = c.books.map((b) => {
+      const t = b.page ? `<a href="plain.html#book-${esc(b.slug)}" data-book="${esc(b.slug)}"><em>${esc(b.title)}</em></a>` : `<em>${esc(b.title)}</em>`;
+      return `<li>${t}${b.author ? ` · ${esc(b.author)}` : ''}${b.oneLine ? `. <span class="one-line">${esc(b.oneLine)}</span>` : ''}</li>`;
+    }).join('');
     return `${c.label ? `<h4>${esc(c.label)}${c.labelDe ? ` <span lang="de">· ${esc(c.labelDe)}</span>` : ''}</h4>` : ''}<ul class="shelf-list">${li}</ul>`;
   }).join('\n');
-  return `\n<details class="library" id="bookshelf"><summary>Mac’s bookshelf: ${lib.books.length} books he has read, by subject</summary>\n${groups}\n</details>\n`;
+  return `\n<details class="library" id="bookshelf"${open ? ' open' : ''}><summary>Mac’s bookshelf: ${lib.books.length} books he has read, by subject</summary>\n${groups}\n</details>\n`;
+}
+
+/** Every book's reading page, for the text page: one article per book, by category. */
+export function libraryPagesHtml(lib) {
+  if (!lib?.books?.some((b) => b.page)) return '';
+  const parts = lib.categories.map((c) => {
+    const arts = c.books.filter((b) => b.page).map((b) => `
+      <article class="bookpage" id="book-${esc(b.slug)}" aria-labelledby="book-${esc(b.slug)}-h">
+        <h4 id="book-${esc(b.slug)}-h"><em>${esc(b.title)}</em></h4>
+        ${b.author ? `<p class="byline">${esc(b.author)}</p>` : ''}
+        ${bookFragment(lib, b.slug, { level: 5 })}
+        <p class="back"><a href="#bookshelf">Back to the bookshelf</a></p>
+      </article>`).join('');
+    return arts ? `<h3 class="bookcat">${esc(c.label)}${c.labelDe ? ` <span lang="de">· ${esc(c.labelDe)}</span>` : ''}</h3>${arts}` : '';
+  }).join('\n');
+  return `\n<section class="booknotes" aria-label="Notes on every book on Mac’s shelf">\n<h3>Notes on every book</h3>\n${parts}\n</section>\n`;
 }
 
 function listFiles(dir, base = dir) {
@@ -426,7 +461,7 @@ export function plainHtml(content) {
     <section id="${id}" aria-labelledby="${id}-h">
       <p class="eyebrow">${esc(s.name)} · ${esc(s.sub)}</p>
       <h2 id="${id}-h">${esc(s.title || s.sub)}</h2>
-      ${s.libraryAdded ? s.html.replace('<details class="library"', '<details class="library" open') : s.html}
+      ${s.libraryAdded ? s.html.replace('<details class="library"', '<details class="library" open') + libraryPagesHtml(content.library) : s.html}
     </section>`;
     })
     .join('\n');
@@ -483,7 +518,11 @@ export default function marketPlugin() {
     load(id) {
       if (id === '\0' + V_CONTENT) {
         for (const f of [...readDir(CONTENT_DIR), ...readDir(FALLBACK_DIR)]) this.addWatchFile?.(f);
-        return `export default ${JSON.stringify(buildContent())};`;
+        // the reading pages stay out of the bundle: the 3D reading view fetches reading/<slug>.html when a book opens
+        const c = buildContent();
+        const { pages, ...library } = c.library;
+        library.books = library.books.map((b) => ({ ...b, page: !!pages[b.slug] }));
+        return `export default ${JSON.stringify({ ...c, library })};`;
       }
       if (id === '\0' + V_INV) {
         return `export default ${JSON.stringify(buildInventory())};`;
@@ -510,6 +549,11 @@ export default function marketPlugin() {
     configureServer(server) {
       // Serve the prototype's instrument samples for the generative fallback band in dev.
       server.middlewares.use((req, res, next) => {
+        const rd = req.url && /\/reading\/([a-z0-9-]+)\.html(?:\?|$)/.exec(req.url);
+        if (rd) {
+          const html = bookFragment(buildLibrary(), rd[1]);
+          if (html) { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html); return; }
+        }
         if (req.url && req.url.endsWith('/fallback/samples.json') && fs.existsSync(SAMPLES)) {
           res.setHeader('Content-Type', 'application/json');
           fs.createReadStream(SAMPLES).pipe(res);
@@ -536,6 +580,12 @@ export default function marketPlugin() {
       // They are fetched only if the stems cannot play.
       if (fs.existsSync(SAMPLES)) {
         this.emitFile({ type: 'asset', fileName: 'fallback/samples.json', source: fs.readFileSync(SAMPLES) });
+      }
+      // one small HTML fragment per book, fetched by the reading view when that book is opened in the market
+      const lib = buildLibrary();
+      for (const b of lib.books) {
+        const html = bookFragment(lib, b.slug);
+        if (html) this.emitFile({ type: 'asset', fileName: `reading/${b.slug}.html`, source: html });
       }
     },
   };

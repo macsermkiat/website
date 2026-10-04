@@ -1,51 +1,50 @@
 // The Bücherstand: click any book and it slides off the shelf, comes to the front of the counter and opens,
-// showing its own title, author and a one-line note on its pages (and in the panel). Click it again and it
-// closes and goes back to its place. Mac's books (reading.md) are found on the vendor's titled spines; a book of
-// his with no printed spine gets a free spine near the middle of the view, wearing a red paper band.
+// showing its own title and author on its pages, and the reading view beside it shows that book's page from
+// content/books/<slug>.md (in short, summary, key ideas). Click the book again, press Escape or close the reading
+// view, and it closes and goes back to its place. Which book a spine is comes from items.json (`slug`, `title`,
+// `author`, `category`), which the vendor keeps in line with content/books/categories.json.
 import * as THREE from 'three';
 import { boxOf, rest, restore, wrap, esc, UP } from './common.js';
 import { viewFor } from '../../engine/market.js';
 import inventory from 'virtual:market-inventory';
 import { actionNote, LIBRARY } from '../../content.js';
+import { libraryBook } from '../../ui/reading.js';
 
 const _p = new THREE.Vector3(), _q = new THREE.Quaternion();
-const BOOK_HOLD = 14; // seconds an open book stays out before the bookseller puts it back
+const BOOK_HOLD = 14; // seconds an open book stays out before the bookseller puts it back (not while it is being read)
 const MIN_HEIGHT = 0.3; // an open book is shown at least this tall (metres), so its pages can be read
+const byName = (a, b) => a.name.localeCompare(b.name, 'en', { numeric: true });
 
 export function createBooks(ctx) {
-  const { market, anim, sfx, say, items } = ctx;
+  const { market, anim, sfx, say, items, reader } = ctx;
   const place = market.places.books;
   const picks = ctx.books || [];
-  if (!place) return { api: { featuredBooks: [], openBook: () => null } };
-  const nodes = items.of('books', 'book').map((i) => i.node).sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }));
+  const none = { api: { featuredBooks: [], openBook: () => null, openBySlug: (slug) => readOnly(slug) } };
+  if (!place) return none;
+  const nodes = items.of('books', 'book').map((i) => i.node).sort(byName);
   const itemOf = new Map(items.of('books', 'book').map((i) => [i.node, i]));
 
-  const pickOf = titledSpines(nodes, picks);
-  const untitled = picks.map((_, i) => i).filter((i) => ![...pickOf.values()].includes(i));
-  const banded = chooseSpines(place, nodes.filter((n) => !pickOf.has(n)), untitled.length);
-  banded.forEach((n, k) => { pickOf.set(n, untitled[k]); const b = paperBand(n); if (b) b.name = `band_pick_${untitled[k]}`; });
-  const spineFor = picks.map((_, i) => [...pickOf.entries()].filter(([, j]) => j === i).map(([n]) => n).sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }))[0] || null);
-  const featured = spineFor.filter(Boolean);
-  const where = banded.length ? 'His picks wear a red paper band.' : `His ${['', 'one', 'two', 'three', 'four', 'five', 'six'][picks.length] || picks.length} ${picks.length === 1 ? 'stands' : 'stand together'} in the middle of the lower shelf.`;
+  // each of Mac's books once: the spine whose items.json slug (or printed title) is that book
+  const spineOf = new Map(); // slug -> node
+  for (const n of nodes) {
+    const e = libraryEntry(n);
+    if (e && !spineOf.has(e.slug)) spineOf.set(e.slug, n);
+  }
+  // "Pick a book for me": the writer's picks on his shelf first (reading.md), then the rest of the shelf in its order
+  const featured = picks.map((b) => libraryBook({ title: b[0] })).filter(Boolean).map((e) => spineOf.get(e.slug)).filter(Boolean);
+  const rotation = [...new Set([...featured, ...LIBRARY.books.map((b) => spineOf.get(b.slug)).filter(Boolean), ...nodes])];
   let turn = 0;
 
-  /**
-   * What a book is: Mac's pick (title, author, note from reading.md), a book from Mac's own shelf (bookshelf.json,
-   * with the writer's one-line summary from content/books/), or the vendor's stock (items.json).
-   */
+  /** What a book is: one of Mac's (the bookshelf entry for its slug, with the writer's summary) or secondhand stock. */
   function describe(n) {
-    const i = pickOf.has(n) ? pickOf.get(n) : -1;
     const b = bookInfo(n);
-    const lib = libraryEntry(b?.title) || (i >= 0 ? libraryEntry(picks[i][0]) : null);
-    if (i >= 0) { const p = picks[i]; return { mac: true, title: p[0], author: p[1], note: p[2] || lib?.oneLine || '' }; }
-    if (lib) return { mac: true, shelf: true, title: b?.title || lib.title, author: b?.author || lib.author, note: lib.oneLine || b?.note || 'One of the books on Mac’s own shelf.' };
-    return { mac: false, title: b?.title || 'A secondhand book', author: b?.author || '', note: b?.note || 'A secondhand copy from the bookseller’s stock, not one of Mac’s.' };
+    const lib = libraryEntry(n);
+    if (lib) return { mac: true, slug: lib.slug, title: lib.title || b?.title, author: lib.author || b?.author || '', note: lib.oneLine || b?.note || 'One of the books on Mac’s own shelf.', category: lib.categoryDe || '' };
+    return { mac: false, slug: '', title: b?.title || 'A secondhand book', author: b?.author || '', note: b?.note || 'A secondhand copy from the bookseller’s stock, not one of Mac’s.' };
   }
-  // after Mac's picks, "Pick a book for me" goes on to the spines that are books from his own shelf
-  const shelfSpines = nodes.filter((n) => !pickOf.has(n) && libraryEntry(bookInfo(n)?.title));
 
   let open = null; // { n, item, group, left, state }
-  function openBook(n) {
+  function openBook(n, { focus = true } = {}) {
     if (!n) return;
     const item = itemOf.get(n);
     if (open?.n === n) { close(); return; }
@@ -55,8 +54,8 @@ export function createBooks(ctx) {
     sfx('page');
     const text = d.mac
       ? actionNote('books', 'book', `<b>${esc(d.title)}</b>${d.author ? ' · ' + esc(d.author) : ''}${d.note ? '<br>' + esc(d.note) : ''}`, { title: d.title, author: d.author, note: d.note })
-      : actionNote('books', 'other', `<b>${esc(d.title)}</b>${d.author ? ' · ' + esc(d.author) : ''}. ${esc(d.note)} <em>${where}</em>`, { title: d.title, author: d.author, note: d.note });
-    say(`${text}<br><em>Click the open book to put it back, or another spine to keep browsing.</em>`);
+      : actionNote('books', 'other', `<b>${esc(d.title)}</b>${d.author ? ' · ' + esc(d.author) : ''}. ${esc(d.note)}`, { title: d.title, author: d.author, note: d.note });
+    say(`${text}<br><em>Click the open book, or close its page, to put it back.</em>`);
     if (item) { items.release(item); item.busy = true; item.keepOwn = true; }
     const r0 = rest(n);
     // 1. half out of the shelf, its top tipped toward the customer, the way a bookseller takes a book down
@@ -69,6 +68,8 @@ export function createBooks(ctx) {
     const pull = (k) => { n.position.copy(r0.p).addScaledVector(out, k); n.quaternion.copy(r0.q).premultiply(tip.setFromAxisAngle(tipAxis, 0.3 * k)); };
     const o = { n, item, d, r0, pull, left: BOOK_HOLD, state: 'pulling', group: null };
     open = o;
+    // the reading view opens with the book (Mac's books have a page; stock gets its note and a link)
+    reader?.open({ slug: d.slug, title: d.title, author: d.author, note: d.note }, { focus, onClose: () => { if (open === o) close({ fromReader: true }); } });
     anim.add(0.45, pull, () => {
       if (open !== o) return; // closed while it was coming out
       // 2. the book itself is swapped for a copy that can open, which comes to the front of the counter
@@ -106,10 +107,11 @@ export function createBooks(ctx) {
     return { p, q: new THREE.Quaternion().setFromRotationMatrix(m) };
   }
 
-  function close() {
+  function close({ fromReader = false } = {}) {
     const o = open;
     if (!o) return;
     open = null;
+    if (!fromReader && reader?.slug === (o.d.slug || '')) reader.close({ silent: true });
     const { n, item, r0, pull, group: book } = o;
     const home = () => {
       n.visible = true;
@@ -129,16 +131,18 @@ export function createBooks(ctx) {
   }
 
   function pickForMe() {
-    const total = Math.max(1, picks.length + shelfSpines.length);
-    const k = turn++ % total;
-    const i = k < picks.length ? k : -1;
-    const n = (i >= 0 ? spineFor[i] : shelfSpines[k - picks.length]) || nodes[(Math.random() * nodes.length) | 0];
-    if (n) openBook(n);
-    else {
-      // no shelf at all (a stand-in without books): the note alone
-      const b = picks[Math.max(0, i)];
-      if (b) say(actionNote('books', 'book', `<b>${esc(b[0])}</b>${b[1] ? ' · ' + esc(b[1]) : ''}${b[2] ? '<br>' + esc(b[2]) : ''}`, { title: b[0], author: b[1], note: b[2] }));
-    }
+    const n = rotation.length ? rotation[turn++ % rotation.length] : null;
+    if (n) { openBook(n); return; }
+    // no shelf at all (a stand-in without books): the reading view alone
+    const b = LIBRARY.books[turn++ % Math.max(1, LIBRARY.books.length)];
+    if (b) readOnly(b.slug);
+  }
+
+  /** A link in the bookshelf list: open that book on its shelf, or only its page when it has no spine. */
+  function openBySlug(slug, opts) {
+    const n = spineOf.get(slug);
+    if (n) { if (open?.n !== n) openBook(n, opts); return true; }
+    return readOnly(slug);
   }
 
   return {
@@ -147,15 +151,26 @@ export function createBooks(ctx) {
       featuredBooks: featured,
       pickBook: pickForMe,
       openBook: (n) => openBook(n),
+      openBySlug,
       bookOf: (n) => describe(n),
+      /** Mac's books with a spine (tests): slug -> node name. */
+      macSpines: () => Object.fromEntries([...spineOf].map(([k, n]) => [k, n.name])),
       /** The book standing open (for tests): its node name, title and state. */
-      openedBook: () => (open ? { name: open.n.name, title: open.d.title, author: open.d.author, note: open.d.note, mac: !!open.d.mac, state: open.state } : null),
+      openedBook: () => (open ? { name: open.n.name, slug: open.d.slug, title: open.d.title, author: open.d.author, note: open.d.note, mac: !!open.d.mac, state: open.state } : null),
     },
-    retract: close,
+    retract: () => { close(); },
     update(dt) {
-      if (open?.state === 'open' && (open.left -= dt) <= 0) close();
+      if (open?.state === 'open' && !reader?.isOpen && (open.left -= dt) <= 0) close();
     },
   };
+
+  function readOnly(slug) {
+    const b = LIBRARY.books.find((x) => x.slug === slug);
+    if (!b) return false;
+    reader?.open({ slug: b.slug, title: b.title, author: b.author, note: b.oneLine });
+    say(`<b>${esc(b.title)}</b>${b.author ? ' · ' + esc(b.author) : ''}`);
+    return true;
+  }
 }
 
 // ---------- the book that opens ----------
@@ -328,86 +343,19 @@ function pageTextures(d, aspect) {
 
 // ---------- which spine is which ----------
 
-// What each act_ book is: the vendor's node extras { title, author } (GLTFLoader puts them in userData), else
-// the vendor's items.json, keyed by node name (the lite glbs carry no extras, but their books have the same names).
-const norm = (t) => String(t || '').toLowerCase().normalize('NFC').replace(/[^\p{L}\p{N}]+/gu, '');
+// What each act_ book is: the vendor's items.json entry, keyed by node name (title, author, slug, category), else
+// the node's own glTF extras (GLTFLoader puts them in userData).
 export function bookInfo(n) {
   const u = n.userData || {};
   const it = inventory.items?.[n.name];
-  const title = u.title || it?.title;
+  const title = it?.title || it?.name || u.title;
   if (!title) return null;
-  return { title: String(title), author: String(u.author || it?.author || ''), note: it?.note ? String(it.note) : '' };
+  return { title: String(title), author: String(it?.author || u.author || ''), slug: String(it?.slug || u.slug || ''), note: it?.note ? String(it.note) : '' };
 }
 
-const LIB = new Map(LIBRARY.books.map((b) => [norm(b.title), b]));
-/** The entry for a title on Mac's own bookshelf (exact title, or a subtitle-free match), or null. */
-export function libraryEntry(title) {
-  const t = norm(title);
-  if (!t) return null;
-  if (LIB.has(t)) return LIB.get(t);
-  for (const [k, b] of LIB) if (k.length > 5 && t.length > 5 && (t.startsWith(k) || k.startsWith(t))) return b;
-  return null;
-}
-
-/** Map spine node -> index into `picks` for spines whose printed title is one of Mac's books. */
-function titledSpines(nodes, picks) {
-  const out = new Map();
-  const wanted = picks.map((b) => norm(b[0]));
-  for (const n of nodes) {
-    const t = norm(bookInfo(n)?.title);
-    if (!t) continue;
-    // "The Feynman Lectures on Physics, Vol. II" is still the Feynman lectures
-    const i = wanted.findIndex((w) => w && (w === t || (w.length > 5 && t.includes(w)) || (t.length > 5 && w.includes(t))));
-    if (i >= 0) out.set(n, i);
-  }
-  return out;
-}
-
-/** A book standing on a shelf (not lying on the counter). */
-function onShelf(place, n) {
-  for (let o = n.parent; o && o !== place.root; o = o.parent) if (/counter/i.test(o.name || '')) return false;
-  return true;
-}
-
-/**
- * Pick `count` spines for Mac's books: shelf books nearest the middle of the bookshop's view, at least
- * 0.3 m apart, then in order along the shelves (left to right, top shelf first), so the list reads as it stands.
- */
-function chooseSpines(place, nodes, count) {
-  if (!nodes.length || !count) return [];
-  const view = viewFor(place);
-  const ray = new THREE.Ray(view.pos, view.target.clone().sub(view.pos).normalize());
-  const vendor = place.nodes.slots.slot_vendor?.getWorldPosition(new THREE.Vector3());
-  const side = (p) => {
-    if (!vendor) return Infinity;
-    const a = new THREE.Vector2(vendor.x - view.pos.x, vendor.z - view.pos.z).normalize();
-    const b = new THREE.Vector2(p.x - view.pos.x, p.z - view.pos.z);
-    return Math.abs(a.x * b.y - a.y * b.x);
-  };
-  const cands = nodes.filter((n) => onShelf(place, n)).map((n) => ({ n, p: n.getWorldPosition(new THREE.Vector3()) })).filter((c) => side(c.p) > 0.5);
-  cands.forEach((c) => { c.d = ray.distanceToPoint(c.p); });
-  cands.sort((a, b) => a.d - b.d);
-  const chosen = [];
-  for (const c of cands) {
-    if (chosen.length >= count) break;
-    if (chosen.every((o) => o.p.distanceTo(c.p) > 0.3)) chosen.push(c);
-  }
-  const right = new THREE.Vector3(Math.cos(place.ry), 0, -Math.sin(place.ry));
-  chosen.sort((a, b) => (Math.abs(a.p.y - b.p.y) > 0.15 ? b.p.y - a.p.y : a.p.dot(right) - b.p.dot(right)));
-  return chosen.map((c) => c.n);
-}
-
-const BAND = new THREE.MeshStandardMaterial({ name: 'action_book_band', color: 0xb3342a, roughness: 0.72 });
-/** A paper band round the lower part of a book (like a bookshop's belly band), as a child of its pivot. */
-function paperBand(pivot) {
-  const box = boxOf(pivot, pivot);
-  if (box.isEmpty()) return null;
-  const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
-  const h = Math.min(0.05, size.y * 0.24);
-  const band = new THREE.Mesh(new THREE.BoxGeometry(size.x + 0.004, h, size.z + 0.004), BAND);
-  band.position.set(c.x, box.min.y + size.y * 0.4, c.z);
-  band.castShadow = false;
-  band.userData.itemFx = true;
-  pivot.add(band);
-  return band;
+/** The bookshelf entry (content/books/categories.json) for a spine: by its slug, else by its exact title. */
+export function libraryEntry(n) {
+  const b = bookInfo(n);
+  if (!b) return null;
+  return libraryBook({ slug: b.slug, title: b.title });
 }

@@ -17,6 +17,7 @@ import { createCameraRig } from './interaction/camera.js';
 import { createPicking } from './interaction/picking.js';
 import { bindKeyboard, watchMotion } from './interaction/keyboard.js';
 import { createPanel, buildPlaceNav } from './ui/panel.js';
+import { createReader } from './ui/reading.js';
 import { SECTIONS, ORDER, bookPicks, phrases, taglineHtml } from './content.js';
 import { createPerfMeter } from './perf.js';
 import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders } from './engine/merge.js';
@@ -140,7 +141,10 @@ async function boot() {
   const phoneHome = stage.clientWidth < 600 && stage.clientHeight > stage.clientWidth * 0.9;
   const rig = createCameraRig({ camera, dom: renderer.domElement, home: phoneHome ? PHONE_HOME : home, motion });
   let panel, openedFor = null;
+  // the reading view: a book opened on the Bücherstand shows its page from content/books/<slug>.md
+  const reader = createReader();
   const actions = createActions({
+    reader,
     market, scene, lite, motion, audio, rig, camera, overlay,
     books: bookPicks(),
     sfx: (n) => audio.sfx(n),
@@ -195,6 +199,12 @@ async function boot() {
       requestAnimationFrame(() => panelShift());
     },
     onClose: () => { actions.retract(); openedFor = null; key?.follow(null); panelShift(); },
+  });
+  // a title in the bookshelf list opens that book on its shelf, with its page in the reading view
+  $('pBody').addEventListener('click', (e) => {
+    const a = e.target.closest?.('a[data-book]');
+    if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+    if (actions.items.handlers.openBySlug?.(a.dataset.book)) e.preventDefault();
   });
   // Opening a place from the buttons under the market: bring the market back into view first.
   // On a phone the panel is a bottom sheet: bring the market to the top of the screen, so the part above the
@@ -322,7 +332,7 @@ async function boot() {
   const mute = setupMute($('mute'), audio);
   bindKeyboard({
     canvas: renderer.domElement, order: ORDER, openPlace, rig, resetView,
-    closePanel: () => panel.close(),
+    closePanel: () => (reader.isOpen ? reader.close() : panel.close()),
     endRide: () => actions.rides.endRide(false),
     isRiding: () => !!actions.rides.riding,
   });
@@ -487,7 +497,8 @@ async function boot() {
   function goodsList(id) {
     const featured = new Set(actions.featuredBooks);
     const list = actions.items.of(id).filter((it) => it.clickable && !['tap', 'lid', 'kettle', 'pot', 'served'].includes(it.kind))
-      .filter((it) => it.kind !== 'book' || featured.has(it.node) || /counter/i.test(it.info.where || ''));
+      // books: every one of Mac's books (items.json gives each its slug); stock without a title stays out
+      .filter((it) => it.kind !== 'book' || featured.has(it.node) || !!it.info.slug || /counter/i.test(it.info.where || ''));
     const seen = {};
     const total = {};
     for (const it of list) total[it.label] = (total[it.label] || 0) + 1;
@@ -549,6 +560,9 @@ async function boot() {
     /** Resolves when the after-first-frame work is done (LOD figures, deferred models). */
     settled: () => Promise.all([lodReady, deferredReady]).then(([lod, deferred]) => ({ lod, deferred })),
     featuredBooks: () => actions.featuredBooks.map((n) => n.name),
+    /** The reading view (tests): open, which book, and whether its page has loaded. */
+    reading: () => { const r = document.getElementById('reader'); return { open: reader.isOpen, slug: reader.slug, state: r?.dataset.state || null, title: document.getElementById('rTitle')?.textContent || '', text: (document.getElementById('rBody')?.textContent || '').slice(0, 400) }; },
+    closeReader: () => reader.close(),
     /** The books "Pick a book for me" offers first, as [title, author] (tests compare a clicked spine with them). */
     bookPicks: () => bookPicks().map((b) => [b[0], b[1]]),
     /** The items (tests): click one by node name as a visitor would, read an item's state. */

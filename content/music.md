@@ -25,7 +25,7 @@ play:
   lite: "The lite market plays the band as one mix, so this light is only for the eyes. Switch to the full market to hear this player up front."
 ---
 
-The band on the bandstand is a quartet: tenor sax, piano, double bass, and drums played with brushes. They play one slow ballad, "Lanterns After Closing".
+The band on the bandstand is a quartet: tenor sax, piano, double bass, and drums played with brushes. They play one slow ballad, "Lanterns After Closing". It is in G minor, in three-four time.
 
 Each player sits in their own place, so the sound follows where you stand. Walk toward the bandstand and the band sounds nearer. On the full market, pick a player to hear them up front.
 

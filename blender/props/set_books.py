@@ -303,12 +303,12 @@ def easel_copy(m, M, nn, b, scale=1.0):
     w, h, d = b["dims"]
     h, d = h * scale, d * scale
     wood = vlib.RW("wood")
-    # easel: a back leg, a ledge and two front legs
-    m.box((0.012, 0.012, h * 0.8), M @ T(0, 0.06, h * 0.38, rx=-0.26), wood, C("6a4228"))
+    # easel: a back leg, a ledge and two front legs (the tilted legs' feet sit on the counter, not in it)
+    m.box((0.012, 0.012, h * 0.8), M @ T(0, 0.06, h * 0.39 + 0.002, rx=-0.26), wood, C("6a4228"))
     m.box((d * 0.9, 0.03, 0.008), M @ T(0, -0.035, 0.012), wood, C("7a4a2c"))
     m.box((d * 0.9, 0.006, 0.02), M @ T(0, -0.048, 0.02), wood, C("7a4a2c"))
     for sx in (-1, 1):
-        m.box((0.01, 0.01, h * 0.75), M @ T(sx * d * 0.38, -0.01, h * 0.36, rx=0.26), wood, C("6a4228"))
+        m.box((0.01, 0.01, h * 0.75), M @ T(sx * d * 0.38, -0.01, h * 0.365 + 0.002, rx=0.26), wood, C("6a4228"))
     # the book turned so its front cover (+X board) faces the visitor (-Y), spine on the left, centred on the
     # easel, standing on the ledge and leaning back against the back leg
     Mb = M @ T(0, -0.035 + w / 2, 0.016) @ Matrix.Rotation(-0.26, 4, 'X') @ T(-d / 2, 0, 0) @ \
@@ -458,7 +458,7 @@ SETS = {
                                width=2.1, cam=((0.35, -1.1, 0.25), (0.1, 0.0, 0.14), 32)),
     "prop_books_counter": dict(fn=counter, slot="slot_counter", stall="buecherstand", kind="counter", section=True,
                                seed=53, width=2.2, cam=((-0.0, -1.95, 0.62), (0.0, 0.0, 0.1), 30),
-                               hero=((0.2, -0.85, 0.42), (0.22, 0.0, 0.1), 36)),
+                               hero=((0.3, -1.08, 0.5), (0.3, 0.0, 0.17), 36)),
 }
 for _i, _c in enumerate(books_catalog.categories()):
     SETS[f"prop_books_{_c['key']}"] = _section_def(_c["key"], 60 + _i)

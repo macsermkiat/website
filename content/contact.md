@@ -17,7 +17,7 @@ notes:
 
 My code is on GitHub: [github.com/macsermkiat](https://github.com/macsermkiat).
 
-If you have something to say about this website, open an issue on [its GitHub repository](https://github.com/macsermkiat/website/issues).
+If you have something to say about this website, open an issue on [its GitHub repository](https://github.com/macsermkiat/website/issues). <!-- check -->
 
 The best way to reach me is [[Mac: email address or preferred contact]]. Write if you want to talk about one of the projects, a study you're planning, or a book I should read. <!-- check -->
 

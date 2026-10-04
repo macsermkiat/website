@@ -37,6 +37,8 @@ const BUDGET = {
   square: { tris: 40000, bytes: 3 * MB, what: 'Square ground, lamps, string-light poles' },
   town: { tris: 150000, bytes: 5 * MB, what: 'Town ring and church' },
   person: { tris: 5000, bytes: 0.4 * MB, what: 'One person variant' },
+  // BUILD.md "Bücherstand categories": the bookshop with its six category sections and all its props
+  buecherstand: { tris: 80000, bytes: 4 * MB, what: 'Bücherstand with all its props' },
 };
 const FIRST_LOAD = { full: 25 * MB, lite: 8 * MB };
 
@@ -145,7 +147,7 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
   const rows = groups.filter((g) => !g.lod).map((g) => {
     const full = measure(g.files.full, { skipShared: true });
     const lite = measure(g.files.lite, { skipShared: true });
-    const b = g.kind && BUDGET[g.kind];
+    const b = (g.id === 'buecherstand' && BUDGET.buecherstand) || (g.kind && BUDGET[g.kind]);
     return { id: g.id, kind: g.kind, deferred: g.deferred.full, full, lite, budget: b || null, over: b ? { tris: full.tris > b.tris, bytes: full.bytes > b.bytes } : null };
   });
   const shared = [...users].filter(([h]) => sharedHashes.has(h)).map(([, u]) => ({ file: path.relative(models, u.info.path), bytes: u.info.size, users: [...u.groups] }));

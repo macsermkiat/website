@@ -46,7 +46,9 @@ export function createWurst(ctx) {
     const item = items.of('wurst', 'sausage').find((i) => i.node === s) || items.add(s, 'wurst', place, 'sausage');
     if (item) sausages.set(item, { item, r: rest(s), axis: longAxis(s), centre: turnCentre(s, item.info), angle: 0, turns: 0 });
   }
-  const onGrill = () => [...sausages.values()].filter((s) => /grill/i.test(s.item.info.name || '') || !s.item.info.name);
+  const onGrill = () => [...sausages.values()].filter((s) => !s.item.info.raw && (/grill/i.test(s.item.info.name || '') || !s.item.info.name));
+  // only a sausage over the coals flares and sparks; the raw ones and the warm tray are just turned in place
+  const overCoals = (item) => !item.info.raw && (/grill/i.test(item.info.name || '') || !item.info.name);
   let turned = 0;
 
   function turnOne(item, delay = 0, quiet = false) {
@@ -74,18 +76,22 @@ export function createWurst(ctx) {
       pose(s.angle, 0);
       item.busy = false;
       // fat drips on the coals: a flare and a spray of sparks
+      if (!overCoals(item)) return;
       flare = Math.min(2.2, flare + (quiet ? 0.35 : 1.2));
       sparks.burst(node.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, -0.04, 0)), quiet ? 4 : 12);
       smoke.boost = Math.max(smoke.boost, quiet ? 0.5 : 1.4);
     }, delay);
-    if (!quiet) {
+    if (!quiet && item.info.raw) {
+      say(`<b>${esc(item.info.name)}</b>, turned over in the tray. It goes on the grill when there is room.`);
+    } else if (!quiet) {
       sfx('sizzle');
       turned++;
       say(`<b>${esc(item.info.name || 'A Bratwurst')}</b>, turned (${s.turns}×). ${actionNote('wurst', 'turn', ['Turned. Nicely browned on this side.', 'The coals flare up and the smoke drifts over the crowd.', 'Almost ready. Mustard or ketchup?'][(s.turns - 1) % 3], { n: s.turns - 1, name: item.info.name })}`);
     }
   }
   function turnAll() {
-    const list = [...sausages.keys()];
+    const grillList = onGrill().map((s) => s.item);
+    const list = grillList.length ? grillList : [...sausages.keys()];
     list.forEach((it, i) => turnOne(it, i * 0.07, true));
     sfx('sizzle');
     turned++;

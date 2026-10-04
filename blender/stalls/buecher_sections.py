@@ -39,7 +39,10 @@ BOARD_SET = 0.01                  # boards' front edge sits 1 cm behind the upri
 CART_FRONT_Y = -2.28              # front face of both carts (stall frame)
 CART_X = 1.40                     # cart centre at x = -1.40 (left) and +1.40 (right)
 CART_TIERS = ((0.62, 0.02), (0.92, 0.27))   # (board top z, board front edge y from the cart front)
-CART_SIGN_Z = 1.31                # underside of the cart signs (clear height of the back tier)
+CART_SIGN_Z = 1.31                # back tier's height limit: taller books would hide the cabinet glass
+CART_SIGN = (0.47, 0.24, 0.10)    # cart name board on the front apron: centre z, height, overhang past the cart
+# (round 3: the cart signs moved from rods above the back tier to the front apron, because from a
+# 3/4 view a rod sign on the right cart covered the right rack's "Menschen & Gespräche" sign)
 
 # Section plan, visitor's left to right: left wing (two bays), left cart, right cart, right wing.
 # Bay / board widths are sized from the book count (0.34 m + 2.2 cm a book, rounded) and leave
@@ -141,8 +144,8 @@ def sections():
                 {"index": 1, "offset": [0.0, round(y1 - y0, 4), round(z1 - z0, 4)], "width": bw,
                  "depth": round(y1 - y0 - 0.01, 4), "clear_height": round(CART_SIGN_Z - z1, 4)},
             ]
-            sign_local = (W / 2, y1 + 0.21, CART_SIGN_Z + 0.12)
-            sign_size = (W + 0.30, 0.24)
+            sign_local = (W / 2, -0.012, CART_SIGN[0])
+            sign_size = (W + CART_SIGN[2], CART_SIGN[1])
             kind = "book cart (%s of the counter)" % ("left" if unit == "cart_l" else "right")
         n = len(c["books"])
         length = sum(b["width"] for b in boards)
@@ -189,7 +192,9 @@ def write_json(path=OUT_JSON):
                  "(+Y) at most board depth."),
         "boards": ("offset is each board's [x, y, z] in the slot frame (same left end, front edge and top surface "
                    "convention). clear_height is the free height above a board's top surface (null = open above). "
-                   "The cart's upper tier is stepped back (+Y) behind the lower tier's books."),
+                   "The cart's upper tier is stepped back (+Y) behind the lower tier's books; its clear_height is a "
+                   "sightline limit (taller books would hide the glazed cabinets behind), not a physical one. "
+                   "The cart signs are name boards on the carts' front aprons, below the lower tier."),
         "mean_spine": MEAN_SPINE,
         "sections": [{k: v for k, v in s.items() if not k.startswith("_")} for s in secs],
         "units": {

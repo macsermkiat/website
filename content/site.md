@@ -2,7 +2,7 @@
 section: site
 stall: Nachtmarkt
 title: "Mac's Nachtmarkt"
-tagline: "Physician in Bangkok. I write software for clinical research."
+tagline: "I'm a physician in Bangkok and I write software for clinical research."
 description: "Mac is a physician at Chulalongkorn University in Bangkok who builds software for clinical research. His homepage is a German Christmas market at night."
 actions:
   - "Play the ballad"
@@ -16,7 +16,8 @@ notes:
   "Reset view": ""
   "Plain version": ""
   "Lite market": ""
-toggle_labels:
+# Reference only: src/main.js builds these strings itself and does not read them. Edit main.js to change the UI.
+reference_only_toggle_labels:
   "Play the ballad":
     "off": "Play the ballad"
     "on": "Pause the ballad"
@@ -26,7 +27,7 @@ toggle_labels:
   "Lite market":
     "off": "Lite market: off"
     "on": "Lite market: on"
-titles:
+reference_only_titles:
   "Plain version": "The same content as a plain page, without the market."
   "Lite market":
     "off": "Press for the lite market: fewer lights, no shadows, lighter models."

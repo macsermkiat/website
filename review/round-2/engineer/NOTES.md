@@ -84,23 +84,56 @@ load average of 15 to 18. The market owner should commit them; they are untracke
   `act_` nodes yet (only `rot_pyramid`), so the Lebkuchen hearts made in code stay.
 - The whole smoke suite was run again on this build, and every preview in this folder was retaken from it.
 
-## Late in the round: Mac's bookshelf and the sausage axis
+## Last pass (4 October, after the second restart): the six category shelves and the reading view
 
-- **Mac's bookshelf** (`plugins/market.js` `buildLibrary`, `actions/items/books.js`).
-  - The build reads `content/bookshelf.json` (the 55 titles Mac chose), the writer's
-    `content/books/categories.json` and the one-line summary (`one_line`) from each `content/books/<slug>.md`.
-  - The bookshop panel and plain.html get "Mac's bookshelf: 55 books he has read, by subject", one list per
-    category, with a summary for every book the writer has done (36 so far). On plain.html the list is open.
-  - In the 3D shop, a spine whose printed title is on Mac's shelf opens as **his** book ("from Mac's shelf" on the
-    title page) with the writer's summary on the right page. Seven of the vendor's current spines match (The Order
-    of Time, The Book of Why, The Black Swan, Surely You're Joking, Man's Search for Meaning, Chaos, Reality Is Not
-    What It Seems). When the vendor prints Mac's titles on the spines, every one of them matches with no engine
-    change. "Pick a book for me" goes through the writer's picks that are on Mac's shelf, then these spines.
-  - Section loading no longer reads sub-folders, so a book page's heading can never be taken for a section.
-  - The strict gate counts a book page still marked `review: check`. The build's warning reduces them to one line.
-- **Sausages turn about their own axis.** The vendor moved the sausage pivots to their base and asked for this.
-  `wurst.js` now turns each sausage about its long axis at `turn_axis.offset_threejs_y` over the pivot (items.json),
-  or about the middle of its mesh when there is no such field. It no longer rolls round its underside.
+BUILD.md's new "Bücherstand categories" section and the vendor's and carpenter's round-3 exports landed during the
+restart. The engine now follows them.
+
+- **One source for books.** `plugins/market.js` `buildLibrary` reads only `content/books/categories.json`, as BUILD.md
+  says: 55 books in six categories (physics 10, lives 6, mind 9, people 14, decisions 11, craft 5). `bookshelf.json` is
+  no longer read. Each book gets its one-line summary and its page from `content/books/<slug>.md`. All 55 pages exist.
+- **The six category sets bind exactly.** These are `prop_books_physics`, `_lives`, `_mind`, `_people`, `_decisions` and
+  `_craft`, on the carpenter's `slot_cat_<key>` empties. That gives 55 clickable `act_book_00..54` on both the full and
+  the lite market, with `report.bindings` and `report.contract` both empty. Each spine is matched to its book by its
+  items.json `slug`, falling back to its title. The paper bands and the guesswork about which spine stands for which
+  of Mac's books are gone (`books.js`). Every titled spine now is one of his books.
+- **Reading view** (`src/ui/reading.js`, `#reader` in index.html). When a book is clicked, it slides out, flies to the
+  counter and opens with its title and author on the pages. Beside it, a reading view shows that book's
+  `content/books/<slug>.md`: the category in German, title, author, In short, Summary, Key ideas, If you read one
+  chapter, and the sources as links.
+  - **Fetched on demand.** The build emits one fragment per book (`dist/reading/<slug>.html`, 5–7 kB each), and the
+    view fetches it only when that book opens. The 55 summaries add nothing to the first load. The dev server serves
+    the same fragments.
+  - **If the fetch fails,** the view shows the one-line summary and a link to the book's notes on plain.html.
+  - **Keyboard.** Focus goes to the title and Tab stays inside the view. Escape or the close button closes the view,
+    puts the book back and returns focus. Escape on the canvas closes the view before the panel.
+  - **The open book stays out while the view is open.** It goes back by itself after 14 s only once the view is closed.
+- **The panel's bookshelf list.** Each title is a link (`data-book`). In the market, clicking one opens that book on its
+  shelf, with its page. Without the 3D market (or with a modifier key) the link goes to `plain.html#book-<slug>`. The
+  panel's "goods, one by one" list names all 55 books as buttons, so every book can also be reached from the keyboard.
+- **plain.html** lists the same 55 books by category, each title linked to its own `<article id="book-<slug>">` with
+  the full notes (headings shifted to fit the page). The page is 423 kB uncompressed. It is plain text, so it is still
+  fast.
+- **Strict gate.** Book pages marked `review: check` are counted, as before. A local build includes them and warns
+  (35 pages today). A deploy (`STRICT_CONTENT=1`) stops until the writer and Mac clear them.
+- **Budget.** `budget.mjs` applies BUILD.md's Bücherstand budget, 80k triangles and 4 MB. It is at 59.0k and 2.45 MB of
+  its own files, plus 0.93 MB of shared atlases.
+- **Sausages.** The vendor's raw sausages (`act_sausage_16..23`, `raw: true`) and the warm tray turn in place, with
+  no flare or sparks: only a sausage over the coals flares. "Turn the sausages" turns the ones on the grill. A raw one
+  says it goes on the grill when there is room.
+- **Tests.** Five new unit checks cover the library from categories.json, the linked list, a book's page fragment,
+  the articles on the text page, and all 55 books with pages in the production content. The smoke run checks:
+  - the reading view shows the clicked book's page;
+  - Tab is trapped inside it;
+  - Escape and the close button put the book back;
+  - a bookshelf link opens its book;
+  - plain.html has one article per book.
+
+### Mac's bookshelf, as built before the categories (superseded)
+
+The round's earlier pass read `content/bookshelf.json` and matched the vendor's spines by printed title. Only seven
+matched, and the rest of Mac's books wore paper bands on stock spines. All of that is replaced by the section above.
+Sausages still turn about their own axis, at items.json `turn_axis.offset_threejs_y` over the base pivot (`wurst.js`).
 
 ## What each item does
 
@@ -109,11 +142,11 @@ stall's module. `common.js` holds the shared pieces: frames, streams, liquid sur
 
 | Item | Click | Module |
 |---|---|---|
-| Book (all 106 spines) | Slides out, flies to a lectern pose in front of the counter and opens. The left page carries its own title and author, the right page its note from items.json. It also shows its cover texture. Clicking the open book, or any other spine, puts it back; after 14 s it goes back by itself. | `books.js` |
+| Book (all 55 of Mac's books, on the six category shelves) | Slides out, flies to a lectern pose in front of the counter and opens. The left page carries its own title and author, the right page its one-line summary, and the outside its cover texture. The reading view beside it shows its whole page from content/books/<slug>.md. Clicking the open book or another spine, closing the view or pressing Escape puts it back. | `books.js`, `ui/reading.js` |
 | Glass (18) | An empty glass slides under its own tap (items.json `beer` names the tap). The tap handle tips, a stream runs, the beer rises and the head grows, then the glass slides home. A full glass is picked up; click a second full glass and the two meet and clink (Prost), with a line from the crowd. An upside-down glass from the back shelf is turned upright first. The tap itself pours the next empty glass. | `beer.js` |
 | Mug (16) | The ladle rises out of the copper pot, moves over that mug and tips. The mug fills with a stream and gets its own steam, and the pot lid lifts. An upside-down mug is turned upright first. | `gluehwein.js` |
 | Wine bottle `act_bottle_*` (18) | Comes toward the visitor, tilts and turns once to show its label. A tag and the panel give its name and a tasting note (items.json `note`/`tasting`, then about.md `bottles:`, then a note matched to its grape). A second click, or 10 s, puts it back. Wine glasses swirl; the kettle opens and steams. | `gluehwein.js` |
-| Sausage (16) | Turns half over on the grill with a hop, a sizzle, a flare of the coals and a burst of sparks. "Turn the sausages" turns them all, staggered. | `wurst.js` |
+| Sausage (24) | Turns half over about its own long axis with a hop and a sizzle. One on the grill also brings a flare of the coals and a burst of sparks. The raw ones and the warm tray just turn. "Turn the sausages" turns those on the grill, staggered. | `wurst.js` |
 | Roll (16) | A sausage from the grill flies into the roll along its length, and a zigzag of mustard is drawn on. It is handed over after 12 s or on a second click. | `wurst.js` |
 | Deco goods | In the deco stalls, `act_` nodes lift under the pointer. A click shows their `detail` on a tag with a small swing. The Lebkuchen stall has no act_ nodes yet, so it gets three iced hearts made in code, hanging on ribbons. Their icing reads "Frohe Weihnachten", "Für Dich" and "Süßer Schatz", and a click shows the text and what it means. | `deco.js` |
 
@@ -237,17 +270,15 @@ One asset is over a budget:
 - **Vendor.**
   - Please give the deco stalls `act_` nodes for their goods, each with an items.json `detail` field. The
     Lebkuchen hearts in `deco.js` are stand-ins and are skipped as soon as the stall has `act_` nodes.
-  - Please check the lite Bierstand foam (see above).
-  - Section stalls are over their per-asset byte budgets, and every deco stall is too. This is mostly the
-    shared kit textures: each stall counts the whole deco kit, 12 `.webp` files. Sharing one texture set, or
-    smaller kit textures, would bring the deco stalls under 1 MB.
-- **Writer.** A `note` field for each book and bottle in items.json would replace the grape-based tasting
-  notes and the generic book lines.
-- **Lighting designer.** The Bücherstand has one light marker too many (see the contract notes).
-- **Carpenter.** The cabinet books in `stall_buecher.glb` are still one merged mesh (`buecher_books`), so they cannot
-  be clicked (Codex round 2, point 5). Export each one as an `act_book_*` pivot with an items.json entry (`kind: book`,
-  `title`, `author`), as the vendor's counter set does. The engine reads `act_` nodes from the stall's own glb as
-  well as from its props sets, so they become clickable with no engine change.
+  - The lite Bierstand foam is fixed in your round-3 export. The engine's check still guards it.
+  - Section stalls are over their per-asset byte budgets once their shared atlases are charged to them, and every
+    deco stall is too. This is mostly the shared kit textures: each stall counts the whole deco kit, 12 `.webp` files.
+    Sharing one texture set, or smaller kit textures, would bring the deco stalls under 1 MB.
+- **Writer.** A `note` field for each bottle in items.json would replace the grape-based tasting notes. The books need
+  nothing more: their notes come from content/books/<slug>.md.
+- **Carpenter.** The engine has no per-category close-ups yet. An optional `cam_cat_<key>` empty per section (your
+  round-3 offer) would let a book's click frame its own bay. That needs the market owner to add the prefix to BUILD.md.
+  The Bücherstand's light marker count is fine now (2).
 - **Organizer.** The figures can now ship without their own clips: the engine plays `people_anims.glb` on every
   figure. Dropping the repeated clips from the 24 figure files saves their bytes (Codex round 2, point 9).
 - **Ride builder / organizer.** The bandstand with its instruments and players is 66.8k triangles against 50k.

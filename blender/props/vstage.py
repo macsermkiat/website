@@ -225,8 +225,25 @@ def shot(cam, top, out_jpg, samples=128, res=(1920, 1080), png_name=None):
     render.camera((loc[0], loc[1], loc[2] + top), (tgt[0], tgt[1], tgt[2] + top), lens=lens, dof=None)
     os.makedirs(RENDERS, exist_ok=True)
     png = os.path.join(RENDERS, (png_name or os.path.basename(out_jpg).replace(".jpg", "")) + ".png")
+    glass_no_shadow()
     render.render(png, samples=samples, res=res, jpeg=out_jpg, jpeg_width=1280)
     return png
+
+
+def glass_no_shadow():
+    """Preview only: Cycles blocks shadow rays at transmission glass, so beer, foam and anything else behind a
+    glass wall is lit only by noisy caustics and reads dark (the beer heads' band showed as a tan collar).
+    Thin glass passes nearly all light, and the browser's transmission glass casts no shadow either, so meshes
+    with a transmission glass material do not cast shadows in the previews. Nothing exported changes."""
+    for o in bpy.data.objects:
+        if o.type != 'MESH':
+            continue
+        for slot in o.material_slots:
+            mt = slot.material
+            b = mt and mt.use_nodes and mt.node_tree.nodes.get("Principled BSDF")
+            if b and "Transmission Weight" in b.inputs and b.inputs["Transmission Weight"].default_value > 0.9:
+                o.visible_shadow = False
+                break
 
 
 def frame_cam(ps, lens=35, elev=0.33, margin=1.12, aspect=16 / 9):
@@ -286,5 +303,7 @@ def shot_at(cam, origin, out_jpg, samples=128, res=(1920, 1080), png_name=None):
     render.camera(tuple(origin + Vector(loc)), tuple(origin + Vector(tgt)), lens=lens, dof=None)
     os.makedirs(RENDERS, exist_ok=True)
     png = os.path.join(RENDERS, (png_name or os.path.basename(out_jpg).replace(".jpg", "")) + ".png")
+    glass_no_shadow()
     render.render(png, samples=samples, res=res, jpeg=out_jpg, jpeg_width=1280)
     return png
+

@@ -196,11 +196,14 @@ try {
     check('Bücherstand view: every one of Mac\'s featured spines in clear view (the bookseller stands aside)', five.length >= 1 && five.every((b) => !b.who.length), JSON.stringify(five));
     const out = await page.evaluate(() => window.__market.openedBook());
     check('the chosen book is open in front of the counter when the picture is taken', out?.name === five[0]?.n && out.state === 'open', `${JSON.stringify(out)} vs ${five[0]?.n}`);
+    await page.waitForFunction(() => window.__market.reading().state !== 'loading', null, { timeout: LONG });
+    const rd = await page.evaluate(() => window.__market.reading());
+    check('the reading view shows that book\'s page from content/books/<slug>.md (In short, summary)', rd.open && rd.slug === out?.slug && rd.state === 'ready' && rd.title === out?.title && /In short/.test(rd.text), JSON.stringify(rd).slice(0, 200));
     await shot(page, 'panel_buecherstand.jpg');
     await go(() => window.__market.resetView());
     await frames(page, 1);
-    const tag = await page.evaluate(() => ({ open: window.__market.openedBook(), visible: window.__market.item(window.__market.featuredBooks()[0])?.visible }));
-    check('reset view closes the open book and puts it back on the shelf', tag.open === null && tag.visible === true, JSON.stringify(tag));
+    const tag = await page.evaluate(() => ({ open: window.__market.openedBook(), visible: window.__market.item(window.__market.featuredBooks()[0])?.visible, reading: window.__market.reading().open }));
+    check('reset view closes the open book and its reading view, and puts it back on the shelf', tag.open === null && tag.visible === true && !tag.reading, JSON.stringify(tag));
     await go(() => { window.__market.openPlace('band'); window.__market.act('band', 'sax'); });
     await frames(page, 3);
     await shot(page, 'panel_bandstand.jpg');
@@ -284,19 +287,18 @@ try {
     await M(() => window.__market.advance(0.8));
     { const n = await note(page); check('Bücherstand: the note gives its title and author', !!picks[k] && n.includes(picks[k][0]) && n.includes(picks[k][1]), n); }
     await pose('item_books_open.jpg', () => {});
-    // a spine that is one of the books on Mac's own shelf (content/bookshelf.json) shows the writer's one-line summary
-    // (a title the writer has already summarised in content/books/, when there is one)
-    const cats = (() => { try { return JSON.parse(readFileSync(path.resolve('../content/books/categories.json'), 'utf8')).categories.flatMap((c) => c.books); } catch { return []; } })();
-    const allLib = JSON.parse(readFileSync(path.resolve('../content/bookshelf.json'), 'utf8')).books.map((b) => b.title);
-    const summarised = cats.filter((b) => existsSync(path.resolve(`../content/books/${b.slug}.md`))).map((b) => b.title);
-    const lib = summarised.length ? summarised : allLib;
-    const nt = (t) => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    // any other of Mac's books (items.json gives every titled spine its slug in content/books/categories.json)
     const itemsJson = JSON.parse(readFileSync(path.resolve('public/models/items.json'), 'utf8')).items;
-    const shelfSpine = Object.entries(itemsJson).find(([k, v]) => v.kind === 'book' && lib.some((t) => nt(t) === nt(v.title)) && !five.includes(k))?.[0] || null;
+    const shelfSpine = Object.entries(itemsJson).find(([k, v]) => v.kind === 'book' && v.slug && existsSync(path.resolve(`../content/books/${v.slug}.md`)) && !five.includes(k) && v.category === 'craft')?.[0]
+      || Object.entries(itemsJson).find(([k, v]) => v.kind === 'book' && v.slug && !five.includes(k))?.[0] || null;
     if (shelfSpine) {
       await M((n) => { window.__market.clickItem(window.__market.openedBook()?.name); window.__market.advance(1.2); window.__market.clickItem(n); window.__market.advance(2.4); }, shelfSpine);
       const ob = await M(() => window.__market.openedBook());
-      check('Bücherstand: a book from Mac\'s own shelf opens as itself, with the writer\'s one-line summary', ob?.name === shelfSpine && ob.mac === true && ob.note.length > 30 && (await note(page)).includes(ob.title), JSON.stringify(ob));
+      check('Bücherstand: any book on the category shelves opens as itself, with the writer\'s one-line summary', ob?.name === shelfSpine && ob.slug === itemsJson[shelfSpine].slug && ob.title === itemsJson[shelfSpine].title && ob.mac === true && ob.note.length > 30 && (await note(page)).includes(ob.title), JSON.stringify(ob));
+      await page.waitForFunction(() => window.__market.reading().state !== 'loading', null, { timeout: LONG });
+      const rd = await M(() => window.__market.reading());
+      check('Bücherstand: its reading view shows its own page', rd.open && rd.slug === ob?.slug && rd.state === 'ready' && rd.title === ob?.title, JSON.stringify(rd).slice(0, 200));
+      await pose('item_books_category.jpg', () => {});
     }
     await M(() => window.__market.resetView());
 
@@ -381,15 +383,35 @@ try {
       if (again) { await page.mouse.click(again.x, again.y); await page.evaluate(() => window.__market.advance(3)); }
       check('clicking the open book again puts it back', (await page.evaluate(() => window.__market.openedBook())) === null);
     } else check('clicking a named spine opens that book, showing its own title', false, `no clear pixel on ${spines[si]}`);
-    // a book from the bookseller's stock names itself too (items.json)
-    await page.evaluate(() => window.__market.clickItem('act_book_201'));
+    // keyboard: the reading view takes focus, Escape closes it and puts the book back
+    await page.evaluate(() => window.__market.clickItem('act_book_53'));
     await page.evaluate(() => window.__market.advance(3));
-    const stock = await page.evaluate(() => window.__market.openedBook());
-    check('a stock book opens with its own title and author (items.json)', stock?.title === 'Siddhartha' && /Hesse/.test(await note(page)), `${JSON.stringify(stock)} ${await note(page)}`);
-
+    await page.waitForFunction(() => window.__market.reading().state !== 'loading', null, { timeout: LONG });
+    const kb = await page.evaluate(() => ({ book: window.__market.openedBook(), reading: window.__market.reading(), focus: document.activeElement?.id }));
+    check('a clicked book opens its reading view with the focus on its title', kb.book?.name === 'act_book_53' && kb.reading.open && kb.reading.slug === kb.book.slug && kb.focus === 'rTitle', JSON.stringify(kb).slice(0, 220));
+    await page.keyboard.press('Tab');
+    check('Tab stays inside the reading view', await page.evaluate(() => document.getElementById('reader').contains(document.activeElement)));
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => window.__market.advance(3));
+    const esc1 = await page.evaluate(() => ({ book: window.__market.openedBook(), reading: window.__market.reading().open, panel: window.__market.panel, visible: window.__market.item('act_book_53').visible }));
+    check('Escape closes the reading view and puts the book back, leaving the panel open', esc1.book === null && !esc1.reading && esc1.panel === 'books' && esc1.visible, JSON.stringify(esc1));
+    // a title in the panel's bookshelf list opens that book on its shelf
+    await page.evaluate(() => { const d = document.querySelector('#pBody details.library'); if (d) d.open = true; });
+    const link = page.locator('#pBody a[data-book="chaos"]');
+    if (await link.count()) {
+      await link.click();
+      await page.evaluate(() => window.__market.advance(3));
+      const lk = await page.evaluate(() => ({ book: window.__market.openedBook(), reading: window.__market.reading() }));
+      check('a title in the bookshelf list opens that book and its page', lk.book?.slug === 'chaos' && lk.reading.slug === 'chaos', JSON.stringify(lk).slice(0, 200));
+      await page.click('#rClose');
+      await page.evaluate(() => window.__market.advance(3));
+      check('the reading view\'s close button puts the book back', (await page.evaluate(() => window.__market.openedBook())) === null);
+    } else check('a title in the bookshelf list opens that book and its page', false, 'no link for chaos in the panel');
+    await page.evaluate(() => window.__market.clickItem('act_book_53'));
+    await page.evaluate(() => window.__market.advance(3));
     await page.click('#pClose');
     await page.evaluate(() => window.__market.advance(3));
-    const tagOff = await page.evaluate(() => ({ open: window.__market.openedBook(), visible: window.__market.item('act_book_201').visible }));
+    const tagOff = await page.evaluate(() => ({ open: window.__market.openedBook(), visible: window.__market.item('act_book_53').visible, reading: window.__market.reading().open }));
     check('closing the panel closes the book and puts it back', tagOff.open === null && tagOff.visible, JSON.stringify(tagOff));
 
     await page.click('#places button[data-place="band"]');
@@ -574,9 +596,12 @@ try {
     check('plain.html lists every third-party asset with its source URL', (await page.locator('.credits-all a[href^="https://github.com/"]').count()) > 5);
     { const t = await page.textContent('#books');
       check('plain.html carries the books the 3D shelf features (they are on Mac\'s shelf), and not the unconfirmed list', /The Order of Time/.test(t) && /The Book of Why/.test(t) && !/On the shelf in the market/.test(t) && !/Gödel, Escher, Bach/.test(t), t.slice(0, 200)); }
-    const shelfN = JSON.parse(readFileSync(path.resolve('../content/bookshelf.json'), 'utf8')).books.length;
+    const cats = JSON.parse(readFileSync(path.resolve('../content/books/categories.json'), 'utf8')).categories.flatMap((c) => c.books);
     const libN = await page.locator('#books .library li').count();
-    check('plain.html lists Mac\'s whole bookshelf, with the writer\'s one-line summaries', libN === shelfN && (await page.locator('#books .library .one-line').count()) > 0, `${libN} of ${shelfN}`);
+    check('plain.html lists Mac\'s whole bookshelf (categories.json), with the writer\'s one-line summaries', libN === cats.length && (await page.locator('#books .library .one-line').count()) > 0, `${libN} of ${cats.length}`);
+    const pagesN = await page.locator('#books article.bookpage').count();
+    const withPage = cats.filter((b) => existsSync(path.resolve(`../content/books/${b.slug}.md`))).length;
+    check('plain.html carries the same notes the reading view shows, one article per book', pagesN === withPage && (await page.locator('#book-the-order-of-time h5').first().textContent()) === 'In short', `${pagesN} of ${withPage}`);
     await shot(page, 'plain_html.jpg');
     await ctx.close();
     // no WebGL: the page shows every section as text in place of the market

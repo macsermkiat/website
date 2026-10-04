@@ -2,6 +2,8 @@
 
 This pass (pass 3) continued from the partial round-2 work on disk after a restart. It adds warmer bulb cores, softer shelf shadows and a softer Ferris hub, re-shoots the bench, the home view, the Glühwein approach and both lite entered views, and brings this file up to date with the code (the sign-lamp hood, the focus checks).
 
+Pass 4 (after a second restart) changed no code. It found that the bench screenshots on disk (`raw/after.png`, `raw/lite.png`, `raw/snow.png`, `raw/nosign.png`) were still the pass-1 renders, so `after.jpg`, `after_lite.jpg`, `side_by_side*.jpg`, `snow_toggle.jpg`, `sign_lamp_bench.jpg` and `lite_gable.jpg` showed the brighter × 4.8 bulbs and the hard shelf shadows. It re-shot all four from the current code, re-made those images and `bulbs_closeup.jpg` (the pass-1 frames are kept in `raw_pass1/` for that comparison), and re-ran `measure.py`: every number in the colour table below comes from the new `raw/after.png` and `raw/lite.png`.
+
 `site/src/lighting/` is the night. `index.js` exports `createLighting({ scene, renderer, camera, lite })`, which returns `{ composer, update(dt, t), setSnow(on), dispose() }`. It also has the helpers the engine uses (`placeLights`, `tune`) and one new one this round, `focusPlace(id)`. The settings and the reasons for them are in `site/src/lighting/README.md`. Every round-2 change there is marked "round 2" and gives the round-1 value it replaced.
 
 The market report for the full home view says `lighting: "lighting"`, with 12 real-time lights (4 section interiors, 4 front fills, bandstand, tree, carousel, Ferris wheel) and no warnings.
@@ -75,7 +77,7 @@ If the fixed run's p50 is over 16.7 ms, set `PROFILES.full.msaa = 2` in `setting
 | `home_signs.jpg` | The home view's left stalls at 2×, round 1 against round 2. The Bratwurst board over the roof now reads. The Glühwein board is behind the crowd's speech bubble in this frame, which comes from the crowd, not the lighting. |
 | `market_glueh.jpg`, `market_wurst.jpg`, `before_after_glueh.jpg`, `before_after_wurst.jpg` | The two stalls entered, full, round 1 against round 2 (the Glühwein board no longer washed out; less bulb glare). |
 | `market_lite_glueh.jpg`, `market_lite_band.jpg`, `before_after_lite_glueh.jpg`, `before_after_lite_band.jpg` | Lite, entered: the Glühwein stall and the bandstand, with the lights they borrow (round 1: the bandstand had no real light on lite). |
-| `bulbs_closeup.jpg` | The bench's bulb row and shelves: Cycles, round 2 pass 1 (bulbs × 4.8), pass 3 (× 3.9 in deeper amber, softer shelf shadows). |
+| `bulbs_closeup.jpg` | The bench's bulb row and shelves: Cycles, round 2 pass 1 (bulbs × 4.8, from `raw_pass1/`), pass 3 code (× 3.9 in deeper amber, softer shelf shadows), re-shot in pass 4. |
 | `side_by_side.jpg`, `side_by_side_pair.jpg` | Test bench: the Cycles reference, round 1, round 2 full and round 2 lite. |
 | `sign_lamp_bench.jpg` | The bench's Glühwein board: Cycles, no lamp, lamp. |
 | `lite_gable.jpg` | The lite gable and eave: no light through the walls. |

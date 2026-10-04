@@ -393,8 +393,8 @@ def counter():
         m.torus(0.08, 0.003, seg(12, 6), 3, "steel", T(gx - 0.4, -0.13, 0.168, rx=math.pi / 2),
                 C("7a7a7a"), arc=math.pi, a0=0.0)  # handle up over the top
     bx, by = X(0.4), 0.03
-    # between the warming tray and the rolls: a steel tray of raw Bratwurst waiting for the grill (static, not
-    # clickable), set back so the tongs keep the front
+    # between the warming tray and the rolls: a steel tray of raw Bratwurst waiting for the grill, set back so
+    # the tongs keep the front
     rx0, rx1 = tx + 0.14, bx - 0.18
     if rx1 - rx0 > 0.3:
         rxm = (rx0 + rx1) / 2
@@ -403,9 +403,13 @@ def counter():
                 "steel", Mt @ Matrix.Diagonal((1.0, 0.64, 1.0, 1.0)), C("d0d0d0"))
         # lying along the tray's long side: five side by side, three more on top. Round 3: each raw one is its
         # own clickable act_sausage_16..23 (base pivot, like the grilled ones), in full and lite alike
+        # (own seeded generator: drng advances differently in full and lite, which moved these in lite)
+        import random
+        rraw = random.Random(4242)
         for k in range(8):
             y, z = (-0.052 + k * 0.026, 0.004) if k < 5 else (-0.039 + (k - 5) * 0.026, 0.004 + 2 * SAUSAGE_R - 0.004)
-            dx, jr = drng.uniform(-0.008, 0.008), drng.uniform(-0.06, 0.06)
+            dx, jr = rraw.uniform(-0.008, 0.008), rraw.uniform(-0.06, 0.06)
+            drng.random(), drng.random()     # keep drng's stream for the goods after the tray as before
             sausage_node(s, f"act_sausage_{16 + k}", tuple(Mt @ Vector((dx, y, z))), "Raw Bratwurst, ready for the grill",
                          L=0.13, bend=0.005, seed=40 + k, rz=-0.04 + jr, raw=True)
     # basket of rolls, stacked two deep, each roll its own node

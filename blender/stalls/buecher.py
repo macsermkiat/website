@@ -380,10 +380,11 @@ def book_cart(h, unit, sec, lite):
     C.mbox(F @ _T(W / 2, y1 - 0.0, (z0 + z1) / 2), (W - 0.06, 0.022, z1 - z0), tint=h.cart_tint, grain=0)
     C.mbox(F @ _T(W / 2, Dc - 0.012, (bot + z1) / 2), (W - 0.06, 0.024, z1 - bot), tint=h.cart_tint, grain=0)
     C.mbox(F @ _T(W / 2, Dc / 2, bot + 0.012), (W - 0.06, Dc - 0.04, 0.024), tint=h.cart_tint, grain=0)
-    # a raised moulding on the front panel and painted lining
-    if not lite:
-        C.mbox(F @ _T(W / 2, -0.004, (bot + z0) / 2), (W - 0.16, 0.012, z0 - bot - 0.1), tint="oak", grain=0)
-    h.paint.mbox(F @ _T(W / 2, -0.012, z0 - 0.03), (W - 0.04, 0.008, 0.025), band="green", bevel=0.002)
+    # the section's name board hangs on the front apron (section_sign builds it) from two iron
+    # hooks over the apron's top edge; a green lining strip runs along that edge
+    h.paint.mbox(F @ _T(W / 2, 0.008, z0 + 0.004), (W - 0.04, 0.02, 0.012), band="green", bevel=0.002)
+    for xs in (0.11, W - 0.11):
+        I.mbox(F @ _T(xs, -0.004, BS.CART_SIGN[0] + BS.CART_SIGN[1] / 2 + 0.008), (0.02, 0.034, 0.03), bevel=0)
     # tier boards
     for (z, y) in BS.CART_TIERS:
         FR.mbox(F @ _T(W / 2, y + (y1 - y0 - 0.01) / 2, z - BS.BOARD_T / 2), (W - 0.06, y1 - y0 - 0.01, BS.BOARD_T),
@@ -408,11 +409,10 @@ def book_cart(h, unit, sec, lite):
         I.slab(F @ Vector((xs, Dc, z1 - 0.02)), F @ Vector((xs, Dc + 0.12, z1 + 0.04)), 0.014, 0.014,
                up=(0, 0, 1), bevel=0)
     I.cyl(F @ Vector((W / 2, Dc + 0.12, z1 + 0.04)), 0.014, 0.014, W - 0.12, seg=8, rot=(0, math.pi / 2, a))
-    # sign rods from the back corners, finials on top
-    sz = BS.CART_SIGN_Z
-    for xs in (0.02, W - 0.02):
-        I.mbox(F @ _T(xs, Dc - 0.02, (z1 + sz + 0.26) / 2), (0.014, 0.014, sz + 0.26 - z1), bevel=0)
-        I.sphere(F @ Vector((xs, Dc - 0.02, sz + 0.27)), 0.017, seg=8, rings=5)
+    # turned finials on the back corners of the side panels
+    for xs in (0.015, W - 0.015):
+        FR.cyl(F @ Vector((xs, Dc - 0.015, z1 + 0.115)), 0.012, 0.012, 0.05, seg=8, tint="dark")
+        I.sphere(F @ Vector((xs, Dc - 0.015, z1 + 0.15)), 0.017, seg=8, rings=5)
     return F
 
 

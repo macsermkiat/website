@@ -14,18 +14,15 @@ notes:
   "Get off": "Back on the ground."
 ---
 
-These are the questions I keep coming back to. I don't have answers to them. When I write something on one, it will go on this page. <!-- check -->
+Nothing is written up here yet.
+
+These are the questions I keep coming back to. I don't have answers to them. When I write something on one, it will go on this page. <!-- check --> [[Mac: confirm the intro and the three topics below, or replace them. Until you do, a production build leaves them off the page.]]
 
 ### What is a cause?
-
-Science leans on the word all the time and rarely says what it means. <!-- check --> [[Mac: confirm this line or write your own. Until you do, a production build shows the question without it.]]
+Science leans on the word all the time and rarely says what it means. <!-- check --> [[Mac: confirm this line or write your own.]]
 
 ### Is time something the brain makes?
-
 Physics has trouble finding a flow of time. We feel one every second. <!-- check --> [[Mac: confirm this line or write your own.]]
 
 ### Why does improvisation feel inevitable afterwards?
-
 A good solo sounds planned once it's over. Nobody planned it. <!-- check --> [[Mac: confirm this line or write your own.]]
-
-[[Mac: confirm or replace these three topics. The check marker on the first paragraph covers the choice of topics. Link each one to a note when there is one.]]

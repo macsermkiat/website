@@ -46,3 +46,16 @@ footer .credits a { color: inherit; }
 .library h4 span { font-weight: 400; opacity: .75; }
 .library li { margin: 4px 0; }
 .library .one-line { opacity: .85; }
+
+/* every book's notes (content/books/<slug>.md), under the bookshelf */
+.booknotes { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 8px; }
+.booknotes > h3 { font-size: 26px; }
+.bookcat { font-size: 20px; color: var(--gold); margin-top: 28px; }
+.bookcat span { font-weight: 400; color: var(--muted); }
+.bookpage { border-top: 1px dashed var(--line); padding: 14px 0 4px; margin-top: 14px; }
+.bookpage h4 { font-family: var(--display); font-size: 22px; margin: 0; }
+.bookpage .byline { margin: 0 0 6px; color: var(--muted); }
+.bookpage h5 { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 16px 0 4px; }
+.bookpage h6 { font-size: 15px; margin: 12px 0 4px; }
+.bookpage .sources, .bookpage .back { font-size: 14px; color: var(--muted); }
+.bookpage:target { outline: 2px solid var(--gold); outline-offset: 6px; border-radius: 4px; }

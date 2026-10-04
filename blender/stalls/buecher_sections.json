@@ -3,7 +3,7 @@
  "about": "Bücherstand category sections (owner: carpenter; built by blender/stalls/buecher.py from blender/stalls/buecher_sections.py, so this file matches stall_buecher.glb). One section per key in content/books/categories.json. The vendor parents prop_books_<key> to slot_cat_<key>.",
  "frame": "Positions are the stall's Blender frame (metres, Z up, origin on the ground at the footprint centre, front toward -Y; three.js: x = x, y = z, z = -y). Each section's frame is its slot empty's frame: +X along the boards from the visitor's left to right, -Y toward the visitor (spines face -Y), +Z up. slot_rotation_z_deg is that frame's rotation about Blender Z.",
  "slot": "slot_cat_<key> sits at the LEFT end of the section's LOWEST board, on its top surface, at its front edge. Books stand on +Z from there, run along +X for board width and reach back (+Y) at most board depth.",
- "boards": "offset is each board's [x, y, z] in the slot frame (same left end, front edge and top surface convention). clear_height is the free height above a board's top surface (null = open above). The cart's upper tier is stepped back (+Y) behind the lower tier's books.",
+ "boards": "offset is each board's [x, y, z] in the slot frame (same left end, front edge and top surface convention). clear_height is the free height above a board's top surface (null = open above). The cart's upper tier is stepped back (+Y) behind the lower tier's books; its clear_height is a sightline limit (taller books would hide the glazed cabinets behind), not a physical one. The cart signs are name boards on the carts' front aprons, below the lower tier.",
  "mean_spine": 0.042,
  "sections": [
   {
@@ -174,11 +174,11 @@
     "text": "Lebensgeschichten",
     "center": [
      -1.4,
-     -1.8,
-     1.43
+     -2.292,
+     0.47
     ],
     "size": [
-     0.9,
+     0.7,
      0.24
     ]
    }
@@ -233,11 +233,11 @@
     "text": "Risiko & Entscheidungen",
     "center": [
      1.4,
-     -1.8,
-     1.43
+     -2.292,
+     0.47
     ],
     "size": [
-     0.98,
+     0.78,
      0.24
     ]
    }

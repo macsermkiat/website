@@ -335,6 +335,9 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
     # the foam's side against the glass, from the beer up to just under the rim
     side = [(r_at(level) - 0.0006, level - 0.002), (r_at(level + 0.004) - 0.0005, level + 0.004),
             (ri - 0.0004, rim_z - 0.003)]
+    # round 3 pass 2: the band takes a strip of the dry crown texture (fine pale bubbles), not the wet edge
+    # strip, whose darker lacing read as a tan collar through the tinted glass
+    band = lambda u, v: reg.uv(0.25 + 0.75 * u, 0.3 + 0.12 * v)
     sv, sf, su = [], [], []
     for i, (r, z) in enumerate(side):
         for j in range(n + 1):
@@ -344,8 +347,8 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
         for j in range(n):
             q = (i * (n + 1) + j, i * (n + 1) + j + 1, (i + 1) * (n + 1) + j + 1, (i + 1) * (n + 1) + j)
             sf.append(q)
-            su.append([edge(j / n, 0.55 + 0.45 * i / 2), edge((j + 1) / n, 0.55 + 0.45 * i / 2),
-                       edge((j + 1) / n, 0.55 + 0.45 * (i + 1) / 2), edge(j / n, 0.55 + 0.45 * (i + 1) / 2)])
+            su.append([band(j / n, i / 2), band((j + 1) / n, i / 2), band((j + 1) / n, (i + 1) / 2),
+                       band(j / n, (i + 1) / 2)])
     # seen through the glass this band sits in the glass's own shade, so it is painted a little brighter than
     # the crown (round 3: it read as a khaki collar); only the upper, paler part of the wet strip is used
     foam_m.add(sv, sf, su, M, C("fff6e6"), "foam", True)
@@ -500,8 +503,8 @@ def sausage(m, M, L=0.2, r=0.013, bend=0.02, dark=False, seed=0.0, raw=False):
         rings.append([(x, y + rr * math.cos(TWO_PI * j / ring_n), rr * math.sin(TWO_PI * j / ring_n))
                       for j in range(ring_n)])
     if raw:
-        # raw pork pink-beige (round 2's #dcc4b0 read as white Weißwurst under the warm key light)
-        m.loft(rings, "sw_satin", M, jit(C("c99c8e"), 0.035), "atlas", cap0=True, cap1=True)
+        # raw pork pink-beige, greyed (round 2: #dcc4b0 read as white Weißwurst; round 3: #c99c8e as a hot dog)
+        m.loft(rings, "sw_satin", M, jit(C("c89d90"), 0.035), "atlas", cap0=True, cap1=True)
         return
     m.loft(rings, "sausage_dark" if dark else "sausage", M, jit(WHITE, 0.05), "atlas", cap0=True, cap1=True)
 
