@@ -16,3 +16,48 @@ full scene after LOD {"triangles":917519,"meshes":536} {"people":90,"hidden":0,"
   ok   shelf goods merged into a few meshes (books, mugs, glasses, bottles) ({"merged":{"books":55,"meshes":6},"featured":["act_book_00","act_book_01","act_book_02","act_book_03","act_book_04"]})
   ok   layout.json and props.json bindings all resolve exactly ([])
   ok   clickable items found: books, glasses, mugs, bottles, sausages, rolls ({"glueh:ladle":1,"glueh:mug":16,"glueh:effect":5,"glueh:kettle":1,"glueh:lid":1,"glueh:bottle":18,"glueh:wineglass":5,"bier:glass":18,"bier:)
+· screenshot ../review/round-4/engineer/home_full.jpg
+  ok   Glühwein close-up: the vendor stays in view (person_4 person_5 person_6 person_7)
+  ok   Glühwein close-up: nobody in the picture stands between the camera and the vendor (blocking: ; stepped aside: person_4 person_5 person_6 person_7)
+· screenshot ../review/round-4/engineer/panel_gluehwein.jpg
+  ok   Bücherstand view: every one of Mac's featured spines in clear view (the bookseller stands aside) ([{"n":"act_book_00","who":[]},{"n":"act_book_01","who":[]},{"n":"act_book_02","who":[]},{"n":"act_book_03","who":[]},{"n":"act_book_04","who)
+  ok   the chosen book is open in front of the counter when the picture is taken ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
+  ok   the reading view shows that book's page from content/books/<slug>.md (In short, summary) ({"open":true,"slug":"the-many-hidden-worlds-of-quantum-mechanics","state":"ready","title":"The Many Hidden Worlds of Quantum Mechanics","tex)
+· screenshot ../review/round-4/engineer/panel_buecherstand.jpg
+  ok   reset view closes the open book and its reading view, and puts it back on the shelf ({"open":null,"visible":true,"reading":false})
+· screenshot ../review/round-4/engineer/panel_bandstand.jpg
+· screenshot ../review/round-4/engineer/home_full_snow.jpg
+· plain.html
+  ok   plain.html has all seven sections (7 sections)
+  ok   plain.html links back to the market 
+  ok   plain.html credits the music (the manifest's credit line) (Music: “Lanterns After Closing”, an original ballad for this site. Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: M)
+  ok   plain.html lists every third-party asset with its source URL 
+  ok   plain.html carries the books the 3D shelf features (they are on Mac's shelf), and not the unconfirmed list (
+      Bücherstand · Reading
+      The bookshop
+      I read physics, philosophy and books about the brain.
+The shelves hold books from my A)
+  ok   plain.html lists Mac's whole bookshelf (categories.json), with the writer's one-line summaries (55 of 55)
+  ok   plain.html carries the same notes the reading view shows, one article per book (55 of 55)
+· screenshot ../review/round-4/engineer/plain_html.jpg
+  ok   without WebGL the 3D page falls back to the text of all seven sections 
+  ok   the 3D page links to plain.html 
+  ok   the 3D page credits the music in its footer (Music: “Lanterns After Closing”, an original ballad for this site. Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: M)
+  ok   the credit links every licence it names (5 named)
+  ok   the 3D page lists every third-party asset with its source URL 
+  ok   the canvas has an accessible name 
+  ok   mute covers the band and the stall sounds 
+· every model missing and layout.json ignored: the BUILD.md layout with labelled stand-ins
+· ready in 1.3 s
+  ok   missing glbs: every place is a stand-in ([])
+  ok   missing layout.json: the BUILD.md layout (BUILD.md fallback)
+  ok   missing glbs are reported as bindings that did not resolve (nothing guessed) ([])
+  ok   stand-ins keep the actions working (Mugs poured tonight: 1. Red wine, cinnamon, clove and orange. Careful, it's hot.)
+· screenshot ../review/round-4/engineer/missing_models_standins.jpg
+· ready in 11.3 s
+  ok   ?perf shows the frame-time meter with its Tour button 
+  ok   two missing glbs: just those two are stand-ins ([{"id":"bierstand","place":"bier","kind":"section","source":"standin","file":null},{"id":"riesenrad","place":"ferris","kind":"landmark","sou)
+
+38/38 checks passed
+No console errors.
+EXIT 0

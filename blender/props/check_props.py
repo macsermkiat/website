@@ -26,7 +26,7 @@ FAIL (exit 1):
 WARN (listed, exit 0): lite versions above 38 % of the full triangles (target about a third).
 
     python3 blender/props/check_props.py --notes   also rewrites the budget tables in
-                                                   review/round-3/vendor/NOTES.md from the current glbs
+                                                   review/round-4/vendor/NOTES.md from the current glbs
 """
 import json
 import os
@@ -58,7 +58,7 @@ BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|
 HEADROOM, SECTION_TRIS, SECTION_MB, DECO_TRIS = 2000, 60000, 3.0, 20000
 LITE_RATIO = 0.38
 ACT_BBOX_TOL, MESH_BBOX_TOL = 0.01, 0.02          # m: full vs lite bounds of act_ subtrees / mesh nodes
-NOTES = os.path.join(REPO, "review", "round-3", "vendor", "NOTES.md")
+NOTES = os.path.join(REPO, "review", "round-4", "vendor", "NOTES.md")
 SEAT = os.path.join(HERE, "seat_check.mjs")
 
 fails, warns = [], []

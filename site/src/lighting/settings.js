@@ -143,15 +143,17 @@ export const NIGHT = {
   // m of the camera and gone past `far` m, so close-ups read and the home view's crowd is unchanged.
   figure: { knee: 0.9, range: 1.5, spec: 0.35, fill: { color: [1.0, 0.72, 0.5], intensity: 1.7, near: 4.5, far: 9 } },
   // Round 4: the Bücherstand's side racks hang their own bulb strings from little canopies, and the
-  // canopy shadowed the upper boards from the stall's front light (carpenter judges, round 3). A bulb
-  // string that hangs at least `below` m under its model's top string, is at least `minLength` m long
-  // and that no light_ of its model reaches (its middle more than `minAway` m from every light_ empty
-  // in plan) gets a one-sided wash glow under it: `down` m lower and `out` m toward the model's
-  // front, along the string with its ends drawn in by `inset` of its length, lighting nothing higher
-  // than `ceiling` m under the bulbs (the canopy's own fascia board sits right there and blew out), which lights the board fronts and book spines under the canopy. It is the
-  // light those bulbs would throw; strings over a lit stall front (the Glühwein lambrequin, calibrated
-  // against Cycles) are left alone.
-  canopy: { intensity: 9, reach: 1.8, down: 0.22, out: 0.3, inset: 0.12, ceiling: 0.12, minAway: 1.6, minLength: 0.6, below: 0.15, floor: 0.25, color: [1.0, 0.62, 0.34] },
+  // canopy shadowed the upper boards from the stall's front light (carpenter judges, round 3); the
+  // bulbs lit nothing, as bulbStrings had merged them into the eave string 0.4 m above. A bulb string
+  // that hangs at least `below` m under its model's top string, is at least `minLength` m long and
+  // that no light_ of its model reaches (its middle more than `minAway` m from every light_ empty in
+  // plan) gets a one-sided wash glow: `down` m under the bulbs and `out` m toward the model's front,
+  // along the string with its ends drawn in by `inset` of its length. It lights nothing higher than
+  // `ceiling` m under the bulbs (the canopy fascia and the section signs hang right under them and
+  // blew out) and nothing lower than `floor` m over the base. It is the light those bulbs would
+  // throw onto the boards and book spines. Strings over a lit stall front (the Glühwein lambrequin,
+  // calibrated against Cycles) are within minAway of a light_ and are left alone.
+  canopy: { intensity: 7, reach: 1.8, down: 0.3, out: 0.3, inset: 0.12, ceiling: 0.28, minAway: 1.6, minLength: 0.6, below: 0.15, floor: 0.25, color: [1.0, 0.62, 0.34] },
 
   // faint cool rim on edges that face the moon, for figures and posts in front of the stalls.
   // It is added as radiance, not multiplied by albedo (the crowd's coats are albedo 0.01-0.07), and

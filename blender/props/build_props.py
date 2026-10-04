@@ -13,7 +13,7 @@ Outputs
     blender/out/props_report.json      triangles, bytes, bounding boxes, pivots, items per set
     blender/out/vendor/renders/*.png   the preview PNGs (deco frames as prop_deco_<key>.png; never the shared
                                        blender/out/renders/, where the carpenter's deco.py writes deco_<key>.png)
-    review/round-3/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
+    review/round-4/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
                                        and the deco contact sheet (built only from the vendor's own frames)
 """
 import argparse
@@ -113,7 +113,7 @@ def guard_paths():
     repo = os.path.realpath(vlib.REPO or "")
     if not repo or repo == "/" or not os.path.isfile(os.path.join(repo, "docs", "BUILD.md")):
         raise SystemExit(f"[props] refusing to run: repo root {repo!r} is not the website repo")
-    owned = {"review": (vlib.REVIEW, "review/round-3/vendor"), "models": (vlib.MODELS, "site/public/models"),
+    owned = {"review": (vlib.REVIEW, "review/round-4/vendor"), "models": (vlib.MODELS, "site/public/models"),
              "report": (os.path.dirname(REPORT), "blender/out"), "renders": (vstage.RENDERS, "blender/out/vendor/renders"),
              "atlas": (vlib.ATLAS_DIR, "blender/out/vendor")}
     for key, (path, rel) in owned.items():
@@ -203,7 +203,7 @@ def deco_contact_sheet(sets):
         print(f"[props] contact sheet not rebuilt, frames missing: {[os.path.basename(p) for p in missing]}")
         return
     out = os.path.join(vlib.REVIEW, "deco_goods_contact_sheet.jpg")
-    render.contact_sheet(frames, out, cols=3, tile=(416, 234), title="Deco stall goods (vendor, round 3)")
+    render.contact_sheet(frames, out, cols=3, tile=(416, 234), title="Deco stall goods (vendor, round 4)")
     print(f"[props] wrote {out}")
 
 

@@ -3,3 +3,8 @@
   [-b] info: [lighting] bulb bounce on 4 materials of place_riesenrad
   [-b] info: [lighting] hub fade on 1 bulb meshes of place_riesenrad
   [-b] info: [lighting] focus bier (0 lights moved)
+bier: /home/claude/website/review/round-4/lighting/raw_before/bier.png (3464 s) {"lights":12,"warnings":[],"focus":"bier"}
+  [-b] info: [lighting] focus glueh (0 lights moved)
+glueh: /home/claude/website/review/round-4/lighting/raw_before/glueh.png (4015 s) {"lights":12,"warnings":[],"focus":"glueh"}
+  [-b] info: [lighting] focus books (0 lights moved)
+books: /home/claude/website/review/round-4/lighting/raw_before/books.png (4590 s) {"lights":12,"warnings":[],"focus":"books"}

@@ -44,7 +44,10 @@ started me commits. There is no round-3 engineer folder, so the open points come
 - `tests/shoot-r4.mjs` (new, a small check run): full market at 1280 × 860, with the Bier panel, a pint mid-pour,
   Prost, and the bandstand at rest. **No console errors.**
 - `tests/smoke.mjs --only shots,plain,missing`: home view, stall panels, snow, plain.html, and every model
-  missing (falls back to stand-ins). The result is in `smoke.log` in this folder; see the end of this file.
+  missing (falls back to stand-ins): **38/38 checks passed, no console errors** (`smoke.log`). The screenshots
+  `home_full.jpg`, `panel_gluehwein.jpg`, `panel_buecherstand.jpg`, `panel_bandstand.jpg`, `home_full_snow.jpg`,
+  `plain_html.jpg` and `missing_models_standins.jpg` in this folder come from this run. The machine's load
+  average was 3 to 11 during the run.
 
 ## Still open (other roles)
 
