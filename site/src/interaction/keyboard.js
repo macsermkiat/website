@@ -3,7 +3,7 @@
 export function bindKeyboard({ canvas, order, openPlace, closePanel, endRide, isRiding, resetView, rig }) {
   canvas.tabIndex = 0;
   canvas.setAttribute('role', 'application');
-  canvas.setAttribute('aria-label', 'The 3D market. Arrow keys look around, plus and minus zoom, 1 to 7 open a place, Home resets the view.');
+  canvas.setAttribute('aria-label', "Mac's Nachtmarkt: a 3D Christmas market at night. Arrow keys look around, plus and minus zoom, 1 to 7 open a place, Home resets the view. The places are also listed as buttons below the market.");
   addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
     const t = e.target;

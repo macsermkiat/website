@@ -311,16 +311,67 @@ Add any further checks you find necessary. Then give one holistic verdict:
 Don't average the checks: one serious failure can decide the verdict alone. List concrete fixes in priority order. Don't edit any files.`
 }
 
+
+// ---- Dynamic model/effort selection (args.dynamic) ----
+const DYNAMIC = !!args.dynamic
+const WRITING_ROLES = new Set(args.writingRoles || ['writer'])
+const TIERS = {
+  light: { model: 'sonnet', effort: 'low' },
+  standard: { model: null, effort: 'medium' },   // null = session model (Opus 5.5)
+  heavy: { model: null, effort: 'high' },
+}
+const TRIAGE_SCHEMA = {
+  type: 'object',
+  properties: { tier: { type: 'string', enum: ['light', 'standard', 'heavy'] }, reason: { type: 'string' } },
+  required: ['tier', 'reason'],
+}
+async function builderOpts(key, pass, fixes) {
+  const fixed = (args.builderModel || {})[key] ? { model: args.builderModel[key] } : {}
+  if (!DYNAMIC) return { opts: { effort: (args.builderEffort || {})[key] || 'high', ...fixed } }
+  const r = ROLES[key]
+  const t = await agent(`Classify how demanding this next work pass is, so the right model and effort can be chosen. Don't open any files; judge from the text below.
+Role: ${r.title}. Pass ${pass} of round ${ROUND}.
+Fixes and priorities for this pass:
+- ${(fixes && fixes.length ? fixes : [r.brief.slice(-2500)]).join('\n- ')}
+
+Tiers:
+- light: small, local edits (text tweaks, renames, a parameter or colour change, re-export, notes cleanup) with no new modelling, no new code paths and no visual judgement.
+- standard: several fixes or moderate new code or modelling, where the approach is clear.
+- heavy: new systems or geometry, cross-cutting refactors, hard visual quality work, or anything whose approach is unclear.
+Pick the lowest tier that will do the job well.`, { label: `triage · ${key} · ${pass}`, phase: 'Build', schema: TRIAGE_SCHEMA, model: 'sonnet', effort: 'low' })
+  let tier = (t && t.tier) || 'standard'
+  if ((args.minTier || {})[key] === 'standard' && tier === 'light') tier = 'standard'
+  if ((args.minTier || {})[key] === 'heavy') tier = 'heavy'
+  const o = { ...TIERS[tier] }
+  if (WRITING_ROLES.has(key)) { o.model = 'sonnet'; if (o.effort === 'high') o.effort = 'medium' }   // Mac: writing runs on Sonnet
+  if (fixed.model) o.model = fixed.model
+  const opts = { effort: o.effort, ...(o.model ? { model: o.model } : {}) }
+  log(`${key} pass ${pass}: ${tier} → ${o.model || 'opus'} / ${o.effort}${t ? ' (' + t.reason.slice(0, 80) + ')' : ''}`)
+  return { tier, opts }
+}
+
 const results = await pipeline(args.roles, async (key) => {
   let pass = START, built = null, fixes = [], history = []
   if (START > 1) { built = { summary: `Pass ${START - 1} was done earlier. Read review/round-${ROUND}/${key}/NOTES.md for what was built, and the current files.` }; fixes = [`Read review/round-${ROUND}/${key}/JUDGES.md (the Opus and Fable judges) and review/round-${ROUND}/CODEX_JUDGE.md (the Codex judge, whole market), and fix everything that concerns your role. The files on disk may hold a partly finished earlier pass; continue from them.`] }
   while (pass < START + MAX_PASSES) {
-    built = await agent(buildPrompt(key, pass, built, fixes), { label: `${key} · pass ${pass}`, phase: 'Build', schema: BUILD_SCHEMA, effort: (args.builderEffort || {})[key] || 'high', ...((args.builderModel || {})[key] ? { model: args.builderModel[key] } : {}) })
+    const bopts = await builderOpts(key, pass, fixes)
+    built = await agent(buildPrompt(key, pass, built, fixes), { label: `${key} · pass ${pass}${bopts.tier ? ' · ' + bopts.tier : ''}`, phase: 'Build', schema: BUILD_SCHEMA, ...bopts.opts })
     if (!built) { history.push({ pass, error: 'builder failed' }); break }
-    const verdicts = (await parallel([
-      () => agent(judgePrompt(key, built), { label: `judge opus · ${key} · ${pass}`, phase: 'Judge', schema: VERDICT_SCHEMA, effort: args.judgeEffort || 'high' }),
-      () => agent(judgePrompt(key, built), { label: `judge fable · ${key} · ${pass}`, phase: 'Judge', schema: VERDICT_SCHEMA, model: 'fable', effort: args.judgeEffort || 'high' }),
-    ])).filter(Boolean)
+    let verdicts
+    if (DYNAMIC) {
+      // Staged panel: Opus judges first; Fable is only spent to confirm a Ship.
+      const first = await agent(judgePrompt(key, built), { label: `judge opus · ${key} · ${pass}`, phase: 'Judge', schema: VERDICT_SCHEMA, effort: args.judgeEffort || 'low' })
+      verdicts = [first].filter(Boolean)
+      if (first && first.verdict === 'Ship') {
+        const second = await agent(judgePrompt(key, built), { label: `judge fable · ${key} · ${pass}`, phase: 'Judge', schema: VERDICT_SCHEMA, model: 'fable', effort: args.judgeEffort || 'low' })
+        if (second) verdicts.push(second)
+      }
+    } else {
+      verdicts = (await parallel([
+        () => agent(judgePrompt(key, built), { label: `judge opus · ${key} · ${pass}`, phase: 'Judge', schema: VERDICT_SCHEMA, effort: args.judgeEffort || 'high' }),
+        () => agent(judgePrompt(key, built), { label: `judge fable · ${key} · ${pass}`, phase: 'Judge', schema: VERDICT_SCHEMA, model: 'fable', effort: args.judgeEffort || 'high' }),
+      ])).filter(Boolean)
+    }
     history.push({ pass, built, verdicts: verdicts.map(v => ({ verdict: v.verdict, failed: v.checks.filter(c => !c.pass), fixes: v.fixes })) })
     log(`${key} pass ${pass}: ${verdicts.map(v => v.verdict).join(' / ')}`)
     if (verdicts.length && verdicts.every(v => v.verdict === 'Ship')) break
