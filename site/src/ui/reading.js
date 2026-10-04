@@ -27,7 +27,7 @@ async function fetchPage(slug) {
   return p;
 }
 
-export function createReader() {
+export function createReader({ onToggle } = {}) {
   const root = $('reader');
   if (!root) return { open() {}, close() {}, get isOpen() { return false; }, get slug() { return null; } };
   const title = $('rTitle'), author = $('rAuthor'), eyebrow = $('rEyebrow'), body = $('rBody');
@@ -56,6 +56,7 @@ export function createReader() {
     root.hidden = false;
     root.dataset.slug = slug;
     root.dataset.state = 'loading';
+    onToggle?.(true);
     if (focus) title.focus({ preventScroll: true });
     const my = ++token;
     if (!slug || entry.page === false) { done(false); return; }
@@ -84,6 +85,7 @@ export function createReader() {
     token++;
     root.hidden = true;
     delete root.dataset.slug;
+    onToggle?.(false);
     if (!silent) was.onClose?.();
     if (returnFocus && document.contains(returnFocus) && !silent) returnFocus.focus({ preventScroll: true });
     if (!silent) returnFocus = null;

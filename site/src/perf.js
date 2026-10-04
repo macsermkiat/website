@@ -50,10 +50,11 @@ export function createPerfMeter({ stage, renderer, lite, governor, tour }) {
 
   // ---------- the tour ----------
   const STOPS = [['home', null], ['Glühwein', 'glueh'], ['bandstand', 'band'], ['Bücherstand', 'books'], ['Riesenrad', 'ferris'], ['home again', null]];
-  let run = null; // { i, phase: 'fly' | 'measure', t0, n0, lines }
+  let run = null; // { i, phase: 'fly' | 'measure', t0, n0, lines, stops }
+  let tourJson = null;
   function startTour() {
     if (!tour || run) return;
-    run = { i: -1, lines: [], t0: 0 };
+    run = { i: -1, lines: [], stops: [], t0: 0 };
     tourBtn.textContent = 'Touring…';
     nextStop();
   }
@@ -61,8 +62,10 @@ export function createPerfMeter({ stage, renderer, lite, governor, tour }) {
     run.i++;
     if (run.i >= STOPS.length) {
       const out = run.lines.join('\n');
+      const run_lines = run.stops;
       run = null;
       text.dataset.tour = out;
+      tourJson = { lines: run_lines, url: location.href, at: new Date().toISOString() };
       console.info('[perf] tour\n' + out);
       tourBtn.textContent = 'Tour';
       toClipboard(out, tourBtn, 'Tour');
@@ -77,7 +80,9 @@ export function createPerfMeter({ stage, renderer, lite, governor, tour }) {
     if (!run) return;
     if (run.phase === 'fly' && now - run.t0 > 2500) { run.phase = 'measure'; run.t0 = now; run.samples = []; }
     else if (run.phase === 'measure' && now - run.t0 > 4000 && run.samples.length >= 10) {
-      run.lines.push(line(stats(run.samples), STOPS[run.i][0]));
+      const st = stats(run.samples);
+      run.lines.push(line(st, STOPS[run.i][0]));
+      run.stops.push({ view: STOPS[run.i][0], ...st });
       nextStop();
     }
   }
@@ -87,6 +92,8 @@ export function createPerfMeter({ stage, renderer, lite, governor, tour }) {
     stats,
     startTour,
     get tourResult() { return text.dataset.tour || null; },
+    /** The finished tour, one record per view (tests/perf.mjs reads it). */
+    get tourData() { return tourJson; },
     /** Call once per rendered frame with the unclamped frame time in seconds. */
     frame(dt) {
       calls = renderer.info.render.calls;

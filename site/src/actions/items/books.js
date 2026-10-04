@@ -14,6 +14,8 @@ const _p = new THREE.Vector3(), _q = new THREE.Quaternion();
 const BOOK_HOLD = 14; // seconds an open book stays out before the bookseller puts it back (not while it is being read)
 const MIN_HEIGHT = 0.3; // an open book is shown at least this tall (metres), so its pages can be read
 const byName = (a, b) => a.name.localeCompare(b.name, 'en', { numeric: true });
+/** True where the reading view is a sheet over the lower part of the screen (see main.css, "the reading view"). */
+const sheetView = () => typeof matchMedia === 'function' && (matchMedia('(max-width: 960px)').matches || matchMedia('(max-aspect-ratio: 1/1)').matches);
 
 export function createBooks(ctx) {
   const { market, anim, sfx, say, items, reader } = ctx;
@@ -79,6 +81,9 @@ export function createBooks(ctx) {
       n.visible = false;
       const from = book.poseOf(n);
       const to = presentPose(book);
+      // where the reading view is a sheet over the lower part of the screen (960 px wide or less, or a tall
+      // screen), the camera comes to the open book so it stands in the part the sheet leaves free
+      if (sheetView()) o.back = ctx.frame?.({ center: to.p, facing: new THREE.Vector3(0, 0, 1).applyQuaternion(to.q), halfW: book.W * book.S, halfH: book.H * book.S * 0.5, lift: 0.4, margin: 1.4, near: 0.4 }) || null;
       book.set(from.p, from.q, 1);
       o.state = 'flying';
       anim.add(0.75, (k) => {
@@ -107,10 +112,12 @@ export function createBooks(ctx) {
     return { p, q: new THREE.Quaternion().setFromRotationMatrix(m) };
   }
 
-  function close({ fromReader = false } = {}) {
+  function close({ fromReader = false, retract = false } = {}) {
     const o = open;
     if (!o) return;
     open = null;
+    // the camera came to the book: back to where it was, unless the visitor has gone elsewhere
+    if (o.back && !retract) ctx.flyBack?.(o.back);
     if (!fromReader && reader?.slug === (o.d.slug || '')) reader.close({ silent: true });
     const { n, item, r0, pull, group: book } = o;
     const home = () => {
@@ -128,6 +135,58 @@ export function createBooks(ctx) {
         book.setClosedOffset(k);
       }, () => { book.dispose(); home(); });
     });
+  }
+
+  // ---------- looking along one category's shelf ----------
+  // A cam_cat_<key> empty in the stall (looking at cam_cat_<key>_target, or else at that section's books) frames a
+  // section exactly. Without one, the view is worked out from the section's own books: square to the shelf
+  // (its long axis is the spread of its spines), from the side the stall's close-up looks from, and far enough
+  // back that the section fills the part of the screen the panel leaves free.
+  const shelves = LIBRARY.categories.map((c) => ({ key: c.key, label: c.labelDe || c.label, en: c.label })).filter((c) => c.key);
+  function spinesOf(key) { return nodes.filter((n) => libraryEntry(n)?.category === key); }
+  function shelfView(key) {
+    const cam = place.nodes.camCats?.[key];
+    const spines = spinesOf(key);
+    const box = new THREE.Box3();
+    for (const n of spines) box.union(boxOf(n));
+    const slot = place.nodes.slots[`slot_cat_${key}`];
+    if (box.isEmpty() && slot) box.setFromCenterAndSize(slot.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0.3, 0.12, 0)), new THREE.Vector3(0.6, 0.3, 0.25));
+    if (box.isEmpty()) return null;
+    const center = box.getCenter(new THREE.Vector3());
+    if (cam) {
+      const t = place.nodes.camCatTargets?.[key];
+      return { pos: cam.getWorldPosition(new THREE.Vector3()), target: t ? t.getWorldPosition(new THREE.Vector3()) : center, near: 0.5, exact: true };
+    }
+    // the shelf's long axis: the spread of its spines on the ground plane (or the slot's own X for one book)
+    let axis = new THREE.Vector3(1, 0, 0);
+    if (spines.length > 1) {
+      let sxx = 0, szz = 0, sxz = 0;
+      const ps = spines.map((n) => n.getWorldPosition(new THREE.Vector3()));
+      const m = ps.reduce((a, p) => a.add(p), new THREE.Vector3()).divideScalar(ps.length);
+      for (const p of ps) { const x = p.x - m.x, z = p.z - m.z; sxx += x * x; szz += z * z; sxz += x * z; }
+      const ang = 0.5 * Math.atan2(2 * sxz, sxx - szz);
+      axis.set(Math.cos(ang), 0, Math.sin(ang));
+    } else if (slot) axis.set(1, 0, 0).applyQuaternion(slot.getWorldQuaternion(new THREE.Quaternion())).setY(0).normalize();
+    const facing = new THREE.Vector3(-axis.z, 0, axis.x);
+    const front = viewFor(place).pos.clone().sub(center).setY(0);
+    if (facing.dot(front) < 0) facing.negate();
+    const size = box.getSize(new THREE.Vector3());
+    const halfW = (Math.abs(axis.x) * size.x + Math.abs(axis.z) * size.z) / 2 + 0.08;
+    return { center, facing, halfW, halfH: size.y / 2 + 0.08, depth: Math.abs(facing.x) * size.x + Math.abs(facing.z) * size.z };
+  }
+  let shelfOpen = null;
+  function showShelf(key) {
+    const v = shelfView(key);
+    if (!v) return false;
+    shelfOpen = key;
+    if (v.exact) ctx.flyBack?.(v);
+    else ctx.frame?.({ ...v, lift: 0.3, margin: 1.3, near: 0.5 });
+    // the lite market's close-up key light turns to the shelf (the full market's own lights reach it)
+    if (v.center) ctx.keyAt?.(v.center, v.facing || v.pos.clone().sub(v.target));
+    const c = shelves.find((x) => x.key === key);
+    const n = spinesOf(key).length;
+    say(`<b lang="de">${esc(c?.label || key)}</b>${c?.en && c.en !== c.label ? ` · ${esc(c.en)}` : ''}: ${n} book${n === 1 ? '' : 's'} on this shelf. <em>Click a spine to open it.</em>`);
+    return true;
   }
 
   function pickForMe() {
@@ -149,6 +208,11 @@ export function createBooks(ctx) {
     kinds: { book: (item) => openBook(item.node) },
     api: {
       featuredBooks: featured,
+      /** The category shelves (key, German label) and a view along one of them. */
+      shelves: () => shelves.filter((c) => spinesOf(c.key).length || place.nodes.slots[`slot_cat_${c.key}`]),
+      showShelf,
+      shelfView: (key) => { const v = shelfView(key); return v && { exact: !!v.exact, center: v.center?.toArray?.(), halfW: v.halfW, halfH: v.halfH }; },
+      shownShelf: () => shelfOpen,
       pickBook: pickForMe,
       openBook: (n) => openBook(n),
       openBySlug,
@@ -158,7 +222,7 @@ export function createBooks(ctx) {
       /** The book standing open (for tests): its node name, title and state. */
       openedBook: () => (open ? { name: open.n.name, slug: open.d.slug, title: open.d.title, author: open.d.author, note: open.d.note, mac: !!open.d.mac, state: open.state } : null),
     },
-    retract: () => { close(); },
+    retract: () => { shelfOpen = null; close({ retract: true }); },
     update(dt) {
       if (open?.state === 'open' && !reader?.isOpen && (open.left -= dt) <= 0) close();
     },

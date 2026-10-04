@@ -24,12 +24,14 @@ function hasPrefixUp(o, stop, re) {
 
 /** Scan a model root. Pure bookkeeping: returns the nodes found, changes nothing. */
 export function scanNodes(root) {
-  const n = { bulbs: [], lights: [], snow: [], slots: {}, acts: {}, camView: null, camTarget: null, rots: [], gondolas: [], horses: [], meshes: [] };
+  const n = { bulbs: [], lights: [], snow: [], slots: {}, acts: {}, camView: null, camTarget: null, camCats: {}, camCatTargets: {}, rots: [], gondolas: [], horses: [], meshes: [] };
   root.traverse((o) => {
     const name = o.name || '';
     if (/^light_/i.test(name)) n.lights.push(o);
     else if (/^snow_/i.test(name)) n.snow.push(o);
     else if (/^slot_/i.test(name)) { const k = name.toLowerCase(); if (!n.slots[k]) n.slots[k] = o; }
+    else if (/^cam_cat_.+_target$/i.test(name)) { const k = name.toLowerCase().slice(8, -7); n.camCatTargets[k] ??= o; }
+    else if (/^cam_cat_./i.test(name)) { const k = name.toLowerCase().slice(8).replace(/\.\d+$/, ''); n.camCats[k] ??= o; }
     else if (/^cam_view/i.test(name)) n.camView ??= o;
     else if (/^cam_target/i.test(name)) n.camTarget ??= o;
     // act_x is the pivot; an act_x_mesh inside it is only its geometry (the vendor's and ride builder's export)

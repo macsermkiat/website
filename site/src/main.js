@@ -17,7 +17,7 @@ import { createCameraRig } from './interaction/camera.js';
 import { createPicking } from './interaction/picking.js';
 import { bindKeyboard, watchMotion } from './interaction/keyboard.js';
 import { createPanel, buildPlaceNav } from './ui/panel.js';
-import { createReader } from './ui/reading.js';
+import { createReader, libraryBook } from './ui/reading.js';
 import { SECTIONS, ORDER, bookPicks, phrases, taglineHtml } from './content.js';
 import { createPerfMeter } from './perf.js';
 import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders } from './engine/merge.js';
@@ -142,7 +142,9 @@ async function boot() {
   const rig = createCameraRig({ camera, dom: renderer.domElement, home: phoneHome ? PHONE_HOME : home, motion });
   let panel, openedFor = null;
   // the reading view: a book opened on the Bücherstand shows its page from content/books/<slug>.md
-  const reader = createReader();
+  // while a book is open the page carries .reading; at 960 px and below the reading view is a sheet along the bottom
+  // and the panel steps aside (main.css), so the open book has the picture above the sheet to itself
+  const reader = createReader({ onToggle: (on) => { document.documentElement.classList.toggle('reading', on); requestAnimationFrame(() => panelShift()); } });
   const actions = createActions({
     reader,
     market, scene, lite, motion, audio, rig, camera, overlay,
@@ -151,6 +153,9 @@ async function boot() {
     say: (html) => panel.say(html),
     crowdSay: (text, center, radius) => crowd.say(text, center, radius),
     togglePlay: () => togglePlay(),
+    frame: (o) => frameRegion(o),
+    keyAt: (center, facing) => key?.aim(center, facing),
+    flyBack: (v) => { if (!rig.riding && v) rig.flyTo(v); },
   });
 
   const playBtn = $('play'), np = $('nowplaying');
@@ -258,6 +263,22 @@ async function boot() {
     rig.flyTo({ pos, target, near: 1 });
   }
 
+  /** Frame a box (its centre, the way its face looks, half its width and height in metres) in the part of the
+   *  market the panel or the reading view leaves free, square to its face and a little above it. Returns the
+   *  view it left, so the caller can go back to it. */
+  function frameRegion({ center, facing, halfW, halfH, depth = 0, lift = 0.25, margin = 1.25, near = 0.5 }) {
+    if (rig.riding || !center || !facing) return null;
+    const { fx, fy } = freeFraction();
+    const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+    const d = Math.max((halfH * margin) / (t * fy), (halfW * margin) / (t * camera.aspect * fx), near + 0.15) + depth / 2;
+    const dir = facing.clone().setY(0).normalize();
+    dir.y = lift;
+    dir.normalize();
+    const back = { pos: camera.position.clone(), target: rig.controls.target.clone(), near: rig.controls.minDistance };
+    rig.flyTo({ pos: center.clone().addScaledVector(dir, d), target: center.clone(), near });
+    return back;
+  }
+
   function openDeco(id) {
     const d = market.decos[id];
     if (!d) return;
@@ -343,20 +364,35 @@ async function boot() {
   // shifted (an off-centre projection) to keep the stall in the part that is still visible.
   const panelEl = $('panel');
   const shift = { x: 0, y: 0, tx: 0, ty: 0 };
-  function panelShift() {
-    shift.tx = shift.ty = 0;
-    if (panelEl.hidden) return;
-    const s = stage.getBoundingClientRect(), p = panelEl.getBoundingClientRect();
+  // The open overlay: the reading view while a book is open (on a narrow screen it is a sheet, not the side
+  // panel), else the panel. The picture moves over so its centre is the centre of the part left free.
+  const readerEl = $('reader');
+  function overlayRects() {
+    const el = readerEl && !readerEl.hidden ? readerEl : panelEl.hidden ? null : panelEl;
+    if (!el) return null;
+    const s = stage.getBoundingClientRect(), p = el.getBoundingClientRect();
     const overlapX = Math.max(0, Math.min(s.right, p.right) - Math.max(s.left, p.left));
     const overlapY = Math.max(0, Math.min(s.bottom, p.bottom) - Math.max(s.top, p.top));
-    if (!overlapX || !overlapY) return;
-    if (p.width < s.width * 0.8) shift.tx = (p.left > s.left + s.width / 2 ? 1 : -1) * Math.min(overlapX, s.width * 0.45) / 2;
-    else shift.ty = Math.min(overlapY, s.height * 0.6) / 2;
+    if (!overlapX || !overlapY) return null;
+    const side = p.width < s.width * 0.8;
+    return { s, p, side, ox: Math.min(overlapX, s.width * 0.45), oy: Math.min(overlapY, s.height * 0.6) };
+  }
+  function freeFraction() {
+    const r = overlayRects();
+    if (!r) return { fx: 1, fy: 1 };
+    return r.side ? { fx: 1 - r.ox / r.s.width, fy: 1 } : { fx: 1, fy: 1 - r.oy / r.s.height };
+  }
+  function panelShift() {
+    shift.tx = shift.ty = 0;
+    const r = overlayRects();
+    if (!r) return;
+    if (r.side) shift.tx = (r.p.left > r.s.left + r.s.width / 2 ? 1 : -1) * r.ox / 2;
+    else shift.ty = r.oy / 2;
   }
   // the sheet is fixed to the screen, so its overlap with the market changes as the page scrolls
   let shiftQueued = false;
   window.addEventListener('scroll', () => {
-    if (panelEl.hidden || shiftQueued) return;
+    if ((panelEl.hidden && readerEl?.hidden !== false) || shiftQueued) return;
     shiftQueued = true;
     requestAnimationFrame(() => { shiftQueued = false; panelShift(); });
   }, { passive: true });
@@ -457,6 +493,8 @@ async function boot() {
     onStep: (s) => { report.governor = s; console.info('[market] governor', JSON.stringify(s)); },
   }) : null;
   const perf = params.has('perf') ? createPerfMeter({ stage, renderer, lite, governor: () => governor?.state || null, tour: { openPlace, resetView, advance: (s) => step(s) } }) : null;
+  // ?perf=tour starts the tour by itself once the deferred models are in (tests/perf.mjs on Mac's own machine)
+  if (perf && params.get('perf') === 'tour') setTimeout(() => perf.startTour(), 6000);
 
   // first frame, then reveal (the mark lets tests and ?perf count what was fetched before the market opened)
   performance.mark?.('market-ready');
@@ -572,6 +610,8 @@ async function boot() {
     /** Fly in close to an item as its click would (tests take the close-up before clicking). */
     focusOn(name) { const it = actions.items.all().find((i) => i.node.name === name); if (it) focusItem(it); },
     handlers: actions.items.handlers,
+    /** A book's category key on Mac's shelf (content/books/categories.json). */
+    bookCategory: (slug) => libraryBook({ slug })?.category || null,
     openedBook: () => actions.items.handlers.openedBook?.() || null,
     itemAt: (x, y) => picking.itemAt(x, y),
     pickAt: (x, y) => picking.at(x, y),
@@ -613,6 +653,7 @@ async function boot() {
       return [...who];
     },
     perf: () => perf?.stats() || null,
+    perfTour: () => perf?.tourData || null,
     camera, scene, renderer,
   };
   document.documentElement.dataset.ready = 'true';
@@ -652,6 +693,14 @@ function createKeyLight(scene) {
       place.holder.localToWorld(to);
       L.position.copy(from);
       L.target.position.copy(to);
+      L.target.updateMatrixWorld();
+      want = INTENSITY;
+    },
+    /** Light one part of the open stall (a bookshop shelf the camera looks along): from in front and above. */
+    aim(center, facing) {
+      if (!placeId || !center || !facing) return;
+      L.position.copy(center).addScaledVector(facing.clone().setY(0).normalize(), 1.3).add(new THREE.Vector3(0, 1.1, 0));
+      L.target.position.copy(center);
       L.target.updateMatrixWorld();
       want = INTENSITY;
     },

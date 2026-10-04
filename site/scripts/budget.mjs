@@ -1,7 +1,7 @@
 // Download and triangle budgets (docs/BUILD.md "Budgets"), counted the way a browser pays for them.
 //
 // What it counts, per market (full and lite):
-//   - every glb the engine loads: each layout entry's model, its props sets, the bandstand's instruments and players,
+//   - every glb the engine loads: each layout entry's model, its props sets, the bandstand's instruments, its players (as people),
 //     every crowd figure and the shared clips (people_anims.glb);
 //   - on the full market, the distance level of the crowd (each figure's .lite.glb, loaded after the first frame);
 //   - every external texture those glbs reference (the deco kit and the vendor's atlases are separate .webp files),
@@ -100,21 +100,23 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
   for (const e of places) {
     const files = [e.asset || e.model];
     for (const s of props?.sets || []) if (s.stall === e.id) files.push(s.model);
-    if (/bandstand/.test(e.id)) for (const k of ['sax', 'piano', 'bass', 'drums']) files.push(`instr_${k}.glb`, `people_band_${k}.glb`);
+    // BUILD.md budgets the "Bandstand with instruments"; its four players are person variants (5k each), charged below
+    if (/bandstand/.test(e.id)) for (const k of ['sax', 'piano', 'bass', 'drums']) files.push(`instr_${k}.glb`);
     const f = files.filter(Boolean);
     // a props set may name its own lite file (props.json "lite"); otherwise <model>.lite.glb when it exists
     const lite = f.map((x) => props?.sets?.find((s) => s.model === x && s.lite)?.lite || liteOf(x));
     groups.push({ id: e.id, kind: kindOf(e), files: { full: f, lite }, deferred: { full: deferred(e), lite: deferred(e) } });
   }
-  // people: every figure the crowd names (the bandstand's players are counted with it), and the shared clips
+  // people: every figure the crowd names and the bandstand's four players (each a person variant), and the shared clips
   const people = new Set();
-  JSON.stringify(crowd || {}).replace(/people_[a-z_]+\.glb/g, (m) => { if (!/band_/.test(m)) people.add(m); return m; });
+  JSON.stringify(crowd || {}).replace(/people_[a-z_]+\.glb/g, (m) => { people.add(m); return m; });
+  if (places.some((e) => /bandstand/.test(e.id))) for (const k of ['sax', 'piano', 'bass', 'drums']) if (exists(`people_band_${k}.glb`)) people.add(`people_band_${k}.glb`);
   const anims = crowd?.shared_anims?.file || 'people_anims.glb';
   for (const f of people) {
     if (f === anims) continue;
     groups.push({ id: f.replace(/\.glb$/, ''), kind: 'person', files: { full: [f], lite: [liteOf(f)] }, deferred: { full: false, lite: false } });
     // the full market's distance level: the figure's .lite.glb, loaded after the first frame (crowd.js enableLod)
-    if (liteOf(f) !== f) groups.push({ id: `${f.replace(/\.glb$/, '')} (distance level)`, kind: null, lod: true, files: { full: [liteOf(f)], lite: [] }, deferred: { full: true, lite: true } });
+    if (liteOf(f) !== f && !/^people_band_/.test(f)) groups.push({ id: `${f.replace(/\.glb$/, '')} (distance level)`, kind: null, lod: true, files: { full: [liteOf(f)], lite: [] }, deferred: { full: true, lite: true } });
   }
   if (exists(anims)) groups.push({ id: anims.replace(/\.glb$/, ''), kind: null, files: { full: [anims], lite: [anims] }, deferred: { full: false, lite: false } });
 
@@ -127,7 +129,7 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
   const sharedHashes = new Set([...users].filter(([, u]) => u.groups.size > 1).map(([h]) => h));
 
   const measure = (files, { skipShared = false } = {}) => {
-    let bytes = 0, tris = 0, textures = 0, sharedTex = 0;
+    let bytes = 0, tris = 0, textures = 0, sharedTex = 0, share = 0;
     const missing = [], seen = new Set();
     for (const f of files) {
       const m = filesOf(models, f);
@@ -138,17 +140,18 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
       for (const t of m.textures) {
         if (seen.has(t.hash)) continue;
         seen.add(t.hash);
-        if (skipShared && sharedHashes.has(t.hash)) { sharedTex += t.size; continue; }
+        // a shared texture: listed once in the shared row; each asset that uses it carries an equal part of it
+        if (skipShared && sharedHashes.has(t.hash)) { sharedTex += t.size; share += t.size / users.get(t.hash).groups.size; continue; }
         textures += t.size; bytes += t.size;
       }
     }
-    return { bytes, tris, textures, sharedTextures: sharedTex, missing };
+    return { bytes, tris, textures, sharedTextures: sharedTex, share, missing };
   };
   const rows = groups.filter((g) => !g.lod).map((g) => {
     const full = measure(g.files.full, { skipShared: true });
     const lite = measure(g.files.lite, { skipShared: true });
     const b = (g.id === 'buecherstand' && BUDGET.buecherstand) || (g.kind && BUDGET[g.kind]);
-    return { id: g.id, kind: g.kind, deferred: g.deferred.full, full, lite, budget: b || null, over: b ? { tris: full.tris > b.tris, bytes: full.bytes > b.bytes } : null };
+    return { id: g.id, kind: g.kind, deferred: g.deferred.full, full, lite, budget: b || null, over: b ? { tris: full.tris > b.tris, bytes: full.bytes + full.share > b.bytes } : null };
   });
   const shared = [...users].filter(([h]) => sharedHashes.has(h)).map(([, u]) => ({ file: path.relative(models, u.info.path), bytes: u.info.size, users: [...u.groups] }));
 
@@ -187,11 +190,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (args.includes('--json')) { console.log(JSON.stringify(r, null, 1)); process.exit(0); }
   const mb = (b) => `${(b / MB).toFixed(2)} MB`;
   const k = (t) => `${(t / 1000).toFixed(1)}k`;
-  console.log('Per asset (full glb + props + own textures; lite in brackets; textures shared with another asset are in the last row)');
+  console.log('Per asset (full glb + props + own textures; lite in brackets; textures shared with other assets are in the last row,\n  and each asset is judged on its own bytes plus an equal part of every shared texture it uses)');
   for (const g of r.rows) {
     const b = g.budget;
     const flag = g.over && (g.over.tris || g.over.bytes) ? '  OVER' : '';
-    const sh = g.full.sharedTextures ? ` +${mb(g.full.sharedTextures)} shared` : '';
+    const sh = g.full.sharedTextures ? ` +${mb(g.full.sharedTextures)} shared (its part ${mb(g.full.share)})` : '';
     console.log(`  ${g.id.padEnd(24)} ${k(g.full.tris).padStart(7)} tris ${mb(g.full.bytes).padStart(9)}${sh} (lite ${k(g.lite.tris)}, ${mb(g.lite.bytes)})${g.deferred ? ' [deferred]' : ''}${b ? `  budget ${k(b.tris)} / ${mb(b.bytes)}` : ''}${flag}${g.full.missing.length ? `  missing: ${g.full.missing.join(', ')}` : ''}`);
   }
   const sharedBytes = r.shared.reduce((a, s) => a + s.bytes, 0);

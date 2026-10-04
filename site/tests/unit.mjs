@@ -7,7 +7,7 @@ import { songPlan } from '../src/audio/songplan.js';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { contentGate, assetCredits, buildLibrary, libraryHtml, bookFragment, libraryPagesHtml, buildContent, setNotesMode, normTitle } from '../plugins/market.js';
+import { contentGate, contentMarkers, assetCredits, buildLibrary, libraryHtml, bookFragment, libraryPagesHtml, buildContent, setNotesMode, normTitle } from '../plugins/market.js';
 import { mkdirSync } from 'node:fs';
 import { readGlb, budget } from '../scripts/budget.mjs';
 
@@ -80,6 +80,8 @@ check('the song is about ten minutes before it rests and starts again', plan.len
   writeFileSync(path.join(dir, 'books', 'categories.json'), JSON.stringify({ categories: [{ key: 'physics', label_en: 'Physics', label_de: 'Physik & Kosmos', books: [{ title: 'Chaos', author: 'James Gleick', slug: 'chaos' }, { title: 'Grit', author: 'Angela Duckworth', slug: 'grit' }] }] }));
   const g2 = contentGate(dir);
   check('the strict content gate counts a book page still marked review: check', g2.left.some((l) => l.file === 'books/chaos.md' && l.checks === 1), g2.message);
+  const mk = contentMarkers(dir);
+  check('npm run content:check lists each marker the gate counts, with its line', mk.length === 3 && mk.filter((m) => m.file === 'a.md').map((m) => m.line).join(',') === '1,3' && mk.some((m) => m.kind === 'review' && m.file === 'books/chaos.md' && m.line === 5), JSON.stringify(mk));
   const lib = buildLibrary(dir);
   check('Mac\'s bookshelf comes from categories.json, with the one-line summary where the writer has one', lib.books.length === 2 && lib.books[0].oneLine === 'Order in disorder.' && lib.books[0].category === 'physics' && lib.books[1].oneLine === '' && !lib.books[1].page, JSON.stringify(lib.books));
   check('Mac\'s bookshelf renders as a list whose titles link to their reading pages', /<details class="library"[\s\S]*<a href="plain\.html#book-chaos" data-book="chaos"><em>Chaos<\/em><\/a> · James Gleick\. <span class="one-line">Order in disorder\.<\/span>/.test(libraryHtml(lib)) && /<em>Grit<\/em> · Angela/.test(libraryHtml(lib)));
@@ -107,6 +109,12 @@ check('the song is about ten minutes before it rests and starts again', plan.len
   check('budget: a texture several assets share is charged once', !!kit && kit.users.length > 1 && leb.full.sharedTextures > 0, kit ? `${kit.file}: ${kit.users.length} users` : 'no shared kit texture');
   check('budget: deferred assets and the crowd\'s distance level are counted', b.totals.full.deferred > 0 && b.totals.full.everything === b.totals.full.firstLoad + b.totals.full.deferred, JSON.stringify(b.totals.full));
   check('budget: the shared clips (people_anims.glb) are counted', b.rows.some((r) => r.id === 'people_anims'));
+  const band = b.rows.find((r) => r.id === 'bandstand'), players = b.rows.filter((r) => /^people_band_/.test(r.id));
+  check('budget: the bandstand is charged with its instruments, its four players as person variants', band && players.length === 4 && players.every((r) => r.kind === 'person' && r.budget?.tris === 5000), players.map((r) => r.id).join(' '));
+  check('budget: a shared texture is charged to each user in equal parts', leb.full.share > 0 && leb.full.share < leb.full.sharedTextures, `${leb.full.share} of ${leb.full.sharedTextures}`);
+  const over = b.rows.filter((r) => r.over && (r.over.tris || r.over.bytes)).map((r) => r.id);
+  // a note, not a failure: one role's asset over its budget should not stop Mac's deploy (npm run budget shows OVER)
+  console.log(over.length ? `  note  over budget: ${over.join(' ')}` : '  note  every asset is inside its triangle and byte budget');
   const noDist = budget({ dist: '/nonexistent-dist' });
   check('budget: it reports a missing dist (the CLI then exits 1)', noDist.hasDist === false && b.hasDist === true);
   check('budget: both first loads are under their aims', !b.totals.full.over && !b.totals.lite.over, `${(b.totals.full.firstLoad / 1e6).toFixed(2)} / ${(b.totals.lite.firstLoad / 1e6).toFixed(2)} MB`);

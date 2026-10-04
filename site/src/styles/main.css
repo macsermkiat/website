@@ -130,4 +130,16 @@ mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-rad
 .reader .lead { font-style: italic; color: #4a3828; }
 .reader .sources, .reader .more { font-size: 13.5px; color: #6b5a48; border-top: 1px solid #d8c7a3; padding-top: 8px; }
 .reader .close:focus-visible, .reader a:focus-visible { outline-color: #8a2a20; }
-@media (max-width: 640px) { .reader { max-height: min(62vh, 600px); max-height: min(62svh, 600px); } }
+/* 960 px wide or less (and any tall screen): a sheet along the bottom, so the open 3D book stays in view above it.
+   The camera comes to the book and the picture moves up into the part the sheet leaves free (main.js frameRegion). */
+@media (max-width: 960px), (max-aspect-ratio: 1/1) {
+  .reader { position: fixed; top: auto; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: auto; height: auto;
+    max-width: 760px; margin: 0 auto; max-height: min(44vh, 440px); max-height: min(44svh, 440px); padding: 14px 18px 18px; gap: 10px; border-radius: 14px 14px 12px 12px; }
+  .reader h2 { font-size: 24px; }
+  .reader .byline { font-size: 15px; }
+  .reader .top { position: sticky; top: -14px; background: #f3ead6; padding-top: 2px; z-index: 1; }
+  .reading .panel:not(.reader) { visibility: hidden; }
+}
+@media (max-width: 640px) { .reader { max-height: min(46vh, 420px); max-height: min(46svh, 420px); } }
+.views { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; }
+.views-label { color: var(--muted); margin-right: 2px; }

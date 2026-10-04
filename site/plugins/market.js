@@ -492,6 +492,27 @@ export function contentGate(dir = CONTENT_DIR) {
   return { left, message: left.length ? `content still waiting for Mac: ${parts.join('; ')}` : '' };
 }
 
+/**
+ * The same markers as contentGate, one record each with its line, for `npm run content:check`: the list the writer
+ * and Mac work through to let the deploy run.
+ */
+export function contentMarkers(dir = CONTENT_DIR) {
+  const out = [];
+  for (const f of listFiles(dir).filter((f) => f.endsWith('.md'))) {
+    const src = fs.readFileSync(path.join(dir, f), 'utf8');
+    const lineOf = (i) => src.slice(0, i).split('\n').length;
+    const add = (re, kind) => { for (const m of src.matchAll(re)) out.push({ file: f, line: lineOf(m.index), kind, text: m[0].replace(/\s+/g, ' ').slice(0, 160) }); };
+    add(/\[\[[\s\S]+?\]\]/g, 'note');
+    add(/<!--\s*check\b[\s\S]*?-->/gi, 'check');
+    add(/\[(?:check|verify|todo|mac to check)(?::[^\]]*)?\]/gi, 'check');
+    if (/^books\//.test(f) && /^(check|todo|draft)$/i.test(String(frontMatter(src).data.review || '').trim())) {
+      const m = /^review:.*$/m.exec(src);
+      out.push({ file: f, line: m ? lineOf(m.index) : 1, kind: 'review', text: m ? m[0] : 'review: check' });
+    }
+  }
+  return out;
+}
+
 const V_CONTENT = 'virtual:market-content';
 const V_INV = 'virtual:market-inventory';
 

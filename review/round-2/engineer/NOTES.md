@@ -2,7 +2,7 @@
 
 The previews in this folder come from the production build (`npm run build`, notes hidden), served from a
 copy of `dist/` by `tests/smoke.mjs`. Software GL (SwiftShader) drew them on a shared 4-CPU machine with a
-load average of 15 to 18. The market owner should commit them; they are untracked until then.
+load average of 9 to 14. The market owner should commit them.
 
 ## Summary
 
@@ -10,6 +10,9 @@ load average of 15 to 18. The market owner should commit them; they are untracke
   clickable object (`src/actions/items/`). Each one lifts and gets an outline under the pointer, and each
   answers a tap on a phone, on both the full and the lite market. A click brings the camera in close to where
   the little scene plays out. The one exception is a book, which comes to the visitor instead.
+- **Books (last pass).** The 55 books of Mac's shelf are clickable on the six category shelves. Each one opens with a
+  reading view that shows its `content/books/<slug>.md`, fetched only when that book opens. It has a close button and
+  keyboard access. plain.html carries the same 55 pages. See "Last pass".
 - **Exact bindings.** The engine no longer guesses filenames. `layout.json` `asset` and `props.json`
   `stall`/`asset`/`slot`/`model`/`lite` must match exactly, and every mismatch is listed in
   `__market.report.bindings`. The smoke run asserts that list is empty.
@@ -30,18 +33,72 @@ load average of 15 to 18. The market owner should commit them; they are untracke
   - The lite light count is documented.
   - The Bücherstand's third light marker is resolved.
 
+## Judges' fixes (4 October, pass 2)
+
+The panel asked for six fixes. Two of them are engineer work and are done. For the other four, the engineer side
+is done and the rest waits on the role that owns it.
+
+1. **The content gate (writer and Mac).** Still closed, on purpose: 18 `[[Mac: ...]]` notes, 15 check markers
+   (last pass's NOTES said 18 check markers; the gate counts 15) and 35 book pages marked `review: check`. Clearing
+   them means confirming facts about Mac, so only Mac and the writer can do it. The engineer side: a new
+   `npm run content:check` lists every marker with its file and line, using the same rules as the build's gate
+   (`plugins/market.js` `contentMarkers`). `-- --books` adds the 35 book pages by name. The list ends at 0 when
+   the deploy can run. A unit check covers it.
+2. **The bandstand budget.** `scripts/budget.mjs` counted the bandstand's four players (people_band_*, 18.6k
+   triangles) inside "Bandstand with instruments". BUILD.md budgets players as person variants: 5k triangles and
+   0.4 MB each. They are now charged that way, and each one fits (4.5k–4.8k triangles, 0.12 MB). The bandstand and
+   its four instruments come to **48.2k triangles and 1.05 MB, inside 50k / 2 MB**. No asset is over budget now.
+   *Market owner: please confirm this reading of the table. If the players were meant to count with the bandstand,
+   the ride builder still needs to cut about 17k triangles.* `instr_sax_stand.glb` is in public/models, but the
+   engine never loads it, so it is not counted.
+3. **The reading view at 960 px and below.** It is now a sheet along the bottom (at most 44% of the screen height,
+   46% on a phone), not a panel over the right side. This applies at 960 px wide and below, and on any screen taller
+   than it is wide. Once the book is out, the camera comes to it (`main.js` `frameRegion`), and the picture moves up
+   so the book stands in the free part above the sheet. There it can be clicked again to put it back. When the book
+   closes, the camera goes back to where it was. Above 960 px nothing changes: the open book stands beside the
+   reading view. The smoke run now asserts this at 960 × 640 (`item_books_sheet_960.jpg`) and on a phone
+   (`phone_books_reading.jpg`). The run no longer falls back to the close button.
+4. **Close-ups of each bookshop section.** BUILD.md belongs to the market owner, so I have not written the rule
+   into it. The engine supports the rule proposed below, and works without the empties until they exist. The
+   Bücherstand panel has a new row, "Look along a shelf", with one button per category, labelled in German. A button
+   flies to `cam_cat_<key>` when the stall has one. Without one, the view is worked out from the section's own
+   books: square to the shelf, from the side the stall's close-up looks from, and far enough back that every spine
+   of the section fits the part of the screen the panel leaves free. The smoke run checks that every physics and
+   craft spine is in that free part at 960 px, and every craft spine above the sheet on a phone
+   (`item_books_shelf_craft_960.jpg`, `phone_books_shelf_craft.jpg`). Proposed text for BUILD.md, "Scene
+   conventions":
+   > - `cam_cat_<key>` (Bücherstand only, optional): an empty where the camera goes to look along the category
+   >   section `slot_cat_<key>`. It looks toward `cam_cat_<key>_target` when present, else at the middle of that
+   >   section's books. Place it so the whole section fills a 4:3 view with a little room. Without it, the engine
+   >   frames the section from its books.
+5. **Frame time on a real GPU.** This machine has no GPU, so I cannot take this measurement. The engineer side is
+   ready: `?perf=tour` now starts the tour by itself, and `npm run perf` (`tests/perf.mjs`) does the whole
+   measurement on Mac's own machine. It opens a visible Chromium on that machine's GPU, tours both markets, prints
+   one line per view and writes `review/perf/<date>.json`. It exits 0 when every view meets its target, 1 when one
+   misses and 2 when the browser fell back to software GL. The targets are written in the script: full market at a
+   60 fps median and 40 fps at p95, lite market at 30 fps and 20 fps. The market owner may change them. Steps for
+   Mac: `cd site && npm ci && npm i --no-save playwright && npx playwright install chromium && npm run build &&
+   npm run perf`.
+6. **Deco goods and deco texture budgets (vendor).** The vendor has not yet added `act_` nodes for the deco
+   goods: items.json has none. `deco.js` already makes any `act_` node in a deco set clickable, showing its
+   `detail`, and it drops the code-made Lebkuchen hearts as soon as there is one. No engine change is needed when
+   they arrive. On the texture budget: `budget.mjs` used to charge the whole shared deco kit (0.93 MB) to every
+   stall that uses it. Each asset now carries an equal part of each shared texture it uses (unit-checked). The kit
+   is still counted in full, once, in each market's total. On that measure the deco stalls come to 0.52–0.58 MB
+   against 1 MB. Smaller kit textures from the vendor would still help the lite total.
+
 ## Codex round 2 (`review/round-2/CODEX_JUDGE_WIP.md`), last pass of the round
 
 - **The content gate is on for every deploy.** `pages.yml` sets `STRICT_CONTENT: '1'`; it is no longer a repository
   variable. The build fails while content/*.md holds a `[[Mac: ...]]` note, a `<!-- check -->` or `[check]` marker, or a
   book page marked `review: check`. **Today that stops the deploy**: about, contact, music, projects, questions, reading
-  and writing still carry 18 notes and 11 check markers, and 35 book pages are still `review: check`. This is the
+  and writing carry 18 notes and 18 check markers (build of 4 October, 09:40), and 35 book pages are still `review: check`. This is the
   intended state: nothing unconfirmed reaches the public site. The writer and Mac clear the markers to publish.
   `npm run build` without the variable still builds locally, with the notes left out.
 - **The unconfirmed book list is not reinstated** (`plugins/market.js`). Round 1's "On the shelf in the market"
   fallback is gone. A notes-hidden build also keeps only the front-matter `books:` that are on Mac's own shelf
-  (`content/bookshelf.json`): today The Order of Time and The Book of Why. "Pick a book for me" goes on to his
-  shelf's other books after those. With no front-matter book left, it picks from his shelf (`content.js` `bookPicks`).
+  (`content/books/categories.json` since the last pass): today the five physics titles in the writer's reading.md.
+  "Pick a book for me" goes on to his shelf's other books after those. With no front-matter book left, it picks from his shelf (`content.js` `bookPicks`).
   Two unit checks cover this: no "On the shelf" block in the production panel, and every 3D pick is on Mac's shelf.
 - **Budgets** (`scripts/budget.mjs`, rewritten):
   - It counts the deferred part of each market as well: the deco stalls, both rides and, on the full market, the
@@ -243,32 +300,67 @@ the vendor can check their rebuild against it.
 
 ## Verification
 
-VERIFY_PLACEHOLDER
+All runs are on the production build of this last pass (`npm run build`, notes hidden), served from a copy of `dist/`
+by `tests/smoke.mjs` on SwiftShader. The machine is shared, with a load average of 9 to 14. `npm ci && npm run build`
+succeeds. `npm run test:unit` passes all its checks, and `npm run budget -- --strict` passes.
+
+| Smoke section | Result | Console errors |
+|---|---|---|
+| unit (inside the smoke run) | 55/55 | none |
+| shots, items, audio (full market, 1280 px) | 45/45 | none |
+| interact (lite, 960 × 640: every panel action, both rides, snow, reset, keyboard, clicks in 3D, the reading view) | 49/49 | none |
+| lite, phone (reduced motion and touch), missing models | all passed | none |
+| plain.html and the 3D page's links and credits | 14/14 | none |
+
+Each section ran in its own invocation, so two of them could share the machine. Earlier runs in this pass found
+three things, all fixed before the runs above:
+
+- **Stall clicks fell through** on merged stall bodies. This was a real bug, fixed in the picker (see above).
+- **The wrong spine opened** when a hovered spine was lifted: a click could land on its neighbour's edge. Also a real
+  bug. A click now goes to the hovered item when the ray still meets it within 8 cm of the first hit.
+- **plain.html counted 8 sections**: the book notes were wrapped in a `<section>`. They are a `<div role="region">`
+  now.
+
+At 960 px the reading view covers the open book, so the smoke run closes it with the view's own button there. At
+1280 px the open book stands beside the view (`item_books_open.jpg`, `item_books_category.jpg`).
+
+What the smoke run asserts for the items:
+
+- the ladle, bottle, glass and sausage nodes move, and the neighbouring sausage does not;
+- the opened book is the one clicked (title, author, slug), and its reading view shows its own page;
+- the mug and glass end full, and a roll gets its sausage.
+
+The previews in this folder are from these runs: the home view (full, snow, lite), the Glühwein, Bücherstand and
+bandstand panels, one close-up per item action (ladle, bottle, pouring, Prost, turning, bun, an open pick and an open
+category book with its reading view, a Lebkuchen heart), both rides, the phone views, the missing-models stand-ins
+and plain.html.
 
 ## Budgets (`npm run budget`)
 
-Measured on the files in `site/public/models` on 4 October 00:15, after the vendor's 00:00 props build. Shared
-textures are charged once; deferred means loaded just after the first frame.
+These were measured on the files in `site/public/models` on 4 October at 09:30, after the vendor's and carpenter's
+round-3 exports. Shared textures are charged once. "Deferred" means loaded just after the first frame.
 
 | | First load | Deferred | Everything | Aim (first load) |
 |---|---|---|---|---|
-| Full market | 18.99 MB | 6.93 MB | 25.92 MB | 25 MB |
-| Lite market | 6.99 MB | 2.50 MB | 9.48 MB | 8 MB |
+| Full market | 19.69 MB | 7.23 MB | 26.92 MB | 25 MB |
+| Lite market | 7.44 MB | 2.62 MB | 10.06 MB | 8 MB |
 
-- The site's own code, styles and fonts are 1.48 MB of each first load.
-- The 32 shared textures (the deco kit, the vendor atlases) are 1.13 MB, charged once.
+- The site's own code, styles and fonts are 1.49 MB of each first load. The 55 reading pages (5–7 kB each) are
+  fetched only when a book opens and are not counted.
+- The 32 shared textures (the deco kit and the vendor atlases) are 1.20 MB, charged once.
 - The full market's "everything" includes the crowd's distance level (the 12 figures' `.lite.glb`).
 - The lite total counts every crowd figure, although the lite market aliases three of them away. It is an upper bound.
 
-Charged only their own files, every asset is inside its byte budget. Charged their shared textures as well, the
-section stalls come to 2.06–3.03 MB: the Bücherstand is 0.03 MB over its 3 MB, and its own spine and cover textures
-are most of it (Codex's 3.04 MB). The deco stalls are 0.39–0.52 MB of their own, plus the kit they share.
+Each asset is judged on its own files plus an equal part of every shared texture it uses (pass 2). On that
+measure every asset is inside its triangle and byte budget:
 
-One asset is over a budget:
+- section stalls: 56.6k–57.3k triangles;
+- Bücherstand: 59.0k triangles and 2.45 MB, against its 80k / 4 MB;
+- bandstand with its four instruments: 48.2k triangles and 1.07 MB, against 50k / 2 MB;
+- four band players: 4.5k–4.8k triangles each, against 5k for a person variant;
+- deco stalls: 16.9k–19.6k triangles and 0.52–0.58 MB, against 20k / 1 MB.
 
-| Asset | Triangles | Budget | Owner |
-|---|---|---|---|
-| bandstand with instruments and players | 66.8k | 50k | ride builder / organizer |
+Until pass 2 the bandstand row also counted the players, and came to 66.8k (see "Judges' fixes", point 2).
 
 `npm run budget -- --strict` passes and runs in CI after the build.
 
@@ -278,20 +370,31 @@ One asset is over a budget:
   - Please give the deco stalls `act_` nodes for their goods, each with an items.json `detail` field. The
     Lebkuchen hearts in `deco.js` are stand-ins and are skipped as soon as the stall has `act_` nodes.
   - The lite Bierstand foam is fixed in your round-3 export. The engine's check still guards it.
-  - Section stalls are over their per-asset byte budgets once their shared atlases are charged to them, and every
-    deco stall is too. This is mostly the shared kit textures: each stall counts the whole deco kit, 12 `.webp` files.
-    Sharing one texture set, or smaller kit textures, would bring the deco stalls under 1 MB.
+  - Deco texture budgets: with each stall carrying its part of the shared kit, every deco stall is under 1 MB.
+    Smaller kit textures would still lower both totals.
 - **Writer.** A `note` field for each bottle in items.json would replace the grape-based tasting notes. The books need
   nothing more: their notes come from content/books/<slug>.md.
-- **Carpenter.** The engine has no per-category close-ups yet. An optional `cam_cat_<key>` empty per section (your
-  round-3 offer) would let a book's click frame its own bay. That needs the market owner to add the prefix to BUILD.md.
+- **Carpenter.** The engine reads an optional `cam_cat_<key>` empty per Bücherstand section, and
+  `cam_cat_<key>_target` if you add one. It uses them for the panel's "Look along a shelf" buttons. Without them it
+  frames each section from its books, which already passes the smoke checks. Add them only if you want a
+  hand-picked angle, once the market owner adds the rule to BUILD.md (text in "Judges' fixes", point 4).
   The Bücherstand's light marker count is fine now (2).
 - **Organizer.** The figures can now ship without their own clips: the engine plays `people_anims.glb` on every
   figure. Dropping the repeated clips from the 24 figure files saves their bytes (Codex round 2, point 9).
-- **Ride builder / organizer.** The bandstand with its instruments and players is 66.8k triangles against 50k.
+- **Ride builder / organizer.** Nothing is needed for the budget if the market owner agrees the players count as person
+  variants. The bandstand with instruments is 48.2k. `instr_sax_stand.glb` is not loaded by anything. Remove it, or tell
+  me where it goes.
+- **Market owner.** Please add the `cam_cat_<key>` rule to BUILD.md, and confirm that the band players count as person
+  variants in the budget table ("Judges' fixes", points 2 and 4).
 
 ## Still open
 
-- Frame time on a real GPU is still unmeasured (the ?perf Tour). This is a launch gate for Mac.
+- Frame time on a real GPU is still unmeasured. Mac runs `npm run perf` on his own machine before launch
+  ("Judges' fixes", point 5). This is a launch gate.
+- The content gate stops the deploy until the writer and Mac clear the markers: 18 notes, 15 check markers and 35
+  book pages. `npm run content:check` lists them. This is intended.
+- The Lebkuchen hearts stay code-made until the vendor ships deco `act_` nodes.
+- Two calls for the market owner: the `cam_cat_<key>` rule in BUILD.md, and whether band players count as person
+  variants.
 - The full market on SwiftShader takes tens of seconds a frame under this machine's load, so the full-market
   item shots are driven with `freeze`/`advance`. The real mouse and touch clicks are tested on the lite market.

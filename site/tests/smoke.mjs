@@ -400,9 +400,48 @@ try {
       await page.evaluate(() => window.__market.advance(3));
       const ob = await page.evaluate(() => window.__market.openedBook());
       check('clicking a named spine opens that book, showing its own title', ob?.name === pick && ob.title === want[0] && (await note(page)).includes(want[0]), `${JSON.stringify(ob)} ${await note(page)}`);
+      // at 960 px the reading view is a sheet along the bottom: the camera comes to the open book, which stands
+      // in the part of the picture above the sheet, where it can be clicked
+      await page.waitForFunction(() => window.__market.reading().state !== 'loading', null, { timeout: LONG });
+      await stillCamera(page);
+      const sheet = await page.evaluate((n) => {
+        const r = document.getElementById('reader').getBoundingClientRect(), st = document.getElementById('stage').getBoundingClientRect();
+        const p = window.__market.screenPoint(`open_${n}`);
+        return { sheetTop: r.top, sheetLeft: r.left, sheetWidth: r.width, stageTop: st.top, stageWidth: st.width, book: p };
+      }, pick);
+      check('at 960 px the reading view is a bottom sheet and the open book stands above it', sheet.book && sheet.sheetWidth > sheet.stageWidth * 0.6 && sheet.book.y < sheet.sheetTop - 10 && sheet.book.y > sheet.stageTop, JSON.stringify(sheet));
+      await shot(page, 'item_books_sheet_960.jpg', null, { keepScroll: true });
       const again = await aimAt(page, pick, `open_${pick}`); // a click on the open book itself
-      if (again) { await page.mouse.click(again.x, again.y); await page.evaluate(() => window.__market.advance(3)); }
-      check('clicking the open book again puts it back', (await page.evaluate(() => window.__market.openedBook())) === null);
+      check('the open book can be clicked above the sheet', !!again, JSON.stringify(sheet));
+      if (again) {
+        await page.mouse.click(again.x, again.y);
+        await page.evaluate(() => window.__market.advance(3));
+      } else {
+        await page.click('#rClose');
+        await page.evaluate(() => window.__market.advance(3));
+      }
+      check('clicking the open book again puts it back', (await page.evaluate(() => window.__market.openedBook())) === null, JSON.stringify(again));
+      await page.evaluate(() => window.__market.advance(3));
+      // looking along each category shelf (cam_cat_<key>, or a view worked out from the section's books): every
+      // spine of that section is in the part of the picture the panel leaves free
+      const shelfKeys = await page.$$eval('#pActions .views [data-view]', (bs) => bs.map((b) => b.dataset.view));
+      check('the Bücherstand panel has a button per category shelf', shelfKeys.length === 6, shelfKeys.join(' '));
+      for (const key of ['physics', 'craft']) {
+        if (!shelfKeys.includes(key)) continue;
+        await page.click(`#pActions .views [data-view="${key}"]`);
+        await page.evaluate(() => window.__market.advance(3));
+        await stillCamera(page);
+        const fr = await page.evaluate((key) => {
+          const m = window.__market, st = document.getElementById('stage').getBoundingClientRect(), pn = document.getElementById('panel').getBoundingClientRect();
+          const free = pn.width < st.width * 0.8 ? { l: st.left, r: Math.min(st.right, pn.left), t: st.top, b: st.bottom } : { l: st.left, r: st.right, t: st.top, b: Math.min(st.bottom, pn.top) };
+          const names = Object.entries(m.handlers.macSpines()).filter(([slug]) => m.bookCategory(slug) === key).map(([, n]) => n);
+          const pts = names.map((n) => m.screenPoint(n)).filter(Boolean);
+          const inFree = pts.filter((p) => p.x > free.l + 2 && p.x < free.r - 2 && p.y > free.t + 2 && p.y < free.b - 2).length;
+          return { key, shown: m.handlers.shownShelf(), books: names.length, inFree, free, note: document.getElementById('actNote').textContent };
+        }, key);
+        check(`"Look along a shelf" frames the ${key} section in the free part of the picture`, fr.shown === key && fr.books > 0 && fr.inFree === fr.books, JSON.stringify(fr));
+        if (key === 'craft') await shot(page, 'item_books_shelf_craft_960.jpg', null, { keepScroll: true });
+      }
     } else check('clicking a named spine opens that book, showing its own title', false, `no clear pixel on any of Mac's spines`);
     // keyboard: the reading view takes focus, Escape closes it and puts the book back
     await page.evaluate(() => window.__market.clickItem('act_book_53'));
@@ -604,6 +643,31 @@ try {
       const q1 = (await t.page.evaluate(() => window.__market.item('act_sausage_5'))).quaternion;
       check('phone: tapping a sausage turns it', q0.some((v, i) => Math.abs(v - q1[i]) > 0.05), `${q0} -> ${q1}`);
     } else check('phone: tapping a sausage turns it', false, 'no clear pixel on act_sausage_5');
+    // the bookshop on a phone: the far craft shelf framed above the sheet, and a tapped book standing open above
+    // the reading view (a sheet along the bottom)
+    await t.page.click('#places button[data-place="books"]');
+    await frames(t.page, 2);
+    await t.page.evaluate(() => window.__market.settled());
+    await t.page.click('#pActions .views [data-view="craft"]');
+    await frames(t.page, 2);
+    const ph = await t.page.evaluate(() => {
+      const m = window.__market, st = document.getElementById('stage').getBoundingClientRect(), pn = document.getElementById('panel').getBoundingClientRect();
+      const names = Object.entries(m.handlers.macSpines()).filter(([slug]) => m.bookCategory(slug) === 'craft').map(([, n]) => n);
+      const pts = names.map((n) => m.screenPoint(n)).filter(Boolean);
+      return { books: names.length, above: pts.filter((p) => p.y > Math.max(st.top, 0) && p.y < pn.top && p.x > 0 && p.x < innerWidth).length, sheetTop: pn.top };
+    });
+    check('phone: the craft shelf is framed above the panel', ph.books > 0 && ph.above === ph.books, JSON.stringify(ph));
+    await shot(t.page, 'phone_books_shelf_craft.jpg', null, { keepScroll: true });
+    const craft = await t.page.evaluate(() => Object.entries(window.__market.handlers.macSpines()).find(([slug]) => window.__market.bookCategory(slug) === 'craft')?.[1]);
+    const bAim = craft && await aimAt(t.page, craft);
+    if (bAim) {
+      await t.page.touchscreen.tap(bAim.x, bAim.y);
+      await t.page.evaluate(() => window.__market.advance(3));
+      await frames(t.page, 2);
+      const pb = await t.page.evaluate((n) => ({ book: window.__market.openedBook(), sheetTop: document.getElementById('reader').getBoundingClientRect().top, at: window.__market.screenPoint(`open_${n}`) }), craft);
+      check('phone: a tapped book opens above its reading sheet, with its own title', pb.book?.name === craft && pb.at && pb.at.y < pb.sheetTop - 10 && pb.at.y > 0, JSON.stringify(pb));
+      await shot(t.page, 'phone_books_reading.jpg', null, { keepScroll: true });
+    } else check('phone: a tapped book opens above its reading sheet, with its own title', false, `no clear pixel on ${craft}`);
     await t.ctx.close();
   }
 

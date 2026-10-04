@@ -51,6 +51,31 @@ export function createPanel({ actionsFor, itemsFor, onOpen, onClose, playButtonL
         box.appendChild(b);
       }
       actionsBox.append(box, note);
+      // views of one part of the place (the Bücherstand's category shelves)
+      const views = A.views?.list?.() || [];
+      if (views.length) {
+        const row = document.createElement('div');
+        row.className = 'views';
+        row.setAttribute('role', 'group');
+        row.setAttribute('aria-label', A.views.label);
+        const lab = document.createElement('span');
+        lab.className = 'views-label';
+        lab.textContent = `${A.views.label}:`;
+        lab.setAttribute('aria-hidden', 'true');
+        row.appendChild(lab);
+        for (const v of views) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'btn small';
+          b.lang = 'de';
+          b.dataset.view = v.key;
+          b.textContent = v.label;
+          if (v.title && v.title !== v.label) { b.title = v.title; b.setAttribute('aria-label', `${v.label} (${v.title})`); }
+          b.addEventListener('click', v.fn);
+          row.appendChild(b);
+        }
+        actionsBox.appendChild(row);
+      }
       // the goods one by one, for the keyboard and screen readers (the same as clicking them in the market)
       const list = itemsFor?.(id) || [];
       if (list.length) {
