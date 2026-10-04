@@ -275,14 +275,14 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
       if (best < C.minLength || mid.y > topY - C.below) continue;
       const away = Math.min(...lamps.map((p) => Math.hypot(p.x - mid.x, p.z - mid.z)));
       if (away < C.minAway) continue;
-      // across the string in plan, on the model's front side
-      const along = new THREE.Vector3().subVectors(b, a).setY(0);
-      const n = along.lengthSq() > 1e-4 ? new THREE.Vector3(-along.z, 0, along.x).normalize() : front.clone();
-      if (n.dot(front) < 0) n.negate();
-      const off = n.multiplyScalar(C.out).add(new THREE.Vector3(0, -C.down, 0));
+      // just under the bulbs and a little toward the model's front, so the light comes down onto the
+      // boards from above and the front, as from the bulbs; the ends drawn in by `inset` of the
+      // length, so the wash stays on the rack and off its neighbours (the display cabinets)
+      const off = front.clone().multiplyScalar(C.out).add(new THREE.Vector3(0, -C.down, 0));
       const y = mid.y;
+      const ea = a.clone().lerp(b, C.inset), eb = b.clone().lerp(a, C.inset);
       out.push(shading.add({
-        a: a.clone().setY(y).add(off), b: b.clone().setY(y).add(off), color: C.color, intensity: C.intensity, reach: C.reach,
+        a: ea.setY(y).add(off), b: eb.setY(y).add(off), color: C.color, intensity: C.intensity, reach: C.reach,
         oneSided: true, floor: base + C.floor, tag: 'canopy', priority: 1,
       }));
     }

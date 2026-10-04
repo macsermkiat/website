@@ -2,3 +2,4 @@
   [-b] info: [lighting] placed 2 lights (0 shadowed, 0 clipped to their stall), 13 pools, glows {"interior":9,"sign":9}
   [-b] info: [lighting] bulb bounce on 4 materials of place_riesenrad
   [-b] info: [lighting] hub fade on 1 bulb meshes of place_riesenrad
+  [-b] info: [lighting] focus bier (0 lights moved)

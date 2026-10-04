@@ -10,3 +10,9 @@ full scene {"triangles":897913,"meshes":682}
 full scene after LOD {"triangles":917519,"meshes":536} {"people":90,"hidden":0,"lite":90,"lodFar":8,"vendorsVisible":4,"sharedAnims":{"file":"people_anims.glb","clips":13,"retargets":10}}
   ok   crowd distance LOD: far people use their lite figure ({"settled":{"lod":90,"deferred":11},"crowd":{"people":90,"hidden":0,"lite":90,"lodFar":8,"vendorsVisible":4,"sharedAnims":{"file":"people_an)
   ok   crowd: the shared clips (people_anims.glb) are loaded and retargeted ({"file":"people_anims.glb","clips":13,"retargets":10})
+  ok   full: the second light pass gives each ride its real light when it arrives (bierstand gluehwein bratwurst buecherstand gluehwein bierstand buecherstand bratwurst bandstand tree karussell riesenrad)
+  ok   full: static meshes merged (fewer draw calls) ({"before":519,"after":276,"row":12,"snow":30,"riders":106})
+  ok   full: under 800 meshes drawn in the home view ({"triangles":917519,"meshes":536})
+  ok   shelf goods merged into a few meshes (books, mugs, glasses, bottles) ({"merged":{"books":55,"meshes":6},"featured":["act_book_00","act_book_01","act_book_02","act_book_03","act_book_04"]})
+  ok   layout.json and props.json bindings all resolve exactly ([])
+  ok   clickable items found: books, glasses, mugs, bottles, sausages, rolls ({"glueh:ladle":1,"glueh:mug":16,"glueh:effect":5,"glueh:kettle":1,"glueh:lid":1,"glueh:bottle":18,"glueh:wineglass":5,"bier:glass":18,"bier:)
