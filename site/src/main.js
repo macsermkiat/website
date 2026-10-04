@@ -108,7 +108,9 @@ async function boot() {
   const streamOn = !lite && params.get('stream') !== '0';
   const market = await buildMarket({
     scene, lite, warn,
-    defer: deferOn ? (e) => e.kind === 'deco' || e.place === 'ferris' || e.place === 'carousel' : undefined,
+    // round 5, pass 2: the town ring comes just after the first frame too (the still covers the first frame, and
+    // the town is the far backdrop), which is most of the lite market's margin under round 4
+    defer: deferOn ? (e) => e.kind === 'deco' || e.place === 'ferris' || e.place === 'carousel' || e.kind === 'town' : undefined,
     stream: streamOn ? STREAMED : undefined,
     onProgress: (f, e) => { bar.style.width = `${Math.round(f * 85)}%`; $('loadingText').textContent = `Setting up the market… ${e.label || e.id}`; },
   });
@@ -550,7 +552,6 @@ async function boot() {
   bar.style.width = '100%';
   $('loading').classList.add('done');
   $('loading').setAttribute('aria-hidden', 'true');
-  $('still')?.classList.add('done');
   renderer.domElement.removeAttribute('role');
   document.fonts?.load("700 64px 'Alegreya SC'").then(redrawSigns).catch(() => {});
   setTimeout(() => audio.prefetch(), 4000);
@@ -581,6 +582,9 @@ async function boot() {
     document.documentElement.dataset.deferred = 'done';
     return added.placed.length;
   }).catch((e) => { warn(`deferred models: ${e?.message || e}`); return 0; });
+  // the still stays over the live market until the part loaded just after the first frame (the town ring, both
+  // rides, the deco stalls) is in, so the fade shows no gap where they will stand; at most four seconds
+  Promise.race([deferredReady, new Promise((res) => setTimeout(res, 4000))]).then(() => $('still')?.classList.add('done'));
   // the first stop comes in at full detail while the visitor looks at the overview; the town and the tree once
   // everything else has arrived
   const streamReady = streamOn ? deferredReady.then(() => new Promise((res) => setTimeout(res, 600))).then(async () => {
@@ -659,6 +663,38 @@ async function boot() {
     textOn: (sid) => world.textOn(sid),
     pieces: () => world.pieces().map((p) => ({ id: p.id, place: p.placeId, surface: p.surface, title: p.title })),
     surfaces: () => surfaces.list.map((s) => ({ id: s.id, kind: s.kind, fromModel: s.fromModel })),
+    /**
+     * For tests: is a model coaster's writing printed on it? Its write_ cards (front given the print, back hidden
+     * under a round card face) and how far its drawn words reach from the disc's middle, as a share of its radius.
+     */
+    coasterPrint(i = 0) {
+      const s = world.surface(`bier.coaster_${i}`);
+      if (!s) return null;
+      const root = s.root;
+      const mesh = (n) => { const o = root.getObjectByName(n); return o?.isMesh ? o : o?.children.find((c) => c.isMesh) || null; };
+      const fc = mesh(`write_coaster_${i}_front`), bc = mesh(`write_coaster_${i}_back`), back = root.getObjectByName('engine_coaster_back');
+      let disc = null;
+      root.traverse((o) => { if (!disc && o.isMesh && !/^(write_|engine_)/.test(o.name) && !/^write_/.test(o.parent?.name || '')) disc = o; });
+      const reach = {};
+      for (const [face, f] of Object.entries(s.faces)) {
+        const box = new THREE.Box3();
+        // each drawn line's block bounds (troika's, in the line's own plane), into the world
+        f.area.traverse((o) => { const b = o.isText && o.visible && o.textRenderInfo?.blockBounds; if (b) for (const [x, y] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) box.expandByPoint(new THREE.Vector3(x, y, 0).applyMatrix4(o.matrixWorld)); });
+        if (box.isEmpty() || !f.r) continue;
+        const inv = f.area.matrixWorld.clone().invert();
+        const c = new THREE.Vector3(f.w / 2, -f.h / 2, 0);
+        let far = 0;
+        for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) { const p = new THREE.Vector3(x, y, z).applyMatrix4(inv); far = Math.max(far, Math.hypot(p.x - c.x, p.y - c.y)); }
+        reach[face] = +(far / f.r).toFixed(3);
+      }
+      return { fromModel: !!s.fromModel, frontPrinted: !!fc && !!disc && fc.material === disc.material || (!!fc && /vendor_print/.test(fc.material?.name || '')), backCardHidden: !!bc && !bc.visible, roundBack: !!back?.visible, reach };
+    },
+    /** For tests: the open book's pages, printed on the paper (no card of another tone under the words). */
+    bookPrint() {
+      let out = null;
+      scene.traverse((o) => { if (!out && /^open_/.test(o.name)) { const l = o.getObjectByName('write_page_left_mesh') || o.getObjectByName('write_page_left'); const m = l?.isMesh ? l : l?.children.find((c) => c.isMesh); out = { model: !!m, material: m?.material?.name || null }; } });
+      return out;
+    },
     readCopy: () => ({ hidden: $('readCopy').hidden, text: $('readCopy').textContent.slice(0, 600), links: [...$('readCopy').querySelectorAll('a')].map((a) => a.href) }),
     streaming: () => ({ state: streamer.state(), report: streamer.report() }),
     streamReady: () => streamReady,
@@ -694,6 +730,7 @@ async function boot() {
     openedBook: () => actions.items.handlers.openedBook?.() || null,
     itemAt: (x, y) => picking.itemAt(x, y),
     pickAt: (x, y) => picking.full(x, y),
+    tipAt: (x, y, text) => picking.tipAt(x, y, text),
     hoverAt(x, y) { renderer.domElement.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, pointerType: 'mouse', bubbles: true })); },
     get hoveredItem() { return actions.items.hovered?.node.name || null; },
     renderFrame() { composer.render(0.016); },
@@ -795,7 +832,15 @@ function placeMarketLights({ scene, lighting, lightingSource, spots, lite, focus
     }
     return placeLights(scene, list, { lite, focus, reserved, budget: opts.budget });
   };
-  if (second || budget === 0) return place(spots, { budget: budget || 0, reserved: 0, shadowed: 0 });
+  if (second || budget === 0) {
+    // the rides keep the real-time lights held for them; the town's (deferred with them) become glows, as they were
+    // when the town loaded first
+    const rides = spots.filter((s) => s.kind !== 'town'), town = spots.filter((s) => s.kind === 'town');
+    const a = place(rides, { budget: budget || 0, reserved: 0, shadowed: 0 });
+    if (!town.length) return a;
+    const b = place(town, { budget: 0, reserved: 0, shadowed: 0 });
+    return { lights: [...a.lights, ...b.lights], pools: [...a.pools, ...b.pools], cap: a.cap };
+  }
   if (!lite) return place(spots, budget != null ? { budget } : {});
   const first = place(spots.filter((s) => s.kind === 'section'), {});
   const rest = place(spots.filter((s) => s.kind !== 'section'), { budget: Math.max(0, first.cap - first.lights.length) + reserved });

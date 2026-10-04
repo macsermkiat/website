@@ -88,7 +88,6 @@ export function createBooks(ctx) {
       // 2. the book itself is swapped for a copy that can open (the vendor's hardback, with this book's cover;
       // the engine's own when that model is missing), which comes to the front of the counter
       let book = null;
-      console.info('[market] opening a book; vendor model', !!vendor);
       if (vendor) { try { book = buildVendorBook(vendor, n, d, place.holder); } catch (e) { console.warn('[market] book_open could not be dressed; the engine\'s own book opens', e); } }
       book ||= buildOpenBook(n, d, place.holder);
       o.group = book;
@@ -262,7 +261,7 @@ export function createBooks(ctx) {
     if (!w || !book) return;
     // the pages are measured in the faces the text is drawn with: wait for them if they are still on their way
     if (w.started === false) { w.start(); w.ready.then(() => { if (open === o) readOpenBook(o); }); return; }
-    const surface = { id: 'books.book', placeId: 'books', kind: 'book', label: 'the open book', faces: book.faces, theme: 'print', base: book.base, rough: false, glow: [book.paper] };
+    const surface = { id: 'books.book', placeId: 'books', kind: 'book', label: 'the open book', faces: book.faces, theme: 'print', base: book.base, rough: false, glow: book.paper ? [book.paper] : [] };
     const piece = { id: 'books.book', placeId: 'books', surface: 'books.book', title: o.d.title, where: 'an open book at the Bücherstand', html: bookCopy(o.d, null), views: spreads(o.d, null, book), readView: () => book.readView(ctx.camera), turn: (dir, mid, from, to) => book.turn(dir, mid, anim, from, to), onClose: () => { if (open === o) close({ fromReader: true }); } };
     w.addSurface(surface);
     w.addPiece(piece);

@@ -362,6 +362,7 @@ export function renderPage(page, { theme: themeKey = 'print', glow = 0.12, z = 0
     if (disposed) { done(); return; }
     for (const { s, line, dx } of specs) {
       const t = new troika.Text();
+      t.isText = true;
       t.text = s.text;
       t.font = FONTS[s.font].url;
       t.fontSize = s.size;

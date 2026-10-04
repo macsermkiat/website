@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import inventory from 'virtual:market-inventory';
 import { loadGlb } from '../../engine/loader.js';
-import { areaFromWriteMesh } from '../../world/surfaces.js';
+import { areaFromWriteMesh, printOnto } from '../../world/surfaces.js';
 import { renderPage } from '../../world/text.js';
 import { boxOf } from './common.js';
 
@@ -29,8 +29,7 @@ export function loadVendorBook({ lite = false, warn = (m) => console.warn('[mark
   const file = [lite ? entry.lite : null, entry.model, entry.lite].find(have);
   if (!file) return Promise.resolve(null);
   if (!templates.has(file)) {
-    const t0 = performance.now();
-    templates.set(file, loadGlb(file).then((root) => { const t = prepare(root); console.info('[market] book_open ready', file, Math.round(performance.now() - t0), 'ms'); return t; }).catch((e) => { warn(`book_open: ${e?.message || e}; the engine's own book opens instead`); return null; }));
+    templates.set(file, loadGlb(file).then((root) => prepare(root)).catch((e) => { warn(`book_open: ${e?.message || e}; the engine's own book opens instead`); return null; }));
   }
   return templates.get(file);
 }
@@ -83,12 +82,12 @@ function prepare(root) {
     left.add(lm);
     m.geometry = half(R);
   }
-  // the page material, copied so the pages can brighten a little while they are read
-  const paper = pageR.isMesh ? pageR.material : pageR.children.find((c) => c.isMesh)?.material;
-  const page = paper ? paper.clone() : new THREE.MeshStandardMaterial({ color: 0xefe6d0, roughness: 0.9 });
-  page.name = 'engine_book_page';
-  if (page.emissive) { page.emissive.set(0xfff2dc); page.emissiveMap = page.map || null; page.emissiveIntensity = 0.05; }
-  root.traverse((o) => { if (o.isMesh && /^write_page/.test(o.name || o.parent?.name || '') && o.material === paper) o.material = page; });
+  // the pages are printed on the paper itself: each write_ page (which fills the opening the vendor left in the
+  // page) takes the paper's own print, with the UVs of the paper's vertices at its corners, so no lighter card
+  // shows under the words (world/surfaces.js printOnto, as for the Bierdeckel)
+  const paperMeshes = [];
+  root.traverse((o) => { if (o.isMesh && !/^write_/.test(o.name || '')) paperMeshes.push(o); });
+  root.traverse((o) => { if (o.isMesh && /^write_page/.test(o.name || '')) printOnto(o, root, paperMeshes); });
   const box = new THREE.Box3().setFromObject(root);
   return { root, size: box.getSize(new THREE.Vector3()), box };
 }
@@ -181,10 +180,8 @@ export function buildVendorBook(tpl, n, d, frame) {
   let world = { p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1 };
   const leafPages = [];
   const clearLeaf = () => { while (leafPages.length) leafPages.pop().dispose(); };
-  const page = root.getObjectByName('write_page_right');
-  const paper = (page?.isMesh ? page : page?.children.find((c) => c.isMesh))?.material || null;
   return {
-    group, W: (tpl.size.x / 2) * k0, H, T: tpl.size.z * k0, S: 1 / k0, faces, paper, fromModel: true,
+    group, W: (tpl.size.x / 2) * k0, H, T: tpl.size.z * k0, S: 1 / k0, faces, paper: null, fromModel: true,
     // about 19 lines of body text to a page (the procedural book's 21 lines are on a taller page)
     base: R.h / 19,
     get openK() { return openK; },

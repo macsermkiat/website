@@ -12,7 +12,8 @@
     "test:e2e": "node tests/smoke.mjs",
     "budget": "node scripts/budget.mjs",
     "perf": "node tests/perf.mjs",
-    "content:check": "node scripts/content-check.mjs"
+    "content:check": "node scripts/content-check.mjs",
+    "still": "node tests/capture-still.mjs"
   },
   "dependencies": {
     "@fontsource/alegreya-sans": "^5.3.0",

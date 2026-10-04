@@ -532,33 +532,46 @@ function printMesh(body) {
  * Give a write_ card the print of the body it fills a hole in: the body's material, and at each of the card's
  * corners the UV of the body's vertex there, so the print runs on across it. Returns the UV centre, or null.
  */
-function printOnto(node, body) {
+export function printOnto(node, body, sources = null) {
   const card = node.isMesh ? node : node.children.find((c) => c.isMesh);
-  const disc = printMesh(body);
-  if (!card || !disc || !disc.geometry.attributes.uv) return null;
+  const list = (sources || [printMesh(body)]).filter((m) => m?.geometry?.attributes.uv);
+  if (!card || !list.length) return null;
   body.updateWorldMatrix(true, true);
-  const dp = disc.geometry.attributes.position, duv = disc.geometry.attributes.uv;
-  const cp = card.geometry.attributes.position;
-  const toCard = card.matrixWorld.clone().invert().multiply(disc.matrixWorld);
-  const pts = [];
+  const cardInv = card.matrixWorld.clone().invert();
+  const pts = []; // every source vertex in the card's frame: [position, uv u, uv v, source]
   const v = new THREE.Vector3();
-  for (let i = 0; i < dp.count; i++) pts.push(v.fromBufferAttribute(dp, i).applyMatrix4(toCard).clone());
-  const uv = new Float32Array(cp.count * 2);
+  for (const src of list) {
+    const dp = src.geometry.attributes.position;
+    const to = cardInv.clone().multiply(src.matrixWorld);
+    for (let i = 0; i < dp.count; i++) pts.push([v.fromBufferAttribute(dp, i).applyMatrix4(to).clone(), i, src]);
+  }
+  const cp = card.geometry.attributes.position;
   const w = new THREE.Vector3(), cs = card.getWorldScale(new THREE.Vector3()).x || 1;
-  let cu = 0, cv = 0;
+  const near = [];
+  let from = null;
   for (let i = 0; i < cp.count; i++) {
     w.fromBufferAttribute(cp, i);
-    let best = -1, bd = Infinity;
-    pts.forEach((p, k) => { const d = p.distanceToSquared(w); if (d < bd) { bd = d; best = k; } });
+    let best = null, bd = Infinity;
+    for (const p of pts) { if (from && p[2] !== from) continue; const d = p[0].distanceToSquared(w); if (d < bd) { bd = d; best = p; } }
     // a corner with no vertex of the print within 2 mm: the card is not a filled hole; leave it as it is
-    if (best < 0 || Math.sqrt(bd) * cs > 0.002) return null;
-    uv[i * 2] = duv.getX(best); uv[i * 2 + 1] = duv.getY(best);
-    cu += uv[i * 2] / cp.count; cv += uv[i * 2 + 1] / cp.count;
+    if (!best || Math.sqrt(bd) * cs > 0.002) return null;
+    from ||= best[2];
+    near.push(best[1]);
   }
+  // every UV set the print has (its colour UVs, and the baked occlusion's second set), vertex for vertex
   const g = card.geometry.clone();
-  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  for (const k of ['uv', 'uv1', 'uv2']) {
+    const a = from.geometry.attributes[k];
+    if (!a) { if (k !== 'uv') g.deleteAttribute(k); continue; }
+    const out = new Float32Array(cp.count * 2);
+    near.forEach((j, i) => { out[i * 2] = a.getX(j); out[i * 2 + 1] = a.getY(j); });
+    g.setAttribute(k, new THREE.BufferAttribute(out, 2));
+  }
+  const uvA = g.attributes.uv;
+  let cu = 0, cv = 0;
+  for (let i = 0; i < uvA.count; i++) { cu += uvA.getX(i) / uvA.count; cv += uvA.getY(i) / uvA.count; }
   card.geometry = g;
-  card.material = disc.material;
+  card.material = from.material;
   card.userData.printUv = [cu, cv];
   return [cu, cv];
 }
@@ -583,7 +596,13 @@ function cardBack(face, body, frontNode) {
   // just inside the rim's corners, so a coaster of few segments shows no card beyond its edge
   const r = (Math.min(size.x, size.y) / 2) * 0.965;
   const g = new THREE.CircleGeometry(r, 48);
-  if (at) { const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, at[0], at[1]); }
+  if (at) {
+    const uv = g.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, at[0], at[1]);
+    // the baked occlusion's UVs: the card's middle, wherever that is in the print's second set
+    const ao = disc.geometry.attributes.uv1 || disc.geometry.attributes.uv2;
+    if (ao && card?.geometry.attributes.uv1) { const c1 = card.geometry.attributes.uv1; let a = 0, b = 0; for (let i = 0; i < c1.count; i++) { a += c1.getX(i) / c1.count; b += c1.getY(i) / c1.count; } g.setAttribute('uv1', new THREE.BufferAttribute(new Float32Array(uv.count * 2).map((_, i) => (i % 2 ? b : a)), 2)); }
+  }
   const mat = at ? disc.material : new THREE.MeshStandardMaterial({ name: 'engine_coaster_card', color: 0xeee6d6, roughness: 0.9 });
   const back = new THREE.Mesh(g, mat);
   back.name = 'engine_coaster_back';
@@ -661,7 +680,8 @@ export function modelCoasters(place, n, camera) {
     const faces = { front, back };
     out.push({
       id, placeId: 'bier', role: `coaster_${i}`, kind: 'coaster', label: 'a Bierdeckel', root, faces, theme: 'print', align: 'center',
-      base: (back.r || back.w / 1.46) * 0.112, glow: [], rough: false, fromModel: true, holder: place.holder, lift: 0.0002,
+      // the back's words on one side of the card when they can be (type between these sizes), else a second page
+      base: (back.r || back.w / 1.46) * 0.112, fit: [(back.r || back.w / 1.46) * 0.078, (back.r || back.w / 1.46) * 0.112], glow: [], rough: false, fromModel: true, holder: place.holder, lift: 0.0002,
       readView(face = 'front') { const f = faces[face] || faces.front; return readViewFor(f.area, f.w, f.h, camera, { fill: f.r ? (0.84 * f.h) / (2 * f.r) : 0.62 }); },
     });
   }

@@ -16,7 +16,9 @@
 // not the band's players) loads just after the first frame too. --no-stream and --crowd-first count as round 4 did.
 //
 //   node scripts/budget.mjs            report
-//   node scripts/budget.mjs --strict   also fail (exit 1) when a market's first load is over its aim
+//   node scripts/budget.mjs --strict   also fail (exit 1) when a market's first load is over its aim, or not below
+//                                      round 4's (the Pages workflow runs this as its gate before deploying)
+//   --town-first                       count the town ring in the first load (as before round 5, pass 2)
 //   node scripts/budget.mjs --json     machine-readable
 //
 // Per-asset rows charge each asset its own files; a texture that two or more assets share is charged once, to the
@@ -46,6 +48,9 @@ const BUDGET = {
   buecherstand: { tris: 80000, bytes: 4 * MB, what: 'Bücherstand with all its props' },
 };
 const FIRST_LOAD = { full: 25 * MB, lite: 8 * MB };
+// round 5 streams, and a first load may not grow back: the strict run (the Pages workflow's gate) also fails when a
+// market's first load reaches round 4's (19.70 MB full, 7.44 MB lite, counted the same way)
+const ROUND4 = { full: 19.70 * MB, lite: 7.44 * MB };
 
 /** A glb's JSON chunk: triangles (every node that draws a mesh counts), its external images. */
 export function readGlb(file) {
@@ -99,7 +104,8 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
   // the engine opens both markets without the rides and the deco stalls (main.js: defer)
   // drawn instead of another file, never with it: { file: the file it replaces }
   const ALT = { 'instr_sax_stand.glb': 'instr_sax.glb' };
-  const deferred = (e) => e.kind === 'deco' || /riesenrad|karussell/.test(e.id);
+  // round 5, pass 2: the town ring too (main.js defer)
+  const deferred = (e) => e.kind === 'deco' || /riesenrad|karussell/.test(e.id) || (!args.includes('--town-first') && (e.id === 'town' || e.kind === 'town'));
   // main.js STREAMED: lite first on the full market, full detail on demand
   const streamed = (e) => e.kind === 'section' || /bandstand/.test(e.id) || e.id === 'town' || e.id === 'tree' || e.kind === 'town' || e.kind === 'tree';
   const liteOf = (f) => { const l = f.replace(/\.glb$/, '.lite.glb'); return exists(l) ? l : f; };
@@ -204,9 +210,9 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
     let first = code + still, later = codeLater, onDemand = 0;
     const stream = market === 'full' && !args.includes('--no-stream');
     for (const g of groups) if (!g.deferred[market]) first += add(stream && g.streamed ? g.files.lite : g.files[market]);
-    for (const g of groups) if (g.deferred[market]) later += add(g.files[market]);
+    for (const g of groups) if (g.deferred[market]) later += add(stream && g.streamed ? g.files.lite : g.files[market]);
     for (const g of groups) if (stream && g.streamed) onDemand += add(g.files.full);
-    totals[market] = { firstLoad: first, deferred: later, onDemand, everything: first + later + onDemand, aim: FIRST_LOAD[market], over: first > FIRST_LOAD[market] };
+    totals[market] = { firstLoad: first, deferred: later, onDemand, everything: first + later + onDemand, aim: FIRST_LOAD[market], round4: ROUND4[market], over: first > FIRST_LOAD[market], grew: first >= ROUND4[market] };
   }
   return { rows, shared, totals, code, codeLater, still, hasDist };
 }
@@ -230,6 +236,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const sharedBytes = r.shared.reduce((a, s) => a + s.bytes, 0);
   console.log(`  ${'shared textures'.padEnd(24)} ${String(r.shared.length).padStart(7)} files ${mb(sharedBytes).padStart(9)} (each charged once)`);
   console.log(`Site code, styles and fonts: ${mb(r.code)} first, ${mb(r.codeLater)} after the first frame (3D text); home still: ${mb(r.still)}`);
-  for (const [m, t] of Object.entries(r.totals)) console.log(`${m.padEnd(4)} market: first load ${mb(t.firstLoad)} (aim ${mb(t.aim)})${t.over ? '  OVER' : ''}; deferred ${mb(t.deferred)}${t.onDemand ? `; full detail on demand ${mb(t.onDemand)}` : ''}; everything ${mb(t.everything)}`);
+  for (const [m, t] of Object.entries(r.totals)) console.log(`${m.padEnd(4)} market: first load ${mb(t.firstLoad)} (aim ${mb(t.aim)}; round 4 ${mb(t.round4)}, margin ${mb(t.round4 - t.firstLoad)})${t.over ? '  OVER' : ''}${t.grew ? '  NOT BELOW ROUND 4' : ''}; deferred ${mb(t.deferred)}${t.onDemand ? `; full detail on demand ${mb(t.onDemand)}` : ''}; everything ${mb(t.everything)}`);
   if (args.includes('--strict') && Object.values(r.totals).some((t) => t.over)) { console.error('budget: a first load is over its aim'); process.exit(1); }
+  if (args.includes('--strict') && Object.values(r.totals).some((t) => t.grew)) { console.error('budget: a first load is not below round 4\'s'); process.exit(1); }
 }

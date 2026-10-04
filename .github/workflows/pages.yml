@@ -46,9 +46,11 @@ jobs:
           STRICT_CONTENT: '1'
           CONTENT_NOTES: ${{ vars.CONTENT_NOTES || 'hide' }}
           PAGES_BASE: ${{ steps.pages.outputs.base_path }}/
-      # Download budgets (docs/BUILD.md), counting every external texture: the first load of each market must stay
-      # under its aim (25 MB full, 8 MB lite). Per-asset budgets are reported for the roles that own the models.
-      - run: npm run budget -- --strict
+      # The budget gate (scripts/budget.mjs --strict): counting every external texture, the first load of each market
+      # must stay under its aim (25 MB full, 8 MB lite) and below round 4's (19.70 MB full, 7.44 MB lite), or nothing
+      # is deployed. Per-asset budgets are reported for the roles that own the models.
+      - name: Budget gate (first load of each market)
+        run: npm run budget -- --strict
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist

@@ -5,7 +5,81 @@ text as a separate component windows from the market. It should be in the enviro
 the book, it show the book with written text inside. Same as wineshop, beer shop."* The work follows ADR 0003.
 Nothing is committed by me; the session that started me commits.
 
-## What changed
+## Pass 2: the panel's fixes
+
+All five are done. Previews re-rendered; the old ones are replaced.
+
+1. **The Bierdeckel back is printed on the coaster.** The grey rectangle was the vendor's `write_coaster_<i>_back`
+   card (material `write_card`, its own grain texture) lying over the coaster, which is one double-sided surface.
+   From behind it showed the front's print mirrored, with that card on top.
+   - The back now gets a round card face of its own (`engine_coaster_back`), as round as the coaster and just
+     inside its rim. It uses the coaster's own material, with every UV at one plain point of its print, so it is
+     the same card, unprinted. The `write_` back card is hidden.
+   - The front's `write_` card filled the opening the vendor left in the print. It now takes the print itself:
+     at each corner, the UVs (both sets, colour and baked occlusion) of the coaster's vertex there. The print
+     runs on unbroken under the words (`world/surfaces.js` `printOnto`, `cardBack`).
+   - The words are centred inside the disc (`fitRound`). The front stays inside the printed ring, the back inside
+     the rim. Type on the back shrinks, within a range, so a description fits on one side.
+   - When the full model is grafted on (`engine/stream.js`), the coaster dresses itself again from the full print
+     (a new `afterGraft` hook).
+   - The smoke test checks it: front printed, back card hidden, round back face, and words reaching at most 0.71
+     (front) and 0.91 (back) of the radius.
+   - The reading camera frames the whole coaster, so its round edge is in the picture.
+2. **The text sits on crafted props.**
+   - **`book_open.glb` is the book that opens** (`src/actions/items/bookOpen.js`).
+     - The model is fetched once: on the way to the Bücherstand, or 12 s after the market opens.
+     - Its static mesh is split at the spine, and the left half (with its page and cover) is hinged, so the
+       vendor's book flies closed from the shelf, opens on the counter, and closes again.
+     - The clicked book's own cover goes onto `book_open_cover`, from `cover_uv` in items.json.
+     - The words go on `write_page_left/right`. A turn swings `act_page_turn`, carrying the old right page on
+       its front and the new left page on its back (`write_page_turn_front/back`).
+     - The reading camera comes from `cam_read_book`, drawn back as far as the screen's shape needs.
+     - The pages had the coaster's problem: a lighter, then (without the occlusion UVs) a darker card in the
+       page's opening. They now take the paper's own print the same way.
+     - If the model is missing or late (5 s), the engine's own book opens as before.
+   - **The models' `write_`/`cam_read_` nodes carry the words wherever they exist.** The engine knew different
+     names from the ones the carpenter and the ride builder chose, so the table now has aliases:
+     - Glühwein `about`
+     - Bier `projects_board`
+     - Bratwurst `writing_menu` and the vendor's `writing_paper`
+     - Bandstand `music`
+     - Riesenrad `questions_board`, and `question_1..3` on the gondolas (the placards)
+     - Karussell `contact`
+
+     Seven of eight surfaces are now the models' own, and the placards are the wheel's own. Only the Bücherstand
+     reading card is still a stand-in: no `write_` node for it exists yet.
+     - A model surface gets type fitted to its size (the largest size, between a twelfth and a thirtieth of its
+       height, that fits one page; `reader.js` `pagesFor`).
+     - The camera comes from the maker's `cam_read_` side, aimed at the middle of the writing, and steps back
+       if a narrow screen needs it.
+     - A paper surface brightens a little while read.
+     - The tests list which surfaces are the models' own (`unit.mjs`, `smoke.mjs`).
+3. **The hover label stays inside the canvas.** `picking.js` slides it in from an edge, drops it below the pointer
+   near the top, and caps its width (with an ellipsis) at the canvas width. The smoke test hovers the signpost
+   arm nearest the right edge and checks the label's box.
+4. **The lite first load has a wide margin, and a gate keeps it.**
+   - The town ring is not in the first load any more. It comes just after the first frame with the rides and the
+     deco stalls (`main.js` defer), on both markets.
+   - Its three `light_` empties stay glows, as before, so the rides keep the two real-time lights held for them.
+   - The home still now stays up until that part is in (at most 4 s), so the fade shows no gap where the town and
+     rides will stand.
+   - Lite first load: **6.12 MB** (round 4: 7.44 MB, margin 1.32 MB; pass 1 counted the same way today: 7.32 MB).
+     Full: **8.20 MB** (round 4: 19.70 MB).
+   - **Gate:** `npm run budget -- --strict` now also fails when either first load is not below round 4's. The
+     Pages workflow already ran it before upload; the step is now named "Budget gate", so a regression stops the
+     deploy. `--town-first` counts the old way.
+5. **The still is recaptured, and the hint.**
+   - `public/stills/home.webp` is a new frame of this build (the current lighting, the delivered models, the town
+     and rides in). `npm run still` (`tests/capture-still.mjs`) recaptures it in one command after the next
+     lighting or layout change; then build again.
+   - The writer's hint I could not change: `content/` is the writer's (BUILD.md ownership). The page shows the
+     stroll's own hint, and `plugins/market.js` skips the old orbit hint. When the writer adds `ui.stroll_hint`
+     to `content/site.md`, it wins. Suggested text: *"Choose a place on the signpost, or press 1 to 7, and walk
+     there; the arrows walk on to the next stall. Every stall's words are written in it: click a board, a
+     Bierdeckel or a book, or press Enter, to read. Sound starts only when you press play."*
+
+
+## What changed (pass 1, updated where pass 2 changed it)
 
 ### 1. A guided stroll; the free orbit is gone
 
@@ -96,18 +170,20 @@ something that belongs to its stall:
     its UVs mirrored against that side, and its material is double-sided, so winding cannot tell).
   - A coaster held up to read turns its face from the stall's lamps, so it gets a soft light of its own (its
     print as emissive, on its own copy of the material, faded in and out with the pick-up).
-  - Every other surface is still a stand-in.
+  - In pass 1 every other surface was a stand-in. In pass 2 all but the Bücherstand reading card are the models' own (see Pass 2, item 2). The table above lists the stand-ins, which still stand in when a model is missing.
 
 New files: `src/world/text.js`, `surfaces.js`, `sections.js` (the pieces from `content/*.md`, with the built-in
 fallback), `reader.js` and `materials.js`.
 
 ### 3. Streaming: the still first, detail when you get there
 
-- A still of the home view (`public/stills/home.webp`, 61 KB, captured from this build) is preloaded and shown at
-  once. It fades into the live market on the first frame.
-- **The full market opens with the lite files** of the four section stalls, the bandstand, the town and the tree.
+- A still of the home view (`public/stills/home.webp`, 81 KB, recaptured in pass 2 with `npm run still`) is
+  preloaded and shown at once. It fades into the live market once the part loaded after the first frame is in
+  (the town ring, the rides, the deco stalls), at most 4 s after the first frame.
+- **The full market opens with the lite files** of the four section stalls, the bandstand and the tree. The town
+  ring (pass 2) is not in the first load at all: its lite file comes with the rides just after the first frame.
   - A stall comes in at full detail only when it is the stop being walked to or the next one (`guide.walkTo` →
-    `streamer.want`). The first stop, the town and the tree come in just after the first frame.
+    `streamer.want`). The first stop, the town and the tree come in at full detail just after that.
   - The upgrade is a **graft** (`src/engine/stream.js`). The full model's geometry and materials move onto the
     lite model's nodes, so every node an action, item, light or slot holds stays the same object.
   - The town's and the tree's full files add a few detail nodes, which are moved over whole; their snow caps join
@@ -118,24 +194,28 @@ fallback), `reader.js` and `materials.js`.
 - **The 3D text** (troika's chunk and the faces it draws with) loads just after the first frame too
   (`text.js` `loadText`, `reader.start()`). A page or label is an empty group that fills itself when they arrive.
 
-## Budgets (`npm run budget`, this build)
+## Budgets (`npm run budget`, final build of pass 2)
 
-| | Round 4 | Round 5 |
-|---|---|---|
-| Full market, first load | 19.70 MB | **9.29 MB** |
-| Lite market, first load | 7.44 MB | **7.21 MB** |
+| | Round 4 | Round 5, pass 1 | Round 5, pass 2 |
+|---|---|---|---|
+| Full market, first load | 19.70 MB | 9.29 MB | **8.20 MB** |
+| Lite market, first load | 7.44 MB | 7.21 MB | **6.12 MB** |
 
 Breakdown:
 
-- Full market: first load 9.29 MB, deferred 10.26 MB, full detail on demand 13.39 MB, everything 32.94 MB.
-- Lite market: first load 7.21 MB, deferred 3.90 MB, everything 11.11 MB.
-- Site code, styles and fonts: 1.46 MB in the first load. Another 0.34 MB (troika and the text faces) loads after
-  the first frame. The home still is 0.06 MB.
-- `node scripts/budget.mjs --no-stream --crowd-first` counts the way round 4 did: 20.55 MB full, 7.96 MB lite. The
-  models grew in between: the new signpost, and the vendor's deco props roughly doubled.
+- Full market: first load 8.20 MB, deferred 11.79 MB, full detail on demand 13.58 MB, everything 33.56 MB.
+- Lite market: first load 6.12 MB, deferred 5.20 MB, everything 11.32 MB.
+- Site code, styles and fonts: 1.47 MB in the first load, plus 0.34 MB after the first frame (troika and the
+  text faces). The home still is 0.08 MB. `book_open.glb` (26 KB, lite 23 KB) is fetched on the way to the
+  Bücherstand; its textures are the vendor's print atlas, which the props already load.
+- Counted as in pass 1 (`--town-first`) the models delivered since then would put the lite first load at
+  7.32 MB: the margin pass 1 had was nearly gone, which is why the town moved.
+- Counted the way round 4 did (`--no-stream --crowd-first --town-first`): 20.84 MB full, 7.87 MB lite. The models
+  grew since round 4.
+- `npm run budget -- --strict` (the Pages workflow's gate) fails if either first load is over its aim (25 / 8 MB)
+  or not below round 4's.
 
-The full listing is in `budget.txt`. The smoke run also measures the bytes the browser fetched before the
-market's first frame (see Verification).
+The full listing is in `budget.txt`.
 
 ## Verification
 
@@ -162,7 +242,10 @@ Bierdeckel and the Marktblatt are in `read_bier_coaster_0.jpg`, `read_bier_coast
 
 ## Files (engineer-owned)
 
-- New:
+- New in pass 2:
+  - `src/actions/items/bookOpen.js`: the vendor's open hardback
+  - `tests/capture-still.mjs` (`npm run still`)
+- New in pass 1:
   - `src/nav/{stroll,signpost,guide}.js`
   - `src/world/{text,surfaces,sections,reader,materials}.js`
   - `src/ui/{signboard,stopbar,note}.js`
@@ -182,52 +265,57 @@ Bierdeckel and the Marktblatt are in `read_bier_coaster_0.jpg`, `read_bier_coast
   - `plugins/market.js`
   - `scripts/budget.mjs`, `tests/unit.mjs`
   - `package.json` and the lockfile: troika-three-text, @fontsource/caveat
+- Changed in pass 2:
+  - `src/world/{surfaces,reader,text}.js`: model surfaces by alias, printed coasters and pages, fitted type
+  - `src/engine/stream.js`: the `afterGraft` hook
+  - `src/actions/items/books.js`: uses `bookOpen.js`
+  - `src/nav/guide.js`: fetches the book on the way
+  - `src/interaction/picking.js`, `src/styles/main.css`: the hover label kept inside
+  - `src/main.js`: the town deferred, its lights, the still held, test probes
+  - `scripts/budget.mjs`, `.github/workflows/pages.yml`: the round-4 gate
+  - `tests/unit.mjs`, `tests/smoke.mjs`, `tests/dev-r5.mjs`, `package.json`
 - Removed: `src/ui/panel.js`.
 - `CREDITS.md` (engineer table): troika-three-text with its utils, webgl-sdf-generator and bidi-js (MIT), and
   Caveat (OFL).
-- Not touched: `.github/workflows/pages.yml`. The Vite base stays `/website/` (or `PAGES_BASE`).
+- `.github/workflows/pages.yml`: the budget step is named "Budget gate" (it already ran `--strict`). The Vite base
+  stays `/website/` (or `PAGES_BASE`).
 
 ## For the other roles
 
 - **Architect.** Your stroll data is used as delivered. Moving the overview eye 4.5 m out could be folded into
   `stroll.py`, if you agree the gondola's own eye is too deep inside the rim.
-- **Carpenter and vendor.** The coasters and the Marktblatt are in use. `book_open.glb` is not yet: the procedural
-  open book (pages, turning leaf) is kept this round. The other roles the engine looks for:
-  - glueh `board`
-  - bier `vomfass`
-  - wurst `menu` (`paper` is covered by the Marktblatt)
-  - books `card`
-  - band `sheet`
-  - ferris `notice`
-  - carousel `ticket`
-
-  A plane with UVs is enough: the area is recovered from the UVs, with v running down the text. The stand-ins
-  then go away by themselves.
-- **Writer.** `content/site.md` `ui.hint` still describes the round-4 orbit ("drag to look around… click a
-  stall to go inside"). The build keeps the stroll's own hint until `ui.stroll_hint` exists, and then uses that.
-- **Lighting.** The still (`public/stills/home.webp`) is a frame of the live home view. Re-capture it after a
-  lighting change (`tests/dev-r5.mjs` with `snap:`, or ask me).
+- **Carpenter, vendor and ride builder.** Your `write_`/`cam_read_` nodes are all in use, under the names you
+  chose: Glühwein `about`, Bier `projects_board`, Bratwurst `writing_menu`, Marktblatt `writing_paper`, bandstand
+  `music`, Riesenrad `questions_board` and `question_1..3`, Karussell `contact`, the Bierdeckel and
+  `book_open.glb`. Still missing: the Bücherstand reading card (`write_card`, or any of `reading_card` and
+  `books_card`); it stays a stand-in until then.
+  - A request for next round: a `write_` card that fills a hole in a print (the coasters, the book's pages) shows
+    its own grain texture and no baked occlusion, so it reads as a different card. The engine now gives it the
+    print's own UVs. If the cards carried the print themselves, nothing would need fixing.
+  - The vendor's wine bottles have `write_label_0..11`. The ADR mentions a tasting note on a turned label. There
+    is no text for them yet, so they are left as printed.
+- **Writer.** Please add `ui.stroll_hint` to `content/site.md` (suggested text in Pass 2, item 5). The old
+  `ui.hint` describes the round-4 orbit and is not shown.
+- **Lighting.** After a lighting change: `cd site && npm run build && npm run still && npm run build`.
 
 ## Open issues
 
-1. **`book_open.glb` is not used yet.** The vendor's open book (`write_page_left/right`, `act_page_turn` with
-   `write_page_turn_front/back`, `cam_read_book`) arrived at 17:00. The procedural book (its pages and turning
-   leaf, `src/actions/items/books.js`) works and is kept; swapping in the model is a contained change for round 6.
-2. **Most writing surfaces are still stand-ins.** Only the coasters and the Marktblatt come from models. The
-   others go away by themselves when `write_<role>` nodes arrive (roles listed above).
-3. **The spare coasters stay blank.** The vendor made five (`act_coaster_0..4`); there are three projects.
-   Coasters 3 and 4 lie on the counter with their print and no words, and are not clickable.
-4. **Only books turn pages today.** Every section's text fits one page of its surface at the current sizes. The
-   pagination is exact and tested on books; a longer section will page by itself.
-5. **The lite margin is small.** The lite first load is 7.21 MB against round 4's 7.44 MB, and it moves with
-   the models: it read 7.09, 7.20 and 7.28 MB at different points this afternoon as deliveries landed. The lite stalls, the signpost and the deco props
-   are where it would go.
-6. **The still must be recaptured after a lighting or layout change**, or the fade into the live market shows
-   a jump.
-7. **Writer's hint.** `ui.hint` still describes the orbit; the build uses its own hint until `ui.stroll_hint`
-   exists.
-8. **Testing on swiftshader is slow** (a full smoke run takes about an hour; one frame at 1280 px can take over a
-   minute). The tests freeze the loop and advance it by hand. Text appears a moment after a page is drawn
-   (troika builds its glyphs in a worker), so a screenshot taken right after a flip can miss it; the tests wait
-   for it.
-9. **Audio levels are checked by sampling**, and once read zero for one stem on a slow run (passed on rerun).
+1. **The Bücherstand reading card is the one stand-in left.** It goes away by itself when a `write_card` (or
+   `reading_card`) node arrives.
+2. **The spare coasters stay blank.** The vendor made five (`act_coaster_0..4`), and there are three projects.
+   Coasters 3 and 4 lie on the counter with their print and no words, and cannot be clicked. Their write_ cards
+   are left as delivered.
+3. **The lite coaster is a 12-sided disc.** Close up its rim shows corners on the lite market. The round back face
+   sits just inside them. The full model is round.
+4. **Pages turn on books and on a long coaster back.** Every other section fits one page of its surface at the
+   current sizes. Model surfaces fit their type to one page when they can; a longer text pages by itself.
+5. **The town arrives a moment after the first frame.** The still covers that moment (at most 4 s). On a very slow
+   connection, the fade can still happen before the town is in.
+6. **The vendor's book needs a few seconds to fetch.** It is fetched on the way to the Bücherstand. A click that
+   comes before it arrives (5 s) opens the engine's own book.
+7. **The still must be recaptured after a lighting or layout change** (`npm run still`).
+8. **Writer's hint:** see "For the other roles".
+9. **Testing on swiftshader is slow:** a full smoke run takes over an hour. Text appears a moment after a page is
+   drawn (troika builds its glyphs in a worker), so the tests wait for it.
+10. **Audio levels are checked by sampling.** On a slow run the check once read zero for one stem; it passed on
+    rerun.

@@ -8,7 +8,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { contentGate, contentMarkers, assetCredits, buildLibrary, libraryHtml, bookFragment, libraryPagesHtml, buildContent, setNotesMode, normTitle } from '../plugins/market.js';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readdirSync } from 'node:fs';
 import { readGlb, budget } from '../scripts/budget.mjs';
 
 let failed = 0;
@@ -147,6 +147,19 @@ check('the song is about ten minutes before it rests and starts again', plan.len
     check('stroll: a leg joins every pair of stops (a signpost choice walks straight there)', missing.length === 0, missing.join(' '));
     check('stroll: every stop has an eye and a target, and the Riesenrad its overview', st.stops.every((s) => s.eye?.length === 3 && s.target?.length === 3) && !!st.stops.find((s) => s.id === 'riesenrad')?.overview);
   }
+  // in-world text: which writing surfaces the delivered models carry (write_<name>), as world/surfaces.js finds them
+  const src = readFileSync(new URL('../src/world/surfaces.js', import.meta.url), 'utf8');
+  const names = (f) => nodeNames(f).map((n) => n.replace(/:m?$/, ''));
+  const roles = [...src.matchAll(/role: '([a-z_]+)'(?:, aliases: \[([^\]]*)\])?/g)].map((m) => [m[1], ...(m[2] ? [...m[2].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]) : [])]);
+  const writes = new Set();
+  for (const f of readdirSync(new URL('.', MODELS)).filter((x) => /\.glb$/.test(x) && !/\.lite\.glb$/.test(x))) {
+    try { for (const n of names(f)) { const m = /^write_(.+)$/.exec(n); if (m && !/_mesh$/.test(n)) writes.add(m[1]); } } catch { /* unreadable: skipped */ }
+  }
+  const found = roles.map((r) => [r[0], r.find((x) => writes.has(x))]);
+  check('in-world text: the engine knows a write_ name for every writing surface', roles.length >= 8, roles.map((r) => r.join('/')).join(' '));
+  console.log('  note  surfaces on the models\' own write_ nodes:', found.filter((f) => f[1]).map((f) => `${f[0]}=write_${f[1]}`).join(', ') || 'none', '| stand-ins:', found.filter((f) => !f[1]).map((f) => f[0]).join(', ') || 'none');
+  const book = (() => { try { return names('book_open.glb'); } catch { return null; } })();
+  if (book) check('book_open.glb has the pages, the leaf and the reading camera the engine uses', ['write_page_left', 'write_page_right', 'act_page_turn', 'write_page_turn_front', 'write_page_turn_back', 'cam_read_book', 'book_open_cover'].every((n) => book.includes(n)));
 }
 
 console.log(failed ? `\n${failed} unit checks failed` : '\nall unit checks passed');

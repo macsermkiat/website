@@ -150,13 +150,16 @@ try {
     log(`full: ${(fullAtReady / 1e6).toFixed(2)} MB downloaded when the market opens`);
     check('full: the first load is smaller than round 4 (19.70 MB)', fullAtReady < 19.7e6, `${(fullAtReady / 1e6).toFixed(2)} MB`);
     check('full market chosen with ?quality=full', report.quality.lite === false);
-    check('the still fades out once the market is drawn', await page.evaluate(() => document.getElementById('still').classList.contains('done')));
+    // it stays until the deferred part (town, rides, deco stalls) is in, at most four seconds of the page's own clock
+    check('the still fades out once the market is drawn', await page.waitForFunction(() => document.getElementById('still').classList.contains('done'), null, { timeout: 120000 }).then(() => true, () => false));
     check('no side panel or reading aside on the 3D page', await page.evaluate(() => !document.querySelector('#panel, #reader, aside.panel, aside.reader')));
     check('the stroll runs on the architect\'s stops and legs', /stops and legs/.test(report.stroll.lane), report.stroll.lane);
     check('the stroll\'s loop is the architect\'s order', JSON.stringify(report.stroll.stops) === JSON.stringify(['glueh', 'ferris', 'wurst', 'band', 'bier', 'carousel', 'books']), JSON.stringify(report.stroll.stops));
     check('the signpost in the market is the carpenter\'s (act_sign_ boards)', /act_sign_/.test(report.stroll.signpost), report.stroll.signpost);
     check('the on-screen signpost has seven arms and an overview', (await page.locator('#signboard .sb-arm').count()) === 7 && (await page.locator('#signboard .sb-home').count()) === 1);
-    check('streaming: the section stalls, bandstand, town and tree open at lite detail', await page.evaluate(() => { const s = window.__market.streaming().state; return ['gluehwein', 'bierstand', 'bratwurst', 'buecherstand', 'bandstand', 'town'].every((id) => s[id] === 'lite' || s[id] === 'loading' || s[id] === 'full'); }), JSON.stringify(await page.evaluate(() => window.__market.streaming().state)));
+    check('streaming: the section stalls and the bandstand open at lite detail', await page.evaluate(() => { const s = window.__market.streaming().state; return ['gluehwein', 'bierstand', 'bratwurst', 'buecherstand', 'bandstand'].every((id) => s[id] === 'lite' || s[id] === 'loading' || s[id] === 'full'); }), JSON.stringify(await page.evaluate(() => window.__market.streaming().state)));
+    // pass 2: the town ring is not in the first load; it comes with the rides and deco stalls just after the first frame
+    check('streaming: the town ring comes just after the first frame, with the rides', await page.evaluate(() => window.__market.report.deferred.includes('town')), JSON.stringify(await page.evaluate(() => window.__market.report.deferred)));
     // the home view drifts by itself, but a drag only turns the head a little: no orbit
     await page.evaluate(() => window.__market.freeze(true));
     const c0 = await page.evaluate(() => window.__market.cam());
@@ -185,6 +188,38 @@ try {
       for (let r = 0; r <= 24; r += 3) for (let a = 0; a < 12; a++) { const x = c.x + Math.cos(a * Math.PI / 6) * r, y = c.y + Math.sin(a * Math.PI / 6) * r; const p = m.pickAt(x, y); if (p?.sign === 'glueh') return { x, y }; }
       return { miss: c, pick: m.pickAt(c.x, c.y) };
     });
+    // the hover label of the signpost's arm nearest the right edge stays inside the canvas
+    const right = await page.evaluate(() => {
+      const m = window.__market;
+      let best = null;
+      for (const id of ['gluehwein', 'bratwurst', 'bierstand', 'buecherstand', 'bandstand', 'riesenrad', 'karussell']) {
+        const c = m.screenPoint(`act_sign_${id}`);
+        if (!c?.onScreen) continue;
+        for (let r = 0; r <= 24; r += 3) for (let a = 0; a < 12; a++) { const x = c.x + Math.cos(a * Math.PI / 6) * r, y = c.y + Math.sin(a * Math.PI / 6) * r; if (m.pickAt(x, y)?.sign && (!best || x > best.x)) best = { x, y }; }
+      }
+      return best;
+    });
+    if (right) {
+      await page.mouse.move(right.x, right.y);
+      await page.waitForFunction(() => { const t = document.querySelector('.overlay .tip'); return t && !t.hidden; }, null, { timeout: 30000 }).catch(() => {});
+      const fit = await page.evaluate(() => { const t = document.querySelector('.overlay .tip'), c = document.querySelector('#stage canvas'); const a = t.getBoundingClientRect(), b = c.getBoundingClientRect(); return { tip: [a.left, a.top, a.right, a.bottom].map(Math.round), canvas: [b.left, b.top, b.right, b.bottom].map(Math.round), text: t.textContent, hidden: t.hidden }; });
+      check('the signpost\'s hover label stays inside the canvas', !fit.hidden && fit.tip[0] >= fit.canvas[0] && fit.tip[2] <= fit.canvas[2] && fit.tip[1] >= fit.canvas[1], JSON.stringify(fit));
+      await page.mouse.move(box.x + box.width * 0.5, box.y - 40);
+    }
+    // and wherever a board stands: the label of a hover at each edge and corner of the canvas stays inside it
+    const edges = await page.evaluate(() => {
+      const m = window.__market, o = document.querySelector('.overlay'), t = document.querySelector('.overlay .tip');
+      const W = o.clientWidth, H = o.clientHeight, ob = o.getBoundingClientRect();
+      const out = [];
+      for (const [x, y] of [[W - 2, H / 2], [2, H / 2], [W - 2, 4], [2, 4], [W / 2, 3], [W - 2, H - 3]]) {
+        m.tipAt(x, y, 'Riesenrad: walk to the Riesenrad · Big questions');
+        const a = t.getBoundingClientRect();
+        out.push({ at: [Math.round(x), Math.round(y)], inside: a.left >= ob.left - 0.5 && a.right <= ob.right + 0.5 && a.top >= ob.top - 0.5 && a.bottom <= ob.bottom + 0.5 });
+      }
+      m.tipAt(0, 0, null);
+      return out;
+    });
+    check('the hover label stays inside the canvas at every edge and corner', edges.every((e) => e.inside), JSON.stringify(edges));
     if (sign?.x !== undefined) {
       await page.evaluate(() => window.__market.freeze(true));
       await page.mouse.click(sign.x, sign.y);
@@ -245,7 +280,13 @@ try {
     log('reading on the writing surfaces (lite market, 1280 px)');
     const { ctx, page } = await openPage(`${BASE}?quality=lite&snow=0`, { viewport: { width: 1280, height: 760 } });
     await waitReady(page);
+    // the rides (their noticeboard and ticket) come just after the first frame; the open book is fetched ahead
+    await page.evaluate(() => window.__market.settled());
+    await page.evaluate(() => window.__market.handlers.prefetchBook?.());
     await page.evaluate(() => window.__market.freeze(true));
+    const surf = await page.evaluate(() => window.__market.surfaces());
+    log(`writing surfaces on the models' own write_ nodes: ${surf.filter((x) => x.fromModel).map((x) => x.id).join(' ')}; stand-ins: ${surf.filter((x) => !x.fromModel).map((x) => x.id).join(' ') || 'none'}`);
+    check('the carpenter\'s, vendor\'s and ride builder\'s write_ props carry the words where they exist (Glühwein board, vom Fass board, menu, Marktblatt, sheet music, noticeboard, ticket)', ['glueh.board', 'bier.vomfass', 'wurst.menu', 'wurst.paper', 'band.sheet', 'ferris.notice', 'carousel.ticket'].every((id) => surf.find((x) => x.id === id)?.fromModel), JSON.stringify(surf));
     const pieces = await page.evaluate(() => window.__market.pieces().filter((p) => !/placard/.test(p.id)));
     const want = ['glueh.board', 'bier.vomfass', 'bier.coaster_0', 'wurst.menu', 'wurst.paper', 'books.card', 'band.sheet', 'ferris.notice', 'carousel.ticket'];
     check('a writing surface for each section (board, coasters, menu, paper, card, sheet, noticeboard, ticket)', want.every((id) => pieces.some((p) => p.id === id)), pieces.map((p) => p.id).join(' '));
@@ -268,6 +309,12 @@ try {
         await page.evaluate(() => window.__market.advance(1.5));
         const after = await page.evaluate(() => window.__market.reading());
         check('a Bierdeckel flips over to its back', before.face === 'front' && after.face === 'back', JSON.stringify([before, after]));
+        await page.waitForFunction(() => Object.keys(window.__market.coasterPrint(0)?.reach || {}).length === 2, null, { timeout: 60000 }).catch(() => {});
+        const cp = await page.evaluate(() => window.__market.coasterPrint(0));
+        if (cp?.fromModel) {
+          check('a Bierdeckel\'s words are printed on its own round face: no card under them (front in the print, back a round card face)', cp.frontPrinted && cp.backCardHidden && cp.roundBack, JSON.stringify(cp));
+          check('a Bierdeckel\'s words stay inside its edge, front and back', cp.reach.front > 0 && cp.reach.front < 0.85 && cp.reach.back > 0 && cp.reach.back < 0.97, JSON.stringify(cp.reach));
+        }
         const u2 = await page.evaluate(() => window.__market.snapshot());
         writeFileSync(path.join(OUT, 'read_bier_coaster_back.jpg'), Buffer.from(u2.split(',')[1], 'base64'));
       }
@@ -289,11 +336,14 @@ try {
     await page.evaluate(() => window.__market.walkTo('books'));
     await settle();
     await page.evaluate(() => window.__market.handlers.pickBook());
-    await page.evaluate(() => window.__market.advance(4));
+    // the book comes off the shelf, flies to the counter and opens (each stage starts when the last has ended, so
+    // the clock is advanced in steps, letting the page run in between)
+    for (let i = 0; i < 40 && (await page.evaluate(() => window.__market.openedBook()?.state)) !== 'open'; i++) await page.evaluate(() => window.__market.advance(0.5));
     await settle();
     await page.waitForFunction(() => window.__market.reading().id === 'books.book' && window.__market.textOn('books.book').length > 40, null, { timeout: LONG }).catch(() => {});
     await page.evaluate(() => window.__market.advance(0.8));
-    const bk = await page.evaluate(() => ({ book: window.__market.openedBook(), reading: window.__market.reading(), text: window.__market.textOn('books.book') }));
+    const bk = await page.evaluate(() => ({ book: window.__market.openedBook(), reading: window.__market.reading(), text: window.__market.textOn('books.book'), print: window.__market.bookPrint() }));
+    check('the book that opens is the vendor\'s hardback (book_open.glb), its pages printed on its paper', bk.book?.model === 'book_open.glb' && bk.print?.material === 'vendor_print', JSON.stringify([bk.book?.model, bk.print]));
     check('a clicked book opens with its words on its own 3D pages', bk.book?.state === 'open' && bk.reading.id === 'books.book' && !!bk.book.title && bk.text.includes(bk.book.title.split(':')[0].slice(0, 12)), `${JSON.stringify(bk.book)} ${bk.text.slice(0, 120)}`);
     { const u = await page.evaluate(() => window.__market.snapshot()); writeFileSync(path.join(OUT, 'read_book.jpg'), Buffer.from(u.split(',')[1], 'base64')); }
     await page.waitForFunction(() => window.__market.reading().views > 1, null, { timeout: 30000 }).catch(() => {});

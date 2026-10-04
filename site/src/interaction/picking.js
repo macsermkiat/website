@@ -148,6 +148,8 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     /** What a click at client (x, y) would reach (tests). */
     at: (x, y) => { const p = pick({ clientX: x, clientY: y }); return p ? { id: p.id || null, deco: p.deco || null, item: p.item?.node.name || null } : null; },
     setEnabled(v) { enabled = v; if (!v) show(null); },
+    /** Show the hover label with `text` at overlay point (x, y), as a hover there would (tests: edges); null hides. */
+    tipAt: (x, y, text) => show(text == null ? null : { x, y, label: text }),
     /** A click on nothing (the sky, the ground far off). */
     onMiss(f) { onMiss = f; },
     /** What is under client (x, y): the full pick (tests). */
