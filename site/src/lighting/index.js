@@ -228,6 +228,11 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     // the model: the outermost ancestor under the scene (a placed holder, or the bench's stall)
     let model = mesh;
     while (model.parent && model.parent !== scene && !model.parent.isScene) model = model.parent;
+    // section stalls only (the market's layout kind, or the bench's): the tree's and the deco stalls'
+    // short low strings would otherwise each take a priority glow slot (the first market run gave
+    // the tree 23 of them)
+    const kind = model.userData?.entry?.kind || model.userData?.kind;
+    if (kind !== 'section') return [];
     const lamps = [];
     model.traverse((x) => { if (/^light_/.test(x.name)) lamps.push(x.getWorldPosition(new THREE.Vector3())); });
     if (!lamps.length) return [];
@@ -268,6 +273,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     const out = [];
     const base = model.getWorldPosition(new THREE.Vector3()).y;
     for (const pts of comps) {
+      if (out.length >= C.perModel) break;
       // the two cells farthest apart in plan are the string's ends
       let a = pts[0], b = pts[0], best = 0;
       for (const p of pts) for (const q of pts) { const d = Math.hypot(p.x - q.x, p.z - q.z); if (d > best) { best = d; a = p; b = q; } }

@@ -323,7 +323,25 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
     for z in (zb + 0.004, zb + (level - zb) * 0.5, level):
         prof.append((r_at(z) - 0.0008, z))
     prof.append((0.0, level))
+    f0 = len(m.F)
     m.lathe(prof, seg(12, 6), "sw_wet", M, beer_col, "beer")
+    # round 4: a colour gradient up the column, per corner, so the beer reads as a clear liquid lit through
+    # rather than a flat painted fill: deeper amber at the foot (more beer to look through), the named colour
+    # in the middle, and a brighter, paler gold just under the head where the column is thinnest and lit
+    # from above. The beer is opaque in the glb (see vlib.material("beer")), so this gradient carries the depth.
+    deep = tuple(c * 0.62 for c in (beer_col[0], beer_col[1] * 0.86, beer_col[2] * 0.6))
+    light = tuple(min(1.0, c * 1.18 + 0.06 * w) for c, w in zip(beer_col, (1.0, 0.9, 0.35)))
+    z_lo = (M @ Vector((0, 0, zb))).z
+    z_hi = (M @ Vector((0, 0, level))).z
+    for fi in range(f0, len(m.F)):
+        cs = []
+        for vi in m.F[fi]:
+            t = max(0.0, min(1.0, (m.V[vi][2] - z_lo) / ((z_hi - z_lo) or 1.0)))
+            k = t * t * (3 - 2 * t)
+            a, b = (deep, beer_col) if k < 0.55 else (beer_col, light)
+            u = k / 0.55 if k < 0.55 else (k - 0.55) / 0.45
+            cs.append(tuple(a[j] + (b[j] - a[j]) * u for j in range(3)) + (1.0,))
+        m.C[fi] = cs
     ri = r_at(rim_z - 0.003)
     cream = C("f3e6c8")
     wet = C("ebdcbc")                      # the wetter cream where the head meets the glass (soft, not gold)

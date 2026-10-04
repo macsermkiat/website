@@ -573,11 +573,20 @@ def material(key):
         else:
             b.inputs["Transmission Weight"].default_value = 1.0
     elif key == "beer":
+        # round 4: opaque in the glb (no transmission). three.js draws only opaque objects into the buffer a
+        # transmissive glass shows through, so a transmissive beer vanished behind the glass wall and the
+        # pints read as empty in the browser (round 3 market judges). The glass stays transmissive and now
+        # shows the beer. In Cycles a strong, shallow golden subsurface (not exported to glTF) gives the
+        # column the lit-through glow of a clear lager instead of the round-3 opaque orange paint.
         _vcol_mult(m.node_tree, (1.0, 1.0, 1.0), b)
-        b.inputs["Roughness"].default_value = 0.05
+        b.inputs["Roughness"].default_value = 0.06
         b.inputs["IOR"].default_value = 1.33
-        if not lite():
-            b.inputs["Transmission Weight"].default_value = 0.65
+        for k, v in (("Subsurface Weight", 1.0), ("Subsurface Scale", 0.02), ("Coat Weight", 0.4),
+                     ("Coat Roughness", 0.03)):
+            if k in b.inputs:
+                b.inputs[k].default_value = v
+        if "Subsurface Radius" in b.inputs:
+            b.inputs["Subsurface Radius"].default_value = (1.0, 0.55, 0.12)
     elif key == "liquid":
         # a little roughness so a wide surface (the kettle) does not mirror the copper walls and read as empty
         _vcol_mult(m.node_tree, (1.0, 1.0, 1.0), b)

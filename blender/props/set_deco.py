@@ -7,6 +7,8 @@ stay under 20k triangles, so the goods of the two biggest stalls (Spielzeug, Sch
 counter, just under the stall's front header (relative y = -0.03).
 """
 import math
+import random
+from contextlib import contextmanager
 
 import bmesh  # noqa: F401
 from mathutils import Matrix, Vector
@@ -18,6 +20,47 @@ from vlib import C, T, WHITE, drng, jit, rng, seg
 
 TWO_PI = 2 * math.pi
 ROD_Z, ROD_Y = 1.08, -0.03
+
+
+# ------------------------------------------------------------------ clickable goods (round 4)
+# Every deco set now carries its own act_ nodes, so the engine (site/src/actions/items/deco.js) can drop its
+# code-made stand-in hearts. Each item is its own node with its origin at its pivot: "base" (the point it
+# rests on, for goods on the counter) or "hang" (the ribbon's knot on the rod, for goods hanging from it, so
+# the engine's click swing turns it about the knot). items.json carries kind "deco", a display name and a
+# `detail` line for the paper tag. Items exist in the lite glb too, at the same places: their placement and
+# jitter come from their own seeded generator (`irng`), never from the shared stream that lite runs
+# differently.
+@contextmanager
+def item(s, name, origin, label, detail, pivot="base", **extra):
+    """Build an item in set coordinates inside the `with`; it lands in its own node, origin at `origin`."""
+    m = s.node(name, tuple(origin))
+    yield m
+    ox, oy, oz = origin
+    m.V[:] = [(x - ox, y - oy, z - oz) for x, y, z in m.V]
+    if pivot == "hang":
+        pivot = "hang: the ribbon's knot on the rod; the item swings about it"
+    s.item(name, label, "deco", pivot=pivot, detail=detail, **extra)
+
+
+def irng(*key):
+    """A generator of its own for one item, the same in the full and the lite build."""
+    return random.Random(hash_key(key))
+
+
+def hash_key(key):
+    h = 2166136261
+    for ch in repr(key):
+        h = ((h ^ ord(ch)) * 16777619) & 0xFFFFFFFF
+    return h
+
+
+def hang_item(m, x, drop, col, r=0.0018, jx=0.0):
+    """hang() for an item: the same ribbon and knot, with the jitter given (from the item's own generator)."""
+    top = (x, ROD_Y, ROD_Z - 0.008)
+    bot = (x + jx, ROD_Y, ROD_Z - drop)
+    m.tube([top, bot], r, 4 if not vlib.lite() else 3, "sw_satin", None, col)
+    m.box((0.008, 0.02, 0.006), T(x, ROD_Y, ROD_Z + 0.006), "sw_satin", col, skip=("nz",))
+    return Vector(bot)
 
 
 def heart_poly(s, n=18):
@@ -97,6 +140,29 @@ def lebkuchen_heart(m, M, size, k):
               back_region=dough, back=not vlib.lite())
 
 
+HEART_TEXTS = [  # the icing on the six heart faces (vendor_atlas: lebkuchen_0..5)
+    ("Ich liebe Dich", "“Ich liebe Dich” (I love you), piped in white icing inside a scalloped border, with sugar flowers."),
+    ("Frohe Weihnachten", "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border."),
+    ("Für Dich", "“Für Dich” (for you), white icing in a pink scalloped border, with sugar roses."),
+    ("Schatz", "“Schatz” (sweetheart), white icing in a blue piped border."),
+    ("Prost!", "“Prost!” (cheers!), in yellow icing: a heart for the Glühwein crowd."),
+    ("Nachtmarkt", "“Nachtmarkt” (night market), in white icing in a pink border: a souvenir of the evening."),
+]
+
+
+@contextmanager
+def heart_item(s, n, x, size, k, base=None):
+    """act_heart_<n>: a hanging heart (origin at the ribbon's knot on the rod) or, with `base`, one leaning
+    on the display board (origin at its lowest point). k picks the icing face (lebkuchen_<k % 6>)."""
+    text, detail = HEART_TEXTS[k % 6]
+    cm = round(size * 100)
+    origin = base if base else (x, ROD_Y, ROD_Z)
+    label = f"Lebkuchen heart “{text}”"
+    with item(s, f"act_heart_{n}", origin, label, f"{detail} About {cm} cm, on a ribbon to hang around your neck.",
+              pivot="base" if base else "hang", icing=text, size_cm=cm) as hm:
+        yield hm
+
+
 def lebkuchen():
     s = vlib.PropSet("prop_deco_lebkuchen", "slot_counter", "deco-lebkuchen")
     m = s.static
@@ -106,10 +172,12 @@ def lebkuchen():
     for i, x in enumerate(xs):
         size = rng.choice([0.14, 0.17, 0.2, 0.24]) if abs(x) > 0.5 else rng.choice([0.12, 0.15])
         drop = rng.uniform(0.18, 0.42)
-        p = hang(m, x, drop, ribbons[i % 4])
-        # heart hangs facing the front (-Y): its local XY plane -> world XZ, face toward -Y
-        M = T(p.x, p.y + 0.006, p.z - size * 0.36 + 0.01, rx=math.pi / 2, ry=rng.uniform(-0.2, 0.2)) @ T(0, 0, -0.006)
-        lebkuchen_heart(m, M @ T(0, 0, 0, rz=0), size, i)
+        jx, ry = rng.uniform(-0.004, 0.004), rng.uniform(-0.2, 0.2)
+        with heart_item(s, i, x, size, i) as hm:
+            p = hang_item(hm, x, drop, ribbons[i % 4], jx=jx)
+            # heart hangs facing the front (-Y): its local XY plane -> world XZ, face toward -Y
+            M = T(p.x, p.y + 0.006, p.z - size * 0.36 + 0.01, rx=math.pi / 2, ry=ry) @ T(0, 0, -0.006)
+            lebkuchen_heart(hm, M, size, i)
     # on the counter: a basket of small hearts, round Elisenlebkuchen on paper, Pfeffernüsse
     G.crate(m, T(-0.6, 0.02, 0), 0.4, 0.3, 0.07, C("b48c5c"))
     for k in range(6 if not vlib.lite() else 3):
@@ -133,14 +201,22 @@ def lebkuchen():
                  scale=(1, 1, 0.75))
     # two short hearts in the middle of the rod
     for i, x in enumerate((-0.14, 0.14)):
-        p = hang(m, x, 0.12, ribbons[(i + 1) % 4])
-        lebkuchen_heart(m, T(p.x, p.y + 0.006, p.z - 0.12 * 0.36 + 0.01, rx=math.pi / 2) @ T(0, 0, -0.006), 0.12, 7 + i)
-    # a slanted display board along the back with big hearts leaning on it
+        with heart_item(s, 10 + i, x, 0.12, 7 + i) as hm:
+            p = hang_item(hm, x, 0.12, ribbons[(i + 1) % 4], jx=irng("lk", i).uniform(-0.004, 0.004))
+            lebkuchen_heart(hm, T(p.x, p.y + 0.006, p.z - 0.12 * 0.36 + 0.01, rx=math.pi / 2) @ T(0, 0, -0.006),
+                            0.12, 7 + i)
+    # a slanted display board along the back with big hearts leaning on it (each one an item, its origin
+    # under the heart's lowest point on the board's foot rail)
     m.box((0.9, 0.012, 0.16), T(0.1, 0.2, 0.08, rx=-0.25), vlib.RW("wood"), C("7a5230"))
     m.box((0.9, 0.03, 0.02), T(0.1, 0.14, 0.01), vlib.RW("wood"), C("7a5230"))
     for k in range(5):
-        lebkuchen_heart(m, T(-0.18 + k * 0.165, 0.175 - 0.006, 0.02 + 0.09, rx=math.pi / 2 - 0.25,
-                             rz=rng.uniform(-0.08, 0.08)) @ T(0, 0, -0.012), 0.15 if k % 2 else 0.17, k + 3)
+        size = 0.15 if k % 2 else 0.17
+        M = T(-0.18 + k * 0.165, 0.175 - 0.006, 0.02 + 0.09, rx=math.pi / 2 - 0.25,
+              rz=irng("lkb", k).uniform(-0.08, 0.08)) @ T(0, 0, -0.012)
+        low = min((M @ Vector((px, py, pz)) for px, py in heart_poly(size, 18) for pz in (0.0, 0.012)),
+                  key=lambda v: v.z)
+        with heart_item(s, 12 + k, None, size, k + 3, base=(low.x, low.y, low.z)) as hm:
+            lebkuchen_heart(hm, M, size, k + 3)
     # stacks of Elisenlebkuchen tins and ribboned gift boxes at the ends
     for k, (x, y) in enumerate(((0.95, -0.12), (0.95, 0.08), (-0.98, 0.14))):
         for j in range(3 - (k == 2)):
@@ -162,6 +238,15 @@ def almond_heap(m, M, r, h, col=WHITE, k=None):
     m.lathe(prof, k, "almonds", M, col, "glaze", v_by="z")
 
 
+MANDEL_KINDS = [  # (name, tag text, colour of the heap)
+    ("gebrannte Mandeln", "Gebrannte Mandeln: almonds turned in bubbling sugar, vanilla and cinnamon until they crackle, still warm.", "f4e0d0"),
+    ("Zimtmandeln", "Zimtmandeln: the same almonds with an extra coat of cinnamon sugar.", "e8c8a8"),
+    ("gebrannte Cashews", "Gebrannte Cashews: cashews in the same crackling sugar coat.", "f6e6cc"),
+    ("Schokomandeln", "Schokomandeln: roasted almonds dipped in dark chocolate.", "8a5a3a"),
+    ("gebrannte Erdnüsse", "Gebrannte Erdnüsse: peanuts in a crackling sugar coat, the cheapest bag on the counter.", "e8c890"),
+]
+
+
 def mandeln():
     s = vlib.PropSet("prop_deco_mandeln", "slot_counter", "deco-mandeln")
     m = s.static
@@ -180,12 +265,19 @@ def mandeln():
     m.box((0.62, 0.2, 0.02), Mr @ T(0, 0, 0.11), vlib.RW("wood"), C("a07448"))
     for sx in (-1, 1):
         m.box((0.02, 0.2, 0.11), Mr @ T(sx * 0.3, 0, 0.055), vlib.RW("wood"), C("a07448"))
-    for k in range(10 if not vlib.lite() else 5):
+    # each cone in the rack is an item (round 4), the same ten in the lite set (six sides there)
+    for k in range(10):
         cx, cy = -0.24 + (k % 5) * 0.12, -0.05 + (k // 5) * 0.1
-        Mc = Mr @ T(cx, cy, 0.0, rz=rng.uniform(0, 6))
-        m.lathe([(0.004, 0.0), (0.042, 0.2), (0.044, 0.205)], seg(8, 5), "cone_paper", Mc, jit(WHITE, 0.04), "atlas")
-        m.lathe([(0.0405, 0.2), (0.004, 0.02)], seg(8, 5), "paper", Mc, C("e8e0d0"))
-        almond_heap(m, Mc @ T(0, 0, 0.19), 0.042, 0.045, jit(C("f4e0d0"), 0.08))
+        Mc = Mr @ T(cx, cy, 0.0, rz=irng("md", k).uniform(0, 6))
+        o = Mc.translation
+        nut, grams = MANDEL_KINDS[k % len(MANDEL_KINDS)], (100, 200)[k // 5]
+        with item(s, f"act_cone_{k}", (o.x, o.y, 0.0), f"Paper cone of {nut[0]}",
+                  f"{nut[1]} {grams} g in a paper cone, {('3,50 €', '6 €')[k // 5]}.",
+                  grams=grams) as cm:
+            cm.lathe([(0.004, 0.0), (0.042, 0.2), (0.044, 0.205)], seg(8, 6), "cone_paper", Mc, jit(WHITE, 0.04),
+                     "atlas")
+            cm.lathe([(0.0405, 0.2), (0.004, 0.02)], seg(8, 6), "paper", Mc, C("e8e0d0"))
+            almond_heap(cm, Mc @ T(0, 0, 0.19), 0.042, 0.045, jit(C(nut[2]), 0.08), k=seg(8, 6))
     # filled cones lying ready on a paper in front of the rack
     m.box((0.62, 0.1, 0.002), T(0.17, -0.18, 0.001), "paper", C("f4efe4"), skip=("nz",))
     for k in range(3 if not vlib.lite() else 2):
@@ -229,10 +321,11 @@ def mandeln():
 
 # ------------------------------------------------------------------ Kerzen
 CANDLE_COLS = ["b0282a", "f2ead8", "2a6a3a", "d8b048", "2a4a8a", "7a3a7a", "e8d0a0", "c0562a", "f4f0e8", "5a8ab0"]
+CANDLE_NAMES = ["red", "ivory", "fir-green", "gold", "royal blue", "plum", "cream", "rust-orange", "white", "sky-blue"]
 
 
-def candle(m, M, r, h, col, lit=False, kind="pillar"):
-    n = seg(8, 5)
+def candle(m, M, r, h, col, lit=False, kind="pillar", n=None):
+    n = n or seg(8, 5)
     region = "honeycomb" if kind == "beeswax" else vlib.RW("wax")
     m.lathe([(r, 0.0), (r, h - 0.006), (r * 0.92, h), (0.0, h - 0.004)], n, region, M, col, "atlas", v_by="z")
     if lit:
@@ -263,19 +356,39 @@ def kerzen():
         if k:
             m.box((1.6, 0.02, dz), T(-0.1, dy - 0.07, dz / 2), vlib.RW("wood"), C("6a4428"))
             m.box((1.6, 0.14, dz), T(-0.1, dy, dz / 2), vlib.RW("wood"), C("6a4428"), skip=("ny",))
-    x = -0.85
-    k = 0
-    while x < 0.65:
-        tier = k % 3
-        dz, dy = ((0.02, -0.1), (0.09, 0.05), (0.16, 0.17))[tier]
-        kind = rng.choice(["pillar", "pillar", "beeswax", "pillar", "short"])
-        r = rng.uniform(0.022, 0.045) if kind != "short" else rng.uniform(0.035, 0.05)
-        h = rng.uniform(0.07, 0.22) if kind != "short" else rng.uniform(0.05, 0.08)
-        col = C(CANDLE_COLS[rng.randrange(len(CANDLE_COLS))]) if kind != "beeswax" else C("e8b050")
-        candle(m, T(x, dy + rng.uniform(-0.02, 0.02), dz), r, h, jit(col, 0.05), lit=(k % 7 == 3), kind=kind)
-        k += 1
-        if tier == 2:
-            x += 0.15 if not vlib.lite() else 0.36
+    # ten columns of three candles (one per riser) every 15 cm; every third column's candles are items
+    # (round 4: twelve in all, the same in lite, which keeps only those columns)
+    n_item = 0
+    for gi in range(10):
+        x = -0.85 + 0.15 * gi
+        is_item = gi % 3 == 0
+        if vlib.lite() and not is_item:
+            continue
+        for tier in range(3):
+            k = gi * 3 + tier
+            g = irng("kz", k)
+            dz, dy = ((0.02, -0.1), (0.09, 0.05), (0.16, 0.17))[tier]
+            kind = g.choice(["pillar", "pillar", "beeswax", "pillar", "short"])
+            r = g.uniform(0.022, 0.045) if kind != "short" else g.uniform(0.035, 0.05)
+            h = g.uniform(0.07, 0.22) if kind != "short" else g.uniform(0.05, 0.08)
+            ci = g.randrange(len(CANDLE_COLS))
+            col = C(CANDLE_COLS[ci]) if kind != "beeswax" else C("e8b050")
+            pos = (x, dy + g.uniform(-0.02, 0.02), dz)
+            lit = k % 7 == 3
+            if not is_item:
+                candle(m, T(*pos), r, h, jit(col, 0.05), lit=lit, kind=kind)
+                continue
+            cname = "honey beeswax" if kind == "beeswax" else CANDLE_NAMES[ci]
+            what = {"pillar": "pillar candle", "short": "block candle", "beeswax": "rolled beeswax candle"}[kind]
+            extra = {"pillar": "Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
+                     "short": "A short, wide block for a windowsill; burns for about 40 hours.",
+                     "beeswax": "Rolled from a honeycomb sheet of beeswax; it smells of honey."}[kind]
+            label = f"{cname[0].upper() + cname[1:]} {what}"
+            detail = (f"{label}, {round(h * 100)} cm tall, {round(r * 200)} cm across. {extra}"
+                      f"{' Lit, to show the flame.' if lit else ''}")
+            with item(s, f"act_candle_{n_item}", pos, label, detail, colour=cname, lit=lit) as cm:
+                candle(cm, T(*pos), r, h, jit(col, 0.05), lit=lit, kind=kind, n=seg(8, 6))
+            n_item += 1
     # a glass lantern with a lit candle and a cluster of tealights
     Ml = T(0.85, 0.0, 0)
     m.box((0.13, 0.13, 0.015), Ml @ T(0, 0, 0.0075), "iron", WHITE)
@@ -343,7 +456,7 @@ def nutcracker(m, M, coat=C("a8181c"), trousers=C("f2ead8"), hat=C("141414"), s=
 
 def train(m, M):
     cols = [C("b0282a"), C("2a6a3a"), C("2a4a8a")]
-    for k in range(3 if not vlib.lite() else 2):
+    for k in range(3):                      # three cars in lite too: the train is an item (same size)
         Mw = M @ T(k * 0.13, 0, 0)
         body = cols[k]
         if k == 0:
@@ -416,13 +529,23 @@ def spielzeug():
         if vlib.lite() and k % 2:
             continue
         spanbaum(m, T(x, 0.18, 0.07, rz=k), h=0.1 + (k % 3) * 0.03, col=C(["e8d0a0", "d8e0c0", "e0c8a0"][k % 3]))
-    nutcracker(m, T(-0.93, 0.02, 0), C("a8181c"), C("f2ead8"), s=1.0)
-    if not vlib.lite():
-        nutcracker(m, T(-0.79, 0.05, 0, rz=0.2), C("1f3a78"), C("141414"), C("a8181c"), s=0.85)
-        nutcracker(m, T(-0.66, -0.02, 0, rz=-0.15), C("2a6a3a"), C("f2ead8"), s=0.7)
-    train(m, T(-0.46, -0.13, 0))
-    for k, x in enumerate((-0.05, 0.04, 0.13) if not vlib.lite() else (0.04,)):
-        top(m, T(x, -0.14, 0), C(["b0282a", "2a4a8a", "d8b048"][k]))
+    # round 4: the nutcrackers, the train, the spinning tops and the rocking horse are items (all of them in
+    # lite too)
+    for k, (x, y, rz, coat, trousers, hat, sc, who) in enumerate((
+            (-0.93, 0.02, 0.0, "a8181c", "f2ead8", "141414", 1.0, "a king's guard in a red coat"),
+            (-0.79, 0.05, 0.2, "1f3a78", "141414", "a8181c", 0.85, "a soldier in a blue coat and red shako"),
+            (-0.66, -0.02, -0.15, "2a6a3a", "f2ead8", "141414", 0.7, "a forester in a green coat"))):
+        with item(s, f"act_nutcracker_{k}", (x, y, 0.0), "Erzgebirge nutcracker",
+                  f"A turned and painted nutcracker from the Erzgebirge: {who}, {round(34 * sc)} cm tall. "
+                  "Lift the lever at his back and he cracks a walnut.") as tm:
+            nutcracker(tm, T(x, y, 0, rz=rz), C(coat), C(trousers), C(hat), s=sc)
+    with item(s, "act_train_0", (-0.46 + 0.13, -0.13, 0.0), "Wooden toy train",
+              "A painted wooden train: a red engine with a black boiler and two wagons loaded with blocks.") as tm:
+        train(tm, T(-0.46, -0.13, 0))
+    for k, x in enumerate((-0.05, 0.04, 0.13)):
+        with item(s, f"act_top_{k}", (x, -0.14, 0.0), "Spinning top",
+                  f"A turned wooden spinning top in {['red', 'blue', 'yellow'][k]} lacquer with a cream stripe.") as tm:
+            top(tm, T(x, -0.14, 0), C(["b0282a", "2a4a8a", "d8b048"][k]))
     # a tower of painted blocks
     for k in range(6 if not vlib.lite() else 3):
         m.box((0.04, 0.04, 0.04), T(0.25 + (k % 3) * 0.045 - (k // 3) * 0.02, 0.06, 0.02 + (k // 3) * 0.04,
@@ -437,9 +560,14 @@ def spielzeug():
                   vlib.RW("wood"), vlib.RW("wood"), C(["d8b078", "b0282a", "c8a070"][k]), back=False)
     for k, (x, y) in enumerate(((-0.93, -0.2), (-0.3, -0.21), (0.13, -0.215))):
         price_tag(m, T(x, y, 0), (3, 3, 7)[k])
-    # a small rocking horse
+    # a small rocking horse (an item: origin under the middle of its rockers)
     Mh = T(0.86, -0.02, 0)
     k = 5 if not vlib.lite() else 3
+    rh = s.node("act_rockinghorse_0", (0.86, -0.02, 0.0))
+    s.item("act_rockinghorse_0", "Little rocking horse", "deco", pivot="base",
+           detail="A little white rocking horse with a red saddle on curved rockers. Give it a push.")
+    m, m_set = rh, m
+    Mh = T(0, 0, -0.014)          # round 3's horse floated 14 mm: its rockers now touch the counter
     for sy in (-1, 1):
         pts = [(-0.12 + 0.24 * i / (k - 1), sy * 0.03, 0.02 + 0.03 * (2 * i / (k - 1) - 1) ** 2) for i in range(k)]
         m.tube(pts, 0.006, 4, vlib.RW("wood"), Mh, C("7a4a28"))
@@ -449,6 +577,7 @@ def spielzeug():
     for sx in (-0.05, 0.05):
         m.box((0.015, 0.05, 0.07), Mh @ T(sx, 0, 0.055), "sw_gloss", C("f2ead8"), "glaze")
     m.box((0.06, 0.052, 0.012), Mh @ T(0, 0, 0.128), "sw_gloss", C("a8181c"), "glaze")
+    m = m_set
     # wooden stars and hearts cut from plywood, leaning in a small crate at the right end
     G.crate(m, T(0.86, 0.17, 0), 0.2, 0.1, 0.05, C("b48c5c"), slats=1)
     for k in range(4 if not vlib.lite() else 2):
@@ -461,12 +590,14 @@ def spielzeug():
 
 # ------------------------------------------------------------------ Christbaumschmuck
 BAUBLE_COLS = ["a8161d", "d8b048", "1d3a78", "e8e4dc", "1f5a3a", "8a2a6a", "c0c4c8", "e07a2a"]
+BAUBLE_NAMES = ["deep red", "gold", "midnight blue", "snow white", "fir green", "plum", "silver", "amber"]
 
 
-def bauble(m, M, r, col, shiny=True, cap=True, n=8, rings=4, upper=False):
+def bauble(m, M, r, col, shiny=True, cap=True, n=8, rings=4, upper=False, n_lo=5):
     """A glass bauble hanging from its cap (origin at the top of the cap). upper: only the top half and a
-    little more, for baubles sitting in an egg crate."""
-    n, rings = seg(n, 5), seg(rings, 2)
+    little more, for baubles sitting in an egg crate. n_lo: the fewest sides in lite (6 for items, whose
+    lite bounds must match the full ones)."""
+    n, rings = seg(n, n_lo), seg(rings, 2)
     reg, mat = ("sw_metal_polish", "atlas") if shiny else ("sw_satin", "glaze")
     if upper:
         prof = [(r * math.cos(a), r * math.sin(a)) for a in (-0.3, 0.75)] + [(0.0, r)]
@@ -503,24 +634,37 @@ def schmuck():
     m = s.static
     rod(m, -1.08, 1.08)
     xs = [-0.95, -0.84, -0.73, -0.62, -0.51, -0.4, 0.4, 0.51, 0.62, 0.73, 0.84, 0.95]
+    # round 4: every hanging piece is an item, act_bauble_<i>, origin at its knot on the rod
     for i, x in enumerate(xs):
         drop = rng.uniform(0.12, 0.4)
-        p = hang(m, x, drop, C("d8b048"), 0.001)
+        jx = rng.uniform(-0.004, 0.004)
         if i % 4 == 3:
-            # straw star: two crossed layers
-            Ms = T(p.x, p.y, p.z - 0.06, rx=math.pi / 2, ry=rng.uniform(-0.3, 0.3))
-            for k in range(2 if not vlib.lite() else 1):
-                sp = star_poly(0.06, 0.012, 4, rot=k * math.pi / 4)
-                m.extrude(sp, 0.002, Ms @ T(0, 0, k * 0.002), "straw", "straw", C("e8c880"), back=not vlib.lite())
+            label, detail = "Straw star", ("A straw star (Strohstern) of two crossed layers of split straw, bound with "
+                                          "thread: the oldest tree ornament on the stall.")
         elif i % 4 == 1:
-            # glass icicle
-            m.lathe([(0.0, 0.0), (0.009, -0.02), (0.006, -0.1), (0.0, -0.14)], seg(6, 5), "sw_vgloss", T(p.x, p.y, p.z),
-                    C("e8f0f4"), "glass")
-            m.cyl(0.004, 0.004, 0.008, 6 if not vlib.lite() else 4, "sw_metal", T(p.x, p.y, p.z - 0.002), C("d8c080"),
-                  caps=False)
+            label, detail = "Glass icicle", "A blown-glass icicle, clear and twisted, with a gold cap."
         else:
-            bauble(m, T(p.x, p.y, p.z), rng.choice([0.03, 0.035, 0.045, 0.05]), C(BAUBLE_COLS[i % len(BAUBLE_COLS)]),
-                   shiny=i % 3 != 2, n=8, rings=4)
+            cname = BAUBLE_NAMES[i % len(BAUBLE_NAMES)]
+            label = f"{cname[0].upper() + cname[1:]} glass bauble"
+            detail = (f"A mouth-blown glass bauble, {cname}, {'mirror-silvered inside' if i % 3 != 2 else 'satin matt'}, "
+                      "with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €.")
+        with item(s, f"act_bauble_{i}", (x, ROD_Y, ROD_Z), label, detail, pivot="hang") as bm:
+            p = hang_item(bm, x, drop, C("d8b048"), 0.001, jx=jx)
+            if i % 4 == 3:
+                # straw star: two crossed layers
+                Ms = T(p.x, p.y, p.z - 0.06, rx=math.pi / 2, ry=rng.uniform(-0.3, 0.3))
+                for k in range(2 if not vlib.lite() else 1):
+                    sp = star_poly(0.06, 0.012, 4, rot=k * math.pi / 4)
+                    bm.extrude(sp, 0.002, Ms @ T(0, 0, k * 0.002), "straw", "straw", C("e8c880"), back=not vlib.lite())
+            elif i % 4 == 1:
+                # glass icicle
+                bm.lathe([(0.0, 0.0), (0.009, -0.02), (0.006, -0.1), (0.0, -0.14)], seg(6, 5), "sw_vgloss",
+                         T(p.x, p.y, p.z), C("e8f0f4"), "glass")
+                bm.cyl(0.004, 0.004, 0.008, 6 if not vlib.lite() else 4, "sw_metal", T(p.x, p.y, p.z - 0.002),
+                       C("d8c080"), caps=False)
+            else:
+                bauble(bm, T(p.x, p.y, p.z), rng.choice([0.03, 0.035, 0.045, 0.05]),
+                       C(BAUBLE_COLS[i % len(BAUBLE_COLS)]), shiny=i % 3 != 2, n=8, rings=4, n_lo=6)
     # egg-crate trays of baubles on the counter (only their tops show above the crate)
     for t, (tx, cols) in enumerate(((-0.62, BAUBLE_COLS[:4]), (-0.14, BAUBLE_COLS[4:] + ["a8161d", "d8b048"]),
                                     (0.34, ["d8b048", "c0c4c8", "a8161d", "e8e4dc"]))):
@@ -537,9 +681,15 @@ def schmuck():
         m.box((0.44, 0.004, 0.14), Mt @ T(0, 0.155, 0.1, rx=-0.2), "kraft", C("d0bf9c"))
     # a decorated tabletop tree, two loose baubles on their sides and a glass tree-top spire
     tabletop_tree(m, T(0.96, 0.08, 0))
-    for x, y, r, col, a in ((0.66, -0.16, 0.04, "a8161d", 0.4), (0.9, -0.17, 0.034, "d8b048", 2.2),
-                            (-0.92, -0.17, 0.03, "1d3a78", 1.0)):
-        bauble(m, T(x, y, r * (1 + math.cos(1.2)), rx=1.2, rz=a), r, C(col), n=8, rings=4)
+    for j, (x, y, r, col, a, cname) in enumerate(((0.66, -0.16, 0.04, "a8161d", 0.4, "deep red"),
+                                                  (0.9, -0.17, 0.034, "d8b048", 2.2, "gold"),
+                                                  (-0.92, -0.17, 0.03, "1d3a78", 1.0, "midnight blue"))):
+        M = T(x, y, r * (1 + math.cos(1.2)), rx=1.2, rz=a)
+        c = M @ Vector((0, 0, -r))                      # the ball's centre: it rests on the counter under it
+        with item(s, f"act_bauble_{12 + j}", (c.x, c.y, 0.0), f"{cname[0].upper() + cname[1:]} glass bauble",
+                  f"A mouth-blown Lauscha glass bauble, {cname}, lying on the counter where a customer put it down. "
+                  "5 €.") as bm:
+            bauble(bm, M, r, C(col), n=8, rings=4, n_lo=6)
     for k, (x, y) in enumerate(((-0.62, -0.21), (0.34, -0.21))):
         price_tag(m, T(x, y + 0.01, 0), 4)
     Mp = T(0.76, 0.06, 0)
@@ -550,9 +700,10 @@ def schmuck():
 
 
 # ------------------------------------------------------------------ Käse
-def cheese_wheel(m, M, r, h, cut=0.0, rind=C("ffffff"), wax=None):
-    """A wheel; with cut (radians) a wedge is missing at the front showing the paste."""
-    n = seg(28, 10)
+def cheese_wheel(m, M, r, h, cut=0.0, rind=C("ffffff"), wax=None, n_lo=10):
+    """A wheel; with cut (radians) a wedge is missing at the front showing the paste. n_lo: fewest sides in
+    lite (12 for items, so the lite wheel keeps the full one's bounds)."""
+    n = seg(28, n_lo) if n_lo <= 6 else (max(n_lo, int(round(28 * 0.34))) if vlib.lite() else 28)
     arc = TWO_PI - cut
     a0 = -math.pi / 2 + cut / 2
     region = "cheese_rind" if wax is None else "sw_gloss"
@@ -582,10 +733,19 @@ def cheese_wheel(m, M, r, h, cut=0.0, rind=C("ffffff"), wax=None):
 def kaese():
     s = vlib.PropSet("prop_deco_kaese", "slot_counter", "deco-kaese")
     m = s.static
-    cheese_wheel(m, T(-0.78, 0.02, 0), 0.22, 0.11, cut=0.9)
-    cheese_wheel(m, T(-0.3, 0.1, 0), 0.14, 0.09)
-    cheese_wheel(m, T(-0.3, 0.1, 0.09, rz=0.5), 0.12, 0.08, rind=C("e0c080"))
-    cheese_wheel(m, T(-0.3, 0.1, 0.17, rz=1.1), 0.1, 0.07, wax=C("a8161d"))
+    # round 4: the wheels are items (origin at the middle of each wheel's underside)
+    def wheel(n, at, label, detail, r, h, rz=0.0, **kw):
+        with item(s, f"act_cheese_{n}", at, label, detail, **({"cut": True} if kw.get("cut") else {})) as cm:
+            cheese_wheel(cm, T(*at, rz=rz), r, h, n_lo=12, **kw)
+    wheel(0, (-0.78, 0.02, 0.0), "Allgäuer Bergkäse",
+          "Allgäuer Bergkäse, a whole 44 cm wheel aged twelve months, opened at the front: nutty, a little "
+          "crystalline. Cut to order, 100 g for 3,50 €.", 0.22, 0.11, cut=0.9)
+    wheel(1, (-0.3, 0.1, 0.0), "Butterkäse",
+          "Butterkäse: mild, soft and creamy, the cheese every child at the counter asks to taste.", 0.14, 0.09)
+    wheel(2, (-0.3, 0.1, 0.09), "Tilsiter", "Tilsiter: a washed golden rind and a sharp, spicy paste.", 0.12, 0.08,
+          rz=0.5, rind=C("e0c080"))
+    wheel(3, (-0.3, 0.1, 0.17), "Edamer in red wax", "A small Edamer sealed in red wax, mild and firm.", 0.1, 0.07,
+          rz=1.1, wax=C("a8161d"))
     # a cutting board with a wedge and the cheese harp / knife
     G.board(m, T(0.18, -0.04, 0), 0.4, 0.3, 0.025, C("c89e70"))
     wedge = T(0.12, -0.06, 0.025, rz=0.3)
@@ -597,12 +757,19 @@ def kaese():
     for k in range(6):
         cx, cy = 0.63 + (k % 3) * 0.12, -0.03 + (k // 3) * 0.13
         if k % 2:
-            m.sphere(0.055, seg(14, 8), seg(8, 5), "sw_gloss", T(cx, cy, 0.06), C("a8161d"), scale=(1, 1, 0.8))
+            with item(s, f"act_cheese_{7 + k}", (cx, cy, 0.06 - 0.055 * 0.8), "Mini Gouda in red wax",
+                      "A round mini Gouda in red wax, about 400 g: a cheese to take home as a present.") as cm:
+                cm.sphere(0.055, seg(14, 8), seg(8, 5), "sw_gloss", T(cx, cy, 0.06), C("a8161d"), scale=(1, 1, 0.8))
         else:
-            cheese_wheel(m, T(cx, cy, 0.015), 0.055, 0.05, rind=C("a86a2a"))
+            with item(s, f"act_cheese_{7 + k}", (cx, cy, 0.015), "Räucherkäse",
+                      "A small smoked cheese (Räucherkäse) with a brown, beech-smoked rind.") as cm:
+                cheese_wheel(cm, T(cx, cy, 0.015), 0.055, 0.05, rind=C("a86a2a"), n_lo=12)
     # a tower of washed-rind wheels at the left end behind the big cut wheel
-    for j in range(3):
-        cheese_wheel(m, T(-0.98, 0.15, j * 0.075, rz=j * 0.7), 0.09 - j * 0.006, 0.07, rind=C(["c8904a", "d8b070", "b87a3a"][j]))
+    for j, (nm, dt) in enumerate((("Weißlacker", "Weißlacker: an Allgäu beer cheese, soft, salty and strong."),
+                                  ("Romadur", "Romadur: a washed-rind soft cheese, milder than it smells."),
+                                  ("Limburger", "Limburger: a ripe washed-rind cheese with a big smell and a mild heart."))):
+        wheel(4 + j, (-0.98, 0.15, j * 0.075), nm, dt, 0.09 - j * 0.006, 0.07, rz=j * 0.7,
+              rind=C(["c8904a", "d8b070", "b87a3a"][j]))
     # a slate of tasting cubes with toothpicks, and wrapped wedges in a basket at the front
     m.box((0.2, 0.12, 0.008), T(-0.5, -0.17, 0.004, rz=0.05), "sw_matte", C("2a2c2e"))
     for k in range(8 if not vlib.lite() else 4):

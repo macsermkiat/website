@@ -1,0 +1,2 @@
+  [-a] info: [lighting] 2 canopy washes under the bulb strings of place_buecherstand: 9.41,1.33,2.74..10.18,1.33,2.68 | 12.64,1.33,5.22..12.56,1.33,5.98
+  [-a] info: [lighting] placed 10 lights (4 shadowed, 0 clipped to their stall), 29 pools, glows {"interior":4,"eave":4,"spill":4,"sign":4}

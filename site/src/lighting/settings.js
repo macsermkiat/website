@@ -152,8 +152,9 @@ export const NIGHT = {
   // `ceiling` m under the bulbs (the canopy fascia and the section signs hang right under them and
   // blew out) and nothing lower than `floor` m over the base. It is the light those bulbs would
   // throw onto the boards and book spines. Strings over a lit stall front (the Glühwein lambrequin,
-  // calibrated against Cycles) are within minAway of a light_ and are left alone.
-  canopy: { intensity: 7, reach: 1.8, down: 0.3, out: 0.3, inset: 0.12, ceiling: 0.28, minAway: 1.6, minLength: 0.6, below: 0.15, floor: 0.25, color: [1.0, 0.62, 0.34] },
+  // calibrated against Cycles) are within minAway of a light_ and are left alone. Section stalls
+  // only, at most `perModel` washes each (the tree's short low strings would take priority slots).
+  canopy: { intensity: 7, reach: 1.8, down: 0.3, out: 0.3, inset: 0.12, ceiling: 0.28, minAway: 1.6, minLength: 0.6, below: 0.15, floor: 0.25, perModel: 4, color: [1.0, 0.62, 0.34] },
 
   // faint cool rim on edges that face the moon, for figures and posts in front of the stalls.
   // It is added as radiance, not multiplied by albedo (the crowd's coats are albedo 0.01-0.07), and
