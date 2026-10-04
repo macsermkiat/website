@@ -90,7 +90,7 @@ Previews: one Cycles render per section stall (3/4 front view at night) and one 
 - prop_bier_counter: a three-tap tower with tap handles act_tap_0..2 that pivot at their base, drip tray and a row of pint and Maß glasses (act_glass_0..n) with a separate foam mesh on each.
 - prop_bier_back: wooden barrels on a rack, a chalkboard price board.
 - prop_wurst_counter: a round swinging charcoal grill (act_grill) with glowing coals (emissive coal_glow material), sausages act_sausage_0..n, a stack of rolls, mustard and ketchup pots, paper trays.
-- prop_books_shelf_1 and prop_books_shelf_2: shelves full of individual books with varied sizes, colours, wear and spine lettering. Make the books individually addressable as act_book_0..n, and put these titles on readable spines: The Order of Time; Gödel, Escher, Bach; The Feynman Lectures on Physics; Being You; The Book of Why.
+- prop_books_shelf_1 and prop_books_shelf_2: shelves full of individual books with varied sizes, colours, wear and spine lettering. Mac's 55 real books live in the category sets described under 'Bücherstand categories' in docs/BUILD.md; content/books/categories.json is the only source for titles, and these two shelves hold untitled filler.
 - prop_gluehwein_wine: a small wine shelf for the Glühwein stand (slot_shelf_2) with 8–12 individual bottles act_bottle_0..n: German reds and whites (Riesling, Spätburgunder, Dornfelder, Silvaner), each with its own legible label, capsule and glass colour. Include a few wine glasses act_wineglass_0..n.\n- Every item a visitor might click must be its own node with its pivot at its base and a sensible bounding box, and must be clickable on its own: each book, mug, glass, bottle, sausage and roll. Books need a readable title on the spine and a front cover the engine can show when a book is opened (name the cover material book_cover_<n>). Write site/public/models/items.json that maps every act_ node to its display name (for books: title and author).\n- prop_books_counter: open books, a reading lamp with a light_ empty, a cash box.
 - For each of the 9 deco stalls, prop_deco_<key>: the goods, e.g. hanging Lebkuchen hearts with icing, paper cones of almonds, candles of many colours and sizes, wooden toys, glass baubles, wheels of cheese, a crêpe griddle, a chestnut roaster, a potato-pancake pan.
 Previews: one close-up Cycles render per section set on a plain wooden counter at night, and one contact sheet of the deco goods.`,
@@ -98,7 +98,7 @@ Previews: one close-up Cycles render per section set on a plain wooden counter a
       'site/public/models/props.json exists and maps every prop set to a stall and slot',
       'All section prop sets and 9 prop_deco_<key> sets exist with .lite.glb versions',
       'Glühwein mugs are act_mug_*, tap handles act_tap_0..2 pivot at their base, sausages act_sausage_*, grill act_grill, books act_book_* (verify node names and pivot origins)',
-      'The five named titles are legible on book spines in a preview',
+      'Book spines from content/books/categories.json are legible in a close-up preview',
       'Prop sets fit a 0.5 m deep counter and 1.05 m counter height (check bounding boxes)',
       'Close-ups show believable materials: glazed ceramic, copper, glass with foam, charred sausages, worn book cloth',
       'Total prop triangles fit inside the section stall budget when combined with each stall',

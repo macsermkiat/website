@@ -4,6 +4,20 @@ This pass (pass 3) continued from the partial round-2 work on disk after a resta
 
 Pass 4 (after a second restart) changed no code. It found that the bench screenshots on disk (`raw/after.png`, `raw/lite.png`, `raw/snow.png`, `raw/nosign.png`) were still the pass-1 renders, so `after.jpg`, `after_lite.jpg`, `side_by_side*.jpg`, `snow_toggle.jpg`, `sign_lamp_bench.jpg` and `lite_gable.jpg` showed the brighter × 4.8 bulbs and the hard shelf shadows. It re-shot all four from the current code, re-made those images and `bulbs_closeup.jpg` (the pass-1 frames are kept in `raw_pass1/` for that comparison), and re-ran `measure.py`: every number in the colour table below comes from the new `raw/after.png` and `raw/lite.png`.
 
+## Fix pass (the judges' round-2 fixes)
+
+This pass made the five fixes the judging panel asked for, in their order:
+
+| Fix asked for | What I did | Where to see it |
+|---|---|---|
+| **Ferris hub starburst** | Two causes, both fixed. (1) **The hub's bulbs:** the 16 spokes' bulb strings converge on the hub and their last 3–4 m overlapped into one bloom. New `hubFade` (`lights.js`, settings `emissive.hubFade`): every `bulbs_` mesh under a `rot_wheel` gets a per-vertex fade by distance from the wheel's axis, **0.15** at the hub's rim (1.2 m) up to full at 5 m, through a cloned bulb material with a one-line emissive patch. The inner bulbs sit under the bloom threshold, so they read as small amber dots and the wheel reads as rim and spokes. It adds no draw calls, and the gondolas' bulbs are left alone. (2) **The wash light:** three's distance window (1 − (d/D)⁴)² at an 18 m reach still gave the hub 7.5× the rim's light. The wash now hangs 9.2 m in front of the hub (`washOut` 3 → 6), with reach 18 → 30 m and intensity 70 → 56: the rim keeps its light and the hub gets 63 % less (2.7× the rim). | `market.jpg`, `market_hub.jpg` (home-view hub, pass 3 against this pass), `wheel_hub_bench.jpg` (the wheel alone on the bench with its own lights) |
+| **Re-shoot `market_sign_wurst.jpg`** | Re-shot from the current code, along with every other full-market image (home, both sign approaches, both stalls entered) and both lite entered views. To make this affordable, `shoot-market.mjs` can now take several views in one page load: `@snap=name` captures mid-sequence, `@home` goes back to the home view, and `@front=place_bratwurst,7.5,1.7` frames a stall's sign from a visitor's approach. Loading the market is most of a 45-minute software-GL shot. | `market_signs.jpg`, `market_sign_wurst.jpg`, `market_sign_glueh.jpg`, `market_glueh.jpg`, `market_wurst.jpg`, `market_lite_*.jpg` |
+| **Explicit `focusPlace` from the engine** | The request for BUILD.md (the market owner adds it; I don't edit BUILD.md): *Engine: `openPlace(id)` calls `lighting.raw.focusPlace(id)` before the camera flight starts, and closing the panel or `resetView()` calls `lighting.raw.focusPlace(null)`.* In `main.js` that is one line in `openPlace` (`lighting.raw?.focusPlace?.(id);`) and one in the close and reset paths. On my side, the first explicit call now turns the camera-settle detection off for good. Before, `focusPlace(null)` handed control back to it, so a close would have re-armed the heuristic. | README "The entered place gets the lights"; `market_lite_glueh.jpg`, `market_lite_band.jpg` (shot with explicit calls) |
+| **Back-wall bulb merging: baked AO, not more bloom** | The carpenter's stalls ship a baked AO map (`occlusionTexture`, uv1) since round 3, but three applies it only to the hemisphere and the environment. `shading.js` now applies it (`lightingAO()`, settings `ao`) to every local glow in full (they stand in for bounce light) and to the short-reach interior lamps at 60 % (reach under 6 m, so not the washes or the bandstand). On the shipped Glühwein stall the bulbs hang in front of the red lambrequin and stand apart: 15 runs, widest 16 px, with the AO a little darker under the roof (`ao_stall.jpg`, `ao_bulb_row.jpg`). The 123 px run comes from the old bench glb (`review/reference/gluehwein_stall_web.glb`), which has no AO map and hangs its bulbs in front of the pale back wall. I raycast the bench and found that wall 0.85 m from the lamp, just under its horizon. I tried a lamp radius for diffuse light (r 0.3–0.7 m), a shade over the lamp's horizon, a lower interior-glow ceiling, and no interior glow at all. None of them separated the bulbs without darkening the shelves (best: widest run 117 px with the shelf wall down from .34 to .30, Cycles .39). So none of them are kept, and the bench numbers below are unchanged. | `ao_stall.jpg`, `ao_bulb_row.jpg`, `bulbs_closeup.jpg` |
+| **Real-GPU p50, MSAA 2× if over 16.7 ms** | **Not measurable here.** This machine has no GPU (no `/dev/dri`; Chromium uses SwiftShader), and this session cannot reach Mac's laptop. Instead the judges' rule now runs at run time: the adaptive quality's first step (MSAA 4× → 2×) triggers at a median of **16.7 ms** (`adaptiveMs`, was 18.2), so any GPU slower than 60 fps settles at 2× within about 5 s. The laptop command and what to set are in README "Real-GPU frame time". | README |
+
+The bench images (`after`, `after_lite`, `side_by_side*`, `snow_toggle`, `sign_lamp_bench`, `lite_gable`, `bulbs_closeup`) were not re-shot. None of this pass's changes reach the bench glb: it has no wheel and no AO map, so its pixels match pass 4. I checked this with a fresh `after` shot of the final code: it differs from pass 4's `raw/after.png` by 0.0006 code values on average (9 at most, from the noise of the snow-free grain), and every number in the table below is the same.
+
 `site/src/lighting/` is the night. `index.js` exports `createLighting({ scene, renderer, camera, lite })`, which returns `{ composer, update(dt, t), setSnow(on), dispose() }`. It also has the helpers the engine uses (`placeLights`, `tune`) and one new one this round, `focusPlace(id)`. The settings and the reasons for them are in `site/src/lighting/README.md`. Every round-2 change there is marked "round 2" and gives the round-1 value it replaced.
 
 The market report for the full home view says `lighting: "lighting"`, with 12 real-time lights (4 section interiors, 4 front fills, bandstand, tree, carousel, Ferris wheel) and no warnings.
@@ -58,7 +72,7 @@ The wood hue is within 1–3° of Cycles everywhere. The one deliberate differen
 
 ## Performance
 
-**Real GPU: not measured** (no GPU here). On the M3 laptop:
+**Real GPU: not measured** (no GPU here: no `/dev/dri`, Chromium uses SwiftShader, and this session cannot reach the laptop). Since the fix pass the adaptive quality's first step (MSAA 4× → 2×) triggers at a median of 16.7 ms, so the judges' rule applies itself on any GPU. On the M3 laptop:
 
 ```sh
 cd site
@@ -72,8 +86,11 @@ If the fixed run's p50 is over 16.7 ms, set `PROFILES.full.msaa = 2` in `setting
 
 | Image | What it shows |
 |---|---|
-| `market_signs.jpg`, `market_sign_glueh.jpg`, `market_sign_wurst.jpg` | **The Glühwein and Bratwurst stands in the full market** from a visitor's approach (6.5 and 7.5 m), with their sign lamps. The Glühwein shot is from this pass; the Bratwurst shot is from pass 1 (same sign lamp, brighter bulbs), because a full-market frame takes 46 minutes on this shared machine. |
-| `market.jpg`, `before_after_market.jpg` | The full market's home view; round 1 against round 2 (smaller moon, softer pools, warmer facades and crowd). |
+| `market_signs.jpg`, `market_sign_glueh.jpg`, `market_sign_wurst.jpg` | **The Glühwein and Bratwurst stands in the full market** from a visitor's approach (6.5 and 7.5 m in front of each sign, eye height 1.7 m, `@front=`), with their sign lamps. Both re-shot in the fix pass from the shipped code. |
+| `market_hub.jpg` | Fix pass: the Ferris hub in the home view at 3×, pass 3 (starburst) against this pass (hub fade and the farther wash). |
+| `wheel_hub_bench.jpg` | Fix pass: the Ferris wheel alone on the bench with its own lights (`?glb=/models/ferris.glb&tune=1&own=landmark`), pass-3 settings against this pass. |
+| `ao_stall.jpg`, `ao_bulb_row.jpg` | Fix pass: the shipped Glühwein stall on the bench (Cycles camera), the baked AO used by the hemisphere only against AO also in the glows and interior lamps, and its bulb row. |
+| `market.jpg`, `before_after_market.jpg` | The full market's home view (fix pass); round 1 against round 2 (smaller moon, softer pools, warmer facades and crowd, no hub starburst). |
 | `home_signs.jpg` | The home view's left stalls at 2×, round 1 against round 2. The Bratwurst board over the roof now reads. The Glühwein board is behind the crowd's speech bubble in this frame, which comes from the crowd, not the lighting. |
 | `market_glueh.jpg`, `market_wurst.jpg`, `before_after_glueh.jpg`, `before_after_wurst.jpg` | The two stalls entered, full, round 1 against round 2 (the Glühwein board no longer washed out; less bulb glare). |
 | `market_lite_glueh.jpg`, `market_lite_band.jpg`, `before_after_lite_glueh.jpg`, `before_after_lite_band.jpg` | Lite, entered: the Glühwein stall and the bandstand, with the lights they borrow (round 1: the bandstand had no real light on lite). |
@@ -89,21 +106,24 @@ If the fixed run's p50 is over 16.7 ms, set `PROFILES.full.msaa = 2` in `setting
 | Item | Size |
 |---|---|
 | Models and textures | None shipped. The sky, stars, snow, environment, probes and sign fixtures are generated in code. |
-| Code | About 168 KB of unminified JS in 15 files: 9 modules (`index`, `lights`, `shading`, `settings`, `sky`, `env`, `snow`, `fog`, `grade`) plus tools and configs (`shoot*.mjs`, `perf.mjs`, `diag-market.mjs`, two vite configs). `compose.py` and `measure.py` make and measure the review images. |
+| Code | About 175 KB of unminified JS in 15 files: 9 modules (`index`, `lights`, `shading`, `settings`, `sky`, `env`, `snow`, `fog`, `grade`) plus tools and configs (`shoot*.mjs`, `perf.mjs`, `diag-market.mjs`, two vite configs). `compose.py` and `measure.py` make and measure the review images. |
 | Sign fixtures | 112 triangles per lamp, all lamps in one mesh, 3 draw calls per `placeLights` call |
 | Real-time warm lights | 14 on full, 4 on lite, minus the engine's reserved lights (12 in the market report). The entered place borrows up to 2 and the total stays the same. |
 | Local glows | 28 (full) / 16 (lite) slots in one shared uniform |
 | Shadows | Moon 1536², every 3rd frame, plus 4 × 512² static interior cube maps (full). None on lite. |
 | Snow | 28.5k points on full, 8k on lite |
+| Hub fade (fix pass) | One Float32 attribute on the wheel's bulb mesh (22,560 vertices, 90 KB of GPU memory), one cloned material, no extra draw calls |
 
 ## What I would improve next
 
-- Measure real-GPU frame times on Mac's laptop (above).
-- The bench's left bulbs still merge into one bright run of about 120 px. The cause is the back wall right behind them, which the interior light lights almost white. The fix is baked AO or a lightmap on the carpenter's stalls, not more bloom tuning.
+- Measure real-GPU frame times on Mac's laptop (above) and write the p50 into README.
+- The bench's left bulbs still merge into one bright run of about 120 px. That glb has no AO map and hangs its bulbs in front of the pale back wall. The shipped stalls have AO, which the lighting now uses, and their bulbs stand apart. Next step: bake the same AO into the bench glb (the market owner's `review/reference/`), or switch the bench to `stall_gluehwein.glb` once a Cycles reference of that stall from the bench camera exists.
 - Snow does not settle on the ground or roofs yet.
-- The engine should call `lighting.raw.focusPlace(id)` from `openPlace` and `focusPlace(null)` on close. The camera-based detection then stops, and the focus is set before the flight starts rather than a third of a second after it ends.
-- Re-shoot the Bratwurst approach (`market_sign_wurst.jpg` is from pass 1) when the machine is less loaded.
+- The engine should call `lighting.raw.focusPlace(id)` from `openPlace` and `focusPlace(null)` on close and reset (the BUILD.md line is in the fix-pass table above). The camera-based detection then stops for good, and the focus is set before the flight starts rather than a third of a second after it ends.
 
 ## Contract
 
-Nothing here breaks BUILD.md. Two requests to the market owner are still open: add `--palette false` wherever plain `gltf-transform optimize` is still used, and drop main.js's redundant `SNOW_FOG_MAX`. The engine could also call `focusPlace` explicitly (optional).
+Nothing here breaks BUILD.md. Requests to the market owner:
+
+1. **New (fix pass):** add to BUILD.md, for the engineer: *`openPlace(id)` calls `lighting.raw.focusPlace(id)` before the camera flight starts, and closing the panel or `resetView()` calls `lighting.raw.focusPlace(null)`.*
+2. Still open: add `--palette false` wherever plain `gltf-transform optimize` is still used, and drop main.js's redundant `SNOW_FOG_MAX`.

@@ -37,6 +37,18 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     const cands = boxes.filter((b) => ray.ray.intersectsBox(b.box)).map((b) => b.h);
     if (!cands.length) return null;
     const hits = ray.intersectObjects(cands, true);
+    // the item under the pointer is lifted a little while hovered: a click on it still means it when the ray meets it
+    // within a few centimetres of the first hit (on a tight row of spines seen at an angle, the lift can bring a
+    // neighbour's edge in front of the click point)
+    const held = items?.hovered;
+    if (held && hits.length) {
+      const h = hits.find((x) => x.distance - hits[0].distance < 0.08 && items.itemOf(x.object) === held);
+      if (h) {
+        let o = h.object;
+        while (o && !o.userData.place && !o.userData.entry) o = o.parent;
+        if (o) return { x: ev.clientX - r.left, y: ev.clientY - r.top, distance: h.distance, id: o.userData.place || null, deco: o.userData.place ? null : o.userData.entry?.id, item: held };
+      }
+    }
     for (const h of hits) {
       const o0 = h.object;
       if (o0.userData.bulbs && hits.length > 1) continue;
