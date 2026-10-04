@@ -14,7 +14,7 @@ review: "check"
 
 ## In short
 
-A young man visits a philosopher in an old city (Kyoto, in all but name) to prove him wrong about his claim that the world is simple and anyone can be happy. Over five nights the philosopher explains the ideas of Alfred Adler, the Austrian psychologist who broke with Freud: the past does not decide your life, all problems are about other people, and freedom means being willing to be disliked. Ichiro Kishimi is a Japanese Adler scholar and Fumitake Koga is the writer who shaped their talks into a Socratic dialogue.
+A young man visits a philosopher in a thousand-year-old city to prove him wrong about his claim that the world is simple and anyone can be happy. Over five nights the philosopher explains the ideas of Alfred Adler, the Austrian psychologist who broke with Freud: the past does not decide your life, all problems are about other people, and freedom means being willing to be disliked. Ichiro Kishimi is a Japanese Adler scholar and Fumitake Koga is the writer who shaped their talks into a Socratic dialogue.
 
 ## Summary
 
@@ -28,7 +28,7 @@ On the third night comes the book's central tool, the separation of tasks. For a
 
 The fourth night introduces community feeling, the sense of belonging to others and caring about them. The philosopher says that people who worry constantly about how they look to others are, oddly, self-centred. He rejects both praise and rebuke, because both come from above and treat the other person as inferior. Instead he wants horizontal relationships, in which people are equals, and encouragement, such as a simple "thank you." A person feels worthwhile when they feel useful to others.
 
-The last night brings the pieces together. Self-acceptance means accepting what you cannot change and working on what you can. Confidence in others means trusting people unconditionally, even at the risk of being betrayed. Contribution to others means feeling you are of use, which Adler saw as the root of happiness. The youth asks whether he must do something special. The philosopher replies that he needs the courage to be normal. Life, he says, is not a line leading to a goal but a series of moments, like a dance, and each moment is complete in itself. The youth leaves, won over at last, as snow begins to fall.
+The last night brings the pieces together. Self-acceptance means accepting what you cannot change and working on what you can. Confidence in others means trusting people unconditionally, even at the risk of being betrayed. Contribution to others means feeling you are of use, which Adler saw as the root of happiness. The youth asks whether he must do something special. The philosopher replies that he needs the courage to be normal. Life, he says, is not a line leading to a goal but a series of moments, like a dance, and each moment is complete in itself. The youth leaves, won over at last.
 
 ## Key ideas
 

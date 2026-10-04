@@ -47,7 +47,7 @@ The final chapter covers the hardest talks, such as bad news or breaking off a r
 
 **Frame the conversation.** State the topic, your goal and ask for agreement before diving in. It gives both people the same map.
 
-**Curiosity beats defensiveness.** Asking what someone meant, and why they feel as they do, calms things far better than defending yourself.
+**Curiosity beats defensiveness.** Asking what someone meant, and what is behind their reaction, calms things far better than defending yourself.
 
 ## If you read one chapter
 

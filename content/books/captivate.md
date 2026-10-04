@@ -18,7 +18,7 @@ review: "done"
 
 ## Summary
 
-Van Edwards starts from her own discomfort at parties and networking events. She had tried to fix it with charm and chatter, and it had not worked. What changed things was treating people as puzzles to be curious about. She even took a week-long vow of silence, going to events and doing nothing but listen, and found she made better connections that way than by talking eagerly.
+Van Edwards starts from her own discomfort at parties and networking events. She had tried to fix it with charm and chatter, and it had not worked. What changed things was treating people as puzzles to be curious about. She even took a vow of silence, going to events and doing nothing but listen, and found she made better connections that way than by talking eagerly.
 
 Part One is the first five minutes. The first chapter says you do not have to be good at every kind of social event. Work out where you shine and where you struggle, and spend your energy there. At a party, she maps the room into zones. The entrance is a poor place to meet anyone because arrivals are busy getting their bearings. Hovering near the food or the bathrooms is a trap. The best spot is where people have a drink in hand and are ready to talk, such as just past the bar.
 

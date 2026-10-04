@@ -23,7 +23,7 @@ Ranjay Gulati, who teaches leadership at Harvard Business School, set out to lea
 
 ## Summary
 
-The book opens with a scene from Gulati's childhood. When he was fourteen, a man working for a property developer threatened his mother with a gun to make her sell her land. She slapped him and told him to leave. Afterwards she told her son that she had been scared, but being scared was no reason to do nothing. That, in short, is the book's definition of courage: taking action in the face of fear, usually for something that matters.
+The book opens with a scene from Gulati's childhood. His mother once had a frightening encounter with a property developer and a gun. Afterwards she told her son that she had been scared, but being scared was no reason to do nothing. That, in short, is the book's definition of courage: taking action in the face of fear, usually for something that matters.
 
 Gulati starts from the brain. Fear is our default response to uncertainty and loss of control, because caution kept our ancestors alive. Following Aristotle, he places courage between cowardice and recklessness. Real boldness is thoughtful. Frances Haugen spent many months deciding whether to blow the whistle on Facebook, while Captain Chesley Sullenberger had seconds to decide to land his plane on the Hudson River. Both were brave, but neither was careless.
 

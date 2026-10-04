@@ -38,7 +38,7 @@ The book ends with the first full Starship test flight in April 2023, which blew
 
 **The algorithm.** Musk's five rules, in order: question every requirement, delete any part or process you can, simplify what is left, speed it up, and only then automate. He says he has lost years doing them in the wrong order, like automating steps that should have been deleted.
 
-**Requirements have names.** Every rule should come with the name of the person who made it, not a department, so it can be questioned. Rules from smart people are the most dangerous, because nobody challenges them.
+**Requirements have names.** Every rule should come with the name of the person who made it, not a department, so it can be questioned. Musk warns that a rule from a clever person is the one least likely to be questioned.
 
 **Delete until it hurts.** If you don't end up adding back about ten percent of what you removed, you didn't remove enough.
 
@@ -54,4 +54,4 @@ The book ends with the first full Starship test flight in April 2023, which blew
 
 ## If you read one chapter
 
-Read the chapters on 2008, when three rocket failures, a fourth-launch success and a Christmas rescue of both companies show Musk's appetite for risk at its most extreme.
+Read the section on 2008, when three rocket failures, a fourth-launch success and a Christmas rescue of both companies show Musk's appetite for risk at its most extreme.

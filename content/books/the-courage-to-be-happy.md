@@ -17,7 +17,7 @@ review: "check"
 
 ## In short
 
-Three years after the first book, the young man comes back to the philosopher's study. He has quit his job at a university library to teach at his old middle school, tried to run his class on Adler's principles, and watched it fall apart, so he has come to announce that Adler is useless in the real world. Over one long night the philosopher answers him, and the book becomes a practical guide to Adler's psychology: respect, why praise and punishment backfire, and how independence leads to work, friendship and, finally, love.
+Three years after the first book, the young man comes back to the philosopher's study. He has quit his job at a university library to teach at a school, tried to run his class on Adler's principles, and watched it fall apart, so he has come to announce that Adler is useless in the real world. Over one long night the philosopher answers him, and the book becomes a practical guide to Adler's psychology: respect, why praise and punishment backfire, and how independence leads to work, friendship and, finally, love.
 
 ## Summary
 

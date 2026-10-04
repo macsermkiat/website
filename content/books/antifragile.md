@@ -13,7 +13,7 @@ review: "check"
 
 ## In short
 
-Some things break under stress, some things resist it, and some things actually improve because of it. Taleb coins the word "antifragile" for that third group, which includes muscles, evolution, restaurants in a busy street and good start-up economies. Since we cannot predict rare, large events, he argues, we should stop trying and instead arrange things so that surprises help us more than they hurt us.
+Some things break under stress, some things resist it, and some things actually improve because of it. Taleb coins the word "antifragile" for that third group, which includes muscles, evolution, the restaurant business and good start-up economies. Since we cannot predict rare, large events, he argues, we should stop trying and instead arrange things so that surprises help us more than they hurt us.
 
 ## Summary
 
