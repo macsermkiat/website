@@ -315,7 +315,7 @@ const results = await pipeline(args.roles, async (key) => {
   let pass = START, built = null, fixes = [], history = []
   if (START > 1) { built = { summary: `Pass ${START - 1} was done earlier. Read review/round-${ROUND}/${key}/NOTES.md for what was built, and the current files.` }; fixes = [`Read review/round-${ROUND}/${key}/JUDGES.md (the Opus and Fable judges) and review/round-${ROUND}/CODEX_JUDGE.md (the Codex judge, whole market), and fix everything that concerns your role. The files on disk may hold a partly finished earlier pass; continue from them.`] }
   while (pass < START + MAX_PASSES) {
-    built = await agent(buildPrompt(key, pass, built, fixes), { label: `${key} · pass ${pass}`, phase: 'Build', schema: BUILD_SCHEMA, effort: (args.builderEffort || {})[key] || 'high' })
+    built = await agent(buildPrompt(key, pass, built, fixes), { label: `${key} · pass ${pass}`, phase: 'Build', schema: BUILD_SCHEMA, effort: (args.builderEffort || {})[key] || 'high', ...((args.builderModel || {})[key] ? { model: args.builderModel[key] } : {}) })
     if (!built) { history.push({ pass, error: 'builder failed' }); break }
     const verdicts = (await parallel([
       () => agent(judgePrompt(key, built), { label: `judge opus · ${key} · ${pass}`, phase: 'Judge', schema: VERDICT_SCHEMA, effort: args.judgeEffort || 'high' }),

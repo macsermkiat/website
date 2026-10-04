@@ -17,7 +17,7 @@ def g_sausage(dark):
     (h px = its length), matching goods.sausage's loft. Browned skin with a sheen, diagonal
     char marks from the grate on two sides (turned once), blistered and darker tied ends."""
     def f(w, h, seed):
-        base = hexc("5a2610") if dark else hexc("7a3a18")
+        base = hexc("4a1e0c") if dark else hexc("72361a")
         t = Tex(w, h, base, 0.3)
         yy, xx = np.mgrid[0:h, 0:w].astype(float)
         brown = fbm(h, w, 22, seed)
@@ -122,7 +122,7 @@ def g_foam(w, h, seed):
         gloss = np.maximum(gloss, smooth(0.2, 0.7, bub) * k)
         # highlight: a small bright spot up-left of each larger bubble's centre
         hl = np.maximum(hl, smooth(0.35, 0.0, d1 / r) * k)
-    t.col = mix(t.col, np.array(hexc("d8c092")), rim * 0.55)
+    t.col = mix(t.col, np.array(hexc("d0b480")), rim * 0.7)
     t.col = mix(t.col, np.array(hexc("fffaf0")), hl * 0.5)
     thin = smooth(0.62, 0.82, fbm(h, w, 30, seed + 1))
     t.col = mix(t.col, np.array(hexc("e8c888")), thin * 0.35)

@@ -88,12 +88,13 @@ def gift_box(m, M, w, d, h, col, ribbon=C("b0282a")):
 
 # ------------------------------------------------------------------ Lebkuchen
 def lebkuchen_heart(m, M, size, k):
-    poly = heart_poly(size, 18 if size >= 0.14 and not vlib.lite() else 12)
+    poly = heart_poly(size, 18 if size >= 0.14 and not vlib.lite() else (12 if not vlib.lite() else 10))
     reg = f"lebkuchen_{k % 6}"
     dough = vlib.R(reg, sub=(0.0, 0.0, 0.08, 0.08))
-    # heart polygon spans x +-size/2, y from -size*0.53 to +size*0.36 roughly; face UVs by bbox
+    # heart polygon spans x +-size/2, y from -size*0.53 to +size*0.36 roughly; face UVs by bbox. Lite drops
+    # the back face (every heart faces the visitor: hanging, leaning on the board or lying in the basket)
     m.extrude(poly, 0.012, M, reg, dough, WHITE, "glaze", bevel=0.0 if (vlib.lite() or size < 0.17) else 0.003,
-              back_region=dough)
+              back_region=dough, back=not vlib.lite())
 
 
 def lebkuchen():
@@ -526,7 +527,7 @@ def schmuck():
         Mt = T(tx, -0.02, 0)
         m.box((0.44, 0.3, 0.035), Mt @ T(0, 0, 0.0175), "kraft", C("d8c8a8"), skip=("nz",))
         for k in range(12):
-            if vlib.lite() and (k + k // 4) % 2:
+            if vlib.lite() and k not in (0, 3, 5, 6, 9):
                 continue
             cx, cy = -0.165 + (k % 4) * 0.11, -0.1 + (k // 4) * 0.1
             r = 0.035
