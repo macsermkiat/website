@@ -96,6 +96,38 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     const T = N.town;
     shading.setTownWash(new THREE.Color().setRGB(...T.color), T.intensity, T.r0, T.r1, T.height, T.facing);
   }
+  // round 4: figures get a highlight shoulder and a close-up fill (shading.js, LIGHTING_FIGURE)
+  if (N.figure) {
+    const F = N.figure;
+    shading.setFigure(new THREE.Color().setRGB(...F.fill.color), F.fill.intensity, F.fill.near, F.fill.far, F.knee, F.range, F.spec);
+  }
+  // A figure is a skinned mesh under the crowd's group (crowd.js names it `crowd`), or any material
+  // the crowd lifted (userData.crowdLift) or flagged userData.figure. The crowd arrives after the
+  // lighting, and swaps figures as it loads, so this runs again every couple of seconds; each
+  // material is marked once (a define, so three compiles the figure variant once per material kind).
+  const figureMats = new Set();
+  let lastMark = -1;
+  function markFigures() {
+    if (!N.figure) return 0;
+    let n = 0;
+    const mark = (m) => {
+      if (!m || figureMats.has(m) || !m.isMaterial || !('roughness' in m || 'shininess' in m)) return;
+      m.defines = { ...(m.defines || {}), LIGHTING_FIGURE: '' };
+      m.needsUpdate = true;
+      figureMats.add(m);
+      n++;
+    };
+    const visit = (o, inCrowd) => {
+      if (o.isMesh) {
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of mats) if ((inCrowd && o.isSkinnedMesh) || m?.userData?.crowdLift || m?.userData?.figure || o.userData?.figure) mark(m);
+      }
+      const c = inCrowd || o.name === 'crowd';
+      for (const ch of o.children) visit(ch, c);
+    };
+    visit(scene, false);
+    return n;
+  }
 
   // ---------- sky ----------
   const sky = createSky(N, { clouds: P.clouds });
@@ -185,6 +217,78 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
 
   // ---------- emissives, bulb-string glows and warm lights ----------
   const glowOf = new Map(); // bulbs_ mesh -> its glows
+  // round 4: a wash under a bulb string that no light_ of its model reaches (the Bücherstand's rack
+  // canopies), toward the model's front, so the boards the canopy shadows are lit by its bulbs
+  const _cw = new THREE.Vector3(), _cq = new THREE.Quaternion();
+  function canopyGlows(mesh, strings) {
+    const C = N.canopy;
+    if (!C || !C.intensity || !strings.length || mesh.isInstancedMesh) return [];
+    const pos = mesh.geometry?.attributes?.position;
+    if (!pos) return [];
+    // the model: the outermost ancestor under the scene (a placed holder, or the bench's stall)
+    let model = mesh;
+    while (model.parent && model.parent !== scene && !model.parent.isScene) model = model.parent;
+    const lamps = [];
+    model.traverse((x) => { if (/^light_/.test(x.name)) lamps.push(x.getWorldPosition(new THREE.Vector3())); });
+    if (!lamps.length) return [];
+    model.getWorldQuaternion(_cq);
+    const front = new THREE.Vector3(0, 0, 1).applyQuaternion(_cq).setY(0).normalize();
+    // bulbStrings joins strings up to a cell apart in height, so a rack canopy's string 0.3 m under
+    // the eave string becomes part of it: cluster the bulbs again, finer in height (0.1 m cells, so
+    // strings more than ~0.2 m apart in height stay apart), and keep the clusters that hang lower than
+    // the model's top string, are at least `minLength` m long and that no light_ reaches
+    mesh.updateWorldMatrix(true, false);
+    const cells = new Map(), v = new THREE.Vector3();
+    const step = Math.max(1, Math.floor(pos.count / 4000));
+    let topY = -Infinity;
+    for (let i = 0; i < pos.count; i += step) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
+      topY = Math.max(topY, v.y);
+      const k = [Math.floor(v.x / 0.2), Math.floor(v.y / 0.1), Math.floor(v.z / 0.2)];
+      const key = k.join(',');
+      let c = cells.get(key);
+      if (!c) cells.set(key, (c = { k, p: new THREE.Vector3(), n: 0 }));
+      c.p.add(v); c.n++;
+    }
+    const seen = new Set(), comps = [];
+    for (const [key0, c0] of cells) {
+      if (seen.has(key0)) continue;
+      seen.add(key0);
+      const comp = [], stack = [c0];
+      while (stack.length) {
+        const c = stack.pop();
+        comp.push(c);
+        for (let dx = -2; dx <= 2; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -2; dz <= 2; dz++) {
+          const k = `${c.k[0] + dx},${c.k[1] + dy},${c.k[2] + dz}`;
+          if (cells.has(k) && !seen.has(k)) { seen.add(k); stack.push(cells.get(k)); }
+        }
+      }
+      comps.push(comp.map((c) => c.p.clone().divideScalar(c.n)));
+    }
+    const out = [];
+    const base = model.getWorldPosition(new THREE.Vector3()).y;
+    for (const pts of comps) {
+      // the two cells farthest apart in plan are the string's ends
+      let a = pts[0], b = pts[0], best = 0;
+      for (const p of pts) for (const q of pts) { const d = Math.hypot(p.x - q.x, p.z - q.z); if (d > best) { best = d; a = p; b = q; } }
+      const mid = pts.reduce((m, p) => m.add(p), new THREE.Vector3()).divideScalar(pts.length);
+      if (best < C.minLength || mid.y > topY - C.below) continue;
+      const away = Math.min(...lamps.map((p) => Math.hypot(p.x - mid.x, p.z - mid.z)));
+      if (away < C.minAway) continue;
+      // across the string in plan, on the model's front side
+      const along = new THREE.Vector3().subVectors(b, a).setY(0);
+      const n = along.lengthSq() > 1e-4 ? new THREE.Vector3(-along.z, 0, along.x).normalize() : front.clone();
+      if (n.dot(front) < 0) n.negate();
+      const off = n.multiplyScalar(C.out).add(new THREE.Vector3(0, -C.down, 0));
+      const y = mid.y;
+      out.push(shading.add({
+        a: a.clone().setY(y).add(off), b: b.clone().setY(y).add(off), color: C.color, intensity: C.intensity, reach: C.reach,
+        oneSided: true, floor: base + C.floor, tag: 'canopy', priority: 1,
+      }));
+    }
+    if (out.length) console.info(`[lighting] ${out.length} canopy wash${out.length > 1 ? 'es' : ''} under the bulb strings of ${model.name || 'a model'}: ${out.map((e) => `${e.a.toArray().map((x) => x.toFixed(2))}..${e.b.toArray().map((x) => x.toFixed(2))}`).join(' | ')}`);
+    return out;
+  }
   function addBulbGlows(root) {
     const G = N.glow.bulbs;
     root.traverse((o) => {
@@ -197,7 +301,9 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
       // strings on stalls only: short and level (the wheel, the carousel crown, the tree and the
       // long festoons across the square are skipped: they move, or hang far from anything to light)
       const strings = bulbStrings(o).filter((st) => st.a.distanceTo(st.b) <= G.maxLength && st.height <= G.maxHeight);
-      glowOf.set(o, strings.map((st) => shading.add({ a: st.a, b: st.b, color, intensity: G.intensity, reach: G.reach, tag: 'bulbs' })));
+      const entries = strings.map((st) => shading.add({ a: st.a, b: st.b, color, intensity: G.intensity, reach: G.reach, tag: 'bulbs' }));
+      entries.push(...canopyGlows(o, strings));
+      glowOf.set(o, entries);
     });
   }
   const emissives = tuneEmissives(scene, N, { lite });
@@ -509,6 +615,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     if (snowSettling && snowMix === snowTarget) { snowSettling = false; refreshEnvironment(N.env.settle); }
     snow.update({ t, windOffset, fog: scene.fog, opacity: k });
 
+    if (frame === 2 || wall - lastMark > 2) { lastMark = wall; markFigures(); }
     if (P.shadows && moonShadowEvery > 1 && frame % moonShadowEvery === 0) moonLight.shadow.needsUpdate = true;
 
     // the entered place gets the lights (unless the engine sets it with focusPlace)
@@ -568,6 +675,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     synthRT.dispose();
     updater?.dispose();
     probes.forEach((p) => p.dispose());
+    figureMats.forEach((m) => { if (m.defines) { delete m.defines.LIGHTING_FIGURE; m.needsUpdate = true; } });
     shading.restore();
     bloom.dispose();
     grade.dispose();
@@ -601,6 +709,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     get focus() { return focusId; },
     get focusMoves() { return [...moved.keys()].map((L) => ({ light: L.name, place: L.userData.spot?.id, from: moved.get(L).id })); },
     tune,
+    markFigures,
     captureEnvironment,
     refreshEnvironment,
     captureProbes,

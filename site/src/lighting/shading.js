@@ -41,8 +41,9 @@ import * as THREE from 'three';
 const LIT = ['standard', 'physical', 'lambert', 'phong', 'toon'];
 const KEYS = ['lights_pars_begin', 'lights_fragment_begin', 'lights_fragment_end', 'lights_physical_pars_fragment', 'shadowmap_pars_fragment'];
 // vec4s: [glowCount, rimStrength, rimPower, clipCount], [rimDir, darkLo], [rimColor, darkHi],
-// [town wash colour × intensity, -], [wash inner radius, outer radius, height falloff, facing share]
-const HEADER = 5;
+// [town wash colour × intensity, -], [wash inner radius, outer radius, height falloff, facing share],
+// round 4: [figure fill colour × intensity, fill near], [fill far, highlight knee, highlight range, cloth specular]
+const HEADER = 7;
 // vec4s per clip: [light world pos, fade], [box centre, cos yaw], [half size, sin yaw],
 // [front extra, front cut, roof slope, ridge z] (box frame; the roof is a tent whose ridge is the box top)
 const CLIP = 4;
@@ -54,7 +55,7 @@ export function installShading({ maxGlows = 16, maxClips = 4, minRoughness = 0.3
   const CLIP0 = HEADER + maxGlows * 3;
   const size = CLIP0 + Math.max(1, maxClips) * CLIP;
   const data = new Float32Array(size * 4);
-  data.set([0, 0, 3, 0, 0, 1, 0, 0.07, 0, 0, 0, 0.16, 0, 0, 0, 0, 1e4, 1e4 + 1, 1, 0]); // no rim or town wash until set
+  data.set([0, 0, 3, 0, 0, 1, 0, 0.07, 0, 0, 0, 0.16, 0, 0, 0, 0, 1e4, 1e4 + 1, 1, 0, 0, 0, 0, 4, 8, 1e4, 1, 1]); // no rim, town wash or figure fill until set
 
   THREE.ShaderChunk.lights_pars_begin = saved.lights_pars_begin + /* glsl */ `
 uniform vec4 lightingGlow[ ${size} ];
@@ -164,6 +165,40 @@ float lightingClip( vec3 lightView, vec3 posView ) {
   #else
     reflectedLight.directDiffuse += glowIrr * BRDF_Lambert( material.diffuseColor );
   #endif
+  // round 4: figures (the crowd and the vendors; materials marked LIGHTING_FIGURE by the module).
+  // A vendor stands right under his stall's interior lamp, 0.7 m over his head: the light hits his
+  // shoulders, sleeves and a pale scarf from above at 30-50x what it gives the back wall per unit of
+  // albedo, so light cloth blew out to white while his face, vertical and turned away from the lamp,
+  // stayed a dark smudge. Two terms, both only on figures:
+  //  - a highlight shoulder: the direct light on a figure is linear up to the knee (radiance, linear)
+  //    and rolls off softly above it, hue kept, so a white sleeve under the lamp reads as lit cloth;
+  //    the cloth's specular is scaled too (wool has no sheen to speak of);
+  //  - a soft warm fill from the viewer's side (the light the counter, the cobbles and the crowd
+  //    bounce back at a figure's face), fading in between fill far and fill near metres from the
+  //    camera, so close-ups read and the home view's crowd is unchanged
+  #ifdef LIGHTING_FIGURE
+  {
+    vec4 fa = lightingGlow[ 5 ];
+    vec4 fb = lightingGlow[ 6 ];
+    reflectedLight.directSpecular *= fb.w;
+    vec3 dsum = reflectedLight.directDiffuse + reflectedLight.directSpecular;
+    float lum = dot( dsum, vec3( 0.2126, 0.7152, 0.0722 ) );
+    if ( lum > fb.y ) {
+      float over = lum - fb.y;
+      float k = ( fb.y + over / ( 1.0 + over / fb.z ) ) / lum;
+      reflectedLight.directDiffuse *= k;
+      reflectedLight.directSpecular *= k;
+    }
+    float near = 1.0 - smoothstep( fa.w, fb.x, length( geometryPosition ) );
+    float facing = clamp( dot( geometryNormal, geometryViewDir ), 0.0, 1.0 );
+    vec3 fillIrr = fa.rgb * ( near * ( 0.25 + 0.75 * facing ) );
+    #if defined( STANDARD )
+      reflectedLight.directDiffuse += fillIrr * BRDF_Lambert( material.diffuseContribution );
+    #else
+      reflectedLight.directDiffuse += fillIrr * BRDF_Lambert( material.diffuseColor );
+    #endif
+  }
+  #endif
 }
 ` + saved.lights_fragment_end;
 
@@ -269,6 +304,10 @@ float lightingClip( vec3 lightView, vec3 posView ) {
       data.set([data[0], strength, power, data[3], d.x, d.y, d.z, dark[0], color.r, color.g, color.b, dark[1]], 0);
     },
     setRimStrength(s) { data[1] = s; },
+    /** Round 4, figures: fill colour (linear Color) × intensity, fill near/far (m from the camera), highlight knee and range (linear radiance), cloth specular share. */
+    setFigure(color, intensity, near, far, knee, range, spec) {
+      data.set([color.r * intensity, color.g * intensity, color.b * intensity, near, far, knee, range, spec], 20);
+    },
     /** The town wash: colour (linear Color) × intensity, from radius r0 (0) to r1 (full), height falloff, facing share. */
     setTownWash(color, intensity, r0, r1, height, facing) {
       data.set([color.r * intensity, color.g * intensity, color.b * intensity, 0, r0, r1, height, facing], 12);

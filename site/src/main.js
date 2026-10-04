@@ -15,6 +15,7 @@ import { createActions } from './actions/index.js';
 import { bandPositions } from './actions/band.js';
 import { createCameraRig } from './interaction/camera.js';
 import { createPicking } from './interaction/picking.js';
+import { itemFrame } from './interaction/itemFrame.js';
 import { bindKeyboard, watchMotion } from './interaction/keyboard.js';
 import { createPanel, buildPlaceNav } from './ui/panel.js';
 import { createReader, libraryBook } from './ui/reading.js';
@@ -252,6 +253,9 @@ async function boot() {
   function focusItem(item) {
     const at = actions.items.focusOf(item);
     if (!at || rig.riding) return;
+    // the Bierstand: the tap, the vendor and a full pint in one picture (interaction/itemFrame.js)
+    const fr = itemFrame(item, { items: actions.items, people: () => crowd.people() });
+    if (fr) { frameRegion(fr); return; }
     const dir = camera.position.clone().sub(at);
     const dist = dir.length();
     if (dist < ITEM_NEAR * 1.15) return; // already close: no flight for a neighbour
@@ -592,6 +596,8 @@ async function boot() {
     governor: () => governor?.state || null,
     keyLight: () => key?.state() || null,
     crowd: () => crowd.stats(),
+    /** The tenor's two places (engine/instruments.js): held while the band plays, on its stand while it rests. */
+    saxStand: () => { const st = scene.getObjectByName('instrument_sax_stand'), h = scene.getObjectByName('instrument_sax'); return { stand: !!st, standVisible: !!st?.visible, heldVisible: !!h?.visible }; },
     hiddenPeople: () => crowd.hiddenIds(),
     people: () => crowd.people(),
     sceneStats: () => sceneStats(scene),

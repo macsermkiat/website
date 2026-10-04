@@ -1,0 +1,2 @@
+bench_books_off: /home/claude/website/review/round-4/lighting/raw/bench_books_off.png (138.8 s) {"calls":1,"triangles":1}
+bench_books_on: /home/claude/website/review/round-4/lighting/raw/bench_books_on.png (205.0 s) {"calls":1,"triangles":1}

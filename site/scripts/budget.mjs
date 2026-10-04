@@ -92,6 +92,8 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
   const places = layout?.places || [];
   const kindOf = (e) => (e.kind === 'section' ? 'section' : e.kind === 'deco' ? 'deco' : /bandstand/.test(e.id) ? 'bandstand' : e.kind === 'landmark' ? 'ride' : /square/.test(e.id) ? 'square' : /town|church/.test(e.id) ? 'town' : null);
   // the engine opens both markets without the rides and the deco stalls (main.js: defer)
+  // drawn instead of another file, never with it: { file: the file it replaces }
+  const ALT = { 'instr_sax_stand.glb': 'instr_sax.glb' };
   const deferred = (e) => e.kind === 'deco' || /riesenrad|karussell/.test(e.id);
   const liteOf = (f) => { const l = f.replace(/\.glb$/, '.lite.glb'); return exists(l) ? l : f; };
 
@@ -102,6 +104,9 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
     for (const s of props?.sets || []) if (s.stall === e.id) files.push(s.model);
     // BUILD.md budgets the "Bandstand with instruments"; its four players are person variants (5k each), charged below
     if (/bandstand/.test(e.id)) for (const k of ['sax', 'piano', 'bass', 'drums']) files.push(`instr_${k}.glb`);
+    // the sax on its stand (band on a break) is shown instead of the held sax, never with it: its bytes count,
+    // and its triangles only where they exceed the held sax's (ALT)
+    if (/bandstand/.test(e.id) && exists('instr_sax_stand.glb')) files.push('instr_sax_stand.glb');
     const f = files.filter(Boolean);
     // a props set may name its own lite file (props.json "lite"); otherwise <model>.lite.glb when it exists
     const lite = f.map((x) => props?.sets?.find((s) => s.model === x && s.lite)?.lite || liteOf(x));
@@ -135,7 +140,9 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
       const m = filesOf(models, f);
       missing.push(...m.missing);
       if (!m.glb) continue;
-      tris += m.tris;
+      const alt = ALT[f.replace(/\.lite\.glb$/, '.glb')];
+      if (alt) { const lf = /\.lite\.glb$/.test(f) ? liteOf(alt) : alt; tris += Math.max(0, m.tris - (files.includes(lf) ? filesOf(models, lf).tris : 0)); }
+      else tris += m.tris;
       if (!seen.has(m.glb.hash)) { seen.add(m.glb.hash); bytes += m.glb.size; }
       for (const t of m.textures) {
         if (seen.has(t.hash)) continue;

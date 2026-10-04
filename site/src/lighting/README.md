@@ -157,6 +157,19 @@ The Codex judge asked that the lite light allocation should favour the stall or 
 
 BUILD.md allows two `light_` per section stall. The Bücherstand's counter prop brings a third (`light_lamp`). `placeWarmLights` now gives any model at most `warm.perModel` (2) real lights. A stall's further `light_` becomes a small two-sided glow (`glow.lamp`: intensity 2.5, reach 1.3 m), with no ground pool.
 
+### Figures in close-ups (round 4)
+
+The whole-market judge found the Bier vendor's white sleeves blown out to glare and the Glühwein vendor's face a dark smudge under a white scarf. The cause is where a vendor stands: at `slot_vendor`, right under the stall's interior lamp (`light_0`, 0.7 m over his head). Per unit of albedo, his shoulders, sleeves and a pale scarf (albedo 0.79, 0.69, 0.53) took 30 to 50 times the light the back wall gets, so they rendered at a linear radiance of about 13 and AgX turned them white. His face is vertical and turned away from the lamp, so it got grazing light only.
+
+Every material of a figure gets the define `LIGHTING_FIGURE`. A figure is a skinned mesh under the crowd's `crowd` group, or a material the crowd lifted (`userData.crowdLift`) or flagged `userData.figure`. `markFigures()` runs every 2 s of wall time, because the crowd loads after the lighting. With the define, `shading.js` adds two terms to the figure's shader. Nothing else in the scene changes.
+
+- **Highlight shoulder** (`figure.knee` 0.9, `figure.range` 1.5): the direct light on a figure is linear up to the knee (linear radiance, by luminance, hue kept) and rolls off softly toward knee + range above it. A sleeve under the lamp now reads as lit cloth, about 2.2 in place of 13, and stays the brightest thing on the figure. The direct specular on cloth is scaled by `figure.spec` (0.35).
+- **Close-up fill** (`figure.fill`: warm `[1, .72, .5]`, irradiance 1.7): a soft light from the viewer's side (`0.25 + 0.75 × N·V`). It stands for the light that the counter, the cobbles and the crowd bounce back at a face. It is full within 4.5 m of the camera and gone past 9 m, so faces read in close-ups and the crowd in the home view is unchanged.
+
+### Bücherstand rack canopies (round 4)
+
+The Bücherstand's side racks hang their own bulb strings from small canopies. The canopy shadowed the upper boards from the stall's front light, and the canopy bulbs (two-sided glows, 0.18 with 0.9 m reach, tuned for the Glühwein lambrequin) lit almost nothing. A bulb string whose middle is more than `canopy.minAway` (1.6 m) in plan from every `light_` empty of its model now gets a **canopy wash**. That is a one-sided segment glow along the string, `canopy.down` (0.35 m) lower and `canopy.out` (0.4 m) toward the model's front, with intensity 4.5, reach 1.7 m and a floor 0.25 m above the base. It lights the board fronts and book spines under the canopy from where the bulbs hang. It is a glow, not a third three.js light, so full and lite get the same light and lite keeps its four real lights. Strings over a lit stall front (the Glühwein lambrequin, the main Bücherstand eave) are within 1.6 m of a `light_` and are left alone. The washes take slot priority 1, like the stall interiors, so the racks are lit from the home view too. The market has 2 of them (`[lighting] 2 canopy washes under the bulb strings of …`).
+
 ### Local glows (`shading.js`)
 
 three.js evaluates every light for every pixel, so each extra light costs across the whole frame. The glows are a cheaper, diffuse-only light for the short-reach jobs:
@@ -244,6 +257,7 @@ URL options:
 | `?cam=x,y,z,tx,ty,tz` | Any camera (close-ups for checking artifacts) |
 | `?set=moon.lightIntensity:0.2,bloom.strength:0` | Override any value in `NIGHT` |
 | `?shot=1` | Hide the HUD |
+| `?figure=/models/people_vendor_bier.glb` | A person at the stall's `slot_vendor`, in a `crowd` group as in the market (round 4: vendors in close-ups) |
 
 Tools (software GL on this machine):
 

@@ -130,6 +130,8 @@ export function createBandActions({ market, audio, say, lite, togglePlay }) {
           to.reset().play();
           from.crossFadeTo(to, 0.6, false);
         }
+        // the sax on its stand while the band rests, in the player's hands while it plays
+        if (m.swap) { m.swap.held.visible = m.playing; m.swap.stand.visible = !m.playing; }
         if (!still) m.mixer.update(dt);
       }
       spots.forEach((sp, i) => { sp.s.intensity = sp.base * (0.85 + (i ? L.sax : L.bass) * 0.35 + (featured ? 0.2 : 0)); });

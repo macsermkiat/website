@@ -34,6 +34,20 @@ export async function placeInstruments(placed, scanNodes, { lite, manager, warn 
         person.name = `musician_${k}`;
         person.traverse((o) => { if (o.isMesh) { o.castShadow = !lite; o.receiveShadow = false; } });
         slot.add(person);
+        // the band on a break: the tenor rests on its floor stand (instr_sax_stand, same origin) while the
+        // player rests, and goes back into his hands when the band plays (actions/band.js). Only with the
+        // organizer's player: the stand-in figure always holds the sax.
+        if (k === 'sax' && person.userData.musician?.play && person.userData.musician?.rest && modelExists('instr_sax_stand.glb')) {
+          const sf = (lite && liteVariant('instr_sax_stand.glb')) || 'instr_sax_stand.glb';
+          try {
+            const stand = await loadGlb(sf, manager);
+            stand.name = 'instrument_sax_stand';
+            slot.add(stand);
+            obj.userData.live = stand.userData.live = true; // they toggle: never merged into the static mesh
+            stand.visible = false;
+            person.userData.musician.swap = { held: obj, stand };
+          } catch (e) { warn(`${p.entry.id}: could not load ${sf} (${e?.message || e}).`); }
+        }
         n++;
       } catch (e) {
         warn(`${p.entry.id}: could not load ${file} (${e?.message || e}).`);

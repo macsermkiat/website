@@ -156,7 +156,8 @@ const _v = new THREE.Vector3();
 // cam_target. The Bücherstand is about its books, so its view comes in closer to the shelves.
 // the Bücherstand with its six category sections (round 3): pull back a little from the carpenter's cam_view so the side racks
 // stand clear of the panel (was 0.8 for the small round-1 stall)
-export const VIEW_NUDGE = { books: { dolly: 1.12 } };
+// the Bierstand (round 4): back a little so the tap tower to the right of the vendor clears the panel too
+export const VIEW_NUDGE = { books: { dolly: 1.12 }, bier: { dolly: 1.2 } };
 
 export function viewFor(place) {
   const n = place.nodes;

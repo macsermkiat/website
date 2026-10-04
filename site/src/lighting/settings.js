@@ -132,6 +132,26 @@ export const NIGHT = {
   // street lamps below. Irradiance, linear; 0 turns it off.
   town: { color: [1.0, 0.74, 0.5], intensity: 0.22, r0: 36, r1: 46, height: 9, facing: 0.7 },
 
+  // Round 4 (whole-market judge: "the Bier vendor's white sleeves blow out to glare ... the Glühwein
+  // vendor's face is a dark smudge under a white-blown scarf"). Figures only: the crowd's and the
+  // vendors' materials (SkinnedMesh under the `crowd` group, or the crowd's lifted materials).
+  // knee/range: the direct light on a figure (linear radiance) is linear up to `knee` and rolls off
+  // above it toward knee + range, hue kept, so a white sleeve 0.7 m under a stall's interior lamp
+  // reads as lit cloth, not as glare (it was ~13; the knee keeps it under ~2.4). `spec`: share of the
+  // direct specular kept on cloth. fill: a soft warm fill from the viewer's side (the counter, cobbles
+  // and crowd bouncing the stall light back at a face), `intensity` in irradiance, full within `near`
+  // m of the camera and gone past `far` m, so close-ups read and the home view's crowd is unchanged.
+  figure: { knee: 0.9, range: 1.5, spec: 0.35, fill: { color: [1.0, 0.72, 0.5], intensity: 1.7, near: 4.5, far: 9 } },
+  // Round 4: the Bücherstand's side racks hang their own bulb strings from little canopies, and the
+  // canopy shadowed the upper boards from the stall's front light (carpenter judges, round 3). A bulb
+  // string that hangs at least `below` m under its model's top string, is at least `minLength` m long
+  // and that no light_ of its model reaches (its middle more than `minAway` m from every light_ empty
+  // in plan) gets a one-sided wash glow under it: `down` m lower and `out` m toward the model's
+  // front, along the string, which lights the board fronts and book spines under the canopy. It is the
+  // light those bulbs would throw; strings over a lit stall front (the Glühwein lambrequin, calibrated
+  // against Cycles) are left alone.
+  canopy: { intensity: 4.5, reach: 1.7, down: 0.35, out: 0.4, minAway: 1.6, minLength: 0.6, below: 0.15, floor: 0.25, color: [1.0, 0.62, 0.34] },
+
   // faint cool rim on edges that face the moon, for figures and posts in front of the stalls.
   // It is added as radiance, not multiplied by albedo (the crowd's coats are albedo 0.01-0.07), and
   // only on dark materials: it fades out between albedo `dark[0]` and `dark[1]`, so wood walls stay
