@@ -535,7 +535,7 @@ def material(key):
         return m
     names = {"atlas": "vendor_atlas", "glaze": "vendor_glaze", "glass": "vendor_glass", "liquid": "vendor_liquid",
              "beer": "vendor_beer", "coal_glow": "coal_glow", "flame": "flame", "lamp": "lamp_glow",
-             "grill_iron": "grill_iron", "lamp_shade": "vendor_lamp_shade", "foam": "vendor_foam",
+             "grill_iron": "grill_iron", "lamp_shade": "vendor_lamp_shade", "foam": "vendor_foam", "glass_pint": "vendor_glass_pint",
              "bulb_warm": "bulb_warm"}
     m = bpy.data.materials.new(names[key])
     m.use_nodes = True
@@ -563,12 +563,22 @@ def material(key):
         b.inputs["Coat Weight"].default_value = 1.0
         b.inputs["Coat Roughness"].default_value = 0.04
         b.inputs["Coat IOR"].default_value = 1.5
-    elif key == "glass":
+    elif key in ("glass", "glass_pint"):
         _atlas_nodes(m, color=False, rm=False, normal=True, normal_strength=0.6)
         b.inputs["Roughness"].default_value = 0.03
         b.inputs["IOR"].default_value = 1.5
         if lite():
-            _blend(m, 0.28)
+            # round 4: the full pints on the counter get their own lite glass. The eye looks at the beer
+            # through two walls (outer and inner surface); at 0.28 each, a white-lit diffuse shell veiled
+            # about half the beer and it read grey-beige in the engine. Real glass has next to no diffuse,
+            # so this shell is dark grey (0.2) at 0.15: its highlights stay, the beer keeps its colour.
+            # Bottles, jars and the clean glasses keep 0.28. (Not named *beer*: the engine finds a glass's
+            # beer by /beer|lager|ale/ in the material name.)
+            _blend(m, 0.15 if key == "glass_pint" else 0.28)
+            if key == "glass_pint":
+                for nd in m.node_tree.nodes:
+                    if nd.type == 'MIX' and nd.data_type == 'RGBA':
+                        nd.inputs[6].default_value = (0.2, 0.2, 0.2, 1.0)
             b.inputs["Roughness"].default_value = 0.08
         else:
             b.inputs["Transmission Weight"].default_value = 1.0
@@ -577,14 +587,12 @@ def material(key):
         # transmissive glass shows through, so a transmissive beer vanished behind the glass wall (round 3
         # browser: the pints read as empty). The glass stays transmissive and now shows the beer; its depth
         # comes from the per-vertex gradient goods.beer_fill paints (deep amber foot, pale gold under the
-        # head) and a clear coat for the wet shine. The Cycles previews give it real transmission instead
-        # (vstage.beer_preview), which only the offline renderer can show through a glass wall.
+        # head). No clear coat: exported as KHR_materials_clearcoat it gave the beer a second, white mirror
+        # of the moonlit sky in the browser and washed it to a pale pink-beige. The Cycles previews give it
+        # real transmission and the coat (vstage.beer_preview), which only the offline renderer shows well.
         _vcol_mult(m.node_tree, (1.0, 1.0, 1.0), b)
         b.inputs["Roughness"].default_value = 0.06
         b.inputs["IOR"].default_value = 1.33
-        for k, v in (("Coat Weight", 0.4), ("Coat Roughness", 0.03)):
-            if k in b.inputs:
-                b.inputs[k].default_value = v
     elif key == "liquid":
         # a little roughness so a wide surface (the kettle) does not mirror the copper walls and read as empty
         _vcol_mult(m.node_tree, (1.0, 1.0, 1.0), b)

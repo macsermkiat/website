@@ -99,7 +99,8 @@ def counter():
         foam = s.node(f"foam_{i}", (0, 0, 0), parent=f"act_glass_{i}")
         rz = rng.uniform(-math.pi, math.pi) if kind == "mass" else 0
         M = T(0, 0, 0, rz=rz)
-        glass = {"mass": G.mass, "willi": G.willi, "weizen": G.weizen}[kind](g, M)
+        # round 4: the full glasses on the counter wear vendor_glass_pint, a darker, fainter shell in lite (vlib)
+        glass = {"mass": G.mass, "willi": G.willi, "weizen": G.weizen}[kind](g, M, mat="glass_pint")
         level = glass[1] - {"mass": 0.018, "willi": 0.016, "weizen": 0.03}[kind] - rng.uniform(0, 0.004)
         # foam runs down the side facing the visitor on every other glass (angle in the glass's own frame)
         spill = (-math.pi / 2 + rng.uniform(-0.7, 0.7) - rz) if i % 2 == 0 else 0

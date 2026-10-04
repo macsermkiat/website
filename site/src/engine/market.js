@@ -146,16 +146,20 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
 
   integrate(await load(now, onProgress));
 
-  let pending = null;
+  let pending = null, laterLoaded;
+  const laterDone = new Promise((r) => (laterLoaded = r));
   /** Load what `defer` held back. Resolves to { placed, spots, snow, bulbs } for the new entries. */
   market.loadDeferred = () => {
-    pending ||= later.length ? load(later).then(integrate) : Promise.resolve({ placed: [], spots: [], snow: [], bulbs: [] });
+    pending ||= (later.length ? load(later).then(integrate) : Promise.resolve({ placed: [], spots: [], snow: [], bulbs: [] })).then((r) => { laterLoaded(); return r; });
     return pending;
   };
-  /** Resolves once a place exists (a deferred ride may still be on its way). */
-  market.whenPlace = async (id) => {
+  /**
+   * Resolves once a place exists. A deferred ride arrives when the deferred part loads (after the first frame);
+   * waiting for it does not start that load early unless `load` is set (a visitor asking for the ride now).
+   */
+  market.whenPlace = async (id, { load: now = false } = {}) => {
     if (market.places[id]) return market.places[id];
-    if (later.some((e) => e.place === id)) await market.loadDeferred();
+    if (later.some((e) => e.place === id)) await (now ? market.loadDeferred() : laterDone);
     return market.places[id] || null;
   };
   return market;

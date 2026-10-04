@@ -240,7 +240,7 @@ def shot(cam, top, out_jpg, samples=128, res=(1920, 1080), png_name=None):
 def beer_preview():
     """Preview only (round 4): the beer is opaque in the glb, because a three.js transmissive glass cannot
     show a transmissive liquid behind it. Cycles can, so the previews let a part of the light through the
-    column (Transmission 0.6): the lit golden body the browser shows, with the depth and the refracted
+    column (Transmission 0.6, with a clear coat for the wet shine): the lit golden body the browser shows, with the depth and the refracted
     counter of a clear lager behind it. Full transmission went dark olive here (the column refracts the
     unlit wall behind it and the stall has no back light); round 3's 0.65 on an orange base read as opaque
     orange. The meshes it is on stop casting shadows with the glass (glass_no_shadow). Nothing exported
@@ -249,7 +249,7 @@ def beer_preview():
     if not mt or mt.get("preview_clear"):
         return
     b = mt.node_tree.nodes.get("Principled BSDF")
-    for k, v in (("Transmission Weight", 0.6), ("Roughness", 0.03)):
+    for k, v in (("Transmission Weight", 0.6), ("Roughness", 0.03), ("Coat Weight", 0.4), ("Coat Roughness", 0.03)):
         if k in b.inputs:
             b.inputs[k].default_value = v
     mt["preview_clear"] = True

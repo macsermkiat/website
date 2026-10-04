@@ -248,7 +248,7 @@ def twine(m, pts, r=0.0022):
 
 
 # ------------------------------------------------------------------ beer glasses
-def willi(m, M, glass_col=C("eef4f0"), n=None, lo=7):
+def willi(m, M, glass_col=C("eef4f0"), n=None, lo=7, mat="glass"):
     """0.5 l Willi-Becher, 20.5 cm: 2.5 mm walls, a rounded rim and a thick base. Returns
     (inner profile, rim z, outer rim radius)."""
     M = M or Matrix()
@@ -261,11 +261,11 @@ def willi(m, M, glass_col=C("eef4f0"), n=None, lo=7):
         outer = [outer[i] for i in (0, 1, 3, 4, 5, 7)]
         rim = [rim[1]]
         inner = [inner[i] for i in (0, 2, 4, 5)]
-    m.lathe(outer + rim + inner, n, "sw_vgloss", M, glass_col, "glass")
+    m.lathe(outer + rim + inner, n, "sw_vgloss", M, glass_col, mat)
     return inner, 0.2058, 0.0365
 
 
-def weizen(m, M, glass_col=C("eef4f0"), n=None, lo=7):
+def weizen(m, M, glass_col=C("eef4f0"), n=None, lo=7, mat="glass"):
     """0.5 l Weizenglas, 25 cm: a narrow waist low down, a tall tulip belly, thin walls on a heavy foot.
     Returns (inner profile, rim z, outer rim radius)."""
     M = M or Matrix()
@@ -278,11 +278,11 @@ def weizen(m, M, glass_col=C("eef4f0"), n=None, lo=7):
         outer = [outer[i] for i in (0, 1, 3, 4, 6, 8)]
         rim = [rim[1]]
         inner = [inner[i] for i in (0, 2, 4, 5)]
-    m.lathe(outer + rim + inner, n, "sw_vgloss", M, glass_col, "glass")
+    m.lathe(outer + rim + inner, n, "sw_vgloss", M, glass_col, mat)
     return inner, 0.2512, 0.0352
 
 
-def mass(m, M, glass_col=C("eef4f0"), n=None, lo=7):
+def mass(m, M, glass_col=C("eef4f0"), n=None, lo=7, mat="glass"):
     """1 l Maßkrug, 21 cm: thick dimpled glass (4.5 mm walls, 2 cm base) with a handle.
     Returns (inner profile, rim z, outer rim radius)."""
     M = M or Matrix()
@@ -290,16 +290,16 @@ def mass(m, M, glass_col=C("eef4f0"), n=None, lo=7):
     outer = [(0.0, 0.0), (0.05, 0.0), (0.054, 0.006), (0.054, 0.03), (0.052, 0.2), (0.053, 0.207)]
     rim = [(0.0528, 0.2095), (0.0505, 0.2108), (0.0484, 0.2095)]
     inner = [(0.0484, 0.207), (0.0475, 0.2), (0.0492, 0.036), (0.043, 0.022), (0.0, 0.02)]
-    m.lathe(outer[:3], n, "sw_vgloss", M, glass_col, "glass")
-    m.lathe(outer[2:5], n, "dimples", M, glass_col, "glass", v_by="z")
-    m.lathe(outer[4:] + (rim if not lite() else [rim[1]]) + inner, n, "sw_vgloss", M, glass_col, "glass")
+    m.lathe(outer[:3], n, "sw_vgloss", M, glass_col, mat)
+    m.lathe(outer[2:5], n, "dimples", M, glass_col, mat, v_by="z")
+    m.lathe(outer[4:] + (rim if not lite() else [rim[1]]) + inner, n, "sw_vgloss", M, glass_col, mat)
     # handle: a thick D-shaped loop on +X
     k = seg(8, 4)
     pts = []
     for i in range(k + 1):
         a = math.pi * i / k
         pts.append((0.05 + 0.045 * math.sin(a), 0, 0.185 - 0.14 * (0.5 - 0.5 * math.cos(a))))
-    m.tube(pts, 0.011, seg(7, 4), "sw_vgloss", M, glass_col, "glass")
+    m.tube(pts, 0.011, seg(7, 4), "sw_vgloss", M, glass_col, mat)
     return inner, 0.2108, 0.053
 
 

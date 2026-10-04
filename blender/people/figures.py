@@ -908,11 +908,17 @@ class Figure:
             q = Matrix.Rotation(tilt, 3, "X") @ q
             return C + Vector((0, 0.004 * s, zb - C.z)) + q
         ch = spec.get("crown", 0.105) * s
+        taper = spec.get("taper", 1.0)          # > 1 narrows the crown toward the top (a Tyrolean hat)
+        pinch = spec.get("pinch", 0.0)          # front pinch: the crown's front sides pressed in near the top
         rows = []
-        for sc, dz in ((1.0, -0.004 * s), (1.0, 0.0), (0.98, ch * 0.5), (0.92, ch * 0.95), (0.86, ch)):
-            rows.append([place(v * sc, dz) for v in base])
+        for sc, dz in ((1.0, -0.004 * s), (1.0, 0.0), (1 - 0.02 * taper, ch * 0.5), (1 - 0.08 * taper, ch * 0.95),
+                       (1 - 0.14 * taper, ch)):
+            t = max(dz, 0.0) / ch
+            rows.append([place(Vector((v.x * sc * (1 - pinch * t * t * max(0.0, -math.sin(a)) * abs(math.cos(a)) * 2.2),
+                                       v.y * sc, 0)), dz) for v, a in zip(base, ats)])
         # pinched top with a centre dent
-        rows.append([place(Vector((v.x * 0.55, v.y * 0.62, 0)), ch * 0.92 - 0.012 * s * abs(math.sin(a))) for v, a in zip(base, ats)])
+        rows.append([place(Vector((v.x * (0.55 - 0.1 * pinch * max(0.0, -math.sin(a))), v.y * 0.62, 0)),
+                           ch * 0.92 - 0.012 * s * abs(math.sin(a))) for v, a in zip(base, ats)])
         self.m.grid(rows, "hat", wv, closed=True, uv_tile=(0.05, 0.05))
         cen = place(Vector(), ch * 0.8)
         ring = self.m.V[-len(base):]
@@ -932,14 +938,35 @@ class Figure:
             dv = Vector((v.x, v.y, 0)).normalized()
             side = abs(math.cos(az))
             curl = spec.get("curl", 0.014) * s * side ** 2
-            r_mid.append(place(v + dv * bw * 0.5, 0.002 * s + curl * 0.3))
-            r_out.append(place(v + dv * bw * (1 - 0.15 * side), curl - 0.004 * s * (1 - side)))
+            # back_up: the brim turned up at the back and dipped at the front, as on a Bavarian felt hat
+            back = math.sin(az)
+            bu = spec.get("back_up", 0.0) * s
+            lift = bu * max(back, 0.0) ** 2 - 0.35 * bu * max(-back, 0.0) ** 2
+            r_mid.append(place(v + dv * bw * 0.5, 0.002 * s + curl * 0.3 + lift * 0.3))
+            r_out.append(place(v + dv * bw * (1 - 0.15 * side), curl - 0.004 * s * (1 - side) + lift))
         self.m.grid([r_in, r_mid, r_out], "hat", wv, col=(0.95, 0.95, 0.95), closed=True, uv_tile=(0.05, 0.05))
         # band
         band = lin(spec.get("band", "#1b1714"))
         self.m.grid([[place(v * 1.01 + Vector((v.x, v.y, 0)).normalized() * 0.002 * s, dz) for v in base]
                      for dz in (0.001 * s, 0.026 * s)], "body", wv, col=band, closed=True)
-        if spec.get("feather"):
+        if spec.get("brush"):
+            # a Gamsbart-style brush tucked in the band at the back left: a fan of thin tufts, pale at the tips
+            root = place(Vector((-(rx + 0.016 * s) * 0.82, (ry + 0.014 * s) * 0.58, 0)), 0.014 * s)
+            nt = 5 if self.lite else 9
+            for k in range(nt):
+                f = (k / (nt - 1)) - 0.5
+                ang = TAU * k / nt * 2.0                     # two turns of a cone: a bushy brush, not a fan
+                cone = 0.15 + 0.3 * abs(f) * 2
+                d = Vector((-0.15 + cone * math.cos(ang), 0.2 + cone * math.sin(ang), 1.0)).normalized()
+                ln = (0.075 - 0.02 * abs(f) * 2) * s
+                mid = root + d * ln * 0.55
+                tip = root + d * ln
+                self.m.tube([root, mid, tip], [0.0025 * s, 0.0055 * s, 0.0035 * s], "body", wv, seg=3,
+                            col=lin(spec["brush"]), caps=False)
+            # the brush's clasp
+            self.m.sphere(root + Vector((0, 0, 0.004 * s)), 0.007 * s, "body", wv, seg=6, rings=4,
+                          col=lin(spec.get("clasp", "#b8a068")))
+        elif spec.get("feather"):
             p = place(base[n // 4 * 3 if n >= 4 else 0] * 1.02, 0.02 * s)
             p = place(Vector((-(rx + 0.02 * s), 0.02 * s, 0)), 0.018 * s)
             self.m.sphere(p + Vector((0, 0.02 * s, 0.03 * s)), 1.0, "body", wv, seg=6, rings=4,

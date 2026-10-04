@@ -49,6 +49,7 @@ CLIPS_LITE = {"crowd": ["idle", "walk", "chat", "drink", "sit"], "band": ["play"
 # for *_free clips); every other clip must be in the lite file, because the full market draws far people lite too
 LITE_FALLBACK = {"idle_free": "idle", "chat_free": "idle", "laugh": "idle", "walk_free": "walk"}
 LITE_CAP = 40
+BUECHER_BROWSE_Z = 2.6   # three.js local z of the Buecherstand browsers (Blender stall frame y -2.6)
 # vendors who sell no drinks serve without the mug (specs.py serve_mug=False)
 SERVE_MUG = {"gluehwein": True, "bierstand": True, "bratwurst": False, "buecherstand": False}
 
@@ -107,6 +108,14 @@ def obstacles(P):
             obs.append(("rect", add(p["pos"], rot((0, 0.2), p["rot"])), p["rot"], 1.95, 1.4, k))
         elif p["kind"] == "deco":
             obs.append(("rect", p["pos"], p["rot"], 1.6, 1.3, k))
+    # the Buecherstand's carts and wing racks stand in front of its booth, from local z 1.1 out to Blender y -2.33
+    # (three.js local z 2.33) and x +-2.95; the generic section rect stops at z 1.6 and x +-1.95. Its own name, so the stall's browsers are
+    # checked against it too.
+    if "buecherstand" in P:
+        p = P["buecherstand"]
+        # two bands, because the wing racks angle back toward the booth: the front one full width, the back narrower
+        obs.append(("rect", add(p["pos"], rot((0, 2.09), p["rot"])), p["rot"], 2.95, 0.24, "buecher carts and racks"))
+        obs.append(("rect", add(p["pos"], rot((0, 1.475), p["rot"])), p["rot"], 2.6, 0.375, "buecher carts and racks"))
     obs.append(("circle", P["bandstand"]["pos"], 4.05, "bandstand"))
     bs = P["bandstand"]["pos"]
     obs.append(("rect", (bs[0], bs[1] + 4.3), 0.0, 1.3, 0.9, "bandstand steps"))
@@ -338,7 +347,8 @@ def main():
     # ---------------- walkers: lanes, the front of the square, round the bandstand and to the tree
     paths = [
         [(-15.0, 9.8), (-7.0, 10.6), (0.0, 11.2), (7.0, 10.6), (15.0, 9.6)],    # across the front
-        [(-12.5, 6.2), (-4.0, 4.6), (3.5, 4.4), (12.0, 5.9)],                   # in front of the section stalls
+        # in front of the section stalls: under the pole at (-7.8, 5.6), and ending short of the Buecherstand browsers
+        [(-12.5, 6.2), (-7.8, 4.7), (-4.0, 4.6), (3.5, 4.4), (11.2, 6.6)],
         [(-18.45, 14.0), (-18.5, 6.0), (-18.4, -2.0), (-18.5, -8.5)],          # left lane, clear of the poles at x -17.5
         [(18.55, 14.2), (18.45, 9.8), (18.55, 5.8), (18.5, -1.5), (18.55, -3.2)],  # right lane
         [(-3.6, 1.2), (-4.7, -2.5), (-4.9, -6.2), (-4.9, -9.3), (-2.6, -11.6), (0.0, -11.7), (4.3, -10.8)],  # round the bandstand
@@ -385,12 +395,16 @@ def main():
         groups.append(("FREE", f"group_{sid}_{len(groups)}", c, n))
     # browsing at the Buecherstand counter
     browsing = []
-    bc = stall_pt("buecherstand", (0, 1.2))
+    # In front of the two book carts (buecher_sections.json: lives / decisions, front edge at Blender y -2.26).
+    # Round 3 stood them at local z 1.95, inside the carts; Blender y -2.6 (three.js local z 2.6) is in front of
+    # the carts and the angled wing racks. Each faces his cart.
+    bc = stall_pt("buecherstand", (0, BUECHER_BROWSE_Z))
     br = []
-    for i, lx in enumerate((-1.45, 1.4)):          # at the two book cabinets (slot_cabinet_l / _r)
-        w = stall_pt("buecherstand", (lx, 1.95))
+    for i, lx in enumerate((-1.5, 1.5)):
+        w = stall_pt("buecherstand", (lx, BUECHER_BROWSE_Z))
         m = person(pick_adult(), "idle", mug=False)
         m["pos"] = r2((w[0] - bc[0], w[1] - bc[1]))
+        m["rotY"] = round(face(w, stall_pt("buecherstand", (lx * 0.95, 1.9))), 3)
         br.append(m)
     browsing.append(dict(id="browsing_buecherstand", kind="browsing", stall="buecherstand", pos=r2(bc),
                          members=vary_coats(br), note="browsing the books, facing the counter"))

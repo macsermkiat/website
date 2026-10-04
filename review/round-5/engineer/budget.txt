@@ -1,0 +1,43 @@
+Per asset (full glb + props + own textures; lite in brackets; textures shared with other assets are in the last row,
+  and each asset is judged on its own bytes plus an equal part of every shared texture it uses)
+  square                     39.5k tris   2.20 MB (lite 12.7k, 0.68 MB)  budget 40.0k / 3.00 MB
+  town                      134.0k tris   4.41 MB (lite 32.3k, 1.20 MB)  budget 150.0k / 5.00 MB
+  tree                       39.9k tris   1.05 MB (lite 9.7k, 0.33 MB)
+  signpost                    2.2k tris   0.43 MB (lite 1.2k, 0.17 MB)
+  gluehwein                  56.8k tris   1.41 MB +0.93 MB shared (its part 0.07 MB) (lite 14.8k, 0.47 MB)  budget 60.0k / 3.00 MB
+  bratwurst                  57.3k tris   1.32 MB +0.99 MB shared (its part 0.10 MB) (lite 13.6k, 0.44 MB)  budget 60.0k / 3.00 MB
+  bierstand                  57.1k tris   1.35 MB +0.93 MB shared (its part 0.07 MB) (lite 16.1k, 0.45 MB)  budget 60.0k / 3.00 MB
+  buecherstand               59.0k tris   2.38 MB +0.93 MB shared (its part 0.07 MB) (lite 17.8k, 0.80 MB)  budget 80.0k / 4.00 MB
+  bandstand                  48.4k tris   1.12 MB +0.33 MB shared (its part 0.02 MB) (lite 16.3k, 0.50 MB)  budget 50.0k / 2.00 MB
+  riesenrad                  70.8k tris   1.41 MB +0.27 MB shared (its part 0.02 MB) (lite 24.5k, 0.66 MB) [deferred]  budget 80.0k / 3.00 MB
+  karussell                  78.6k tris   0.90 MB +0.27 MB shared (its part 0.02 MB) (lite 29.5k, 0.35 MB) [deferred]  budget 80.0k / 3.00 MB
+  deco-lebkuchen             18.5k tris   0.56 MB +0.93 MB shared (its part 0.07 MB) (lite 5.9k, 0.23 MB) [deferred]  budget 20.0k / 1.00 MB
+  deco-mandeln               18.8k tris   0.53 MB +0.93 MB shared (its part 0.07 MB) (lite 6.0k, 0.22 MB) [deferred]  budget 20.0k / 1.00 MB
+  deco-kerzen                17.9k tris   0.52 MB +0.93 MB shared (its part 0.07 MB) (lite 5.4k, 0.20 MB) [deferred]  budget 20.0k / 1.00 MB
+  deco-spielzeug             18.8k tris   0.54 MB +0.93 MB shared (its part 0.07 MB) (lite 6.7k, 0.23 MB) [deferred]  budget 20.0k / 1.00 MB
+  deco-schmuck               18.6k tris   0.54 MB +0.93 MB shared (its part 0.07 MB) (lite 5.7k, 0.21 MB) [deferred]  budget 20.0k / 1.00 MB
+  deco-kaese                 17.9k tris   0.48 MB +0.93 MB shared (its part 0.07 MB) (lite 6.3k, 0.21 MB) [deferred]  budget 20.0k / 1.00 MB
+  deco-crepes                16.9k tris   0.48 MB +0.93 MB shared (its part 0.07 MB) (lite 5.1k, 0.18 MB) [deferred]  budget 20.0k / 1.00 MB
+  deco-maroni                18.4k tris   0.49 MB +0.99 MB shared (its part 0.10 MB) (lite 6.6k, 0.20 MB) [deferred]  budget 20.0k / 1.00 MB
+  deco-kartoffelpuffer       19.4k tris   0.53 MB +0.93 MB shared (its part 0.07 MB) (lite 6.1k, 0.22 MB) [deferred]  budget 20.0k / 1.00 MB
+  people_man_coat             4.6k tris   0.13 MB (lite 1.5k, 0.05 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_woman_coat           4.9k tris   0.13 MB (lite 1.7k, 0.05 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_man_parka            5.0k tris   0.13 MB (lite 1.8k, 0.05 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_woman_older          4.8k tris   0.13 MB (lite 1.6k, 0.05 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_man_older            4.5k tris   0.13 MB (lite 1.5k, 0.05 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_woman_young          4.7k tris   0.13 MB (lite 1.6k, 0.05 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_child_boy            5.0k tris   0.13 MB (lite 1.8k, 0.05 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_child_girl           4.8k tris   0.13 MB (lite 1.7k, 0.05 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_vendor_gluehwein     4.8k tris   0.11 MB (lite 1.6k, 0.04 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_vendor_bier          4.4k tris   0.11 MB (lite 1.7k, 0.04 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_vendor_wurst         3.8k tris   0.11 MB (lite 1.4k, 0.03 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_vendor_buecher       4.4k tris   0.12 MB (lite 1.6k, 0.04 MB) [deferred]  budget 5.0k / 0.40 MB
+  people_band_sax             4.5k tris   0.12 MB (lite 1.6k, 0.04 MB)  budget 5.0k / 0.40 MB
+  people_band_piano           4.8k tris   0.12 MB (lite 1.7k, 0.04 MB)  budget 5.0k / 0.40 MB
+  people_band_bass            4.7k tris   0.12 MB (lite 1.6k, 0.04 MB)  budget 5.0k / 0.40 MB
+  people_band_drums           4.6k tris   0.12 MB (lite 1.5k, 0.04 MB)  budget 5.0k / 0.40 MB
+  people_anims                0.0k tris   0.07 MB (lite 0.0k, 0.07 MB)
+  shared textures               32 files   1.16 MB (each charged once)
+Site code, styles and fonts: 1.45 MB first, 0.34 MB after the first frame (3D text); home still: 0.06 MB
+full market: first load 9.17 MB (aim 25.00 MB); deferred 10.20 MB; full detail on demand 13.02 MB; everything 32.39 MB
+lite market: first load 7.09 MB (aim 8.00 MB); deferred 3.80 MB; everything 10.90 MB

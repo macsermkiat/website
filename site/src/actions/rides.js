@@ -46,7 +46,7 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
   function whenReady(id, start) {
     if (place(id) || !market.whenPlace) return start();
     say('One moment, the ride is still being set up…');
-    market.whenPlace(id).then(() => start());
+    market.whenPlace(id, { load: true }).then(() => start());
   }
   // from a gondola: over the square toward the church, the stalls below and the town beyond
   const lookAtMarket = new THREE.Vector3(8, 3, 4);

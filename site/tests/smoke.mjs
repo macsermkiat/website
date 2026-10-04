@@ -117,7 +117,9 @@ const shot = async (page, name, sel, { keepScroll = false } = {}) => {
   const file = path.join(OUT, name);
   // hold the last rendered frame so the capture does not wait behind a slow software-GL frame
   if (!sel && !keepScroll) await page.evaluate(() => window.scrollTo(0, 0)); // clicking the place buttons scrolls the page
-  const frozen = await page.evaluate(() => { if (!window.__market?.freeze) return false; window.__market.freeze(true); return true; });
+  // draw the current state first: with the clock held (advance() runs it without drawing) the canvas would still
+  // show an older frame
+  const frozen = await page.evaluate(() => { if (!window.__market?.freeze) return false; window.__market.renderFrame?.(); window.__market.freeze(true); return true; });
   // a frozen page still waits for the frames already queued on the GPU; on SwiftShader those can take minutes
   const SHOT = 900000;
   if (sel) await page.locator(sel).screenshot({ path: file, type: 'jpeg', quality: 86, timeout: SHOT });
@@ -170,6 +172,8 @@ try {
     const z = (await page.evaluate(() => window.__market.cam())).look.zoom;
     check('zoom stays in its small band', z >= 0.82 - 1e-6 && z <= 1.12 + 1e-6, String(z));
     await page.evaluate(() => window.__market.freeze(false));
+    await page.mouse.move(box.x + box.width * 0.5, box.y - 40); // off the canvas: no hover label in the picture
+    await page.evaluate(() => window.__market.settled());
     await shot(page, 'home_signpost.jpg');
     // a click on the signpost's Glühwein board walks there
     const sign = await page.evaluate(() => {
@@ -189,9 +193,9 @@ try {
     // the walk: along the path at walking pace, with gentle ease
     await page.evaluate(() => window.__market.freeze(true));
     const w0 = await page.evaluate(() => window.__market.cam());
-    check('the camera walks (not flies) to the stop', w0.mode === 'walk' && w0.progress && w0.progress.dur >= 2.2 && w0.progress.dur <= 9.01, JSON.stringify(w0.progress));
+    check('the camera walks (not flies) to the stop', w0.mode === 'walk' && w0.progress && w0.progress.dur >= 2.2 && w0.progress.dur <= 12.01, JSON.stringify(w0.progress));
     const pace = w0.progress.length / w0.progress.dur;
-    check('walking pace (about 3 m/s; never a dash)', pace < 4.5 || w0.progress.dur >= 8.99, `${pace.toFixed(2)} m/s over ${w0.progress.length.toFixed(1)} m`);
+    check('walking pace (about 3 m/s; never a dash)', pace < 3.5 || w0.progress.dur >= 11.99, `${pace.toFixed(2)} m/s over ${w0.progress.length.toFixed(1)} m`);
     await page.evaluate((d) => window.__market.advance(d * 0.45), w0.progress.dur);
     const mid = await page.evaluate(() => window.__market.cam());
     check('mid-stroll the camera is on its way, down at eye level and off the straight line', mid.moving && mid.pos[1] < w0.pos[1] - 1, JSON.stringify(mid.pos));

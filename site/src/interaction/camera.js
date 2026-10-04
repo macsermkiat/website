@@ -15,7 +15,7 @@ export const LOOK_YAW = THREE.MathUtils.degToRad(15);
 export const LOOK_PITCH = THREE.MathUtils.degToRad(9);
 export const ZOOM_BAND = [0.82, 1.12]; // fraction of the stop's distance to its target
 const WALK_SPEED = 3.2; // m/s: an unhurried walk, a little brisker than real
-const WALK_MIN = 2.2, WALK_MAX = 9; // seconds
+const WALK_MIN = 2.2, WALK_MAX = 12; // seconds (the longest legs, from the home view down into the square, take the most)
 
 const smooth = (t) => t * t * (3 - 2 * t);
 const ease = (t) => (t < 0.5 ? 4 * t ** 3 : 1 - Math.pow(-2 * t + 2, 3) / 2);
