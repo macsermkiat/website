@@ -31,8 +31,20 @@ async function fetchGlb(rel, manager) {
   const root = gltf.scene || gltf.scenes?.[0];
   if (!root) throw new Error(`${rel} has no scene`);
   setClips(root, gltf.animations || []);
+  tagGltf(root, gltf.parser?.associations);
   shareSources(root);
   return root;
+}
+
+// Which objects the loader made for glTF nodes and primitives, and which materials came from the file:
+// the streamer (engine/stream.js) grafts a full model onto its lite twin by these.
+function tagGltf(root, assoc) {
+  root.traverse((o) => {
+    const a = assoc?.get(o);
+    if (a && a.nodes !== undefined) o.userData.gltfNode = a.nodes;
+    if (a && a.primitives !== undefined) o.userData.gltfPrimitive = true;
+    if (o.isMesh) for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m) m.userData.fromGlb = true;
+  });
 }
 
 // Textures from different glbs that decoded to the same image get one GPU upload between them.
@@ -78,6 +90,7 @@ export async function loadGlb(rel, manager) {
  */
 export async function loadEntry(entry, { lite, manager, warn }) {
   const tries = [];
+  // streaming: the full market opens with the lite model of a place and grafts the full one on later
   if (lite && entry.lite) tries.push(['lite', entry.lite]);
   if (entry.model) tries.push(['glb', entry.model]);
   for (const [source, rel] of tries) {

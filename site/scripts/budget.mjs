@@ -9,6 +9,11 @@
 //   - the site's own scripts, styles and fonts from dist/assets (run it after `npm run build`; no dist is an error).
 // It splits each market's download into the first load (before the market opens) and the deferred part (the deco
 // stalls, both rides and the crowd's distance level, loaded just after the first frame), as main.js does.
+// Round 5 streams detail: the full market opens with the lite files of the section stalls, the bandstand, the town
+// and the tree (main.js STREAMED) and fetches a stall's full files only when it is the stop being walked to or the
+// next one ("on demand"; the town and the tree right after the first frame). The home still (public/stills) shows
+// before any of it and counts towards the first load; so do the fonts the 3D text is drawn with. The crowd (but
+// not the band's players) loads just after the first frame too. --no-stream and --crowd-first count as round 4 did.
 //
 //   node scripts/budget.mjs            report
 //   node scripts/budget.mjs --strict   also fail (exit 1) when a market's first load is over its aim
@@ -95,6 +100,8 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
   // drawn instead of another file, never with it: { file: the file it replaces }
   const ALT = { 'instr_sax_stand.glb': 'instr_sax.glb' };
   const deferred = (e) => e.kind === 'deco' || /riesenrad|karussell/.test(e.id);
+  // main.js STREAMED: lite first on the full market, full detail on demand
+  const streamed = (e) => e.kind === 'section' || /bandstand/.test(e.id) || e.id === 'town' || e.id === 'tree' || e.kind === 'town' || e.kind === 'tree';
   const liteOf = (f) => { const l = f.replace(/\.glb$/, '.lite.glb'); return exists(l) ? l : f; };
 
   // groups: { id, kind, files: { full: [...], lite: [...] }, deferred: { full, lite } }
@@ -110,7 +117,7 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
     const f = files.filter(Boolean);
     // a props set may name its own lite file (props.json "lite"); otherwise <model>.lite.glb when it exists
     const lite = f.map((x) => props?.sets?.find((s) => s.model === x && s.lite)?.lite || liteOf(x));
-    groups.push({ id: e.id, kind: kindOf(e), files: { full: f, lite }, deferred: { full: deferred(e), lite: deferred(e) } });
+    groups.push({ id: e.id, kind: kindOf(e), files: { full: f, lite }, deferred: { full: deferred(e), lite: deferred(e) }, streamed: streamed(e) && lite.some((x, i) => x !== f[i]) });
   }
   // people: every figure the crowd names and the bandstand's four players (each a person variant), and the shared clips
   const people = new Set();
@@ -119,7 +126,9 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
   const anims = crowd?.shared_anims?.file || 'people_anims.glb';
   for (const f of people) {
     if (f === anims) continue;
-    groups.push({ id: f.replace(/\.glb$/, ''), kind: 'person', files: { full: [f], lite: [liteOf(f)] }, deferred: { full: false, lite: false } });
+    // round 5: the crowd streams in just after the first frame (main.js loadCrowd); the band's players come first
+    const band = /^people_band_/.test(f);
+    groups.push({ id: f.replace(/\.glb$/, ''), kind: 'person', files: { full: [f], lite: [liteOf(f)] }, deferred: { full: !band && !args.includes('--crowd-first'), lite: !band && !args.includes('--crowd-first') } });
     // the full market's distance level: the figure's .lite.glb, loaded after the first frame (crowd.js enableLod)
     if (liteOf(f) !== f && !/^people_band_/.test(f)) groups.push({ id: `${f.replace(/\.glb$/, '')} (distance level)`, kind: null, lod: true, files: { full: [liteOf(f)], lite: [] }, deferred: { full: true, lite: true } });
   }
@@ -166,7 +175,19 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
   const assets = path.join(dist, 'assets');
   const hasDist = fs.existsSync(assets);
   let code = 0;
-  if (hasDist) for (const f of fs.readdirSync(assets)) if (/\.(js|css|woff2?)$/.test(f) && !/^plain-/.test(f)) code += fs.statSync(path.join(assets, f)).size;
+  // fonts: the pages' CSS fonts load as woff2 (the woff beside each is the old browsers' fallback and is not
+  // fetched); the 3D text's fonts are the woff files world/text.js imports
+  const textFonts = new Set();
+  try { fs.readFileSync(path.join(site, 'src', 'world', 'text.js'), 'utf8').replace(/files\/([a-z0-9-]+)\.woff\?url/g, (m, n) => { textFonts.add(n); return m; }); } catch { /* no 3D text */ }
+  const fontUsed = (f) => !/\.woff$/.test(f) || [...textFonts].some((n) => f.startsWith(`${n}-`));
+  // the 3D text (troika's chunk and the faces it draws with) loads just after the first frame (world/text.js loadText)
+  let codeLater = 0;
+  const later = (f) => /^troika/.test(f) || (/\.woff$/.test(f) && fontUsed(f));
+  if (hasDist) for (const f of fs.readdirSync(assets)) if (/\.(js|css|woff2?)$/.test(f) && !/^plain-/.test(f) && fontUsed(f)) { const n = fs.statSync(path.join(assets, f)).size; if (later(f)) codeLater += n; else code += n; }
+  // the home still, shown before anything else
+  let still = 0;
+  const stills = path.join(dist, 'stills');
+  if (fs.existsSync(stills)) for (const f of fs.readdirSync(stills)) if (/^home\./.test(f)) still += fs.statSync(path.join(stills, f)).size;
 
   const totals = {};
   for (const market of ['full', 'lite']) {
@@ -180,12 +201,14 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
       return bytes;
     };
     // first load before the deferred part, so a texture both use is charged to the first load
-    let first = code, later = 0;
-    for (const g of groups) if (!g.deferred[market]) first += add(g.files[market]);
+    let first = code + still, later = codeLater, onDemand = 0;
+    const stream = market === 'full' && !args.includes('--no-stream');
+    for (const g of groups) if (!g.deferred[market]) first += add(stream && g.streamed ? g.files.lite : g.files[market]);
     for (const g of groups) if (g.deferred[market]) later += add(g.files[market]);
-    totals[market] = { firstLoad: first, deferred: later, everything: first + later, aim: FIRST_LOAD[market], over: first > FIRST_LOAD[market] };
+    for (const g of groups) if (stream && g.streamed) onDemand += add(g.files.full);
+    totals[market] = { firstLoad: first, deferred: later, onDemand, everything: first + later + onDemand, aim: FIRST_LOAD[market], over: first > FIRST_LOAD[market] };
   }
-  return { rows, shared, totals, code, hasDist };
+  return { rows, shared, totals, code, codeLater, still, hasDist };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -206,7 +229,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   const sharedBytes = r.shared.reduce((a, s) => a + s.bytes, 0);
   console.log(`  ${'shared textures'.padEnd(24)} ${String(r.shared.length).padStart(7)} files ${mb(sharedBytes).padStart(9)} (each charged once)`);
-  console.log(`Site code, styles and fonts: ${mb(r.code)}`);
-  for (const [m, t] of Object.entries(r.totals)) console.log(`${m.padEnd(4)} market: first load ${mb(t.firstLoad)} (aim ${mb(t.aim)})${t.over ? '  OVER' : ''}; deferred ${mb(t.deferred)}; everything ${mb(t.everything)}`);
+  console.log(`Site code, styles and fonts: ${mb(r.code)} first, ${mb(r.codeLater)} after the first frame (3D text); home still: ${mb(r.still)}`);
+  for (const [m, t] of Object.entries(r.totals)) console.log(`${m.padEnd(4)} market: first load ${mb(t.firstLoad)} (aim ${mb(t.aim)})${t.over ? '  OVER' : ''}; deferred ${mb(t.deferred)}${t.onDemand ? `; full detail on demand ${mb(t.onDemand)}` : ''}; everything ${mb(t.everything)}`);
   if (args.includes('--strict') && Object.values(r.totals).some((t) => t.over)) { console.error('budget: a first load is over its aim'); process.exit(1); }
 }

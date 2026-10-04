@@ -50,11 +50,12 @@ turns the one light, neutral wood into pine, honey, oak, dark, grey or soot boar
 | `iron` | kit, 0.5 m tile, 512 px | forged iron, mid-grey: hammer dents, scattered rust blooms and runs, soot, pitting |
 | `iron_matte` | kit variant of `iron` | sheet iron for hoods: its own lighter base colour (`kit_iron_matte_color`, the iron colour x1.7 in linear light, ~10 KB) and metal x0.35 as `metallicFactor`, so it reads grey under point lights without an environment map, plus a faint warm emissive copy of that colour (`emissiveFactor` 0.12/0.08/0.045) standing in for the bulbs and fire beside the hood, which no site light reaches. Vertex soot (`shade`) darkens only the base colour, so soot shows in lit areas while the stand-in keeps the shape readable. Roughness and normal maps are the iron kit's |
 | `paint_glow` | kit variant of `paint` | the paint atlas (use `band=` as with `paint`) plus a faint warm emissive copy of it (`emissiveFactor` 0.13/0.09/0.07, emissive texture = the shared paint colour map, so no extra bytes). For outward trim that faces out and down under an eave (bargeboards, carved valances, gable boards): under the site's moonlight plain red paint there goes near-black |
+| `paint_lit` | kit variant of `paint` | (round 4) a main sign board lit by its own gooseneck lamps: the paint atlas with a stronger warm emissive copy of it (`emissiveFactor` 0.55/0.44/0.32, same shared colour map, no extra bytes). A cream board glows and dark letters stay dark, so the sign reads from the site's home view. Used for the Glühwein and Bratwurst main signs. Pair it with `Hut.sign_lamps` so the glow has a visible source |
 | `copper_old` | kit variant of `iron` | old copper sheet for small roofs and hoods: the iron kit's dents, streaks and pitting with a copper-brown colour (`kit_copper_old_color`, the iron colour x1.35 x (1.25, 0.66, 0.42)), metal x0.6. Use it instead of the flat `copper` on architecture |
 | `rauten` | pattern, 0.26 m tile, 256 px | dedicated two-colour Bavarian lozenge texture (`mats.PATTERNS`, made with numpy, no bake): four big lozenges per repeat so the pattern survives mipmapping, a Bavarian blue (sRGB about 12/105/188; pattern version p2) and a warm white, and a faint, nearly neutral emissive copy of the pattern (`emissiveFactor` 0.22/0.20/0.17) standing in for the eave bulbs that hang beside the pennants. Embedded in the glb (6.4 KB as WebP in the decoded `stall_bier.glb`). Use `uv_off=` to place a lozenge |
 | `snow bulb_warm bulb_cold wire glass fir brass copper ember ash ornament_red ornament_gold fabric_* lamp_glass bookcloth` | simple | flat PBR values (still multiplied by `COLOR_0`; `bookcloth` is a light neutral binding cloth meant to be coloured by `tint=`) |
 
-**Emissive stand-ins.** `iron_matte`, `paint_glow` and `rauten` carry a faint emissive copy of their
+**Emissive stand-ins.** `iron_matte`, `paint_glow`, `paint_lit` and `rauten` carry a faint emissive copy of their
 colour because the browser's bulbs glow but light nothing (`mats.STANDIN_EMIT`). A Cycles preview has
 that light, so call `mats.standin_emission(False)` before rendering (the stall pipeline and `deco.py`
 do); the glb export keeps them on.
@@ -128,8 +129,10 @@ Accumulates primitives into one mesh with `UVMap`, `Col` and flat or smooth shad
 - `Hut.build_roof(..., barge_part=None)`: painted bargeboards go into `barge_part` (e.g. a `paint_glow` Part) instead of the hut's paint Part.
 - `Hut.build_counter(..., extra_shade=None)`: a shade function multiplied into the counter's edge wear (the Bratwurst scorch under its grill).
 - `Hut.build_snow(**kw)`: passes `drifts=`, `cover=` and the rest to `snow_cap`.
-- `pipeline.vendor_props([(name, slot), ...], rotate=False)`: imports the vendor's shipped prop glbs into a Cycles preview (render-only); `rotate=True` for rotated slots. Previews go to `review/round-$NM_ROUND/carpenter/` (default round 3).
+- `pipeline.vendor_props([(name, slot), ...], rotate=False)`: imports the vendor's shipped prop glbs into a Cycles preview (render-only); `rotate=True` for rotated slots. Previews go to `review/round-$NM_ROUND/carpenter/` (default round 4).
 - `stalls/buecher_sections.py` (plain Python, no bpy): the Bücherstand's six category sections (side racks and carts). `buecher.py` builds from it, and `python3 blender/stalls/buecher_sections.py` writes `blender/stalls/buecher_sections.json` for the vendor, so the json always matches the model.
+  - Each section also has `cam_position` / `cam_target_position` (round 4): `buecher.py` exports them as the empties `cam_cat_<key>` (rotated to look at its target) and `cam_cat_<key>_target`, a close-up 1.75 m in front of the section at eye height. The two inner rack bays stand behind the carts, so their cameras swing 40° toward the lane.
+  - `python3 blender/stalls/buecher_sections.py --check [file.glb ...]` is read-only: it compares the json with the module (in memory) and every `slot_cat_`, `cam_cat_` and `cam_cat_*_target` node of the glbs (default: both Bücherstand LODs) with the json, and exits 1 on any mismatch. Only the plain command (no `--check`) writes the json.
 
 ## Checking a stall in the browser
 
@@ -147,7 +150,7 @@ site's home camera where `site/src/layout.json` places it.
 
 - `node blender/lib/optimize.mjs in.glb out.glb [--texture-size 1024]`. This is the web step. Use it instead of `gltf-transform optimize`: that CLI prunes every empty leaf node, which would delete `slot_*`, `light_*` and `cam_*`, and its palette/join passes rename or merge materials such as `bulb_warm`. This script runs dedup, weld, prune (keeping leaves), sparse, WebP at `--texture-size` and meshopt, and leaves the node and material names alone.
 - `python3 blender/lib/glb_tools.py report file.glb ...` lists nodes, materials, images, triangles and size.
-- `python3 blender/lib/glb_tools.py check file.glb ...` checks the stall node contract: `slot_counter`, `slot_shelf_1`, `slot_shelf_2`, `slot_vendor`, `slot_sign`, `slot_front`, `cam_view`, `cam_target`, `light_*`, `bulbs_*`, `snow_*` and a `bulb_warm`/`bulb_cold` material. For `stall_buecher*.glb` it also requires `slot_cat_<key>` and `sign_cat_<key>` for every key in `content/books/categories.json`.
+- `python3 blender/lib/glb_tools.py check file.glb ...` checks the stall node contract: `slot_counter`, `slot_shelf_1`, `slot_shelf_2`, `slot_vendor`, `slot_sign`, `slot_front`, `cam_view`, `cam_target`, `light_*`, `bulbs_*`, `snow_*` and a `bulb_warm`/`bulb_cold` material. For `stall_buecher*.glb` it also requires `slot_cat_<key>`, `sign_cat_<key>`, `cam_cat_<key>` and `cam_cat_<key>_target` for every key in `content/books/categories.json`.
 
 ## Stall scripts built on this
 

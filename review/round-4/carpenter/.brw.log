@@ -1,0 +1,543 @@
+[stall_bratwurst] built lite in 0.3s, 7467 tris
+     bratwurst_wood                    1656
+     bratwurst_frame                    520
+     bratwurst_counter                  428
+     bratwurst_roof                     756
+     bratwurst_paint                    244
+     bratwurst_iron                     816
+     bulbs_0                            632
+     bratwurst_wire                     208
+     bratwurst_hood                      64
+     bratwurst_logs                     484
+     bratwurst_sign                     329
+     snow_0                             658
+     snow_1                             672
+Fra:1 Mem:22.66M (Peak 36.68M) | Time:497534:49:05.29 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:22.66M (Peak 36.68M) | Time:497534:49:05.29 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:22.73M (Peak 36.68M) | Time:497534:49:05.29 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:23.07M (Peak 36.68M) | Time:497534:49:05.29 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:23.19M (Peak 36.68M) | Time:497534:49:05.29 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:23.20M (Peak 36.68M) | Time:497534:49:05.29 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:23.23M (Peak 36.68M) | Time:497534:49:05.30 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:23.39M (Peak 36.68M) | Time:497534:49:05.30 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:23.45M (Peak 36.68M) | Time:497534:49:05.30 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:23.61M (Peak 36.68M) | Time:497534:49:05.30 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:23.70M (Peak 36.68M) | Time:497534:49:05.30 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:23.81M (Peak 36.68M) | Time:497534:49:05.30 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:23.80M (Peak 36.68M) | Time:497534:49:05.30 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst.lite_ao
+Fra:1 Mem:22.87M (Peak 85.21M) | Time:497534:49:09.91 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:22.87M (Peak 85.21M) | Time:497534:49:09.91 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:22.93M (Peak 85.21M) | Time:497534:49:09.91 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:23.02M (Peak 85.21M) | Time:497534:49:09.91 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:23.03M (Peak 85.21M) | Time:497534:49:09.91 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:23.05M (Peak 85.21M) | Time:497534:49:09.91 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:23.18M (Peak 85.21M) | Time:497534:49:09.91 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:23.23M (Peak 85.21M) | Time:497534:49:09.91 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:23.36M (Peak 85.21M) | Time:497534:49:09.91 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:23.43M (Peak 85.21M) | Time:497534:49:09.91 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:23.52M (Peak 85.21M) | Time:497534:49:09.91 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:23.81M (Peak 85.21M) | Time:497534:49:09.92 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:23.80M (Peak 85.21M) | Time:497534:49:09.92 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst.lite_ao
+Fra:1 Mem:22.87M (Peak 85.21M) | Time:497534:49:11.35 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:22.87M (Peak 85.21M) | Time:497534:49:11.35 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:22.93M (Peak 85.21M) | Time:497534:49:11.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:23.02M (Peak 85.21M) | Time:497534:49:11.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:23.02M (Peak 85.21M) | Time:497534:49:11.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:23.30M (Peak 85.21M) | Time:497534:49:11.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:23.40M (Peak 85.21M) | Time:497534:49:11.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:23.47M (Peak 85.21M) | Time:497534:49:11.37 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:23.60M (Peak 85.21M) | Time:497534:49:11.37 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:23.65M (Peak 85.21M) | Time:497534:49:11.37 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:23.81M (Peak 85.21M) | Time:497534:49:11.37 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:23.80M (Peak 85.21M) | Time:497534:49:11.37 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst.lite_ao
+Fra:1 Mem:22.87M (Peak 85.21M) | Time:497534:49:12.26 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:22.87M (Peak 85.21M) | Time:497534:49:12.26 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:22.93M (Peak 85.21M) | Time:497534:49:12.26 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:23.02M (Peak 85.21M) | Time:497534:49:12.26 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:23.03M (Peak 85.21M) | Time:497534:49:12.26 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:23.05M (Peak 85.21M) | Time:497534:49:12.26 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:23.19M (Peak 85.21M) | Time:497534:49:12.26 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:23.23M (Peak 85.21M) | Time:497534:49:12.27 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:23.36M (Peak 85.21M) | Time:497534:49:12.27 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:23.43M (Peak 85.21M) | Time:497534:49:12.27 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:23.81M (Peak 85.21M) | Time:497534:49:12.27 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:23.80M (Peak 85.21M) | Time:497534:49:12.27 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst.lite_ao
+Fra:1 Mem:22.87M (Peak 85.21M) | Time:497534:49:13.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:22.87M (Peak 85.21M) | Time:497534:49:13.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:23.16M (Peak 85.21M) | Time:497534:49:13.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:23.25M (Peak 85.21M) | Time:497534:49:13.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:23.32M (Peak 85.21M) | Time:497534:49:13.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:23.45M (Peak 85.21M) | Time:497534:49:13.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:23.50M (Peak 85.21M) | Time:497534:49:13.96 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:23.56M (Peak 85.21M) | Time:497534:49:13.96 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:23.64M (Peak 85.21M) | Time:497534:49:13.96 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:23.65M (Peak 85.21M) | Time:497534:49:13.96 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:23.67M (Peak 85.21M) | Time:497534:49:13.96 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:23.81M (Peak 85.21M) | Time:497534:49:13.96 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:23.80M (Peak 85.21M) | Time:497534:49:13.96 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst.lite_ao
+Fra:1 Mem:24.92M (Peak 85.21M) | Time:497534:49:14.53 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:24.92M (Peak 85.21M) | Time:497534:49:14.53 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:24.98M (Peak 85.21M) | Time:497534:49:14.53 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:25.06M (Peak 85.21M) | Time:497534:49:14.53 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:25.07M (Peak 85.21M) | Time:497534:49:14.53 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:25.09M (Peak 85.21M) | Time:497534:49:14.53 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:25.23M (Peak 85.21M) | Time:497534:49:14.53 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:25.28M (Peak 85.21M) | Time:497534:49:14.53 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:25.41M (Peak 85.21M) | Time:497534:49:14.53 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:25.48M (Peak 85.21M) | Time:497534:49:14.53 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:25.57M (Peak 85.21M) | Time:497534:49:14.53 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:25.85M (Peak 85.21M) | Time:497534:49:14.54 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:25.85M (Peak 85.21M) | Time:497534:49:14.54 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst.lite_ao
+Fra:1 Mem:24.89M (Peak 87.25M) | Time:497534:49:15.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:24.89M (Peak 87.25M) | Time:497534:49:15.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:25.17M (Peak 87.25M) | Time:497534:49:15.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:25.18M (Peak 87.25M) | Time:497534:49:15.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:25.24M (Peak 87.25M) | Time:497534:49:15.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:25.41M (Peak 87.25M) | Time:497534:49:15.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:25.42M (Peak 87.25M) | Time:497534:49:15.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:25.44M (Peak 87.25M) | Time:497534:49:15.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:25.58M (Peak 87.25M) | Time:497534:49:15.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:25.65M (Peak 87.25M) | Time:497534:49:15.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:25.82M (Peak 87.25M) | Time:497534:49:15.11 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:25.82M (Peak 87.25M) | Time:497534:49:15.11 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst.lite_ao
+Fra:1 Mem:24.92M (Peak 87.25M) | Time:497534:49:15.63 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:24.92M (Peak 87.25M) | Time:497534:49:15.63 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:24.98M (Peak 87.25M) | Time:497534:49:15.64 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:25.06M (Peak 87.25M) | Time:497534:49:15.64 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:25.07M (Peak 87.25M) | Time:497534:49:15.64 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:25.09M (Peak 87.25M) | Time:497534:49:15.64 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:25.23M (Peak 87.25M) | Time:497534:49:15.64 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:25.28M (Peak 87.25M) | Time:497534:49:15.64 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:25.41M (Peak 87.25M) | Time:497534:49:15.64 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:25.48M (Peak 87.25M) | Time:497534:49:15.64 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:25.57M (Peak 87.25M) | Time:497534:49:15.64 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:25.85M (Peak 87.25M) | Time:497534:49:15.64 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:25.85M (Peak 87.25M) | Time:497534:49:15.64 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst.lite_ao
+Fra:1 Mem:24.89M (Peak 87.26M) | Time:497534:49:15.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:24.89M (Peak 87.26M) | Time:497534:49:15.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:24.96M (Peak 87.26M) | Time:497534:49:15.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:25.04M (Peak 87.26M) | Time:497534:49:15.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:25.04M (Peak 87.26M) | Time:497534:49:15.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:25.33M (Peak 87.26M) | Time:497534:49:15.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:25.35M (Peak 87.26M) | Time:497534:49:15.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:25.49M (Peak 87.26M) | Time:497534:49:15.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:25.54M (Peak 87.26M) | Time:497534:49:15.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:25.67M (Peak 87.26M) | Time:497534:49:15.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:25.83M (Peak 87.26M) | Time:497534:49:15.95 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:25.83M (Peak 87.26M) | Time:497534:49:15.95 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst.lite_ao
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+[nmlib] AO stall_bratwurst.lite 384px for 9 objects in 12.3s: islands cover 73%, 115 tiny faces on the patch, island mean 0.34 -> 0.57
+ERROR Draco mesh compression is not available because library could not be found at /home/claude/website/4.2/python/lib/python3.11/site-packages/libextern_draco.so
+14:49:17 | INFO: Starting glTF 2.0 export
+14:49:17 | INFO: Extracting primitive: bratwurst_wood
+14:49:17 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:17 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: bratwurst_frame
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: bratwurst_counter
+14:49:17 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:17 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: bratwurst_roof
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: bratwurst_paint
+14:49:17 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:17 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: bratwurst_iron
+14:49:17 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:17 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: bulbs_0
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: bratwurst_wire
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: bratwurst_hood
+14:49:17 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:17 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: bratwurst_logs
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: bratwurst_sign
+14:49:17 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:17 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: snow_0
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Extracting primitive: snow_1
+14:49:17 | INFO: Primitives created: 1
+14:49:17 | INFO: Finished glTF 2.0 export in 0.5747120380401611 s
+
+[nmlib] exported stall_bratwurst.lite: 0.22 MB (+0.19 MB shared), 7467 tris in 3.6s
+[stall_bratwurst] built full in 1.0s, 36402 tris
+     bratwurst_wood                   12456
+     bratwurst_frame                   1800
+     bratwurst_counter                 2112
+     bratwurst_roof                    4884
+     bratwurst_paint                    244
+     bratwurst_iron                     880
+     bulbs_0                           1480
+     bratwurst_wire                     608
+     bratwurst_hood                    4666
+     bratwurst_logs                     708
+     bratwurst_sign                    2018
+     snow_0                            2342
+     snow_1                            2204
+Fra:1 Mem:51.79M (Peak 87.26M) | Time:497534:49:22.62 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:51.79M (Peak 87.26M) | Time:497534:49:22.62 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:51.93M (Peak 87.26M) | Time:497534:49:22.62 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:54.05M (Peak 87.26M) | Time:497534:49:22.62 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:54.90M (Peak 87.26M) | Time:497534:49:22.62 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:56.08M (Peak 87.26M) | Time:497534:49:22.63 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:55.99M (Peak 87.26M) | Time:497534:49:22.63 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:56.31M (Peak 87.26M) | Time:497534:49:22.63 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:56.49M (Peak 87.26M) | Time:497534:49:22.63 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:56.55M (Peak 87.26M) | Time:497534:49:22.63 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:56.88M (Peak 87.26M) | Time:497534:49:22.63 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:57.98M (Peak 87.26M) | Time:497534:49:22.64 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:57.98M (Peak 87.26M) | Time:497534:49:22.64 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst_ao
+Fra:1 Mem:52.91M (Peak 185.53M) | Time:497534:49:47.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:52.91M (Peak 185.53M) | Time:497534:49:47.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:53.29M (Peak 185.53M) | Time:497534:49:47.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:55.36M (Peak 185.53M) | Time:497534:49:47.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:55.48M (Peak 185.53M) | Time:497534:49:47.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:56.26M (Peak 185.53M) | Time:497534:49:47.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:56.32M (Peak 185.53M) | Time:497534:49:47.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:56.47M (Peak 185.53M) | Time:497534:49:47.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:56.51M (Peak 185.53M) | Time:497534:49:47.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:57.33M (Peak 185.53M) | Time:497534:49:47.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:57.63M (Peak 185.53M) | Time:497534:49:47.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:57.98M (Peak 185.53M) | Time:497534:49:47.14 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:57.98M (Peak 185.53M) | Time:497534:49:47.14 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst_ao
+Fra:1 Mem:52.91M (Peak 185.53M) | Time:497534:49:49.82 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:52.91M (Peak 185.53M) | Time:497534:49:49.82 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:53.32M (Peak 185.53M) | Time:497534:49:49.82 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:55.36M (Peak 185.53M) | Time:497534:49:49.82 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:55.48M (Peak 185.53M) | Time:497534:49:49.82 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:56.26M (Peak 185.53M) | Time:497534:49:49.82 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:56.32M (Peak 185.53M) | Time:497534:49:49.82 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:56.47M (Peak 185.53M) | Time:497534:49:49.83 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:56.51M (Peak 185.53M) | Time:497534:49:49.83 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:57.55M (Peak 185.53M) | Time:497534:49:49.83 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:57.63M (Peak 185.53M) | Time:497534:49:49.83 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:57.98M (Peak 185.53M) | Time:497534:49:49.83 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:57.98M (Peak 185.53M) | Time:497534:49:49.83 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst_ao
+Fra:1 Mem:52.91M (Peak 185.53M) | Time:497534:49:50.78 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:52.91M (Peak 185.53M) | Time:497534:49:50.78 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:53.29M (Peak 185.53M) | Time:497534:49:50.78 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:55.36M (Peak 185.53M) | Time:497534:49:50.78 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:55.48M (Peak 185.53M) | Time:497534:49:50.78 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:56.26M (Peak 185.53M) | Time:497534:49:50.78 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:56.32M (Peak 185.53M) | Time:497534:49:50.78 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:56.47M (Peak 185.53M) | Time:497534:49:50.78 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:56.51M (Peak 185.53M) | Time:497534:49:50.78 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:57.33M (Peak 185.53M) | Time:497534:49:50.79 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:57.68M (Peak 185.53M) | Time:497534:49:50.79 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:57.98M (Peak 185.53M) | Time:497534:49:50.81 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:57.98M (Peak 185.53M) | Time:497534:49:50.81 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst_ao
+Fra:1 Mem:52.91M (Peak 185.53M) | Time:497534:49:54.54 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:52.91M (Peak 185.53M) | Time:497534:49:54.54 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:53.99M (Peak 185.53M) | Time:497534:49:54.54 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:55.36M (Peak 185.53M) | Time:497534:49:54.55 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:55.48M (Peak 185.53M) | Time:497534:49:54.55 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:56.26M (Peak 185.53M) | Time:497534:49:54.55 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:56.32M (Peak 185.53M) | Time:497534:49:54.55 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:56.47M (Peak 185.53M) | Time:497534:49:54.55 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:56.51M (Peak 185.53M) | Time:497534:49:54.55 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:57.90M (Peak 185.53M) | Time:497534:49:54.56 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:57.40M (Peak 185.53M) | Time:497534:49:54.56 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:57.98M (Peak 185.53M) | Time:497534:49:54.56 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:57.98M (Peak 185.53M) | Time:497534:49:54.56 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst_ao
+Fra:1 Mem:52.96M (Peak 185.53M) | Time:497534:49:55.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:52.96M (Peak 185.53M) | Time:497534:49:55.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:53.37M (Peak 185.53M) | Time:497534:49:55.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:55.27M (Peak 185.53M) | Time:497534:49:55.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:55.53M (Peak 185.53M) | Time:497534:49:55.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:56.31M (Peak 185.53M) | Time:497534:49:55.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:56.37M (Peak 185.53M) | Time:497534:49:55.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:56.52M (Peak 185.53M) | Time:497534:49:55.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:56.56M (Peak 185.53M) | Time:497534:49:55.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:57.38M (Peak 185.53M) | Time:497534:49:55.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:57.73M (Peak 185.53M) | Time:497534:49:55.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:58.03M (Peak 185.53M) | Time:497534:49:55.14 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:58.02M (Peak 185.53M) | Time:497534:49:55.14 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst_ao
+Fra:1 Mem:53.16M (Peak 185.58M) | Time:497534:49:55.81 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:53.47M (Peak 185.58M) | Time:497534:49:55.81 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:53.57M (Peak 185.58M) | Time:497534:49:55.81 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:55.62M (Peak 185.58M) | Time:497534:49:55.81 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:55.74M (Peak 185.58M) | Time:497534:49:55.81 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:56.51M (Peak 185.58M) | Time:497534:49:55.81 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:56.57M (Peak 185.58M) | Time:497534:49:55.81 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:56.72M (Peak 185.58M) | Time:497534:49:55.81 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:56.77M (Peak 185.58M) | Time:497534:49:55.81 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:57.58M (Peak 185.58M) | Time:497534:49:55.82 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:57.93M (Peak 185.58M) | Time:497534:49:55.82 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:58.23M (Peak 185.58M) | Time:497534:49:55.82 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:58.23M (Peak 185.58M) | Time:497534:49:55.82 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst_ao
+Fra:1 Mem:53.05M (Peak 185.79M) | Time:497534:49:56.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:53.05M (Peak 185.79M) | Time:497534:49:56.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:53.36M (Peak 185.79M) | Time:497534:49:56.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:55.50M (Peak 185.79M) | Time:497534:49:56.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:55.62M (Peak 185.79M) | Time:497534:49:56.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:56.40M (Peak 185.79M) | Time:497534:49:56.60 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:56.46M (Peak 185.79M) | Time:497534:49:56.60 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:56.61M (Peak 185.79M) | Time:497534:49:56.60 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:56.65M (Peak 185.79M) | Time:497534:49:56.60 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:57.47M (Peak 185.79M) | Time:497534:49:56.60 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:57.82M (Peak 185.79M) | Time:497534:49:56.60 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:58.12M (Peak 185.79M) | Time:497534:49:56.60 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:58.11M (Peak 185.79M) | Time:497534:49:56.60 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst_ao
+Fra:1 Mem:53.02M (Peak 185.79M) | Time:497534:49:57.65 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:53.02M (Peak 185.79M) | Time:497534:49:57.65 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_sign
+Fra:1 Mem:53.39M (Peak 185.79M) | Time:497534:49:57.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_logs
+Fra:1 Mem:53.51M (Peak 185.79M) | Time:497534:49:57.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_hood
+Fra:1 Mem:54.29M (Peak 185.79M) | Time:497534:49:57.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wire
+Fra:1 Mem:54.35M (Peak 185.79M) | Time:497534:49:57.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_iron
+Fra:1 Mem:54.50M (Peak 185.79M) | Time:497534:49:57.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_paint
+Fra:1 Mem:54.54M (Peak 185.79M) | Time:497534:49:57.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_roof
+Fra:1 Mem:55.36M (Peak 185.79M) | Time:497534:49:57.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_counter
+Fra:1 Mem:55.71M (Peak 185.79M) | Time:497534:49:57.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_frame
+Fra:1 Mem:56.01M (Peak 185.79M) | Time:497534:49:57.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | bratwurst_wood
+Fra:1 Mem:58.08M (Peak 185.79M) | Time:497534:49:57.68 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:58.08M (Peak 185.79M) | Time:497534:49:57.68 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_bratwurst_ao
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+[nmlib] AO stall_bratwurst 768px for 9 objects in 37.5s: islands cover 59%, 3496 tiny faces on the patch, island mean 0.30 -> 0.54
+14:49:59 | INFO: Starting glTF 2.0 export
+14:49:59 | INFO: Extracting primitive: bratwurst_wood
+14:49:59 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:59 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: bratwurst_frame
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: bratwurst_counter
+14:49:59 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:59 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: bratwurst_roof
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: bratwurst_paint
+14:49:59 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:59 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: bratwurst_iron
+14:49:59 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:59 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: bulbs_0
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: bratwurst_wire
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: bratwurst_hood
+14:49:59 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:59 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: bratwurst_logs
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: bratwurst_sign
+14:49:59 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:49:59 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: snow_0
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Extracting primitive: snow_1
+14:49:59 | INFO: Primitives created: 1
+14:49:59 | INFO: Finished glTF 2.0 export in 0.5349655151367188 s
+
+[nmlib] exported stall_bratwurst: 0.86 MB (+0.45 MB shared), 36402 tris in 2.4s
+14:50:02 | INFO: Data are loaded, start creating Blender stuff
+14:50:02 | INFO: Blender create Mesh node act_grill_mesh
+14:50:02 | INFO: Blender create Mesh node act_grill_swing_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_0_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_1_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_2_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_3_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_4_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_5_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_6_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_7_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_8_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_9_mesh
+14:50:02 | INFO: Blender create Mesh node coals_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_0_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_1_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_10_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_11_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_12_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_13_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_14_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_15_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_2_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_3_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_4_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_5_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_6_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_7_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_8_mesh
+14:50:02 | INFO: Blender create Mesh node act_roll_9_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_10_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_11_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_12_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_13_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_14_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_15_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_16_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_17_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_18_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_19_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_20_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_21_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_22_mesh
+14:50:02 | INFO: Blender create Mesh node act_sausage_23_mesh
+14:50:02 | INFO: Blender create Mesh node act_served_0_mesh
+14:50:02 | INFO: Blender create Mesh node act_served_1_mesh
+14:50:02 | INFO: Blender create Mesh node prop_wurst_counter_static
+14:50:02 | INFO: glTF import finished in 0.18s
+[nmlib] imported prop_wurst_counter.glb: 93 objects at (0.0, -1.17, 1.05)
+Fra:1 Mem:36.56M (Peak 77.89M) | Time:00:00.02 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bratwurst_wood
+Fra:1 Mem:38.51M (Peak 77.89M) | Time:00:00.02 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | prop_wurst_counter_static
+Fra:1 Mem:40.25M (Peak 77.89M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bratwurst_frame
+Fra:1 Mem:39.86M (Peak 77.89M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | coals_mesh
+Fra:1 Mem:40.14M (Peak 77.89M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bratwurst_counter
+Fra:1 Mem:40.79M (Peak 77.89M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bratwurst_roof
+Fra:1 Mem:41.36M (Peak 77.89M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_served_1_mesh
+Fra:1 Mem:42.09M (Peak 77.89M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bratwurst_paint
+Fra:1 Mem:42.13M (Peak 77.89M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bratwurst_iron
+Fra:1 Mem:42.28M (Peak 77.89M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bulbs_0
+Fra:1 Mem:42.41M (Peak 77.89M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bratwurst_wire
+Fra:1 Mem:42.47M (Peak 77.89M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bratwurst_hood
+Fra:1 Mem:42.93M (Peak 77.89M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_served_0_mesh
+Fra:1 Mem:43.13M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_9_mesh
+Fra:1 Mem:43.11M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bratwurst_logs
+Fra:1 Mem:43.24M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_8_mesh
+Fra:1 Mem:43.25M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bratwurst_sign
+Fra:1 Mem:43.66M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_7_mesh
+Fra:1 Mem:43.71M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_6_mesh
+Fra:1 Mem:43.77M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | snow_0
+Fra:1 Mem:44.00M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | snow_1
+Fra:1 Mem:44.19M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | env_ground
+Fra:1 Mem:44.19M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_grill_mesh
+Fra:1 Mem:44.22M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_5_mesh
+Fra:1 Mem:44.60M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_4_mesh
+Fra:1 Mem:44.65M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_3_mesh
+Fra:1 Mem:44.82M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_2_mesh
+Fra:1 Mem:44.87M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_23_mesh
+Fra:1 Mem:44.91M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_22_mesh
+Fra:1 Mem:44.73M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_grill_swing_mesh
+Fra:1 Mem:45.01M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_21_mesh
+Fra:1 Mem:45.34M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_20_mesh
+Fra:1 Mem:45.39M (Peak 77.89M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_1_mesh
+Fra:1 Mem:45.59M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_19_mesh
+Fra:1 Mem:45.64M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_18_mesh
+Fra:1 Mem:45.69M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_17_mesh
+Fra:1 Mem:45.46M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_0_mesh
+Fra:1 Mem:45.46M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_16_mesh
+Fra:1 Mem:45.51M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_10_mesh
+Fra:1 Mem:45.55M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_15_mesh
+Fra:1 Mem:45.53M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_11_mesh
+Fra:1 Mem:45.60M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_12_mesh
+Fra:1 Mem:45.67M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_13_mesh
+Fra:1 Mem:45.68M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_14_mesh
+Fra:1 Mem:45.69M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_14_mesh
+Fra:1 Mem:45.77M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_15_mesh
+Fra:1 Mem:45.78M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_13_mesh
+Fra:1 Mem:45.76M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_1_mesh
+Fra:1 Mem:45.85M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_2_mesh
+Fra:1 Mem:45.90M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_3_mesh
+Fra:1 Mem:45.90M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_12_mesh
+Fra:1 Mem:45.96M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_11_mesh
+Fra:1 Mem:45.98M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_4_mesh
+Fra:1 Mem:46.05M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_5_mesh
+Fra:1 Mem:46.07M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_10_mesh
+Fra:1 Mem:46.05M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_6_mesh
+Fra:1 Mem:46.15M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_7_mesh
+Fra:1 Mem:46.14M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_8_mesh
+Fra:1 Mem:46.17M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_sausage_0_mesh
+Fra:1 Mem:46.22M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_roll_9_mesh
+Fra:1 Mem:46.25M (Peak 77.89M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing
+Fra:1 Mem:45.96M (Peak 77.89M) | Time:00:00.07 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Images | Loading coal_color
+Fra:1 Mem:45.96M (Peak 77.89M) | Time:00:00.07 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Images | Loading atlas_color
+Fra:1 Mem:62.98M (Peak 77.89M) | Time:00:00.07 | Mem:1.00M, Peak:1.00M | Scene, ViewLayer | Updating Images | Loading coal_emit
+Fra:1 Mem:63.98M (Peak 77.89M) | Time:00:00.08 | Mem:2.00M, Peak:2.00M | Scene, ViewLayer | Updating Images | Loading prop_wurst_counter_ao
+Fra:1 Mem:64.98M (Peak 77.89M) | Time:00:00.08 | Mem:3.00M, Peak:3.00M | Scene, ViewLayer | Updating Images | Loading atlas_normal
+Fra:1 Mem:112.99M (Peak 145.00M) | Time:00:00.14 | Mem:19.00M, Peak:19.00M | Scene, ViewLayer | Updating Images | Loading atlas_rm
+Fra:1 Mem:92.88M (Peak 145.00M) | Time:00:00.19 | Mem:51.00M, Peak:51.00M | Scene, ViewLayer | Waiting for render to start
+Fra:1 Mem:92.88M (Peak 145.00M) | Time:00:00.20 | Mem:51.00M, Peak:51.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)
+Fra:1 Mem:92.88M (Peak 145.00M) | Time:00:00.20 | Mem:51.00M, Peak:51.00M | Scene, ViewLayer | Updating Scene
+Fra:1 Mem:92.88M (Peak 145.00M) | Time:00:00.20 | Mem:51.00M, Peak:51.00M | Scene, ViewLayer | Updating Shaders
+Fra:1 Mem:92.98M (Peak 145.00M) | Time:00:00.20 | Mem:51.02M, Peak:51.02M | Scene, ViewLayer | Updating Procedurals
+Fra:1 Mem:92.98M (Peak 145.00M) | Time:00:00.20 | Mem:51.02M, Peak:51.02M | Scene, ViewLayer | Updating Background
+Fra:1 Mem:92.98M (Peak 145.00M) | Time:00:00.20 | Mem:51.02M, Peak:51.02M | Scene, ViewLayer | Updating Camera
+Fra:1 Mem:92.98M (Peak 145.00M) | Time:00:00.20 | Mem:51.02M, Peak:51.02M | Scene, ViewLayer | Updating Meshes Flags
+Fra:1 Mem:92.98M (Peak 145.00M) | Time:00:00.20 | Mem:51.02M, Peak:51.02M | Scene, ViewLayer | Updating Objects
+Fra:1 Mem:92.98M (Peak 145.00M) | Time:00:00.20 | Mem:51.02M, Peak:51.02M | Scene, ViewLayer | Updating Objects | Copying Transformations to device
+Fra:1 Mem:93.00M (Peak 145.00M) | Time:00:00.20 | Mem:51.03M, Peak:51.03M | Scene, ViewLayer | Updating Objects | Applying Static Transformations
+Fra:1 Mem:93.00M (Peak 145.00M) | Time:00:00.20 | Mem:51.03M, Peak:51.03M | Scene, ViewLayer | Updating Particle Systems
+Fra:1 Mem:93.00M (Peak 145.00M) | Time:00:00.20 | Mem:51.03M, Peak:51.03M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device
+Fra:1 Mem:93.00M (Peak 145.00M) | Time:00:00.20 | Mem:51.03M, Peak:51.03M | Scene, ViewLayer | Updating Meshes
+Fra:1 Mem:93.87M (Peak 145.00M) | Time:00:00.20 | Mem:51.03M, Peak:51.03M | Scene, ViewLayer | Updating Mesh | Computing attributes
+Fra:1 Mem:99.86M (Peak 145.00M) | Time:00:00.20 | Mem:51.04M, Peak:51.04M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device
+Fra:1 Mem:99.82M (Peak 145.00M) | Time:00:00.20 | Mem:56.99M, Peak:56.99M | Scene, ViewLayer | Updating Scene BVH | Building
+Fra:1 Mem:99.82M (Peak 145.00M) | Time:00:00.20 | Mem:56.99M, Peak:56.99M | Scene, ViewLayer | Updating Scene BVH | Building BVH
+Fra:1 Mem:99.82M (Peak 145.00M) | Time:00:00.20 | Mem:58.74M, Peak:58.74M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%
+Fra:1 Mem:99.82M (Peak 145.00M) | Time:00:00.24 | Mem:60.46M, Peak:62.21M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device
+Fra:1 Mem:99.82M (Peak 145.00M) | Time:00:00.24 | Mem:60.46M, Peak:62.21M | Scene, ViewLayer | Updating Mesh | Computing normals
+Fra:1 Mem:102.39M (Peak 145.00M) | Time:00:00.24 | Mem:60.46M, Peak:62.21M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device
+Fra:1 Mem:102.39M (Peak 145.00M) | Time:00:00.24 | Mem:63.03M, Peak:63.03M | Scene, ViewLayer | Updating Objects Flags
+Fra:1 Mem:102.39M (Peak 145.00M) | Time:00:00.24 | Mem:63.03M, Peak:63.03M | Scene, ViewLayer | Updating Primitive Offsets
+Fra:1 Mem:102.39M (Peak 145.00M) | Time:00:00.24 | Mem:63.03M, Peak:63.03M | Scene, ViewLayer | Updating Images
+Fra:1 Mem:101.39M (Peak 145.00M) | Time:00:00.24 | Mem:62.03M, Peak:63.03M | Scene, ViewLayer | Updating Images | Loading kit_wood_normal.png
+Fra:1 Mem:105.39M (Peak 145.00M) | Time:00:00.24 | Mem:62.03M, Peak:63.03M | Scene, ViewLayer | Updating Images | Loading kit_paint_color.png
+Fra:1 Mem:109.39M (Peak 145.00M) | Time:00:00.29 | Mem:66.03M, Peak:66.03M | Scene, ViewLayer | Updating Images | Loading kit_paint_rm.png
+Fra:1 Mem:113.39M (Peak 145.00M) | Time:00:00.29 | Mem:70.03M, Peak:70.03M | Scene, ViewLayer | Updating Images | Loading kit_wood_rm.png
+Fra:1 Mem:117.39M (Peak 145.00M) | Time:00:00.32 | Mem:74.03M, Peak:74.03M | Scene, ViewLayer | Updating Images | Loading kit_paint_normal.png
+Fra:1 Mem:121.39M (Peak 145.00M) | Time:00:00.34 | Mem:78.03M, Peak:78.03M | Scene, ViewLayer | Updating Images | Loading kit_wood_color.png
+Fra:1 Mem:125.39M (Peak 145.00M) | Time:00:00.35 | Mem:82.03M, Peak:82.03M | Scene, ViewLayer | Updating Images | Loading kit_iron_matte_color.png
+Fra:1 Mem:126.39M (Peak 145.00M) | Time:00:00.36 | Mem:83.03M, Peak:83.03M | Scene, ViewLayer | Updating Images | Loading kit_iron_rm.png
+Fra:1 Mem:127.39M (Peak 145.00M) | Time:00:00.37 | Mem:84.03M, Peak:84.03M | Scene, ViewLayer | Updating Images | Loading kit_iron_normal.png
+Fra:1 Mem:128.39M (Peak 145.00M) | Time:00:00.38 | Mem:85.03M, Peak:85.03M | Scene, ViewLayer | Updating Images | Loading kit_iron_color.png
+Fra:1 Mem:129.39M (Peak 145.00M) | Time:00:00.38 | Mem:89.03M, Peak:89.03M | Scene, ViewLayer | Updating Images | Loading kit_oak_normal.png
+Fra:1 Mem:133.39M (Peak 145.00M) | Time:00:00.39 | Mem:90.03M, Peak:90.03M | Scene, ViewLayer | Updating Images | Loading kit_oak_color.png
+Fra:1 Mem:137.39M (Peak 145.00M) | Time:00:00.41 | Mem:94.03M, Peak:94.03M | Scene, ViewLayer | Updating Images | Loading kit_oak_rm.png
+Fra:1 Mem:141.39M (Peak 145.00M) | Time:00:00.43 | Mem:102.03M, Peak:102.03M | Scene, ViewLayer | Updating Camera Volume
+Fra:1 Mem:141.39M (Peak 145.00M) | Time:00:00.43 | Mem:102.03M, Peak:102.03M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:141.39M (Peak 145.00M) | Time:00:00.43 | Mem:102.11M, Peak:102.11M | Scene, ViewLayer | Updating Lights
+Fra:1 Mem:141.40M (Peak 145.00M) | Time:00:00.43 | Mem:102.11M, Peak:102.11M | Scene, ViewLayer | Updating Lights | Importance map
+Fra:1 Mem:205.43M (Peak 493.40M) | Time:00:01.18 | Mem:166.16M, Peak:326.13M | Scene, ViewLayer | Updating Lights | Computing tree
+Fra:1 Mem:205.88M (Peak 493.40M) | Time:00:01.19 | Mem:166.60M, Peak:326.13M | Scene, ViewLayer | Updating Integrator
+Fra:1 Mem:205.88M (Peak 493.40M) | Time:00:01.19 | Mem:166.60M, Peak:326.13M | Scene, ViewLayer | Updating Film
+Fra:1 Mem:205.88M (Peak 493.40M) | Time:00:01.19 | Mem:166.52M, Peak:326.13M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:205.88M (Peak 493.40M) | Time:00:01.19 | Mem:166.61M, Peak:326.13M | Scene, ViewLayer | Updating Baking
+Fra:1 Mem:205.88M (Peak 493.40M) | Time:00:01.19 | Mem:166.61M, Peak:326.13M | Scene, ViewLayer | Updating Device | Writing constant memory
+Fra:1 Mem:205.88M (Peak 493.40M) | Time:00:01.19 | Mem:166.61M, Peak:326.13M | Scene, ViewLayer | Loading denoising kernels (may take a few minutes the first time)
+Fra:1 Mem:205.88M (Peak 493.40M) | Time:00:01.19 | Mem:166.61M, Peak:326.13M | Scene, ViewLayer | Sample 0/48
+Fra:1 Mem:272.69M (Peak 493.40M) | Time:00:04.62 | Remaining:02:41.18 | Mem:233.41M, Peak:326.13M | Scene, ViewLayer | Sample 1/48
+Fra:1 Mem:272.69M (Peak 493.40M) | Time:00:26.67 | Remaining:01:50.37 | Mem:233.41M, Peak:326.13M | Scene, ViewLayer | Sample 9/48
+Fra:1 Mem:272.69M (Peak 493.40M) | Time:00:48.90 | Remaining:01:26.99 | Mem:233.41M, Peak:326.13M | Scene, ViewLayer | Sample 17/48
+Fra:1 Mem:272.69M (Peak 493.40M) | Time:01:43.30 | Remaining:01:33.93 | Mem:233.41M, Peak:326.13M | Scene, ViewLayer | Sample 25/48
+Fra:1 Mem:272.69M (Peak 493.40M) | Time:03:20.80 | Remaining:01:30.72 | Mem:233.41M, Peak:326.13M | Scene, ViewLayer | Sample 33/48
+Fra:1 Mem:272.69M (Peak 493.40M) | Time:04:55.63 | Remaining:00:50.27 | Mem:233.41M, Peak:326.13M | Scene, ViewLayer | Sample 41/48
+Fra:1 Mem:300.81M (Peak 493.40M) | Time:07:13.34 | Mem:233.41M, Peak:326.13M | Scene, ViewLayer | Sample 48/48
+Fra:1 Mem:300.81M (Peak 493.40M) | Time:07:13.34 | Mem:233.41M, Peak:326.13M | Scene, ViewLayer | Finished
+Saved: '/home/claude/website/blender/out/renders/stall_bratwurst_preview.png'
+Time: 07:17.15 (Saving: 00:03.70)
+
+[nmlib] rendered stall_bratwurst_preview.png in 437.2s
+[stall_bratwurst] full: 0.86 MB, 36402 tris
+[stall_bratwurst] lite: 0.22 MB, 7467 tris

@@ -72,7 +72,9 @@ MATS["ti_ox"] = C.pbr("timber_oxblood", tex=T_TI, factor=(1.2, 0.62, 0.5))
 MATS["ti_black"] = C.pbr("timber_black", tex=T_TI, factor=(0.5, 0.48, 0.47))
 MATS["roof_red"] = C.pbr("roof_tiles_red", tex=T_RO)
 MATS["roof_brown"] = C.pbr("roof_tiles_brown", tex=T_RO, factor=(0.72, 0.66, 0.66))
-MATS["slate"] = C.pbr("roof_slate", tex=T_SL)
+# Round 5: the round-1 judges saw the church nave roof as a near-black slab from the home camera;
+# the slate is lifted a third (still blue-grey, still darker than the clay roofs)
+MATS["slate"] = C.pbr("roof_slate", tex=T_SL, factor=(1.32, 1.34, 1.4))
 MATS["stone_red"] = C.pbr("sandstone_red", tex=T_SR)
 MATS["stone_yel"] = C.pbr("sandstone_yellow", tex=T_SY)
 PAINT = {"frame": (0.95, 0.93, 0.88), "green": (0.28, 0.42, 0.3), "red": (0.62, 0.2, 0.16),
@@ -893,6 +895,9 @@ def build_church():
     # two floodlights at the tower foot on the square side, as German churches are lit at night
     for k, sx in enumerate((-3.2, 3.2)):
         C.empty(f"light_church_{k}", F @ Vector((sx, -TW / 2 - 3.5, 0.4)), col)
+    # Round 5: a third, lower-ranked empty grazes the square-side slope of the nave roof (a floodlight on
+    # the house front across the lane), so the slate courses and dormers read from the home camera
+    C.empty("light_church_2", F @ Vector((x0 + NL * 0.5, -NW / 2 - 7.0, NH - 1.5)), col)
     # angular extent of the church block (for skipping houses)
     corners = [F @ Vector((-TW / 2 - 1, -TW / 2, 0)), F @ Vector((x0 + NL + NW / 2, -NW / 2, 0))]
     angs = [math.atan2(c.y, c.x) for c in corners]

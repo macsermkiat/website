@@ -77,8 +77,11 @@ def layout_places():
 # [6.5, -15]), poles 7 and 8 behind the bandstand moved 0.9 m inward to clear it too, and the spans
 # behind the tree are re-routed so no wire or bulb passes through the fir
 # (see blender/square/check_clash.py, which tests every wire and bulb vertex against the fir's needles).
+# Round 5 pass 2: pole 1 moved from [-7.5, 6.5] to [-7.8, 5.6], 0.95 m toward the Glühwein, to widen
+# the front lane between it and the people round the signpost, where the guided stroll walks.  Pole 4
+# moved from [15, 4] to [15.1, 5.2]: the round-4 Bücherstand roof's eave came within 0.35 m of its axis.
 TREE_THREE = (6.5, -15.0)
-POLES_THREE = [[-15, 4], [-7.5, 6.5], [0, 7.5], [7.5, 6.5], [15, 4], [-10.5, -6.5], [10.5, -6.5],
+POLES_THREE = [[-15, 4], [-7.8, 5.6], [0, 7.5], [7.5, 6.5], [15.1, 5.2], [-10.5, -6.5], [10.5, -6.5],
                [-2.6, -9.6], [2.6, -9.6], [-17.5, -3], [-17.5, 5], [-17.5, 13], [17.5, -3], [17.5, 5],
                [17.5, 13], [-7, -18], [0, -21], [12.4, -20.6]]
 # Round 1 pass 3: span 19 used to run 35 m from pole 9 to pole 12 across z = -3, 2 m in front of the

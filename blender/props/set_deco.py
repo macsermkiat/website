@@ -1104,7 +1104,9 @@ def puffer():
     Ms = T(0.52, -0.125, 0)
     with item(s, "act_plate_0", (0.52, -0.125, 0.0), "Three Kartoffelpuffer with applesauce",
               "Three Kartoffelpuffer on a paper plate with a spoonful of applesauce and a wooden fork, 5 €.") as m_p:
-        m_p.lathe([(0.0, 0.0), (0.075, 0.0), (0.09, 0.012), (0.0, 0.004)], seg(16, 8), "paper", Ms, C("f6f2ea"))
+        # 12 sides in lite: a hexagonal plate would change the item's bounds by more than a centimetre
+        m_p.lathe([(0.0, 0.0), (0.075, 0.0), (0.09, 0.012), (0.0, 0.004)], 16 if not vlib.lite() else 12, "paper", Ms,
+                  C("f6f2ea"))
         for k in range(3):
             a = TWO_PI * k / 3 + 0.4
             g = irng("pf_plate", k)

@@ -560,7 +560,11 @@ export default function marketPlugin() {
           const hint = site?.meta?.ui?.hint;
           let out = html.replace('<!--TAGLINE-->', tagline).replace('<!--AUDIO_CREDIT-->', audioCredit()).replace('<!--ASSET_CREDITS-->', assetCredits());
           if (site?.meta?.description) out = out.replace(/(<meta name="description" content=")[^"]*"/, `$1${esc(site.meta.description)}"`);
-          if (hint) out = out.replace(/(<p class="hint" id="hint">)[\s\S]*?(<\/p>)/, `$1${esc(hint)} Keyboard: Tab reaches the places below, or press 1–7.$2`);
+          // the writer's hint still describes the round-4 orbit ("drag to look around… click a stall to go inside"); the
+          // stroll keeps its own until content/site.md has a ui.stroll_hint, which then wins
+          const strollHint = site?.meta?.ui?.stroll_hint;
+          if (strollHint) out = out.replace(/(<p class="hint" id="hint">)[\s\S]*?(<\/p>)/, `$1${esc(strollHint)}$2`);
+          else if (hint && !/drag|go inside|tab reaches/i.test(hint)) out = out.replace(/(<p class="hint" id="hint">)[\s\S]*?(<\/p>)/, `$1${esc(hint)}$2`);
           return out;
         }
         const { nav, body, intro } = plainHtml(content);

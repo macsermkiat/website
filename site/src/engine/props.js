@@ -39,7 +39,7 @@ function normalise(json) {
  * `model` and `lite` files in public/models, and its `asset` (when given) the file that stall is built from.
  * Anything else is reported (warn + `bindings`), never guessed.
  */
-export async function placeProps(placed, { lite, manager, warn, elsewhere = [], bindings = [] }) {
+export async function placeProps(placed, { lite, liteOf = null, manager, warn, elsewhere = [], bindings = [] }) {
   const json = inventory.props;
   if (!json) return 0;
   const items = normalise(json);
@@ -57,7 +57,9 @@ export async function placeProps(placed, { lite, manager, warn, elsewhere = [], 
     if (!slot && target.source === 'standin') return; // a stand-in stall without that shelf
     if (!slot) return bad(it, `${target.file} has no ${it.slot}.`);
     let file = it.model;
-    if (lite) {
+    // streaming: a stall that opens lite on the full market takes its props lite too, and grafts the full ones later
+    const useLite = lite || !!liteOf?.(target.entry);
+    if (useLite) {
       if (it.lite && modelExists(it.lite)) file = it.lite;
       else if (it.lite && modelExists(it.model)) bad(it, `lite file ${it.lite} is not in site/public/models; the lite market loads ${it.model}.`);
       else if (it.lite) return bad(it, `neither ${it.lite} nor ${it.model} is in site/public/models.`);
@@ -74,6 +76,7 @@ export async function placeProps(placed, { lite, manager, warn, elsewhere = [], 
       obj.name = obj.name || `prop_${file}`;
       obj.userData.propFile = file; // which file a set came from (for debugging and tests)
       obj.userData.propSet = it.set || file.replace(/(\.lite)?\.glb$/, '');
+      if (useLite && !lite && file !== it.model) obj.userData.fullFile = it.model;
       slot.add(obj);
       n++;
     } catch (e) {

@@ -569,6 +569,11 @@ KIT_VARIANTS = {
     # (emissiveTexture = the shared paint colour map, so it costs no texture bytes). Under the
     # site's moonlight a red bargeboard facing down goes near-black; this keeps it red.
     "paint_glow": ("paint", dict(emit=(0.13, 0.09, 0.07))),
+    # a main sign board lit by its own gooseneck lamps (round 4): the paint kit with a stronger
+    # warm emissive copy of its colour, so a cream board glows and dark letters stay dark. The
+    # engine has no light for the sign lamps; this lets 'Glühwein' and 'Bratwurst' read from the
+    # home view. Cycles previews switch it off and light the board with the lamp spots instead.
+    "paint_lit": ("paint", dict(emit=(0.55, 0.44, 0.32))),
     # old copper sheet (small roofs, hoods): the iron kit's dents, streaks and pitting with a
     # copper-brown, part-oxidised colour (its own small colour copy), metal x0.6. Replaces the
     # flat untextured 'copper' on architecture, which renders as a salmon plane in three.js.
@@ -576,7 +581,7 @@ KIT_VARIANTS = {
 }
 # Variants whose emission is a stand-in for light the engine does not cast (bulbs, fire). Cycles
 # previews switch it off (standin_emission(False)), so the render stays the lighting target.
-STANDIN_EMIT = {"iron_matte", "paint_glow", "rauten"}
+STANDIN_EMIT = {"iron_matte", "paint_glow", "paint_lit", "rauten"}
 
 
 def standin_emission(on=True):

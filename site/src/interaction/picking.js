@@ -3,11 +3,15 @@
 // roof post in front of a book still hides it.
 import * as THREE from 'three';
 
+function signOf(o) { for (let x = o; x; x = x.parent) if (x.userData?.sign) return x.userData.sign; return null; }
+function signNode(o) { let arm = null; for (let x = o; x; x = x.parent) if (x.userData?.sign) arm = x; return arm; }
+function surfaceRoot(o) { let top = o; for (let x = o; x && x.userData?.readable === o.userData.readable; x = x.parent) top = x; return top; }
+
 // Items answer the pointer only from close by (the stall's close-up, or a visitor who zoomed in); from
 // further away the pointer means the whole stall.
 export const ITEM_RANGE = 11;
 
-export function createPicking({ dom, camera, market, overlay, outline, items, labelFor, onPick, onItem, onDeco, current = () => null }) {
+export function createPicking({ dom, camera, market, overlay, outline, items, labelFor, onPick, onItem, onDeco, current = () => null, extraRoots = () => [], readLabel = () => '', signLabel = () => '', onRead, onSign, onLink, readingNow = () => false }) {
   const ray = new THREE.Raycaster();
   const ptr = new THREE.Vector2();
   const tip = document.createElement('div');
@@ -18,7 +22,7 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
   // coarse boxes first, so a pointer move only tests triangles of the place under it
   let boxes = [];
   const refresh = () => {
-    const roots = [...market.hotRoots, ...(market.decoRoots || [])];
+    const roots = [...market.hotRoots, ...(market.decoRoots || []), ...extraRoots().filter(Boolean)];
     boxes = roots.map((h) => ({ h, box: new THREE.Box3().setFromObject(h).expandByScalar(0.2) }));
   };
   refresh();
@@ -51,6 +55,14 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     }
     for (const h of hits) {
       const o0 = h.object;
+      // words in the market: a link on a page, a writing surface, an arm of the signpost
+      if (o0.userData.href) return { x: ev.clientX - r.left, y: ev.clientY - r.top, distance: h.distance, link: o0.userData.href, linkText: o0.userData.linkText, readable: o0.userData.readable || null };
+      const sign = signOf(o0);
+      if (sign) return { x: ev.clientX - r.left, y: ev.clientY - r.top, distance: h.distance, sign, target: signNode(o0) };
+      if (o0.userData.readable) {
+        let o = o0; while (o && !o.userData.place && !o.userData.entry) o = o.parent;
+        return { x: ev.clientX - r.left, y: ev.clientY - r.top, distance: h.distance, readable: o0.userData.readable, id: o?.userData.place || null, target: surfaceRoot(o0) };
+      }
       if (o0.userData.bulbs && hits.length > 1) continue;
       // the merged shelf goods: the items' own (hidden) meshes answer for them. A stall's merged body (mergeStatic)
       // still answers as its place.
@@ -75,13 +87,14 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     hover = p?.id || null;
     items?.hover(p?.item || null);
     if (outline) {
-      const target = p?.item ? p.item.node : p?.id ? market.places[p.id]?.holder : p?.deco ? (market.decoRoots || []).find((h) => h.userData.entry?.id === p.deco) : null;
-      outline.selectedObjects = target ? [target] : [];
+      const target = p?.link ? null : p?.target ? p.target : p?.item ? p.item.node : p?.id ? market.places[p.id]?.holder : p?.deco ? (market.decoRoots || []).find((h) => h.userData.entry?.id === p.deco) : null;
+      // while reading, the page itself is not outlined (the words would blur)
+      outline.selectedObjects = target && !(p.readable && readingNow()) ? [target] : [];
     }
     if (p) {
       tip.hidden = false;
-      tip.textContent = p.item ? p.item.label : p.id ? labelFor(p.id) : p.label || '';
-      tip.classList.toggle('item', !!p.item);
+      tip.textContent = p.link ? `Open: ${p.linkText || p.link}` : p.sign ? signLabel(p.sign) : p.readable ? readLabel(p.readable) : p.item ? p.item.label : p.id ? labelFor(p.id) : p.label || '';
+      tip.classList.toggle('item', !!p.item || !!p.readable || !!p.link);
       tip.style.left = p.x + 'px';
       tip.style.top = p.y + 'px';
       dom.style.cursor = 'pointer';
@@ -106,7 +119,10 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     // a finger wobbles more than a mouse: a tap may move a little further and still count
     if (moved > (e.pointerType === 'touch' ? 12 : 6)) return;
     const p = pick(e);
-    if (!p) return;
+    if (!p) { onMiss?.(); return; }
+    if (p.link) { onLink?.(p.link, p); return; }
+    if (p.sign) { onSign?.(p.sign); return; }
+    if (p.readable) { onRead?.(p.readable, p); return; }
     if (p.item) {
       // on a touch screen there is no hover: the tap lifts the item and shows its name for a moment
       if (e.pointerType === 'touch') { show(p); clearTimeout(tapTimer); tapTimer = setTimeout(() => show(null), 1400); }
@@ -117,6 +133,7 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     else if (p.deco) onDeco?.(p.deco);
   });
   let tapTimer = 0;
+  let onMiss = null;
 
   return {
     get hover() { return hover; },
@@ -127,6 +144,10 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     /** What a click at client (x, y) would reach (tests). */
     at: (x, y) => { const p = pick({ clientX: x, clientY: y }); return p ? { id: p.id || null, deco: p.deco || null, item: p.item?.node.name || null } : null; },
     setEnabled(v) { enabled = v; if (!v) show(null); },
+    /** A click on nothing (the sky, the ground far off). */
+    onMiss(f) { onMiss = f; },
+    /** What is under client (x, y): the full pick (tests). */
+    full: (x, y) => { const p = pick({ clientX: x, clientY: y }); return p ? { id: p.id || null, deco: p.deco || null, item: p.item?.node.name || null, readable: p.readable || null, sign: p.sign || null, link: p.link || null } : null; },
     /** Highlight a place without a pointer, for keyboard focus on the place buttons. */
     highlight(id) { if (outline) outline.selectedObjects = id && market.places[id] ? [market.places[id].holder] : []; },
   };

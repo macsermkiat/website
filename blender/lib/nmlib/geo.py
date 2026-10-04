@@ -29,7 +29,7 @@ BAND_PAD = 6 / 1024        # UV padding inside a band against bleeding
 # Tiling textures: metres covered by one texture repeat.
 TILE = {"wood": 1.0, "oak": 1.0, "iron": 0.5, "iron_matte": 0.5, "copper_old": 0.5, "rauten": 0.26}
 # materials mapped into the paint atlas bands (band=...)
-BAND_MATS = {"paint", "paint_glow"}
+BAND_MATS = {"paint", "paint_glow", "paint_lit"}
 
 # Named tints (linear multipliers of the light neutral kit wood).
 TINTS = {

@@ -1,2 +1,11 @@
   [-a] info: [lighting] 2 canopy washes under the bulb strings of place_buecherstand: 9.41,1.33,2.74..10.18,1.33,2.68 | 12.64,1.33,5.22..12.56,1.33,5.98
   [-a] info: [lighting] placed 10 lights (4 shadowed, 0 clipped to their stall), 29 pools, glows {"interior":4,"eave":4,"spill":4,"sign":4}
+  [-a] info: [lighting] placed 2 lights (0 shadowed, 0 clipped to their stall), 13 pools, glows {"interior":9,"sign":9}
+  [-a] info: [lighting] bulb bounce on 4 materials of place_riesenrad
+  [-a] info: [lighting] hub fade on 1 bulb meshes of place_riesenrad
+  [-a] info: [lighting] focus bier (0 lights moved)
+bier: /home/claude/website/review/round-4/lighting/raw/bier.png (4054 s) {"lights":12,"warnings":[],"focus":"bier"}
+  [-a] info: [lighting] focus glueh (0 lights moved)
+glueh: /home/claude/website/review/round-4/lighting/raw/glueh.png (4910 s) {"lights":12,"warnings":[],"focus":"glueh"}
+  [-a] info: [lighting] focus books (0 lights moved)
+books: /home/claude/website/review/round-4/lighting/raw/books.png (6033 s) {"lights":12,"warnings":[],"focus":"books"}

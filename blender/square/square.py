@@ -67,7 +67,10 @@ M["pole"] = C.pbr("pole_wood", tex=T_WOOD, factor=(0.8, 0.75, 0.7), rough=0.75)
 M["wire"] = C.solid("wire_black", (0.01, 0.01, 0.01), rough=0.5)
 M["bulb"] = C.solid("bulb_warm", (1.0, 0.8, 0.55), rough=0.3, emit=(1.0, 0.62, 0.28), strength=6.0)
 M["snow"] = C.solid("snow", (0.82, 0.85, 0.92), rough=0.75)
-M["puddle"] = C.pbr("puddle_water", color=(0.035, 0.034, 0.032), rough=0.05, vcol="puddle")
+# Round 5: the round-1 judges read the puddles as dark smudges.  The water is now close to the wet
+# cobbles' own tone (so a puddle is a darker, glossier patch of the same paving, not a black stain)
+# and slightly rough, so it carries a soft smear of the lamps instead of mirroring the black sky.
+M["puddle"] = C.pbr("puddle_water", color=(0.075, 0.07, 0.064), rough=0.12, vcol="puddle")
 M["bands"] = C.pbr("granite_bands", tex=T_WALK, factor=(1.0, 0.98, 0.93) if not LITE else (1.08, 0.98, 0.86), ao_img=ao_img)
 for m in M.values():
     m.use_backface_culling = True
@@ -524,8 +527,11 @@ for deg, w in P.EXITS:
     lamp_spots.append((r * math.cos(t), r * math.sin(t), random.uniform(0, 6.28)))
 if LITE:
     lamp_spots = lamp_spots[:12]
+# street furniture in three.js [x, z] with a footprint radius, for blender/square/stroll.py
+FURN = {"lamps": [], "poles": [], "benches": [], "bins": [], "bollards": []}
 for i, (x, y, rot) in enumerate(lamp_spots):
     lamp(i, x, y, rot)
+    FURN["lamps"].append([round(x, 3), round(-y, 3), 0.35])
 
 # ------------------------------------------------------------------ string-light poles, wires and bulbs
 wood = C.Geo("poles_wood", M["pole"], (1.0, 1.0))
@@ -533,6 +539,7 @@ wire = C.Geo("string_wire", M["wire"], (1, 1))
 poles = [C.three_to_blender(x, z) for x, z in P.POLES_THREE]
 for i, p in enumerate(poles):
     z0 = ground_height(p.x, p.y)
+    FURN["poles"].append([round(p.x, 3), round(-p.y, 3), 0.2])
     H = P.pole_h(i)
     seg = 7 if LITE else 10
     rb = 0.11 if H < 8 else 0.14          # the tall poles behind the bandstand are stouter
@@ -606,6 +613,7 @@ def bench(x, y, rot):
 
 def binn(x, y):
     z0 = ground_height(x, y)
+    FURN["bins"].append([round(x, 3), round(-y, 3), 0.3])
     seg = 8 if LITE else 14
     iron.cyl((x, y, z0 + 0.45), 0.23, 0.25, 0.9, seg=seg, bottom=False)
     iron.cyl((x, y, z0 + 0.93), 0.27, 0.27, 0.06, seg=seg)
@@ -617,6 +625,7 @@ def binn(x, y):
 
 def bollard(x, y):
     z0 = ground_height(x, y)
+    FURN["bollards"].append([round(x, 3), round(-y, 3), 0.12])
     seg = 6 if LITE else 8
     iron.cyl((x, y, z0 + 0.42), 0.09, 0.075, 0.84, seg=seg, caps=False)
     if not LITE:
@@ -641,6 +650,7 @@ for deg in (-140, -52):
     bench_spots.append((TREE_B[0] + P.TREE_BENCH_R * math.cos(a), TREE_B[1] + P.TREE_BENCH_R * math.sin(a), a + math.pi / 2))
 for i, (x, y, rot) in enumerate(bench_spots):
     bench(x, y, rot)
+    FURN["benches"].append([round(x, 3), round(-y, 3), 1.0])
     if i % 2 == 0:
         ox, oy = math.cos(rot) * 1.35, math.sin(rot) * 1.35
         binn(x + ox, y + oy)
@@ -658,6 +668,10 @@ for deg, w in P.EXITS:
 
 bench_ob = bench_wood.finish(col)
 iron_ob = iron.finish(col)
+if not LITE:
+    import json as _json
+    with open(os.path.join(OUT, "furniture.json"), "w") as _f:
+        _json.dump(FURN, _f, indent=1)
 
 # ------------------------------------------------------------------ snow cover over the ground (snow_ground)
 def build_snow():
@@ -709,6 +723,22 @@ def build_snow():
 
 snow_ob = build_snow()
 snowp_ob = snowp.finish(col, smooth=False)
+
+# ------------------------------------------------------------------ guided stroll: path_ empties
+# The loop legs of the stroll (site/src/layout.json "stroll", written by blender/square/stroll.py), in
+# walking order, as empties path_000, path_001 ... at eye height (three.js [x, y, z] -> Blender (x, -z, y)).
+# Each loop leg's first and last empty are listed in its "path_nodes"; a stop's eye ends one leg and
+# starts the next, so it appears twice.
+_stroll = P.load_layout().get("stroll")
+n_path = 0
+if _stroll:
+    for leg in _stroll["legs"]:
+        if not leg.get("loop"):
+            continue
+        for (x, y, z) in leg["points"]:
+            C.empty(f"path_{n_path:03d}", (x, -z, y), col, size=0.2)
+            n_path += 1
+C.log("PATH EMPTIES", n_path)
 
 # ------------------------------------------------------------------ AO bake (full build) and export
 exported = [o for o in col.objects]

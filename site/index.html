@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mac's Nachtmarkt</title>
-  <meta name="description" content="Mac's personal website as a German Christmas night market. Each stall opens a section: about, projects, writing, reading, music, big questions and contact.">
+  <meta name="description" content="Mac's personal website as a German Christmas night market. Stroll from stall to stall and read each section where it is written: about, projects, writing, reading, music, big questions and contact.">
   <meta name="theme-color" content="#080b16">
+  <link rel="preload" as="image" href="stills/home.webp" fetchpriority="high">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 6 8 30h6v24h36V30h6z' fill='%23e6b65e'/%3E%3Crect x='24' y='38' width='16' height='16' fill='%23080b16'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -20,13 +21,34 @@
         <button class="btn primary" id="play" type="button" aria-pressed="false">▶ Play the ballad</button>
         <button class="btn" id="mute" type="button" aria-pressed="false" title="Silence the band and the stall sounds">🔈 Sound: on</button>
         <button class="btn" id="snow" type="button" aria-pressed="false">❄ Snow: off</button>
-        <button class="btn" id="reset" type="button">Reset view</button>
+        <button class="btn" id="reset" type="button" title="Back to the view over the whole square (0)">Overview</button>
         <button class="btn" id="quality" type="button" aria-pressed="false" title="Switch between the full and the lite market">Lite market: off</button>
       </div>
     </header>
 
     <div class="stage" id="stage">
+      <!-- a still of the home view shows at once; the live market fades in behind it -->
+      <img class="still" id="still" src="stills/home.webp" alt="" aria-hidden="true" decoding="async">
       <div class="overlay" id="overlay" aria-hidden="true"></div>
+      <nav class="signboard" id="signboard" aria-label="Signpost: walk to a place"></nav>
+      <div class="stopbar" id="stopbar" hidden>
+        <button class="btn step prev" id="prevStop" type="button"><span aria-hidden="true">‹</span> <span></span></button>
+        <div class="here"><b id="hereName"></b><span id="hereSub"></span></div>
+        <div class="acts" id="stopActs" role="group"></div>
+        <details class="goods" id="goods" hidden><summary>Goods</summary><div class="goodslist" role="group" aria-label="The goods one by one"></div></details>
+        <button class="btn step next" id="nextStop" type="button"><span></span> <span aria-hidden="true">›</span></button>
+      </div>
+      <button class="btn stepback" id="stepBack" type="button" title="Back to the stall's view (Escape)">‹ Step back</button>
+      <div class="readbar" id="readbar" hidden role="group" aria-labelledby="readTitle">
+        <span class="readtitle" id="readTitle" tabindex="-1"></span>
+        <button class="btn small" id="readPrev" type="button">‹ Previous</button>
+        <span class="readpage" id="readPage" aria-live="polite"></span>
+        <button class="btn small" id="readNext" type="button">Next page ›</button>
+        <button class="btn small" id="readFlip" type="button" hidden>Turn it over</button>
+        <button class="btn small primary" id="readClose" type="button" title="Escape">Step back</button>
+      </div>
+      <!-- the words being read, for screen readers and keyboard users (they are drawn in the market) -->
+      <section class="readcopy" id="readCopy" aria-label="The text being read" hidden></section>
       <div class="loading" id="loading" role="status">
         <div class="loading-inner">
           <p id="loadingText">Setting up the market…</p>
@@ -36,25 +58,9 @@
       </div>
       <div class="nowplaying" id="nowplaying" hidden></div>
       <p class="sr-only" id="announce" aria-live="polite"></p>
-      <aside class="panel" id="panel" hidden role="dialog" aria-modal="false" aria-labelledby="pTitle">
-        <div class="top">
-          <div><div class="eyebrow" id="pEyebrow"></div><h2 id="pTitle" tabindex="-1"></h2></div>
-          <button class="close" id="pClose" type="button" aria-label="Close the panel">✕</button>
-        </div>
-        <div id="pActions"></div>
-        <div id="pBody" class="prose"></div>
-      </aside>
-      <aside class="panel reader" id="reader" hidden role="dialog" aria-modal="true" aria-labelledby="rTitle" aria-describedby="rAuthor">
-        <div class="top">
-          <div><div class="eyebrow" id="rEyebrow"></div><h2 id="rTitle" tabindex="-1"></h2><p class="byline" id="rAuthor"></p></div>
-          <button class="close" id="rClose" type="button" aria-label="Close the book and put it back">✕</button>
-        </div>
-        <div id="rBody" class="prose"></div>
-      </aside>
     </div>
-    <p class="hint" id="hint">Drag to look around, scroll or pinch to zoom. Click a stall, the bandstand, the Ferris wheel or the carousel to go inside. With the keyboard, press Tab to reach the places below, or 1–7 to jump to one. Sound starts only when you press play.</p>
+    <p class="hint" id="hint">A guided stroll: choose a place on the signpost (or press 1–7) and walk there; the arrows walk on to the next stall. Every stall's words are written in it: on the Glühwein chalkboard, the Bierdeckel, the Bratwurst menu, the pages of a book, the sheet music, the Riesenrad noticeboard and the Karussell ticket. Click them, or press Enter, to read. Sound starts only when you press play.</p>
 
-    <nav class="places" aria-label="Places in the market" id="places"></nav>
     <footer>
       <a href="plain.html">Text version of every section</a>
       <span aria-hidden="true">·</span>

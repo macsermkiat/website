@@ -1,0 +1,827 @@
+[buecher] sign physics: letters 0.286 x 0.149 m on a 0.59 x 0.24 board
+[buecher] sign mind: letters 0.240 x 0.149 m on a 0.57 x 0.24 board
+[buecher] sign lives: letters 0.650 x 0.048 m on a 0.70 x 0.24 board
+[buecher] sign decisions: letters 0.536 x 0.149 m on a 0.78 x 0.24 board
+[buecher] sign people: letters 0.399 x 0.149 m on a 0.68 x 0.24 board
+[buecher] sign craft: letters 0.418 x 0.149 m on a 0.48 x 0.24 board
+[stall_buecher] built lite in 0.4s, 14297 tris
+     buecher_wood                       912
+     buecher_frame                     1944
+     buecher_counter                    256
+     buecher_roof                       576
+     buecher_paint                     2679
+     buecher_iron                      1584
+     bulbs_0                            872
+     buecher_wire                       344
+     buecher_brass                      320
+     buecher_copper                       6
+     buecher_glass                       84
+     buecher_books                      768
+     buecher_lantern_glass               12
+     buecher_cart                       176
+     sign_cat_physics                   413
+     sign_cat_mind                      391
+     sign_cat_lives                     495
+     sign_cat_decisions                 592
+     sign_cat_people                    588
+     sign_cat_craft                     613
+     snow_0                             168
+     snow_1                             168
+     snow_2                             168
+     snow_3                             168
+Fra:1 Mem:25.78M (Peak 41.10M) | Time:497534:42:47.18 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:25.78M (Peak 41.10M) | Time:497534:42:47.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:25.93M (Peak 41.10M) | Time:497534:42:47.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:25.99M (Peak 41.10M) | Time:497534:42:47.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:26.18M (Peak 41.10M) | Time:497534:42:47.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:26.26M (Peak 41.10M) | Time:497534:42:47.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:26.41M (Peak 41.10M) | Time:497534:42:47.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:26.93M (Peak 41.10M) | Time:497534:42:47.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:27.03M (Peak 41.10M) | Time:497534:42:47.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:27.13M (Peak 41.10M) | Time:497534:42:47.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:27.17M (Peak 41.10M) | Time:497534:42:47.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:27.22M (Peak 41.10M) | Time:497534:42:47.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:27.22M (Peak 41.10M) | Time:497534:42:47.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:27.33M (Peak 41.10M) | Time:497534:42:47.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:27.34M (Peak 41.10M) | Time:497534:42:47.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:27.46M (Peak 41.10M) | Time:497534:42:47.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:27.50M (Peak 41.10M) | Time:497534:42:47.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:27.54M (Peak 41.10M) | Time:497534:42:47.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:28.45M (Peak 41.10M) | Time:497534:42:47.21 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:28.45M (Peak 41.10M) | Time:497534:42:47.21 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.43M (Peak 91.60M) | Time:497534:42:51.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.43M (Peak 91.60M) | Time:497534:42:51.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.55M (Peak 91.60M) | Time:497534:42:51.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:28.66M (Peak 91.60M) | Time:497534:42:51.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:28.77M (Peak 91.60M) | Time:497534:42:51.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:28.87M (Peak 91.60M) | Time:497534:42:51.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:28.94M (Peak 91.60M) | Time:497534:42:51.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:29.02M (Peak 91.60M) | Time:497534:42:51.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:29.03M (Peak 91.60M) | Time:497534:42:51.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:29.18M (Peak 91.60M) | Time:497534:42:51.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:29.51M (Peak 91.60M) | Time:497534:42:51.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:29.56M (Peak 91.60M) | Time:497534:42:51.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.66M (Peak 91.60M) | Time:497534:42:51.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:30.16M (Peak 91.60M) | Time:497534:42:51.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:30.16M (Peak 91.60M) | Time:497534:42:51.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:30.24M (Peak 91.60M) | Time:497534:42:51.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:30.25M (Peak 91.60M) | Time:497534:42:51.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:30.25M (Peak 91.60M) | Time:497534:42:51.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:30.28M (Peak 91.60M) | Time:497534:42:51.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:30.31M (Peak 91.60M) | Time:497534:42:51.13 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:30.57M (Peak 91.60M) | Time:497534:42:51.14 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.57M (Peak 91.60M) | Time:497534:42:51.14 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.34M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.34M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.45M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:28.57M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:28.68M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:28.77M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:28.85M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:28.93M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:28.96M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:28.96M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:29.04M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:29.05M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:29.05M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:29.08M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:29.11M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:29.37M (Peak 93.73M) | Time:497534:42:52.19 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:29.85M (Peak 93.73M) | Time:497534:42:52.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.95M (Peak 93.73M) | Time:497534:42:52.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:29.99M (Peak 93.73M) | Time:497534:42:52.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:30.32M (Peak 93.73M) | Time:497534:42:52.20 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:30.48M (Peak 93.73M) | Time:497534:42:52.20 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.48M (Peak 93.73M) | Time:497534:42:52.20 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.34M (Peak 93.73M) | Time:497534:42:52.89 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.34M (Peak 93.73M) | Time:497534:42:52.89 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.45M (Peak 93.73M) | Time:497534:42:52.89 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:28.57M (Peak 93.73M) | Time:497534:42:52.89 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:28.72M (Peak 93.73M) | Time:497534:42:52.89 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:29.05M (Peak 93.73M) | Time:497534:42:52.89 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:29.10M (Peak 93.73M) | Time:497534:42:52.89 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.20M (Peak 93.73M) | Time:497534:42:52.89 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:29.64M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:29.75M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:29.85M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:29.92M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:30.00M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:30.03M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:30.03M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:30.12M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:30.12M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:30.12M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:30.15M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:30.18M (Peak 93.73M) | Time:497534:42:52.90 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:30.48M (Peak 93.73M) | Time:497534:42:52.92 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.48M (Peak 93.73M) | Time:497534:42:52.92 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.34M (Peak 93.73M) | Time:497534:42:55.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:28.42M (Peak 93.73M) | Time:497534:42:55.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.50M (Peak 93.73M) | Time:497534:42:55.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.61M (Peak 93.73M) | Time:497534:42:55.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:28.72M (Peak 93.73M) | Time:497534:42:55.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:29.06M (Peak 93.73M) | Time:497534:42:55.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:29.10M (Peak 93.73M) | Time:497534:42:55.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.20M (Peak 93.73M) | Time:497534:42:55.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:29.67M (Peak 93.73M) | Time:497534:42:55.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:29.78M (Peak 93.73M) | Time:497534:42:55.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:29.88M (Peak 93.73M) | Time:497534:42:55.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:29.95M (Peak 93.73M) | Time:497534:42:55.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:30.03M (Peak 93.73M) | Time:497534:42:55.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:30.06M (Peak 93.73M) | Time:497534:42:55.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:30.06M (Peak 93.73M) | Time:497534:42:55.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:30.15M (Peak 93.73M) | Time:497534:42:55.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:30.15M (Peak 93.73M) | Time:497534:42:55.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:30.15M (Peak 93.73M) | Time:497534:42:55.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:30.18M (Peak 93.73M) | Time:497534:42:55.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:30.21M (Peak 93.73M) | Time:497534:42:55.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:30.48M (Peak 93.73M) | Time:497534:42:55.48 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.48M (Peak 93.73M) | Time:497534:42:55.48 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.42M (Peak 93.73M) | Time:497534:42:58.57 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.42M (Peak 93.73M) | Time:497534:42:58.57 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.54M (Peak 93.73M) | Time:497534:42:58.57 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:28.70M (Peak 93.73M) | Time:497534:42:58.57 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:29.12M (Peak 93.73M) | Time:497534:42:58.58 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:29.23M (Peak 93.73M) | Time:497534:42:58.58 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:29.34M (Peak 93.73M) | Time:497534:42:58.58 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:29.43M (Peak 93.73M) | Time:497534:42:58.58 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:29.51M (Peak 93.73M) | Time:497534:42:58.58 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:29.50M (Peak 93.73M) | Time:497534:42:58.58 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:29.54M (Peak 93.73M) | Time:497534:42:58.58 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.64M (Peak 93.73M) | Time:497534:42:58.58 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:30.11M (Peak 93.73M) | Time:497534:42:58.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:30.15M (Peak 93.73M) | Time:497534:42:58.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:30.15M (Peak 93.73M) | Time:497534:42:58.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:30.23M (Peak 93.73M) | Time:497534:42:58.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:30.24M (Peak 93.73M) | Time:497534:42:58.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:30.24M (Peak 93.73M) | Time:497534:42:58.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:30.27M (Peak 93.73M) | Time:497534:42:58.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:30.30M (Peak 93.73M) | Time:497534:42:58.59 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:30.56M (Peak 93.73M) | Time:497534:42:58.60 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.56M (Peak 93.73M) | Time:497534:42:58.60 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:42:59.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:28.41M (Peak 93.73M) | Time:497534:42:59.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.47M (Peak 93.73M) | Time:497534:42:59.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.64M (Peak 93.73M) | Time:497534:42:59.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:28.97M (Peak 93.73M) | Time:497534:42:59.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:29.08M (Peak 93.73M) | Time:497534:42:59.05 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:29.19M (Peak 93.73M) | Time:497534:42:59.05 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:29.29M (Peak 93.73M) | Time:497534:42:59.05 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:29.36M (Peak 93.73M) | Time:497534:42:59.05 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:29.45M (Peak 93.73M) | Time:497534:42:59.06 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.55M (Peak 93.73M) | Time:497534:42:59.06 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:29.58M (Peak 93.73M) | Time:497534:42:59.06 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:29.87M (Peak 93.73M) | Time:497534:42:59.06 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:30.09M (Peak 93.73M) | Time:497534:42:59.07 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:30.17M (Peak 93.73M) | Time:497534:42:59.07 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:30.18M (Peak 93.73M) | Time:497534:42:59.07 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:30.18M (Peak 93.73M) | Time:497534:42:59.07 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:30.21M (Peak 93.73M) | Time:497534:42:59.07 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:30.24M (Peak 93.73M) | Time:497534:42:59.07 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:42:59.08 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:42:59.08 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:42:59.73 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:42:59.73 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:28.52M (Peak 93.73M) | Time:497534:42:59.73 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:28.52M (Peak 93.73M) | Time:497534:42:59.73 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.64M (Peak 93.73M) | Time:497534:42:59.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:29.08M (Peak 93.73M) | Time:497534:42:59.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:29.19M (Peak 93.73M) | Time:497534:42:59.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:29.29M (Peak 93.73M) | Time:497534:42:59.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:29.33M (Peak 93.73M) | Time:497534:42:59.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.43M (Peak 93.73M) | Time:497534:42:59.75 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:29.50M (Peak 93.73M) | Time:497534:42:59.75 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:29.58M (Peak 93.73M) | Time:497534:42:59.75 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:29.61M (Peak 93.73M) | Time:497534:42:59.75 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:29.61M (Peak 93.73M) | Time:497534:42:59.75 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:29.70M (Peak 93.73M) | Time:497534:42:59.75 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:29.71M (Peak 93.73M) | Time:497534:42:59.75 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:29.71M (Peak 93.73M) | Time:497534:42:59.75 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:29.73M (Peak 93.73M) | Time:497534:42:59.75 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:29.77M (Peak 93.73M) | Time:497534:42:59.75 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:42:59.76 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:42:59.76 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:00.92 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:00.92 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.48M (Peak 93.73M) | Time:497534:43:00.92 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:28.59M (Peak 93.73M) | Time:497534:43:00.92 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:28.70M (Peak 93.73M) | Time:497534:43:00.93 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:28.80M (Peak 93.73M) | Time:497534:43:00.93 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:28.87M (Peak 93.73M) | Time:497534:43:00.93 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:28.95M (Peak 93.73M) | Time:497534:43:00.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:28.98M (Peak 93.73M) | Time:497534:43:00.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:28.98M (Peak 93.73M) | Time:497534:43:00.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:29.07M (Peak 93.73M) | Time:497534:43:00.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:29.07M (Peak 93.73M) | Time:497534:43:00.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:29.08M (Peak 93.73M) | Time:497534:43:00.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:29.10M (Peak 93.73M) | Time:497534:43:00.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:29.13M (Peak 93.73M) | Time:497534:43:00.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:29.40M (Peak 93.73M) | Time:497534:43:00.94 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:29.87M (Peak 93.73M) | Time:497534:43:00.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.97M (Peak 93.73M) | Time:497534:43:00.96 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:30.02M (Peak 93.73M) | Time:497534:43:00.96 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:30.35M (Peak 93.73M) | Time:497534:43:00.96 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:00.97 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:00.97 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:01.71 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:01.71 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.48M (Peak 93.73M) | Time:497534:43:01.71 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:28.59M (Peak 93.73M) | Time:497534:43:01.71 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:28.70M (Peak 93.73M) | Time:497534:43:01.71 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:28.80M (Peak 93.73M) | Time:497534:43:01.71 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:28.87M (Peak 93.73M) | Time:497534:43:01.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:29.03M (Peak 93.73M) | Time:497534:43:01.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:29.36M (Peak 93.73M) | Time:497534:43:01.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:29.40M (Peak 93.73M) | Time:497534:43:01.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.50M (Peak 93.73M) | Time:497534:43:01.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:29.98M (Peak 93.73M) | Time:497534:43:01.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:30.05M (Peak 93.73M) | Time:497534:43:01.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:30.09M (Peak 93.73M) | Time:497534:43:01.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:30.09M (Peak 93.73M) | Time:497534:43:01.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:30.17M (Peak 93.73M) | Time:497534:43:01.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:30.18M (Peak 93.73M) | Time:497534:43:01.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:30.18M (Peak 93.73M) | Time:497534:43:01.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:30.21M (Peak 93.73M) | Time:497534:43:01.74 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:01.74 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:01.74 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:02.34 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:02.34 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.48M (Peak 93.73M) | Time:497534:43:02.35 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:28.64M (Peak 93.73M) | Time:497534:43:02.35 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:28.97M (Peak 93.73M) | Time:497534:43:02.35 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:29.01M (Peak 93.73M) | Time:497534:43:02.35 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.11M (Peak 93.73M) | Time:497534:43:02.35 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:29.55M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:29.66M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:29.78M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:29.87M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:29.95M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:30.02M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:30.06M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:30.06M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:30.14M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:30.15M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:30.15M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:30.18M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:30.21M (Peak 93.73M) | Time:497534:43:02.36 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:02.37 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:02.37 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:02.97 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:02.97 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:28.52M (Peak 93.73M) | Time:497534:43:02.97 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:28.52M (Peak 93.73M) | Time:497534:43:02.97 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.64M (Peak 93.73M) | Time:497534:43:02.97 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:29.08M (Peak 93.73M) | Time:497534:43:02.97 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:29.19M (Peak 93.73M) | Time:497534:43:02.97 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:29.29M (Peak 93.73M) | Time:497534:43:02.97 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:29.33M (Peak 93.73M) | Time:497534:43:02.97 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.43M (Peak 93.73M) | Time:497534:43:02.97 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:29.50M (Peak 93.73M) | Time:497534:43:02.98 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:29.58M (Peak 93.73M) | Time:497534:43:02.98 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:30.09M (Peak 93.73M) | Time:497534:43:02.98 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:30.09M (Peak 93.73M) | Time:497534:43:02.98 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:30.17M (Peak 93.73M) | Time:497534:43:02.98 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:30.18M (Peak 93.73M) | Time:497534:43:02.98 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:30.18M (Peak 93.73M) | Time:497534:43:02.98 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:30.21M (Peak 93.73M) | Time:497534:43:02.98 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:02.99 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:02.99 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:03.39 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:03.39 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:28.52M (Peak 93.73M) | Time:497534:43:03.39 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:28.85M (Peak 93.73M) | Time:497534:43:03.39 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:28.85M (Peak 93.73M) | Time:497534:43:03.39 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:28.97M (Peak 93.73M) | Time:497534:43:03.39 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:29.08M (Peak 93.73M) | Time:497534:43:03.39 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:29.24M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:29.24M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:29.33M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:29.50M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:29.98M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:30.06M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:30.09M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:30.09M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:30.17M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:30.18M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:30.18M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:30.21M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:03.40 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:28.36M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:28.52M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:28.85M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:28.90M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:29.01M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:29.12M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:29.24M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:29.33M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:29.40M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:29.48M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:29.51M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:29.52M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:29.60M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:29.61M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:29.61M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:29.64M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:29.67M (Peak 93.73M) | Time:497534:43:03.95 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:29.93M (Peak 93.73M) | Time:497534:43:03.96 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:30.03M (Peak 93.73M) | Time:497534:43:03.96 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:03.96 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:30.50M (Peak 93.73M) | Time:497534:43:03.96 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher.lite_ao
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+[nmlib] AO stall_buecher.lite 384px for 14 objects in 18.4s: islands cover 72%, 767 tiny faces on the patch, island mean 0.28 -> 0.53
+ERROR Draco mesh compression is not available because library could not be found at /home/claude/website/4.2/python/lib/python3.11/site-packages/libextern_draco.so
+14:43:05 | INFO: Starting glTF 2.0 export
+14:43:05 | INFO: Extracting primitive: buecher_wood
+14:43:05 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:43:05 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_frame
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_counter
+14:43:05 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:43:05 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_roof
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_paint
+14:43:05 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:43:05 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_iron
+14:43:05 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:43:05 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: bulbs_0
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_wire
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_brass
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_copper
+14:43:05 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:43:05 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_glass
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_books
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_lantern_glass
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: buecher_cart
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: sign_cat_physics
+14:43:05 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:43:05 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: sign_cat_mind
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: sign_cat_lives
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: sign_cat_decisions
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: sign_cat_people
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: sign_cat_craft
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: snow_0
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: snow_1
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: snow_2
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Extracting primitive: snow_3
+14:43:05 | INFO: Primitives created: 1
+14:43:05 | INFO: Finished glTF 2.0 export in 0.6800501346588135 s
+
+[nmlib] exported stall_buecher.lite: 0.41 MB (+0.19 MB shared), 14297 tris in 3.3s
+[buecher] sign physics: letters 0.286 x 0.149 m on a 0.59 x 0.24 board
+[buecher] sign mind: letters 0.240 x 0.149 m on a 0.57 x 0.24 board
+[buecher] sign lives: letters 0.650 x 0.048 m on a 0.70 x 0.24 board
+[buecher] sign decisions: letters 0.536 x 0.149 m on a 0.78 x 0.24 board
+[buecher] sign people: letters 0.399 x 0.149 m on a 0.68 x 0.24 board
+[buecher] sign craft: letters 0.418 x 0.149 m on a 0.48 x 0.24 board
+[stall_buecher] built full in 1.9s, 48098 tris
+     buecher_wood                      1544
+     buecher_frame                     4728
+     buecher_counter                   1368
+     buecher_roof                      9008
+     buecher_paint                    14961
+     buecher_iron                      2096
+     bulbs_0                           2272
+     buecher_wire                       984
+     buecher_brass                      320
+     buecher_copper                       6
+     buecher_glass                       84
+     buecher_books                      816
+     buecher_lantern_glass               12
+     buecher_cart                       528
+     sign_cat_physics                   472
+     sign_cat_mind                      455
+     sign_cat_lives                     575
+     sign_cat_decisions                 678
+     sign_cat_people                    671
+     sign_cat_craft                     704
+     snow_0                            2220
+     snow_1                            2228
+     snow_2                             684
+     snow_3                             684
+Fra:1 Mem:55.49M (Peak 93.73M) | Time:497534:43:11.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:55.60M (Peak 93.73M) | Time:497534:43:11.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:55.60M (Peak 93.73M) | Time:497534:43:11.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:55.98M (Peak 93.73M) | Time:497534:43:11.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:56.14M (Peak 93.73M) | Time:497534:43:11.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:56.39M (Peak 93.73M) | Time:497534:43:11.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:57.01M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:57.42M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:57.53M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:57.64M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:57.75M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:57.75M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:57.87M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:57.88M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:57.88M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:57.91M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:58.03M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:58.46M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:58.74M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:59.99M (Peak 93.73M) | Time:497534:43:11.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:63.87M (Peak 93.73M) | Time:497534:43:11.54 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.86M (Peak 93.73M) | Time:497534:43:11.54 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.44M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.44M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:57.57M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:57.70M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:57.83M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:57.93M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:58.02M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:58.11M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:58.20M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:58.20M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:58.29M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:58.30M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:58.30M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:58.33M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:58.42M (Peak 192.61M) | Time:497534:43:27.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:58.77M (Peak 192.61M) | Time:497534:43:27.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:61.32M (Peak 192.61M) | Time:497534:43:27.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:61.58M (Peak 192.61M) | Time:497534:43:27.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:61.58M (Peak 192.61M) | Time:497534:43:27.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:63.98M (Peak 192.61M) | Time:497534:43:27.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:64.20M (Peak 192.61M) | Time:497534:43:27.46 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:64.20M (Peak 192.61M) | Time:497534:43:27.46 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.18M (Peak 192.95M) | Time:497534:43:32.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.18M (Peak 192.95M) | Time:497534:43:32.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:57.31M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:57.44M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:57.56M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:57.56M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:57.83M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:57.94M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:58.02M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:58.11M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:58.99M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:58.99M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:59.08M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:59.09M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:59.09M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:59.21M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:59.56M (Peak 192.95M) | Time:497534:43:32.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:62.11M (Peak 192.95M) | Time:497534:43:32.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:62.34M (Peak 192.95M) | Time:497534:43:32.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:63.94M (Peak 192.95M) | Time:497534:43:32.46 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.94M (Peak 192.95M) | Time:497534:43:32.46 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.18M (Peak 192.95M) | Time:497534:43:33.65 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.18M (Peak 192.95M) | Time:497534:43:33.65 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:57.31M (Peak 192.95M) | Time:497534:43:33.65 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:57.43M (Peak 192.95M) | Time:497534:43:33.65 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:57.50M (Peak 192.95M) | Time:497534:43:33.65 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:57.83M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:57.94M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:58.81M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:58.90M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:58.99M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:59.00M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:59.08M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:59.09M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:59.09M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:59.21M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:59.56M (Peak 192.95M) | Time:497534:43:33.66 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:62.11M (Peak 192.95M) | Time:497534:43:33.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:62.34M (Peak 192.95M) | Time:497534:43:33.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:63.94M (Peak 192.95M) | Time:497534:43:33.69 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.94M (Peak 192.95M) | Time:497534:43:33.69 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.18M (Peak 192.95M) | Time:497534:43:41.22 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.18M (Peak 192.95M) | Time:497534:43:41.22 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:57.31M (Peak 192.95M) | Time:497534:43:41.22 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:57.44M (Peak 192.95M) | Time:497534:43:41.22 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:57.57M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:57.67M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:57.76M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:57.85M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:57.94M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:57.94M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:58.03M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:58.04M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:58.04M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:58.06M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:58.16M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:58.51M (Peak 192.95M) | Time:497534:43:41.23 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:61.06M (Peak 192.95M) | Time:497534:43:41.24 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:61.32M (Peak 192.95M) | Time:497534:43:41.24 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:62.11M (Peak 192.95M) | Time:497534:43:41.25 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:62.34M (Peak 192.95M) | Time:497534:43:41.25 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:63.94M (Peak 192.95M) | Time:497534:43:41.26 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.94M (Peak 192.95M) | Time:497534:43:41.26 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.28M (Peak 192.95M) | Time:497534:43:54.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.28M (Peak 192.95M) | Time:497534:43:54.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:57.55M (Peak 192.95M) | Time:497534:43:54.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:58.34M (Peak 192.95M) | Time:497534:43:54.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:58.47M (Peak 192.95M) | Time:497534:43:54.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:58.60M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:58.73M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:58.84M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:58.92M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:59.01M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:59.24M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:59.33M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:59.33M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:59.42M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:59.42M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:59.43M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:59.45M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:59.55M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:59.90M (Peak 192.95M) | Time:497534:43:54.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:64.05M (Peak 192.95M) | Time:497534:43:54.12 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:64.05M (Peak 192.95M) | Time:497534:43:54.12 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:43:55.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:43:55.40 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:57.34M (Peak 192.95M) | Time:497534:43:55.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:57.34M (Peak 192.95M) | Time:497534:43:55.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:57.60M (Peak 192.95M) | Time:497534:43:55.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:57.73M (Peak 192.95M) | Time:497534:43:55.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:57.86M (Peak 192.95M) | Time:497534:43:55.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:58.17M (Peak 192.95M) | Time:497534:43:55.41 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:58.85M (Peak 192.95M) | Time:497534:43:55.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:58.94M (Peak 192.95M) | Time:497534:43:55.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:59.03M (Peak 192.95M) | Time:497534:43:55.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:59.03M (Peak 192.95M) | Time:497534:43:55.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:43:55.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:43:55.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:43:55.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:59.15M (Peak 192.95M) | Time:497534:43:55.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:59.25M (Peak 192.95M) | Time:497534:43:55.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:59.60M (Peak 192.95M) | Time:497534:43:55.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:59.59M (Peak 192.95M) | Time:497534:43:55.42 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:60.49M (Peak 192.95M) | Time:497534:43:55.43 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:63.98M (Peak 192.95M) | Time:497534:43:55.46 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.97M (Peak 192.95M) | Time:497534:43:55.46 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:57.34M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:57.61M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:57.73M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:57.89M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:58.65M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:58.76M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:58.85M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:58.94M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:59.03M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:59.03M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:59.15M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:59.25M (Peak 192.95M) | Time:497534:43:56.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:59.60M (Peak 192.95M) | Time:497534:43:56.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:62.15M (Peak 192.95M) | Time:497534:43:56.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:62.37M (Peak 192.95M) | Time:497534:43:56.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:63.98M (Peak 192.95M) | Time:497534:43:56.51 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.97M (Peak 192.95M) | Time:497534:43:56.51 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:43:59.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:57.34M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:57.47M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:57.60M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:57.71M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:57.79M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:57.88M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:57.97M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:57.97M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:58.06M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:58.07M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:58.07M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:58.10M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:58.19M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:58.54M (Peak 192.95M) | Time:497534:43:59.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:61.09M (Peak 192.95M) | Time:497534:43:59.15 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:61.35M (Peak 192.95M) | Time:497534:43:59.16 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:62.36M (Peak 192.95M) | Time:497534:43:59.17 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:63.75M (Peak 192.95M) | Time:497534:43:59.17 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:63.98M (Peak 192.95M) | Time:497534:43:59.20 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.97M (Peak 192.95M) | Time:497534:43:59.20 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:57.34M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:57.47M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:57.60M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:57.71M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:57.79M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:57.88M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:57.97M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:57.97M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:58.06M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:58.07M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:58.07M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:58.10M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:58.19M (Peak 192.95M) | Time:497534:44:00.08 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:58.54M (Peak 192.95M) | Time:497534:44:00.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:61.09M (Peak 192.95M) | Time:497534:44:00.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:61.35M (Peak 192.95M) | Time:497534:44:00.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:62.15M (Peak 192.95M) | Time:497534:44:00.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:62.37M (Peak 192.95M) | Time:497534:44:00.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:63.98M (Peak 192.95M) | Time:497534:44:00.13 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.97M (Peak 192.95M) | Time:497534:44:00.13 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:44:01.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:44:01.09 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:57.47M (Peak 192.95M) | Time:497534:44:01.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:57.47M (Peak 192.95M) | Time:497534:44:01.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:57.61M (Peak 192.95M) | Time:497534:44:01.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:58.52M (Peak 192.95M) | Time:497534:44:01.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:58.65M (Peak 192.95M) | Time:497534:44:01.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:58.76M (Peak 192.95M) | Time:497534:44:01.10 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:58.85M (Peak 192.95M) | Time:497534:44:01.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:58.94M (Peak 192.95M) | Time:497534:44:01.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:59.03M (Peak 192.95M) | Time:497534:44:01.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:59.03M (Peak 192.95M) | Time:497534:44:01.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:44:01.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:44:01.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:44:01.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:59.15M (Peak 192.95M) | Time:497534:44:01.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:59.25M (Peak 192.95M) | Time:497534:44:01.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:59.60M (Peak 192.95M) | Time:497534:44:01.11 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:62.37M (Peak 192.95M) | Time:497534:44:01.12 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:63.98M (Peak 192.95M) | Time:497534:44:01.15 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.97M (Peak 192.95M) | Time:497534:44:01.15 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:44:02.15 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:44:02.15 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:57.34M (Peak 192.95M) | Time:497534:44:02.15 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:57.61M (Peak 192.95M) | Time:497534:44:02.15 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:58.40M (Peak 192.95M) | Time:497534:44:02.15 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:58.52M (Peak 192.95M) | Time:497534:44:02.15 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:58.65M (Peak 192.95M) | Time:497534:44:02.15 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:58.76M (Peak 192.95M) | Time:497534:44:02.15 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:58.85M (Peak 192.95M) | Time:497534:44:02.15 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:58.94M (Peak 192.95M) | Time:497534:44:02.15 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:59.03M (Peak 192.95M) | Time:497534:44:02.16 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:59.03M (Peak 192.95M) | Time:497534:44:02.16 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:44:02.16 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:44:02.16 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:59.13M (Peak 192.95M) | Time:497534:44:02.16 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:59.15M (Peak 192.95M) | Time:497534:44:02.16 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:59.25M (Peak 192.95M) | Time:497534:44:02.16 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:59.60M (Peak 192.95M) | Time:497534:44:02.16 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:59.82M (Peak 192.95M) | Time:497534:44:02.16 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:63.98M (Peak 192.95M) | Time:497534:44:02.19 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.97M (Peak 192.95M) | Time:497534:44:02.19 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:44:03.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:44:03.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:57.47M (Peak 192.95M) | Time:497534:44:03.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:58.26M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:58.40M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:58.52M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:58.65M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:58.76M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:58.85M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:58.94M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:59.03M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:59.03M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:59.12M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:59.13M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:59.15M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:59.25M (Peak 192.95M) | Time:497534:44:03.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:59.60M (Peak 192.95M) | Time:497534:44:03.69 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:59.82M (Peak 192.95M) | Time:497534:44:03.70 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:61.43M (Peak 192.95M) | Time:497534:44:03.71 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:63.98M (Peak 192.95M) | Time:497534:44:03.75 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.97M (Peak 192.95M) | Time:497534:44:03.75 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:57.21M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_craft
+Fra:1 Mem:57.34M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_people
+Fra:1 Mem:57.47M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_decisions
+Fra:1 Mem:57.60M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_lives
+Fra:1 Mem:57.71M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_mind
+Fra:1 Mem:57.79M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | sign_cat_physics
+Fra:1 Mem:57.88M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_cart
+Fra:1 Mem:57.97M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_lantern_glass
+Fra:1 Mem:57.97M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_books
+Fra:1 Mem:58.06M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_glass
+Fra:1 Mem:58.07M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_copper
+Fra:1 Mem:58.07M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_brass
+Fra:1 Mem:58.10M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wire
+Fra:1 Mem:58.19M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_iron
+Fra:1 Mem:58.54M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_wood
+Fra:1 Mem:58.80M (Peak 192.95M) | Time:497534:44:06.67 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_frame
+Fra:1 Mem:59.60M (Peak 192.95M) | Time:497534:44:06.68 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_paint
+Fra:1 Mem:62.15M (Peak 192.95M) | Time:497534:44:06.70 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_counter
+Fra:1 Mem:62.37M (Peak 192.95M) | Time:497534:44:06.70 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | buecher_roof
+Fra:1 Mem:63.98M (Peak 192.95M) | Time:497534:44:06.75 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:63.97M (Peak 192.95M) | Time:497534:44:06.76 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_buecher_ao
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+[nmlib] AO stall_buecher 768px for 14 objects in 58.1s: islands cover 56%, 3614 tiny faces on the patch, island mean 0.29 -> 0.54
+14:44:08 | INFO: Starting glTF 2.0 export
+14:44:08 | INFO: Extracting primitive: buecher_wood
+14:44:08 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:44:08 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:44:08 | INFO: Primitives created: 1
+14:44:08 | INFO: Extracting primitive: buecher_frame
+14:44:08 | INFO: Primitives created: 1
+14:44:08 | INFO: Extracting primitive: buecher_counter
+14:44:08 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:44:08 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:44:08 | INFO: Primitives created: 1
+14:44:08 | INFO: Extracting primitive: buecher_roof
+14:44:08 | INFO: Primitives created: 1
+14:44:08 | INFO: Extracting primitive: buecher_paint
+14:44:08 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:44:08 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:44:08 | INFO: Primitives created: 1
+14:44:08 | INFO: Extracting primitive: buecher_iron
+14:44:08 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:44:08 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:44:08 | INFO: Primitives created: 1
+14:44:08 | INFO: Extracting primitive: bulbs_0
+14:44:08 | INFO: Primitives created: 1
+14:44:08 | INFO: Extracting primitive: buecher_wire
+14:44:08 | INFO: Primitives created: 1
+14:44:08 | INFO: Extracting primitive: buecher_brass
+14:44:08 | INFO: Primitives created: 1
+14:44:08 | INFO: Extracting primitive: buecher_copper
+14:44:08 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:44:08 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:44:08 | INFO: Primitives created: 1
+14:44:08 | INFO: Extracting primitive: buecher_glass
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: buecher_books
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: buecher_lantern_glass
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: buecher_cart
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: sign_cat_physics
+14:44:09 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:44:09 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: sign_cat_mind
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: sign_cat_lives
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: sign_cat_decisions
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: sign_cat_people
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: sign_cat_craft
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: snow_0
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: snow_1
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: snow_2
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Extracting primitive: snow_3
+14:44:09 | INFO: Primitives created: 1
+14:44:09 | INFO: Finished glTF 2.0 export in 0.793004035949707 s
+
+[nmlib] exported stall_buecher: 1.31 MB (+0.44 MB shared), 48098 tris in 5.2s
+[stall_buecher] full: 1.31 MB, 48098 tris
+[stall_buecher] lite: 0.41 MB, 14297 tris

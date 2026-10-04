@@ -22,7 +22,11 @@ The stall itself is not touched: no light was dimmed, and the bulbs, back wall, 
 
 **Where to see it:**
 - `vendors_bench.jpg`: the real `stall_bier` and `stall_gluehwein` glbs with their own `light_` empties and the real vendor glbs at `slot_vendor`, before and after, on the test bench (new option `?figure=`).
-- `market_bier.jpg` and `market_glueh.jpg`: the real market, entered through `openPlace`, before (round-3 code) and after.
+- `market_bier.jpg` and `market_glueh.jpg`: the real market, entered through `openPlace`, before (round-3 code) and after. `vendor_crops.jpg` crops both vendors from them.
+  - **Bier:** before, the white sleeves glow and bloom. After, they read as white cloth with shading, the green waistcoat and brown apron read, and the face is lit.
+  - **Glühwein:** before, the pale scarf blooms over the coat. After, it reads as a cream scarf and the face reads under the hat.
+  - The bulbs, shelves, back wall and counter are unchanged.
+  - The Bier camera is further back in the "after" frame. The engineer's round-4 camera change landed between my two runs; the before run had loaded the code about 100 minutes earlier.
 
 ## 2. Bücherstand side racks
 
@@ -36,7 +40,8 @@ The wash is the light those bulbs would throw onto the boards and the spines. On
 
 **Where to see it:**
 - `books_bench.jpg`: the shipped `stall_buecher.glb` on the bench, without books (props are placed only in the market), before and after.
-- `market_books.jpg`: the entered Bücherstand in the market, with the books.
+- `market_books.jpg`: the entered Bücherstand in the market, with the books, and `books_racks.jpg` (a crop): the top boards and the books on them under both canopies are lit warm now, and the section signs stay readable.
+- The first "after" market run also put 23 washes on the Christmas tree's short, low strings. Each would have taken a priority glow slot. Washes are now limited to section stalls, at most 4 each (`canopy.perModel`). The second run logs only `2 canopy washes under the bulb strings of place_buecherstand`.
 
 ## Standing checks (test bench, re-shot this round)
 
@@ -51,9 +56,11 @@ The wash is the light those bulbs would throw onto the boards and the spines. On
 - `site/src/lighting/settings.js`: `NIGHT.figure` and `NIGHT.canopy`.
 - `site/src/lighting/test.html`: `?figure=<glb>` puts a person at the stall's `slot_vendor` inside a `crowd` group.
 - `site/src/lighting/README.md`: the sections "Figures in close-ups (round 4)" and "Bücherstand rack canopies (round 4)", and the new URL option.
-- This folder: `vendors_bench.jpg`, `books_bench.jpg`, `market_bier.jpg`, `market_glueh.jpg`, `market_books.jpg`, `side_by_side.jpg`, `snow_toggle.jpg`, and the PNGs in `raw/` (after) and `raw_before/` (market, round-3 code).
+- This folder: `vendors_bench.jpg`, `vendor_crops.jpg`, `books_bench.jpg`, `books_racks.jpg`, `market_bier.jpg`, `market_glueh.jpg`, `market_books.jpg`, `side_by_side.jpg`, `snow_toggle.jpg`, and the PNGs in `raw/` (after) and `raw_before/` (market, round-3 code).
 
 ## Open
 
 - The real-GPU frame time is still not measured (no GPU here). The cost added this round is two glow slots and a few ALU operations on figure fragments. It adds no lights, no passes and no draw calls.
+- The vendors' faces read, but they are a little grey and cool next to the warm stall. The figure glbs give skin a low-saturation albedo. Warming the fill further would start to flatten the figures. If the judges want warmer skin, the vendor or organizer could raise the skin albedo's saturation.
+- The racks are lit, but the stall interior is still clearly brighter. That is deliberate: the racks stand outside, under small canopies with a few bulbs.
 - The bench "before" figures are darker than the market's, because the bench has no crowd lift (crowd.js) and no focus lights. The market pairs are the like-for-like comparison.

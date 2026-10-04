@@ -19,8 +19,11 @@ The engine's stand-in models, textures and sounds are made in code; no third-par
 
 | Asset | Used for | Source | Licence |
 |---|---|---|---|
-| three.js (incl. GLTFLoader, OrbitControls, post-processing passes, meshopt decoder) | 3D engine | https://github.com/mrdoob/three.js | MIT |
-| Alegreya SC and Alegreya Sans (Huerta Tipográfica), via Fontsource | Page and panel type, stand-in signs | https://github.com/huertatipografica/Alegreya, https://fontsource.org | SIL Open Font License 1.1 |
+| three.js (incl. GLTFLoader, post-processing passes, meshopt decoder) | 3D engine | https://github.com/mrdoob/three.js | MIT |
+| troika-three-text, with troika-three-utils and troika-worker-utils (ProtectWise) | Crisp SDF text in the market: the chalkboards, Bierdeckel, menu, wrapping paper, book pages, sheet music, noticeboard and ticket | https://github.com/protectwise/troika | MIT |
+| webgl-sdf-generator and bidi-js (Jason Johnston; troika's dependencies) | Glyph signed-distance fields; bidirectional text layout | https://github.com/lojjic/webgl-sdf-generator, https://github.com/lojjic/bidi-js | MIT |
+| Caveat (The Caveat Project Authors), via Fontsource | Chalk handwriting on the Glühwein, Bier and Bratwurst boards | https://github.com/googlefonts/caveat, https://fontsource.org | SIL Open Font License 1.1 |
+| Alegreya SC and Alegreya Sans (Huerta Tipográfica), via Fontsource | Page type; the printed words in the market (book pages, menu paper, sheet music, noticeboard, ticket, signpost) | https://github.com/huertatipografica/Alegreya, https://fontsource.org | SIL Open Font License 1.1 |
 | FluidR3 GM soundfont samples by Frank Wen (piano, bass, sax), as rendered by gleitz/midi-js-soundfonts | Fallback generative band only (plays only if the recorded stems cannot), emitted from `prototype/samples.json` | https://github.com/gleitz/midi-js-soundfonts | CC BY 3.0 per that repo's README (the original FluidR3_GM.sf2 is MIT); credited in the footer of both pages either way |
 | Tone.js drum samples | Fallback generative band only | https://github.com/Tonejs/audio | MIT |
 | Vite, marked, yaml (build time only, not shipped) | Build, content from `content/*.md` | https://vitejs.dev, https://marked.js.org, https://eemeli.org/yaml | MIT, MIT, ISC |
@@ -29,12 +32,13 @@ The engine's stand-in models, textures and sounds are made in code; no third-par
 
 ## Architect (square, town, tree, layout)
 
-All architect textures (cobbles, setts, granite, plaster, timber, roof tiles, slate, sandstone, painted wood, bark, fir needles and the window atlas) are generated procedurally in numpy by `blender/lib/architect_tex.py`; no third-party images or models are used. The only third-party assets are two fonts from the carpenter's bundle in `blender/lib/fonts/`, painted into the shop-sign lettering texture (`shop_signs`) in `town.glb`:
+All architect textures (cobbles, setts, granite, plaster, timber, roof tiles, slate, sandstone, painted wood, bark, fir needles and the window atlas) are generated procedurally in numpy by `blender/lib/architect_tex.py`; no third-party images or models are used. The only third-party assets are three fonts from the carpenter's bundle in `blender/lib/fonts/`, painted into the shop-sign lettering texture (`shop_signs`) in `town.glb` and the board lettering of the stroll signpost (`signpost.glb`, round 5):
 
 | Asset | Used for | Source | Licence |
 |---|---|---|---|
 | UnifrakturCook | Fraktur shop signs (Bäckerei, Weinstube, Gasthaus, Metzgerei, Konditorei, Kaffeehaus) | https://github.com/google/fonts/tree/main/ofl/unifrakturcook | SIL Open Font License 1.1 |
-| Alegreya SC (Huerta Tipográfica) | the other shop signs | https://github.com/google/fonts/tree/main/ofl/alegreyasc | SIL Open Font License 1.1 |
+| Alegreya SC (Huerta Tipográfica) | the other shop signs; the German place names on the signpost boards | https://github.com/google/fonts/tree/main/ofl/alegreyasc | SIL Open Font License 1.1 |
+| IM Fell English Italic (Igino Marini) | the small English labels on the signpost boards | https://github.com/google/fonts/tree/main/ofl/imfellenglish | SIL Open Font License 1.1 |
 
 ## Music writer (music/, site/public/audio/)
 

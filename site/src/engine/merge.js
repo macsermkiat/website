@@ -131,8 +131,8 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
 // Emissive materials (windows, embers) are only merged with the very same material object, because the
 // lighting module and the actions change those materials while the market runs.
 
-const SKIP = /^(snow_|bulbs_|musician_|lighting_|engine_|action_|effect_|item_|open_|band_pick_|pool_|merged_)/i;
-const skipNode = (o) => SKIP.test(o.name || '') || o.userData.live || o.userData.pickProxy;
+const SKIP = /^(snow_|bulbs_|musician_|lighting_|engine_|action_|effect_|item_|open_|band_pick_|pool_|merged_|act_sign_|write_|cam_read_)/i;
+const skipNode = (o) => SKIP.test(o.name || '') || o.userData.live || o.userData.pickProxy || o.userData.readable || o.userData.sign;
 const ANCHOR = /^(rot_|gondola_|horse_|instrument_)/i;
 const ATTRS = ['position', 'normal', 'uv', 'uv1', 'uv2', 'tangent', 'color'];
 const defaultBeforeRender = THREE.Object3D.prototype.onBeforeRender;

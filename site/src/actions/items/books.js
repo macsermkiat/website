@@ -1,24 +1,25 @@
-// The Bücherstand: click any book and it slides off the shelf, comes to the front of the counter and opens,
-// showing its own title and author on its pages, and the reading view beside it shows that book's page from
-// content/books/<slug>.md (in short, summary, key ideas). Click the book again, press Escape or close the reading
-// view, and it closes and goes back to its place. Which book a spine is comes from items.json (`slug`, `title`,
+// The Bücherstand: click any book and it slides off the shelf, comes to the front of the counter and opens, and
+// the camera comes to it: its title page on the left, and its page from content/books/<slug>.md (in short,
+// summary, key ideas) printed on its pages (world/reader.js). Turning a page turns a leaf. Step back (Escape,
+// or the bar's button) and it closes and goes back to its place. Which book a spine is comes from items.json (`slug`, `title`,
 // `author`, `category`), which the vendor keeps in line with content/books/categories.json.
 import * as THREE from 'three';
 import { boxOf, rest, restore, wrap, esc, UP } from './common.js';
 import { viewFor } from '../../engine/market.js';
 import inventory from 'virtual:market-inventory';
 import { actionNote, LIBRARY } from '../../content.js';
-import { libraryBook } from '../../ui/reading.js';
+import { libraryBook, fetchPage } from '../../ui/reading.js';
+import { paginate } from '../../world/text.js';
+import { bookBlocks } from '../../world/sections.js';
 
 const _p = new THREE.Vector3(), _q = new THREE.Quaternion();
 const BOOK_HOLD = 14; // seconds an open book stays out before the bookseller puts it back (not while it is being read)
 const MIN_HEIGHT = 0.3; // an open book is shown at least this tall (metres), so its pages can be read
 const byName = (a, b) => a.name.localeCompare(b.name, 'en', { numeric: true });
-/** True where the reading view is a sheet over the lower part of the screen (see main.css, "the reading view"). */
-const sheetView = () => typeof matchMedia === 'function' && (matchMedia('(max-width: 960px)').matches || matchMedia('(max-aspect-ratio: 1/1)').matches);
 
 export function createBooks(ctx) {
-  const { market, anim, sfx, say, items, reader } = ctx;
+  const { market, anim, sfx, say, items } = ctx;
+  const world = () => ctx.world?.();
   const place = market.places.books;
   const picks = ctx.books || [];
   const none = { api: { featuredBooks: [], openBook: () => null, openBySlug: (slug) => readOnly(slug) } };
@@ -38,9 +39,10 @@ export function createBooks(ctx) {
   let turn = 0;
 
   /** What a book is: one of Mac's (the bookshelf entry for its slug, with the writer's summary) or secondhand stock. */
+  const standIn = new Map(); // a shelf book standing in for one of Mac's books that has no spine of its own
   function describe(n) {
     const b = bookInfo(n);
-    const lib = libraryEntry(n);
+    const lib = standIn.has(n) ? libraryBook({ slug: standIn.get(n).slug }) : libraryEntry(n);
     if (lib) return { mac: true, slug: lib.slug, title: lib.title || b?.title, author: lib.author || b?.author || '', note: lib.oneLine || b?.note || 'One of the books on Mac’s own shelf.', category: lib.categoryDe || '' };
     return { mac: false, slug: '', title: b?.title || 'A secondhand book', author: b?.author || '', note: b?.note || 'A secondhand copy from the bookseller’s stock, not one of Mac’s.' };
   }
@@ -72,8 +74,7 @@ export function createBooks(ctx) {
     const pull = (k) => { n.position.copy(r0.p).addScaledVector(out, k); n.quaternion.copy(r0.q).premultiply(tip.setFromAxisAngle(tipAxis, 0.3 * k)); };
     const o = { n, item, d, r0, pull, left: BOOK_HOLD, state: 'pulling', group: null };
     open = o;
-    // the reading view opens with the book (Mac's books have a page; stock gets its note and a link)
-    reader?.open({ slug: d.slug, title: d.title, author: d.author, note: d.note }, { focus, onClose: () => { if (open === o) close({ fromReader: true }); } });
+    o.focus = focus;
     anim.add(0.45, pull, () => {
       if (open !== o) return; // closed while it was coming out
       // 2. the book itself is swapped for a copy that can open, which comes to the front of the counter
@@ -83,9 +84,6 @@ export function createBooks(ctx) {
       n.visible = false;
       const from = book.poseOf(n);
       const to = presentPose(book);
-      // where the reading view is a sheet over the lower part of the screen (960 px wide or less, or a tall
-      // screen), the camera comes to the open book so it stands in the part the sheet leaves free
-      if (sheetView()) o.back = ctx.frame?.({ center: to.p, facing: new THREE.Vector3(0, 0, 1).applyQuaternion(to.q), halfW: book.W * book.S, halfH: book.H * book.S * 0.5, lift: 0.4, margin: 1.4, near: 0.4 }) || null;
       book.set(from.p, from.q, 1);
       o.state = 'flying';
       anim.add(0.75, (k) => {
@@ -96,7 +94,7 @@ export function createBooks(ctx) {
         o.state = 'opening';
         sfx('page');
         // 3. open to the title page
-        anim.add(0.7, (k) => book.setOpen(k), () => { if (open === o) o.state = 'open'; });
+        anim.add(0.7, (k) => book.setOpen(k), () => { if (open === o) { o.state = 'open'; readOpenBook(o); } });
       });
     });
   }
@@ -119,8 +117,9 @@ export function createBooks(ctx) {
     if (!o) return;
     open = null;
     // the camera came to the book: back to where it was, unless the visitor has gone elsewhere
-    if (o.back && !retract) ctx.flyBack?.(o.back);
-    if (!fromReader && reader?.slug === (o.d.slug || '')) reader.close({ silent: true });
+    // the camera steps back from the pages (unless the reader already did, or the visitor has gone elsewhere)
+    const w = world();
+    if (!fromReader && w?.current?.id === 'books.book') w.close({ silent: true, keepCamera: retract });
     const { n, item, r0, pull, group: book } = o;
     const home = () => {
       n.visible = true;
@@ -226,17 +225,69 @@ export function createBooks(ctx) {
     },
     retract: () => { shelfOpen = null; close({ retract: true }); },
     update(dt) {
-      if (open?.state === 'open' && !reader?.isOpen && (open.left -= dt) <= 0) close();
+      if (open?.state === 'open' && world()?.current?.id !== 'books.book' && (open.left -= dt) <= 0) close();
     },
   };
 
   function readOnly(slug) {
     const b = LIBRARY.books.find((x) => x.slug === slug);
     if (!b) return false;
-    reader?.open({ slug: b.slug, title: b.title, author: b.author, note: b.oneLine });
-    say(`<b>${esc(b.title)}</b>${b.author ? ' · ' + esc(b.author) : ''}`);
+    // no spine for it on the shelf: the bookseller hands over a copy anyway (the nearest shelf book stands in)
+    const n = nodes.find((x) => !libraryEntry(x)) || nodes[0];
+    if (!n) return false;
+    spineOf.set(slug, n);
+    standIn.set(n, b);
+    openBook(n);
     return true;
   }
+
+  /** The open book's pages in the market: title page, then the book's reading page, spread by spread. */
+  function readOpenBook(o) {
+    const w = world();
+    const book = o.group;
+    if (!w || !book) return;
+    // the pages are measured in the faces the text is drawn with: wait for them if they are still on their way
+    if (w.started === false) { w.start(); w.ready.then(() => { if (open === o) readOpenBook(o); }); return; }
+    const surface = { id: 'books.book', placeId: 'books', kind: 'book', label: 'the open book', faces: book.faces, theme: 'print', base: book.base, rough: false, glow: [book.paper] };
+    const piece = { id: 'books.book', placeId: 'books', surface: 'books.book', title: o.d.title, where: 'an open book at the Bücherstand', html: bookCopy(o.d, null), views: spreads(o.d, null, book), readView: () => book.readView(ctx.camera), turn: (dir, mid) => book.turn(dir, mid, anim), onClose: () => { if (open === o) close({ fromReader: true }); } };
+    w.addSurface(surface);
+    w.addPiece(piece);
+    w.open('books.book', { focus: o.focus !== false });
+    if (!o.d.slug) return;
+    fetchPage(o.d.slug).then((html) => {
+      if (open !== o) return;
+      piece.html = bookCopy(o.d, html);
+      piece.views = spreads(o.d, html, book);
+      w.redress('books.book');
+    }).catch(() => {});
+  }
+}
+
+// ---------- the words on the open book ----------
+
+/** Spreads for the reader: the title page on the left of the first, then the reading page, page after page. */
+function spreads(d, html, book) {
+  const { title, body } = bookBlocks(d, html);
+  const L = book.faces.left, R = book.faces.right;
+  const tp = paginate(title, { w: L.w, h: L.h, base: book.base, theme: 'print' })[0];
+  // the title stands a third of the way down, centred
+  const drop = Math.max(0, (L.h - tp.used) * 0.36);
+  tp.lines.forEach((l) => { l.y += drop; });
+  tp.align = 'center';
+  // a little imprint at the foot of the title page
+  const foot = paginate([{ kind: 'sub', runs: [{ text: d.mac ? 'from Mac’s shelf' : 'Antiquariat · Nachtmarkt' }] }], { w: L.w, h: L.h, base: book.base * 0.85, theme: 'print' })[0];
+  foot.lines.forEach((l) => { l.y = L.h - l.height; tp.lines.push(l); });
+  const pages = paginate(body, { w: R.w, h: R.h, base: book.base, theme: 'print' });
+  const views = [{ faces: { left: tp, right: pages[0] || { lines: [] } } }];
+  for (let i = 1; i < pages.length; i += 2) views.push({ faces: { left: pages[i], right: pages[i + 1] || { lines: [] } } });
+  return views;
+}
+
+const escHtml = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+/** The visually hidden copy of an open book: its title, author and reading page. */
+function bookCopy(d, html) {
+  const more = d.slug ? `<p><a href="plain.html#book-${escHtml(d.slug)}">This book in the text version</a></p>` : '';
+  return `<h2><em>${escHtml(d.title)}</em></h2>${d.author ? `<p>${escHtml(d.author)}</p>` : ''}${html || (d.note ? `<p>${escHtml(d.note)}</p>` : '')}${more}`;
 }
 
 // ---------- the book that opens ----------
@@ -257,6 +308,7 @@ function buildOpenBook(n, d, frame) {
   const S = Math.max(1, MIN_HEIGHT / H);
   const cover = coverMaterial(n);
   const pages = pageTextures(d, W / H);
+  const faces = {};
   const group = new THREE.Group();
   group.name = `open_${n.name}`;
   const t = T / 2;
@@ -265,8 +317,15 @@ function buildOpenBook(n, d, frame) {
     const sx = side; // -1 left, +1 right
     const block = new THREE.Mesh(new THREE.BoxGeometry(W * 0.97, H * 0.96, t * 0.9), PAPER);
     block.position.set(sx * W * 0.485, 0, -t * 0.45);
-    const page = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.95, H * 0.94), new THREE.MeshStandardMaterial({ map: sx < 0 ? pages.left : pages.right, roughness: 0.9 }));
+    const page = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.95, H * 0.94), new THREE.MeshStandardMaterial({ map: sx < 0 ? pages.left : pages.right, roughness: 0.9, emissive: 0xfff2dc, emissiveIntensity: 0.06 }));
     page.position.set(sx * W * 0.485, 0, 0.0008);
+    // the writing area: the page less its margins (wider at the outer edge and the foot)
+    const aw = W * 0.95 * 0.8, ah = H * 0.94 * 0.84;
+    const area = new THREE.Object3D();
+    area.name = 'engine_write_area';
+    area.position.set(-aw / 2 + sx * W * 0.01, ah / 2 + H * 0.01, 0.0006);
+    page.add(area);
+    faces[sx < 0 ? 'left' : 'right'] = { area, w: aw, h: ah };
     const board = new THREE.Mesh(new THREE.BoxGeometry(W, H, 0.003), BOARD);
     board.position.set(sx * W / 2, 0, -t - 0.0015);
     g.add(block, page, board);
@@ -284,6 +343,18 @@ function buildOpenBook(n, d, frame) {
   const spine = new THREE.Group();
   spine.add(left, right);
   group.add(spine);
+  // the leaf that turns: hinged at the spine, as wide as a page
+  const leafMat = new THREE.MeshStandardMaterial({ map: pages.right, roughness: 0.9, side: THREE.DoubleSide, emissive: 0xfff2dc, emissiveIntensity: 0.06 });
+  const leafGeo = new THREE.PlaneGeometry(W * 0.95, H * 0.94, 8, 1);
+  leafGeo.translate(W * 0.485, 0, 0);
+  const leaf = new THREE.Mesh(leafGeo, leafMat);
+  leaf.visible = false;
+  leaf.userData.itemFx = true;
+  spine.add(leaf);
+  // the whole spread, for the reading camera
+  const spread = new THREE.Object3D();
+  spread.position.set(-W * 0.97, H * 0.47, 0.002);
+  group.add(spread);
   // open: 0 closed (the left half folded over the right, front cover out) .. 1 open flat with a slight V
   let openK = 0;
   const setOpen = (k) => {
@@ -311,8 +382,34 @@ function buildOpenBook(n, d, frame) {
   const fS = frame.getWorldScale(new THREE.Vector3()).x || 1;
   let world = { p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1 };
   return {
-    group, W, H, T, S,
+    group, W, H, T, S, faces, paper: PAPER,
+    base: H * 0.94 * 0.84 / 21, // about 16 lines of body text to a page
     get openK() { return openK; },
+    /** The reading view of the open spread. */
+    readView(camera) {
+      group.updateWorldMatrix(true, true);
+      const c = new THREE.Vector3(W * 0.97, -H * 0.47, 0).applyMatrix4(spread.matrixWorld);
+      const n = new THREE.Vector3(0, 0, 1).transformDirection(group.matrixWorld).normalize();
+      const s = new THREE.Vector3().setFromMatrixScale(group.matrixWorld).x || 1;
+      const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+      const d = Math.max((H * 0.94 * s) / (2 * t * 0.86), (W * 1.94 * s) / (2 * t * camera.aspect * 0.86));
+      const dir = n.clone(); dir.y += 0.12; dir.normalize();
+      return { pos: c.clone().addScaledVector(dir, d), target: c, near: 0.05 };
+    },
+    /** Turn a leaf: forward (dir > 0) from the right page over to the left, or back. mid() swaps the words. */
+    turn(dir, mid, anim) {
+      const a0 = dir > 0 ? right.rotation.y : left.rotation.y - Math.PI + 0.02;
+      const a1 = dir > 0 ? left.rotation.y - Math.PI + 0.02 : right.rotation.y;
+      leaf.visible = true;
+      leaf.position.z = 0.001;
+      let swapped = false;
+      anim.add(0.7, (k) => {
+        const e = k * k * (3 - 2 * k);
+        leaf.rotation.y = a0 + (a1 - a0) * e;
+        leaf.position.z = 0.001 + Math.sin(e * Math.PI) * W * 0.05;
+        if (!swapped && e > 0.35) { swapped = true; mid(); }
+      }, () => { leaf.visible = false; if (!swapped) mid(); });
+    },
     /** Place it in world terms: position, rotation and uniform scale. */
     set(p, q, s) {
       world = { p: p.clone(), q: q.clone(), s };
@@ -330,8 +427,9 @@ function buildOpenBook(n, d, frame) {
     },
     dispose() {
       group.removeFromParent();
-      group.traverse((m) => { if (m.isMesh) { m.geometry.dispose(); if (m.material !== PAPER && m.material !== BOARD && m.material !== cover?.material) m.material.dispose(); } });
-      pages.left.dispose(); pages.right.dispose();
+      group.traverse((m) => { if (m.isMesh && !m.isText) { m.geometry.dispose(); if (m.material !== PAPER && m.material !== BOARD && m.material !== cover?.material) m.material.dispose(); } });
+      leafGeo.dispose(); leafMat.dispose();
+      if (!pages.shared) { pages.left.dispose(); pages.right.dispose(); }
     },
   };
 }
@@ -374,6 +472,12 @@ function pageTextures(d, aspect) {
     t.anisotropy = 4;
     return t;
   };
+  // the words are drawn in 3D on these pages (world/reader.js); the canvas is the paper only
+  if (pageTextures.blank) return pageTextures.blank;
+  const blankPaper = mk(() => {});
+  pageTextures.blank = { left: blankPaper, right: blankPaper, shared: true };
+  return pageTextures.blank;
+  // eslint-disable-next-line no-unreachable
   const left = mk((g) => {
     let size = 58;
     g.font = `700 ${size}px 'Alegreya SC', Georgia, serif`;

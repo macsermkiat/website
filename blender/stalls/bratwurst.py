@@ -3,7 +3,7 @@
 A low, broad, sooty hut: dark-stained overlapping lap siding blackened above the grill, a
 board-and-batten roof, a riveted sheet-iron chimney hood over the grill end of the counter, a
 stovepipe with a rain cap through the roof, a firewood stack under a lean-to on the right, and a
-black board "Bratwurst" with cream letters on the front slope.
+lit cream board "Bratwurst" with soot-black letters on the front slope.
 
 The grill is the vendor's (round 2): prop_wurst_counter at slot_counter stands its Schwenkgrill on
 the counter under the hood. The stall has no firebox, grate, hearth plate or coals of its own;
@@ -198,22 +198,26 @@ def build(lite):
 
     # ------------------------------------------------------------ sign standing on the front slope
     P = h.paint
-    SG = h.part("sign", "paint", var=0.02)   # the sign is not soot-shaded: cream letters stay light
+    # round 4: bigger (2.45 x 0.6 m, was 1.9 x 0.44; letters about 1.4x taller) and lit. The board is
+    # now cream with soot-black letters (the black board read as a dark patch from the home view), in
+    # 'paint_lit': a warm emissive copy of the paint that stands in for the two gooseneck lamps, so
+    # the cream glows and the letters stay black. Not soot-shaded, so the cream stays clean.
+    SG = h.part("sign", "paint_lit", var=0.02)
     sl = h.front_slope
     y_eave = sl.point(0, 0).y
     ys = -0.55
     z_roof = RIDGE - abs(ys) * math.tan(h.pitch) + 0.05
-    sign_c = Vector((0.45, ys, z_roof + 0.34))
-    cp.sign(SG, SG, "Bratwurst", state.font("alegreya_sc"), sign_c, 1.9, 0.44, depth=0.045,
-            board_band="black", text_band="cream", frame_band="gold", text_size=0.3, max_fill=0.88,
+    sign_c = Vector((0.5, ys, z_roof + 0.42))
+    cp.sign(SG, SG, "Bratwurst", state.font("alegreya_sc"), sign_c, 2.45, 0.6, depth=0.045,
+            board_band="cream", text_band="black", frame_band="black", text_size=0.62, max_fill=0.88,
             text_depth=0.014, text_bevel=0.0)
-    for x in (sign_c.x - 0.75, sign_c.x + 0.75):
+    for x in (sign_c.x - 1.0, sign_c.x + 1.0):
         # iron struts: a post down to the roof and a raking brace back to the ridge
-        h.iron.box((x, ys + 0.03, z_roof + 0.06), (0.03, 0.03, 0.22), bevel=0)
-        a = Vector((x, ys + 0.04, sign_c.z + 0.12))
+        h.iron.box((x, ys + 0.03, z_roof + 0.08), (0.03, 0.03, 0.26), bevel=0)
+        a = Vector((x, ys + 0.04, sign_c.z + 0.14))
         b = Vector((x, ys + 0.45, RIDGE - (abs(ys + 0.45)) * math.tan(h.pitch) + 0.06))
         h.iron.slab(a, b, 0.025, 0.012, up=(1, 0, 0))
-    h.sign_lamps((sign_c.x - 0.55, sign_c.x + 0.55), ys - 0.03, sign_c.z + 0.22)
+    h.sign_lamps((sign_c.x - 0.7, sign_c.x + 0.7), ys - 0.03, sign_c.z + 0.3)
     # stepped black fascia board along the front eave
     cp.valance(P, -W / 2 - 0.25, W / 2 + 0.25, y_eave - 0.035, sl.point(0, 0, -0.03).z + 0.02, 0.12, 0.05,
                13, style="step", band="black")
@@ -247,9 +251,9 @@ def preview(objs):
     # the two gooseneck sign lamps: narrow spots from the lamp heads aimed at the upper half of the
     # board. The lamp heads sit only 0.3 m in front of the board, so a wide cone spills a bright
     # oval onto the roof snow below it; at 38 degrees the lower cone edge ends at the board's foot.
-    for x in (-0.1, 1.0):
-        render.add_light("env_signlamp", 'SPOT', (x, -0.9, 3.83), 24, size=0.04, spot_size=math.radians(38),
-                         spot_blend=0.35, target=(x * 0.6 + 0.18, -0.58, 3.58))
+    for x in (-0.2, 1.2):
+        render.add_light("env_signlamp", 'SPOT', (x, -0.88, 3.98), 40, size=0.04, spot_size=math.radians(40),
+                         spot_blend=0.35, target=(x * 0.6 + 0.2, -0.58, 3.68))
     render.add_light("env_neighbour", 'POINT', (-5.0, -1.5, 2.6), 150, size=0.6)
     if not props:
         print("[bratwurst] preview without the vendor's props")

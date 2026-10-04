@@ -329,8 +329,10 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
     # rather than a flat painted fill: deeper amber at the foot (more beer to look through), the named colour
     # in the middle, and a brighter, paler gold just under the head where the column is thinnest and lit
     # from above. The beer is opaque in the glb (see vlib.material("beer")), so this gradient carries the depth.
-    deep = tuple(c * 0.62 for c in (beer_col[0], beer_col[1] * 0.86, beer_col[2] * 0.6))
-    light = tuple(min(1.0, c * 1.18 + 0.06 * w) for c, w in zip(beer_col, (1.0, 0.9, 0.35)))
+    # (no white mixed into the light end: under the warm stall light and the tone mapping a whitened gold
+    # turns peach, like orange juice)
+    deep = tuple(c * 0.6 for c in (beer_col[0], beer_col[1] * 0.82, beer_col[2] * 0.5))
+    light = (min(1.0, beer_col[0] * 1.08), min(1.0, beer_col[1] * 1.22), beer_col[2] * 0.9)
     z_lo = (M @ Vector((0, 0, zb))).z
     z_hi = (M @ Vector((0, 0, level))).z
     for fi in range(f0, len(m.F)):

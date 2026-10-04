@@ -55,8 +55,8 @@ def args():
     ap.add_argument("--no-lite", action="store_true")
     ap.add_argument("--no-full", action="store_true")
     ap.add_argument("--no-ao", action="store_true", help="skip the AO bake (quick geometry checks only)")
-    ap.add_argument("--samples", type=int, default=128)
-    ap.add_argument("--res", default="1920x1080")
+    ap.add_argument("--samples", type=int, default=48)          # BUILD.md: final review renders 1280x720, 48 samples
+    ap.add_argument("--res", default="1280x720")
     ap.add_argument("--render-only", default=None, help="comma list: render previews only for these sets")
     ap.add_argument("--shots", default="wide,hero", help="section previews to render: wide, hero, stall (in the stall glb)")
     ap.add_argument("--sheet-only", action="store_true", help="only rebuild the deco contact sheet from the frames")

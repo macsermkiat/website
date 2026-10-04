@@ -1,0 +1,375 @@
+[stall_gluehwein] built full in 0.8s, 37857 tris
+     gluehwein_wood                    8464
+     gluehwein_frame                   1668
+     gluehwein_counter                 1884
+     gluehwein_roof                    8470
+     gluehwein_paint                    540
+     gluehwein_iron                     308
+     bulbs_0                           2924
+     gluehwein_wire                    1276
+     gluehwein_fir                     2920
+     gluehwein_baubles_red              720
+     gluehwein_baubles_gold             720
+     gluehwein_trim                    1988
+     gluehwein_sign                     905
+     snow_0                            2552
+     snow_1                            2518
+Fra:1 Mem:50.07M (Peak 63.05M) | Time:497534:44:51.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wood
+Fra:1 Mem:50.61M (Peak 63.05M) | Time:497534:44:51.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:50.61M (Peak 63.05M) | Time:497534:44:51.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_sign
+Fra:1 Mem:52.00M (Peak 63.05M) | Time:497534:44:51.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_frame
+Fra:1 Mem:52.34M (Peak 63.05M) | Time:497534:44:51.47 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_counter
+Fra:1 Mem:52.72M (Peak 63.05M) | Time:497534:44:51.48 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_roof
+Fra:1 Mem:54.09M (Peak 63.05M) | Time:497534:44:51.49 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_trim
+Fra:1 Mem:54.54M (Peak 63.05M) | Time:497534:44:51.49 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_gold
+Fra:1 Mem:54.63M (Peak 63.05M) | Time:497534:44:51.49 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_red
+Fra:1 Mem:54.71M (Peak 63.05M) | Time:497534:44:51.49 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_fir
+Fra:1 Mem:55.05M (Peak 63.05M) | Time:497534:44:51.49 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wire
+Fra:1 Mem:55.21M (Peak 63.05M) | Time:497534:44:51.49 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_iron
+Fra:1 Mem:55.66M (Peak 63.05M) | Time:497534:44:51.49 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_paint
+Fra:1 Mem:55.87M (Peak 63.05M) | Time:497534:44:51.54 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:55.87M (Peak 63.05M) | Time:497534:44:51.54 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_gluehwein_ao
+Fra:1 Mem:51.18M (Peak 181.38M) | Time:497534:45:14.49 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:51.18M (Peak 181.38M) | Time:497534:45:14.49 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_sign
+Fra:1 Mem:51.34M (Peak 181.38M) | Time:497534:45:14.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_trim
+Fra:1 Mem:51.71M (Peak 181.38M) | Time:497534:45:14.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wood
+Fra:1 Mem:52.45M (Peak 181.38M) | Time:497534:45:14.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_gold
+Fra:1 Mem:52.51M (Peak 181.38M) | Time:497534:45:14.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_red
+Fra:1 Mem:52.57M (Peak 181.38M) | Time:497534:45:14.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_fir
+Fra:1 Mem:52.83M (Peak 181.38M) | Time:497534:45:14.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wire
+Fra:1 Mem:52.95M (Peak 181.38M) | Time:497534:45:14.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_iron
+Fra:1 Mem:53.00M (Peak 181.38M) | Time:497534:45:14.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_paint
+Fra:1 Mem:53.10M (Peak 181.38M) | Time:497534:45:14.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_roof
+Fra:1 Mem:55.28M (Peak 181.38M) | Time:497534:45:14.51 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_frame
+Fra:1 Mem:55.56M (Peak 181.38M) | Time:497534:45:14.51 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_counter
+Fra:1 Mem:55.87M (Peak 181.38M) | Time:497534:45:14.54 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:55.87M (Peak 181.38M) | Time:497534:45:14.54 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_gluehwein_ao
+Fra:1 Mem:51.17M (Peak 181.38M) | Time:497534:45:18.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wood
+Fra:1 Mem:51.39M (Peak 181.38M) | Time:497534:45:18.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:51.53M (Peak 181.38M) | Time:497534:45:18.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_sign
+Fra:1 Mem:52.76M (Peak 181.38M) | Time:497534:45:18.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_trim
+Fra:1 Mem:53.13M (Peak 181.38M) | Time:497534:45:18.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_gold
+Fra:1 Mem:53.19M (Peak 181.38M) | Time:497534:45:18.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_red
+Fra:1 Mem:53.25M (Peak 181.38M) | Time:497534:45:18.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_fir
+Fra:1 Mem:53.51M (Peak 181.38M) | Time:497534:45:18.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wire
+Fra:1 Mem:53.63M (Peak 181.38M) | Time:497534:45:18.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_frame
+Fra:1 Mem:53.91M (Peak 181.38M) | Time:497534:45:18.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_counter
+Fra:1 Mem:54.22M (Peak 181.38M) | Time:497534:45:18.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_roof
+Fra:1 Mem:55.73M (Peak 181.38M) | Time:497534:45:18.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_iron
+Fra:1 Mem:55.78M (Peak 181.38M) | Time:497534:45:18.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_paint
+Fra:1 Mem:55.87M (Peak 181.38M) | Time:497534:45:18.47 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:55.87M (Peak 181.38M) | Time:497534:45:18.47 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_gluehwein_ao
+Fra:1 Mem:51.18M (Peak 181.38M) | Time:497534:45:20.03 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:51.18M (Peak 181.38M) | Time:497534:45:20.03 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wood
+Fra:1 Mem:52.60M (Peak 181.38M) | Time:497534:45:20.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_sign
+Fra:1 Mem:52.76M (Peak 181.38M) | Time:497534:45:20.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_trim
+Fra:1 Mem:53.13M (Peak 181.38M) | Time:497534:45:20.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_gold
+Fra:1 Mem:53.19M (Peak 181.38M) | Time:497534:45:20.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_red
+Fra:1 Mem:53.25M (Peak 181.38M) | Time:497534:45:20.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_fir
+Fra:1 Mem:53.51M (Peak 181.38M) | Time:497534:45:20.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wire
+Fra:1 Mem:53.63M (Peak 181.38M) | Time:497534:45:20.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_iron
+Fra:1 Mem:53.68M (Peak 181.38M) | Time:497534:45:20.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_paint
+Fra:1 Mem:53.78M (Peak 181.38M) | Time:497534:45:20.04 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_roof
+Fra:1 Mem:55.29M (Peak 181.38M) | Time:497534:45:20.05 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_frame
+Fra:1 Mem:55.56M (Peak 181.38M) | Time:497534:45:20.05 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_counter
+Fra:1 Mem:55.87M (Peak 181.38M) | Time:497534:45:20.06 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:55.87M (Peak 181.38M) | Time:497534:45:20.06 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_gluehwein_ao
+Fra:1 Mem:51.18M (Peak 181.38M) | Time:497534:45:28.70 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:51.18M (Peak 181.38M) | Time:497534:45:28.70 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wood
+Fra:1 Mem:52.60M (Peak 181.38M) | Time:497534:45:28.71 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_sign
+Fra:1 Mem:52.76M (Peak 181.38M) | Time:497534:45:28.71 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_trim
+Fra:1 Mem:53.13M (Peak 181.38M) | Time:497534:45:28.71 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_gold
+Fra:1 Mem:53.58M (Peak 181.38M) | Time:497534:45:28.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_red
+Fra:1 Mem:53.64M (Peak 181.38M) | Time:497534:45:28.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_fir
+Fra:1 Mem:53.90M (Peak 181.38M) | Time:497534:45:28.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wire
+Fra:1 Mem:54.02M (Peak 181.38M) | Time:497534:45:28.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_iron
+Fra:1 Mem:54.07M (Peak 181.38M) | Time:497534:45:28.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_paint
+Fra:1 Mem:54.16M (Peak 181.38M) | Time:497534:45:28.72 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_roof
+Fra:1 Mem:55.29M (Peak 181.38M) | Time:497534:45:28.73 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_frame
+Fra:1 Mem:55.56M (Peak 181.38M) | Time:497534:45:28.73 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_counter
+Fra:1 Mem:55.87M (Peak 181.38M) | Time:497534:45:28.74 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:55.87M (Peak 181.38M) | Time:497534:45:28.74 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_gluehwein_ao
+Fra:1 Mem:53.20M (Peak 181.38M) | Time:497534:45:30.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:53.20M (Peak 181.38M) | Time:497534:45:30.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_sign
+Fra:1 Mem:53.37M (Peak 181.38M) | Time:497534:45:30.44 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_trim
+Fra:1 Mem:53.73M (Peak 181.38M) | Time:497534:45:30.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_gold
+Fra:1 Mem:53.79M (Peak 181.38M) | Time:497534:45:30.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_red
+Fra:1 Mem:53.85M (Peak 181.38M) | Time:497534:45:30.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_fir
+Fra:1 Mem:54.11M (Peak 181.38M) | Time:497534:45:30.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wire
+Fra:1 Mem:54.23M (Peak 181.38M) | Time:497534:45:30.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_iron
+Fra:1 Mem:54.29M (Peak 181.38M) | Time:497534:45:30.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_paint
+Fra:1 Mem:54.38M (Peak 181.38M) | Time:497534:45:30.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_roof
+Fra:1 Mem:55.89M (Peak 181.38M) | Time:497534:45:30.45 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wood
+Fra:1 Mem:57.31M (Peak 181.38M) | Time:497534:45:30.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_frame
+Fra:1 Mem:57.59M (Peak 181.38M) | Time:497534:45:30.46 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_counter
+Fra:1 Mem:57.90M (Peak 181.38M) | Time:497534:45:30.47 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:57.90M (Peak 181.38M) | Time:497534:45:30.47 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_gluehwein_ao
+Fra:1 Mem:53.18M (Peak 183.40M) | Time:497534:45:31.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wood
+Fra:1 Mem:53.46M (Peak 183.40M) | Time:497534:45:31.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:53.54M (Peak 183.40M) | Time:497534:45:31.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_sign
+Fra:1 Mem:54.77M (Peak 183.40M) | Time:497534:45:31.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_trim
+Fra:1 Mem:55.13M (Peak 183.40M) | Time:497534:45:31.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_gold
+Fra:1 Mem:55.19M (Peak 183.40M) | Time:497534:45:31.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_red
+Fra:1 Mem:55.26M (Peak 183.40M) | Time:497534:45:31.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_fir
+Fra:1 Mem:55.51M (Peak 183.40M) | Time:497534:45:31.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wire
+Fra:1 Mem:55.64M (Peak 183.40M) | Time:497534:45:31.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_iron
+Fra:1 Mem:55.69M (Peak 183.40M) | Time:497534:45:31.50 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_paint
+Fra:1 Mem:55.78M (Peak 183.40M) | Time:497534:45:31.51 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_roof
+Fra:1 Mem:57.68M (Peak 183.40M) | Time:497534:45:31.51 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_frame
+Fra:1 Mem:57.96M (Peak 183.40M) | Time:497534:45:31.51 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_counter
+Fra:1 Mem:57.88M (Peak 183.40M) | Time:497534:45:31.52 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:57.88M (Peak 183.40M) | Time:497534:45:31.52 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_gluehwein_ao
+Fra:1 Mem:53.18M (Peak 183.40M) | Time:497534:45:33.84 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | Plane
+Fra:1 Mem:53.18M (Peak 183.40M) | Time:497534:45:33.84 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_sign
+Fra:1 Mem:53.35M (Peak 183.40M) | Time:497534:45:33.84 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_trim
+Fra:1 Mem:53.71M (Peak 183.40M) | Time:497534:45:33.84 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wood
+Fra:1 Mem:55.13M (Peak 183.40M) | Time:497534:45:33.84 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_gold
+Fra:1 Mem:55.19M (Peak 183.40M) | Time:497534:45:33.84 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_baubles_red
+Fra:1 Mem:55.26M (Peak 183.40M) | Time:497534:45:33.84 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_fir
+Fra:1 Mem:55.51M (Peak 183.40M) | Time:497534:45:33.84 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_wire
+Fra:1 Mem:55.64M (Peak 183.40M) | Time:497534:45:33.84 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_iron
+Fra:1 Mem:55.69M (Peak 183.40M) | Time:497534:45:33.84 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_paint
+Fra:1 Mem:55.75M (Peak 183.40M) | Time:497534:45:33.84 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_frame
+Fra:1 Mem:56.06M (Peak 183.40M) | Time:497534:45:33.85 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_roof
+Fra:1 Mem:57.57M (Peak 183.40M) | Time:497534:45:33.85 | Mem:0.00M, Peak:0.00M | Scene | Synchronizing object | gluehwein_counter
+Fra:1 Mem:57.88M (Peak 183.40M) | Time:497534:45:33.87 | Mem:0.00M, Peak:0.00M | Scene | Initializing
+Fra:1 Mem:57.88M (Peak 183.40M) | Time:497534:45:33.88 | Mem:0.00M, Peak:0.00M | Scene | Updating Images | Loading stall_gluehwein_ao
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+[nmlib] AO stall_gluehwein 768px for 8 objects in 45.4s: islands cover 58%, 292 tiny faces on the patch, island mean 0.28 -> 0.53
+ERROR Draco mesh compression is not available because library could not be found at /home/claude/website/4.2/python/lib/python3.11/site-packages/libextern_draco.so
+14:45:36 | INFO: Starting glTF 2.0 export
+14:45:36 | INFO: Extracting primitive: gluehwein_wood
+14:45:36 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:45:36 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: gluehwein_frame
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: gluehwein_counter
+14:45:36 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:45:36 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: gluehwein_roof
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: gluehwein_paint
+14:45:36 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:45:36 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: gluehwein_iron
+14:45:36 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:45:36 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: bulbs_0
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: gluehwein_wire
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: gluehwein_fir
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: gluehwein_baubles_red
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: gluehwein_baubles_gold
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: gluehwein_trim
+14:45:36 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:45:36 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: gluehwein_sign
+14:45:36 | INFO: Occlusion and metal-roughness texture will be exported separately (use same-sized images if you want them combined)
+14:45:36 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: snow_0
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Extracting primitive: snow_1
+14:45:36 | INFO: Primitives created: 1
+14:45:36 | INFO: Finished glTF 2.0 export in 0.7425329685211182 s
+
+[nmlib] exported stall_gluehwein: 0.95 MB (+0.44 MB shared), 37857 tris in 4.8s
+14:45:41 | INFO: Data are loaded, start creating Blender stuff
+14:45:41 | INFO: Blender create Mesh node act_ladle_mesh
+14:45:41 | INFO: Blender create Mesh node act_mug_0_mesh
+14:45:41 | INFO: Blender create Mesh node act_mug_1_mesh
+14:45:41 | INFO: Blender create Mesh node act_mug_2_mesh
+14:45:41 | INFO: Blender create Mesh node act_mug_3_mesh
+14:45:41 | INFO: Blender create Mesh node act_mug_4_mesh
+14:45:41 | INFO: Blender create Mesh node act_mug_5_mesh
+14:45:41 | INFO: Blender create Mesh node act_mug_6_mesh
+14:45:41 | INFO: Blender create Mesh node act_mug_7_mesh
+14:45:41 | INFO: Blender create Mesh node act_mug_8_mesh
+14:45:41 | INFO: Blender create Mesh node act_mug_9_mesh
+14:45:41 | INFO: Blender create Mesh node act_pot_lid_mesh
+14:45:41 | INFO: Blender create Mesh node act_pot_mesh
+14:45:41 | INFO: Blender create Mesh node prop_gluehwein_counter_static
+14:45:41 | INFO: glTF import finished in 0.09s
+[nmlib] imported prop_gluehwein_counter.glb: 33 objects at (0.0, -1.17, 1.05)
+14:45:42 | INFO: Data are loaded, start creating Blender stuff
+14:45:42 | INFO: Blender create Mesh node act_bottle_12_mesh
+14:45:42 | INFO: Blender create Mesh node act_bottle_13_mesh
+14:45:42 | INFO: Blender create Mesh node act_bottle_14_mesh
+14:45:42 | INFO: Blender create Mesh node act_bottle_15_mesh
+14:45:42 | INFO: Blender create Mesh node act_bottle_16_mesh
+14:45:42 | INFO: Blender create Mesh node act_bottle_17_mesh
+14:45:42 | INFO: Blender create Mesh node act_mug_10_mesh
+14:45:42 | INFO: Blender create Mesh node act_mug_11_mesh
+14:45:42 | INFO: Blender create Mesh node act_mug_12_mesh
+14:45:42 | INFO: Blender create Mesh node act_mug_13_mesh
+14:45:42 | INFO: Blender create Mesh node act_mug_14_mesh
+14:45:42 | INFO: Blender create Mesh node act_mug_15_mesh
+14:45:42 | INFO: Blender create Mesh node prop_gluehwein_shelf_static
+14:45:42 | INFO: glTF import finished in 0.07s
+[nmlib] imported prop_gluehwein_shelf.glb: 26 objects at (0.0, 1.06, 1.38)
+14:45:43 | INFO: Data are loaded, start creating Blender stuff
+14:45:43 | INFO: Blender create Mesh node act_bottle_0_mesh
+14:45:43 | INFO: Blender create Mesh node act_bottle_1_mesh
+14:45:43 | INFO: Blender create Mesh node act_bottle_10_mesh
+14:45:43 | INFO: Blender create Mesh node act_bottle_11_mesh
+14:45:43 | INFO: Blender create Mesh node act_bottle_2_mesh
+14:45:43 | INFO: Blender create Mesh node act_bottle_3_mesh
+14:45:43 | INFO: Blender create Mesh node act_bottle_4_mesh
+14:45:43 | INFO: Blender create Mesh node act_bottle_5_mesh
+14:45:43 | INFO: Blender create Mesh node act_bottle_6_mesh
+14:45:43 | INFO: Blender create Mesh node act_bottle_7_mesh
+14:45:43 | INFO: Blender create Mesh node act_bottle_8_mesh
+14:45:43 | INFO: Blender create Mesh node act_bottle_9_mesh
+14:45:43 | INFO: Blender create Mesh node act_wineglass_0_mesh
+14:45:43 | INFO: Blender create Mesh node act_wineglass_1_mesh
+14:45:43 | INFO: Blender create Mesh node act_wineglass_2_mesh
+14:45:43 | INFO: Blender create Mesh node act_wineglass_3_mesh
+14:45:43 | INFO: Blender create Mesh node act_wineglass_4_mesh
+14:45:43 | INFO: Blender create Mesh node prop_gluehwein_wine_static
+14:45:43 | INFO: glTF import finished in 0.10s
+[nmlib] imported prop_gluehwein_wine.glb: 36 objects at (0.0, 1.06, 1.78)
+Fra:1 Mem:38.27M (Peak 78.67M) | Time:00:00.02 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | gluehwein_wood
+Fra:1 Mem:39.71M (Peak 78.67M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | prop_gluehwein_wine_static
+Fra:1 Mem:39.79M (Peak 78.67M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_wineglass_4_mesh
+Fra:1 Mem:39.85M (Peak 78.67M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_wineglass_3_mesh
+Fra:1 Mem:39.92M (Peak 78.67M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_wineglass_2_mesh
+Fra:1 Mem:40.01M (Peak 78.67M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_wineglass_1_mesh
+Fra:1 Mem:40.10M (Peak 78.67M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | gluehwein_frame
+Fra:1 Mem:40.38M (Peak 78.67M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | gluehwein_counter
+Fra:1 Mem:40.69M (Peak 78.67M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | gluehwein_roof
+Fra:1 Mem:41.13M (Peak 78.67M) | Time:00:00.03 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | gluehwein_paint
+Fra:1 Mem:41.22M (Peak 78.67M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | gluehwein_iron
+Fra:1 Mem:42.37M (Peak 78.67M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_9_mesh
+Fra:1 Mem:42.48M (Peak 78.67M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_8_mesh
+Fra:1 Mem:42.53M (Peak 78.67M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_7_mesh
+Fra:1 Mem:42.53M (Peak 78.67M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | bulbs_0
+Fra:1 Mem:42.79M (Peak 78.67M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | gluehwein_wire
+Fra:1 Mem:42.91M (Peak 78.67M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | gluehwein_fir
+Fra:1 Mem:43.23M (Peak 78.67M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | gluehwein_baubles_red
+Fra:1 Mem:43.29M (Peak 78.67M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | gluehwein_baubles_gold
+Fra:1 Mem:43.35M (Peak 78.67M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_5_mesh
+Fra:1 Mem:43.41M (Peak 78.67M) | Time:00:00.04 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | gluehwein_trim
+Fra:1 Mem:43.82M (Peak 78.67M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_4_mesh
+Fra:1 Mem:43.88M (Peak 78.67M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_3_mesh
+Fra:1 Mem:43.93M (Peak 78.67M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_2_mesh
+Fra:1 Mem:43.98M (Peak 78.67M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_1_mesh
+Fra:1 Mem:44.15M (Peak 78.67M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | snow_0
+Fra:1 Mem:44.20M (Peak 78.67M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_11_mesh
+Fra:1 Mem:44.25M (Peak 78.67M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_10_mesh
+Fra:1 Mem:44.56M (Peak 78.67M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_0_mesh
+Fra:1 Mem:44.80M (Peak 78.67M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | env_ground
+Fra:1 Mem:44.80M (Peak 78.67M) | Time:00:00.05 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_ladle_mesh
+Fra:1 Mem:44.93M (Peak 78.67M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_0_mesh
+Fra:1 Mem:45.84M (Peak 78.67M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_1_mesh
+Fra:1 Mem:45.96M (Peak 78.67M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_2_mesh
+Fra:1 Mem:46.02M (Peak 78.67M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_3_mesh
+Fra:1 Mem:46.08M (Peak 78.67M) | Time:00:00.06 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_4_mesh
+Fra:1 Mem:46.18M (Peak 78.67M) | Time:00:00.07 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_6_mesh
+Fra:1 Mem:46.26M (Peak 78.67M) | Time:00:00.07 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_7_mesh
+Fra:1 Mem:46.09M (Peak 78.67M) | Time:00:00.07 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_8_mesh
+Fra:1 Mem:45.98M (Peak 78.67M) | Time:00:00.07 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_15_mesh
+Fra:1 Mem:46.04M (Peak 78.67M) | Time:00:00.07 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_pot_lid_mesh
+Fra:1 Mem:46.20M (Peak 78.67M) | Time:00:00.07 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_pot_mesh
+Fra:1 Mem:46.29M (Peak 78.67M) | Time:00:00.08 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_14_mesh
+Fra:1 Mem:46.35M (Peak 78.67M) | Time:00:00.08 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_13_mesh
+Fra:1 Mem:47.08M (Peak 78.67M) | Time:00:00.08 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_12_mesh
+Fra:1 Mem:47.14M (Peak 78.67M) | Time:00:00.08 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_11_mesh
+Fra:1 Mem:47.14M (Peak 78.67M) | Time:00:00.08 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | prop_gluehwein_counter_static
+Fra:1 Mem:47.46M (Peak 78.67M) | Time:00:00.09 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_mug_10_mesh
+Fra:1 Mem:47.23M (Peak 78.67M) | Time:00:00.09 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_17_mesh
+Fra:1 Mem:47.30M (Peak 78.67M) | Time:00:00.09 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_16_mesh
+Fra:1 Mem:47.36M (Peak 78.67M) | Time:00:00.09 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_15_mesh
+Fra:1 Mem:47.47M (Peak 78.67M) | Time:00:00.09 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_13_mesh
+Fra:1 Mem:47.50M (Peak 78.67M) | Time:00:00.09 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | act_bottle_14_mesh
+Fra:1 Mem:47.57M (Peak 78.67M) | Time:00:00.10 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing
+Fra:1 Mem:47.29M (Peak 78.67M) | Time:00:00.10 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Images | Loading prop_gluehwein_wine_ao
+Fra:1 Mem:48.29M (Peak 78.67M) | Time:00:00.10 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Images | Loading atlas_color
+Fra:1 Mem:64.30M (Peak 78.67M) | Time:00:00.11 | Mem:1.00M, Peak:1.00M | Scene, ViewLayer | Updating Images | Loading atlas_rm.002
+Fra:1 Mem:80.30M (Peak 80.30M) | Time:00:00.12 | Mem:1.00M, Peak:1.00M | Scene, ViewLayer | Updating Images | Loading atlas_rm
+Fra:1 Mem:160.32M (Peak 192.33M) | Time:00:00.35 | Mem:17.00M, Peak:17.00M | Scene, ViewLayer | Updating Images | Loading atlas_normal
+Fra:1 Mem:144.31M (Peak 192.33M) | Time:00:00.37 | Mem:33.00M, Peak:33.00M | Scene, ViewLayer | Updating Images | Loading atlas_color.002
+Fra:1 Mem:128.30M (Peak 192.33M) | Time:00:00.39 | Mem:49.00M, Peak:49.00M | Scene, ViewLayer | Updating Images | Loading prop_gluehwein_counter_ao
+Fra:1 Mem:129.30M (Peak 192.33M) | Time:00:00.40 | Mem:50.00M, Peak:50.00M | Scene, ViewLayer | Updating Images | Loading atlas_normal.001
+Fra:1 Mem:209.32M (Peak 241.33M) | Time:00:00.58 | Mem:66.00M, Peak:66.00M | Scene, ViewLayer | Updating Images | Loading atlas_color.001
+Fra:1 Mem:193.31M (Peak 241.33M) | Time:00:00.62 | Mem:82.00M, Peak:82.00M | Scene, ViewLayer | Updating Images | Loading atlas_normal.002
+Fra:1 Mem:177.30M (Peak 241.33M) | Time:00:00.65 | Mem:98.00M, Peak:98.00M | Scene, ViewLayer | Updating Images | Loading atlas_rm.001
+Fra:1 Mem:257.32M (Peak 289.33M) | Time:00:00.75 | Mem:114.00M, Peak:114.00M | Scene, ViewLayer | Updating Images | Loading prop_gluehwein_shelf_ao
+Fra:1 Mem:189.73M (Peak 289.33M) | Time:00:00.77 | Mem:147.00M, Peak:147.00M | Scene, ViewLayer | Waiting for render to start
+Fra:1 Mem:189.74M (Peak 289.33M) | Time:00:00.78 | Mem:147.00M, Peak:147.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)
+Fra:1 Mem:189.74M (Peak 289.33M) | Time:00:00.78 | Mem:147.00M, Peak:147.00M | Scene, ViewLayer | Updating Scene
+Fra:1 Mem:189.74M (Peak 289.33M) | Time:00:00.78 | Mem:147.00M, Peak:147.00M | Scene, ViewLayer | Updating Shaders
+Fra:1 Mem:189.84M (Peak 289.33M) | Time:00:00.78 | Mem:147.02M, Peak:147.02M | Scene, ViewLayer | Updating Procedurals
+Fra:1 Mem:189.84M (Peak 289.33M) | Time:00:00.78 | Mem:147.02M, Peak:147.02M | Scene, ViewLayer | Updating Background
+Fra:1 Mem:189.84M (Peak 289.33M) | Time:00:00.78 | Mem:147.02M, Peak:147.02M | Scene, ViewLayer | Updating Camera
+Fra:1 Mem:189.84M (Peak 289.33M) | Time:00:00.78 | Mem:147.02M, Peak:147.02M | Scene, ViewLayer | Updating Meshes Flags
+Fra:1 Mem:189.84M (Peak 289.33M) | Time:00:00.78 | Mem:147.02M, Peak:147.02M | Scene, ViewLayer | Updating Objects
+Fra:1 Mem:189.84M (Peak 289.33M) | Time:00:00.78 | Mem:147.02M, Peak:147.02M | Scene, ViewLayer | Updating Objects | Copying Transformations to device
+Fra:1 Mem:189.86M (Peak 289.33M) | Time:00:00.78 | Mem:147.04M, Peak:147.04M | Scene, ViewLayer | Updating Objects | Applying Static Transformations
+Fra:1 Mem:189.86M (Peak 289.33M) | Time:00:00.78 | Mem:147.04M, Peak:147.04M | Scene, ViewLayer | Updating Particle Systems
+Fra:1 Mem:189.86M (Peak 289.33M) | Time:00:00.78 | Mem:147.04M, Peak:147.04M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device
+Fra:1 Mem:189.86M (Peak 289.33M) | Time:00:00.78 | Mem:147.04M, Peak:147.04M | Scene, ViewLayer | Updating Meshes
+Fra:1 Mem:190.72M (Peak 289.33M) | Time:00:00.78 | Mem:147.04M, Peak:147.04M | Scene, ViewLayer | Updating Mesh | Computing attributes
+Fra:1 Mem:196.24M (Peak 289.33M) | Time:00:00.79 | Mem:147.05M, Peak:147.05M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device
+Fra:1 Mem:196.20M (Peak 289.33M) | Time:00:00.80 | Mem:152.52M, Peak:152.52M | Scene, ViewLayer | Updating Scene BVH | Building
+Fra:1 Mem:196.21M (Peak 289.33M) | Time:00:00.80 | Mem:152.52M, Peak:152.52M | Scene, ViewLayer | Updating Scene BVH | Building BVH
+Fra:1 Mem:196.21M (Peak 289.33M) | Time:00:00.80 | Mem:154.25M, Peak:154.25M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%
+Fra:1 Mem:196.21M (Peak 289.33M) | Time:00:00.83 | Mem:155.96M, Peak:157.69M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device
+Fra:1 Mem:196.21M (Peak 289.33M) | Time:00:00.83 | Mem:155.96M, Peak:157.69M | Scene, ViewLayer | Updating Mesh | Computing normals
+Fra:1 Mem:198.76M (Peak 289.33M) | Time:00:00.83 | Mem:155.96M, Peak:157.69M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device
+Fra:1 Mem:198.76M (Peak 289.33M) | Time:00:00.83 | Mem:158.52M, Peak:158.52M | Scene, ViewLayer | Updating Objects Flags
+Fra:1 Mem:198.76M (Peak 289.33M) | Time:00:00.83 | Mem:158.52M, Peak:158.52M | Scene, ViewLayer | Updating Primitive Offsets
+Fra:1 Mem:198.76M (Peak 289.33M) | Time:00:00.83 | Mem:158.52M, Peak:158.52M | Scene, ViewLayer | Updating Images
+Fra:1 Mem:195.76M (Peak 289.33M) | Time:00:00.83 | Mem:155.52M, Peak:158.52M | Scene, ViewLayer | Updating Images | Loading kit_wood_normal.png
+Fra:1 Mem:199.76M (Peak 289.33M) | Time:00:00.83 | Mem:155.52M, Peak:158.52M | Scene, ViewLayer | Updating Images | Loading kit_paint_color.png
+Fra:1 Mem:203.76M (Peak 289.33M) | Time:00:00.84 | Mem:155.52M, Peak:158.52M | Scene, ViewLayer | Updating Images | Loading kit_paint_rm.png
+Fra:1 Mem:207.76M (Peak 289.33M) | Time:00:00.87 | Mem:159.52M, Peak:159.52M | Scene, ViewLayer | Updating Images | Loading kit_paint_normal.png
+Fra:1 Mem:211.76M (Peak 289.33M) | Time:00:00.89 | Mem:163.52M, Peak:163.52M | Scene, ViewLayer | Updating Images | Loading kit_iron_color.png
+Fra:1 Mem:212.76M (Peak 289.33M) | Time:00:00.90 | Mem:164.52M, Peak:164.52M | Scene, ViewLayer | Updating Images | Loading kit_iron_rm.png
+Fra:1 Mem:213.76M (Peak 289.33M) | Time:00:00.92 | Mem:165.52M, Peak:165.52M | Scene, ViewLayer | Updating Images | Loading kit_iron_normal.png
+Fra:1 Mem:214.76M (Peak 289.33M) | Time:00:00.93 | Mem:166.52M, Peak:166.52M | Scene, ViewLayer | Updating Images | Loading kit_oak_color.png
+Fra:1 Mem:218.76M (Peak 289.33M) | Time:00:00.96 | Mem:170.52M, Peak:170.52M | Scene, ViewLayer | Updating Images | Loading kit_wood_rm.png
+Fra:1 Mem:222.76M (Peak 289.33M) | Time:00:00.96 | Mem:174.52M, Peak:174.52M | Scene, ViewLayer | Updating Images | Loading kit_oak_rm.png
+Fra:1 Mem:226.76M (Peak 289.33M) | Time:00:00.96 | Mem:178.52M, Peak:178.52M | Scene, ViewLayer | Updating Images | Loading kit_oak_normal.png
+Fra:1 Mem:230.76M (Peak 289.33M) | Time:00:01.01 | Mem:182.52M, Peak:182.52M | Scene, ViewLayer | Updating Images | Loading kit_wood_color.png
+Fra:1 Mem:234.76M (Peak 289.33M) | Time:00:01.12 | Mem:194.52M, Peak:194.52M | Scene, ViewLayer | Updating Camera Volume
+Fra:1 Mem:234.76M (Peak 289.33M) | Time:00:01.12 | Mem:194.52M, Peak:194.52M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:234.76M (Peak 289.33M) | Time:00:01.12 | Mem:194.60M, Peak:194.60M | Scene, ViewLayer | Updating Lights
+Fra:1 Mem:234.77M (Peak 289.33M) | Time:00:01.12 | Mem:194.60M, Peak:194.60M | Scene, ViewLayer | Updating Lights | Importance map
+Fra:1 Mem:298.80M (Peak 586.77M) | Time:00:02.37 | Mem:258.65M, Peak:418.62M | Scene, ViewLayer | Updating Lights | Computing tree
+Fra:1 Mem:299.35M (Peak 586.77M) | Time:00:02.39 | Mem:259.20M, Peak:418.62M | Scene, ViewLayer | Updating Integrator
+Fra:1 Mem:299.35M (Peak 586.77M) | Time:00:02.39 | Mem:259.20M, Peak:418.62M | Scene, ViewLayer | Updating Film
+Fra:1 Mem:299.35M (Peak 586.77M) | Time:00:02.39 | Mem:259.12M, Peak:418.62M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:299.35M (Peak 586.77M) | Time:00:02.39 | Mem:259.20M, Peak:418.62M | Scene, ViewLayer | Updating Baking
+Fra:1 Mem:299.35M (Peak 586.77M) | Time:00:02.39 | Mem:259.20M, Peak:418.62M | Scene, ViewLayer | Updating Device | Writing constant memory
+Fra:1 Mem:299.35M (Peak 586.77M) | Time:00:02.39 | Mem:259.20M, Peak:418.62M | Scene, ViewLayer | Loading denoising kernels (may take a few minutes the first time)
+Fra:1 Mem:299.35M (Peak 586.77M) | Time:00:02.39 | Mem:259.20M, Peak:418.62M | Scene, ViewLayer | Sample 0/24
+Fra:1 Mem:336.94M (Peak 586.77M) | Time:00:08.14 | Remaining:02:12.47 | Mem:296.77M, Peak:418.62M | Scene, ViewLayer | Sample 1/24
+Fra:1 Mem:336.94M (Peak 586.77M) | Time:00:28.31 | Remaining:01:38.52 | Mem:296.77M, Peak:418.62M | Scene, ViewLayer | Sample 5/24
+Fra:1 Mem:336.94M (Peak 586.77M) | Time:00:50.54 | Remaining:01:20.25 | Mem:296.77M, Peak:418.62M | Scene, ViewLayer | Sample 9/24
+Fra:1 Mem:336.94M (Peak 586.77M) | Time:01:13.82 | Remaining:01:00.44 | Mem:296.77M, Peak:418.62M | Scene, ViewLayer | Sample 13/24
+Fra:1 Mem:336.94M (Peak 586.77M) | Time:01:37.47 | Remaining:00:39.15 | Mem:296.77M, Peak:418.62M | Scene, ViewLayer | Sample 17/24
+Fra:1 Mem:336.94M (Peak 586.77M) | Time:01:59.63 | Remaining:00:16.74 | Mem:296.77M, Peak:418.62M | Scene, ViewLayer | Sample 21/24
+Fra:1 Mem:352.76M (Peak 586.77M) | Time:02:22.44 | Mem:296.77M, Peak:418.62M | Scene, ViewLayer | Sample 24/24
+Fra:1 Mem:352.76M (Peak 586.77M) | Time:02:22.44 | Mem:296.77M, Peak:418.62M | Scene, ViewLayer | Finished
+Saved: '/home/claude/website/blender/out/renders/glw_signtest.png'
+Time: 02:23.11 (Saving: 00:00.61)
+
+[nmlib] rendered glw_signtest.png in 143.1s
+[stall_gluehwein] full: 0.95 MB, 37857 tris
+[stall_gluehwein] lite: 0.21 MB, 8066 tris

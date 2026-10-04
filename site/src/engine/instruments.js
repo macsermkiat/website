@@ -12,21 +12,23 @@ export const PLAYERS = ['sax', 'piano', 'bass', 'drums'];
 const SEATED = { piano: true, drums: true };
 
 /** placed: [{ entry, root, source }]. Returns how many instruments were placed; never throws. */
-export async function placeInstruments(placed, scanNodes, { lite, manager, warn }) {
+export async function placeInstruments(placed, scanNodes, { lite, liteOf = null, manager, warn }) {
   let n = 0;
   const r = rng(77);
   await Promise.all(placed.map(async (p) => {
     if (p.source === 'standin') return;
+    const useLite = lite || !!liteOf?.(p.entry);
     const slots = scanNodes(p.root).slots;
     await Promise.all(PLAYERS.map(async (k) => {
       const slot = slots[`slot_${k}`];
       if (!slot) return;
       const full = `instr_${k}.glb`;
       if (!modelExists(full)) return;
-      const file = (lite && liteVariant(full)) || full;
+      const file = (useLite && liteVariant(full)) || full;
       try {
         const obj = await loadGlb(file, manager);
         obj.name = `instrument_${k}`;
+        if (file !== full) obj.userData.fullFile = full;
         slot.add(obj);
         // the player: the instrument's origin is where they stand (sax, bass) or sit (piano bench, drum throne).
         // The organizer's animated musician when crowd.json has one, else a stand-in figure.
@@ -38,10 +40,11 @@ export async function placeInstruments(placed, scanNodes, { lite, manager, warn 
         // player rests, and goes back into his hands when the band plays (actions/band.js). Only with the
         // organizer's player: the stand-in figure always holds the sax.
         if (k === 'sax' && person.userData.musician?.play && person.userData.musician?.rest && modelExists('instr_sax_stand.glb')) {
-          const sf = (lite && liteVariant('instr_sax_stand.glb')) || 'instr_sax_stand.glb';
+          const sf = (useLite && liteVariant('instr_sax_stand.glb')) || 'instr_sax_stand.glb';
           try {
             const stand = await loadGlb(sf, manager);
             stand.name = 'instrument_sax_stand';
+            if (sf !== 'instr_sax_stand.glb') stand.userData.fullFile = 'instr_sax_stand.glb';
             slot.add(stand);
             obj.userData.live = stand.userData.live = true; // they toggle: never merged into the static mesh
             stand.visible = false;

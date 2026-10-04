@@ -26,7 +26,7 @@ async function pool(items, n, fn) {
  * Load and place the market. `defer(entry)` picks entries to load only when `market.loadDeferred()` is called
  * (the lite market opens without the rides and the deco stalls, then adds them after its first frame).
  */
-export async function buildMarket({ scene, lite, warn, onProgress, defer = () => false }) {
+export async function buildMarket({ scene, lite, warn, onProgress, defer = () => false, stream = () => false }) {
   const layout = resolveLayout();
   layout.notes.forEach((n) => console.info('[layout]', n));
   const manager = new THREE.LoadingManager();
@@ -48,9 +48,9 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
   async function load(entries, progress) {
     let done = 0;
     const placed = await pool(entries, 4, async (entry) => {
-      const res = await loadEntry(entry, { lite, manager, warn });
+      const res = await loadEntry(entry, { lite: lite || !!stream(entry), manager, warn });
       progress?.(++done / entries.length, entry);
-      return { entry, ...res };
+      return { entry, ...res, streamed: !lite && !!stream(entry) && res.source === 'lite' };
     });
     for (const p of placed) {
       const { entry, root } = p;
@@ -73,8 +73,9 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
     }
     scene.updateMatrixWorld(true);
     const elsewhere = all.filter((e) => !entries.includes(e));
-    market.propCount += await placeProps(placed.map((p) => ({ ...p, nodes: scanNodes(p.root) })), { lite, manager, warn, elsewhere, bindings: market.bindings });
-    market.instrumentCount += await placeInstruments(placed, scanNodes, { lite, manager, warn });
+    const liteOf = (e) => !lite && !!stream(e);
+    market.propCount += await placeProps(placed.map((p) => ({ ...p, nodes: scanNodes(p.root) })), { lite, liteOf, manager, warn, elsewhere, bindings: market.bindings });
+    market.instrumentCount += await placeInstruments(placed, scanNodes, { lite, liteOf, manager, warn });
     scene.updateMatrixWorld(true);
     return placed;
   }
@@ -110,10 +111,13 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
         const size = box.getSize(new THREE.Vector3());
         const center = new THREE.Vector3(p.holder.position.x, THREE.MathUtils.clamp(size.y * 0.45, 1.6, 9), p.holder.position.z);
         const place = { id: p.entry.place, entry: p.entry, holder: p.holder, root: p.root, nodes, rides, center, ry: p.holder.rotation.y, source: p.source, radius: Math.max(size.x, size.z) / 2 };
+        // streaming: opened lite on the full market, the full model is grafted on at its stop (engine/stream.js);
+        // its goods are merged after that
+        place.streamed = p.streamed;
+        place.record = p;
         // the goods (the bookshop's spines, the mugs, glasses, bottles, sausages and rolls): one merged mesh per
         // set and look instead of one draw each; an item leaves it while it moves or its look changes
-        const merge = mergeActMeshes(p.root, ITEM_RE);
-        if (merge) { place.merge = merge; market.merges[place.id] = { books: merge.count, meshes: merge.groups.length }; }
+        if (!place.streamed) mergeGoods(place);
         market.places[p.entry.place] = place;
         market.hotRoots.push(p.holder);
       }
@@ -132,6 +136,13 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
     market.lightSpots.push(...spots);
     return { placed, spots, snow, bulbs: fresh };
   }
+
+  function mergeGoods(place) {
+    const merge = mergeActMeshes(place.root, ITEM_RE);
+    if (merge) { place.merge = merge; market.merges[place.id] = { books: merge.count, meshes: merge.groups.length }; }
+  }
+  /** After a streamed place got its full model: merge its goods as at load. */
+  market.mergeGoods = mergeGoods;
 
   integrate(await load(now, onProgress));
 

@@ -4,6 +4,7 @@
  "frame": "Positions are the stall's Blender frame (metres, Z up, origin on the ground at the footprint centre, front toward -Y; three.js: x = x, y = z, z = -y). Each section's frame is its slot empty's frame: +X along the boards from the visitor's left to right, -Y toward the visitor (spines face -Y), +Z up. slot_rotation_z_deg is that frame's rotation about Blender Z.",
  "slot": "slot_cat_<key> sits at the LEFT end of the section's LOWEST board, on its top surface, at its front edge. Books stand on +Z from there, run along +X for board width and reach back (+Y) at most board depth.",
  "boards": "offset is each board's [x, y, z] in the slot frame (same left end, front edge and top surface convention). clear_height is the free height above a board's top surface (null = open above). The cart's upper tier is stepped back (+Y) behind the lower tier's books; its clear_height is a sightline limit (taller books would hide the glazed cabinets behind), not a physical one. The cart signs are name boards on the carts' front aprons, below the lower tier.",
+ "cam": "cam_cat_<key> (cam_position) is an optional close-up camera for the section, looking at cam_cat_<key>_target (cam_target_position): the centre of its boards and sign. Both are empties in stall_buecher.glb and stall_buecher.lite.glb; the camera empty is also rotated to look at its target.",
  "mean_spine": 0.042,
  "sections": [
   {
@@ -63,7 +64,19 @@
      0.59,
      0.24
     ]
-   }
+   },
+   "cam": "cam_cat_physics",
+   "cam_position": [
+    -1.1571,
+    -3.0293,
+    1.45
+   ],
+   "cam_target": "cam_cat_physics_target",
+   "cam_target_position": [
+    -2.4976,
+    -1.9044,
+    0.86
+   ]
   },
   {
    "key": "mind",
@@ -122,7 +135,19 @@
      0.57,
      0.24
     ]
-   }
+   },
+   "cam": "cam_cat_mind",
+   "cam_position": [
+    -1.8145,
+    -3.1759,
+    1.55
+   ],
+   "cam_target": "cam_cat_mind_target",
+   "cam_target_position": [
+    -2.1184,
+    -1.4525,
+    0.86
+   ]
   },
   {
    "key": "lives",
@@ -181,7 +206,19 @@
      0.7,
      0.24
     ]
-   }
+   },
+   "cam": "cam_cat_lives",
+   "cam_position": [
+    -1.4,
+    -3.92,
+    1.45
+   ],
+   "cam_target": "cam_cat_lives_target",
+   "cam_target_position": [
+    -1.4,
+    -2.17,
+    0.86
+   ]
   },
   {
    "key": "decisions",
@@ -240,7 +277,19 @@
      0.78,
      0.24
     ]
-   }
+   },
+   "cam": "cam_cat_decisions",
+   "cam_position": [
+    1.4,
+    -3.92,
+    1.45
+   ],
+   "cam_target": "cam_cat_decisions_target",
+   "cam_target_position": [
+    1.4,
+    -2.17,
+    0.86
+   ]
   },
   {
    "key": "people",
@@ -299,7 +348,19 @@
      0.68,
      0.24
     ]
-   }
+   },
+   "cam": "cam_cat_people",
+   "cam_position": [
+    1.8499,
+    -3.218,
+    1.55
+   ],
+   "cam_target": "cam_cat_people_target",
+   "cam_target_position": [
+    2.1537,
+    -1.4946,
+    0.86
+   ]
   },
   {
    "key": "craft",
@@ -358,7 +419,19 @@
      0.48,
      0.24
     ]
-   }
+   },
+   "cam": "cam_cat_craft",
+   "cam_position": [
+    1.1924,
+    -3.0714,
+    1.45
+   ],
+   "cam_target": "cam_cat_craft_target",
+   "cam_target_position": [
+    2.533,
+    -1.9466,
+    0.86
+   ]
   }
  ],
  "units": {

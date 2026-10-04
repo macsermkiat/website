@@ -78,7 +78,7 @@ def pretzel(m, M, s=1.0, col=C("6a3212")):
                   C("f4f2ee"), skip=("nz",))
 
 
-BEERS = {"helles": ("Helles", C("f2b52c")), "dunkles": ("Dunkles", C("5a2208")), "weiss": ("Weißbier", C("e8a232")),
+BEERS = {"helles": ("Helles", C("e6a012")), "dunkles": ("Dunkles", C("5a2208")), "weiss": ("Weißbier", C("e8a232")),
          "radler": ("Radler", C("f0b848"))}
 GLASS_NAMES = {"mass": ("Maß", "Maßkrug"), "willi": ("Half litre", "Willibecher"), "weizen": ("Weizenglas", "Weizenglas")}
 

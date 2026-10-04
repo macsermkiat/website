@@ -107,7 +107,10 @@ check('the song is about ten minutes before it rests and starts again', plan.len
   // the deco kit's textures are shared by nine stalls: charged once (the shared row), not to each stall
   const kit = b.shared.find((s) => /deco_kit_wood_color/.test(s.file));
   check('budget: a texture several assets share is charged once', !!kit && kit.users.length > 1 && leb.full.sharedTextures > 0, kit ? `${kit.file}: ${kit.users.length} users` : 'no shared kit texture');
-  check('budget: deferred assets and the crowd\'s distance level are counted', b.totals.full.deferred > 0 && b.totals.full.everything === b.totals.full.firstLoad + b.totals.full.deferred, JSON.stringify(b.totals.full));
+  check('budget: deferred assets and the crowd\'s distance level are counted', b.totals.full.deferred > 0 && b.totals.full.everything === b.totals.full.firstLoad + b.totals.full.deferred + b.totals.full.onDemand, JSON.stringify(b.totals.full));
+  // round 5: the full market streams detail (lite first, full on demand); both first loads beat round 4's
+  check('budget: the full market\'s full-detail stalls are counted on demand, not in the first load', b.totals.full.onDemand > 0 && b.totals.lite.onDemand === 0, JSON.stringify(b.totals));
+  check('budget: both first loads are smaller than round 4 (19.70 MB full, 7.44 MB lite)', b.totals.full.firstLoad < 19.7e6 && b.totals.lite.firstLoad < 7.44e6, `${(b.totals.full.firstLoad / 1e6).toFixed(2)} / ${(b.totals.lite.firstLoad / 1e6).toFixed(2)} MB`);
   check('budget: the shared clips (people_anims.glb) are counted', b.rows.some((r) => r.id === 'people_anims'));
   const band = b.rows.find((r) => r.id === 'bandstand'), players = b.rows.filter((r) => /^people_band_/.test(r.id));
   check('budget: the bandstand is charged with its instruments, its four players as person variants', band && players.length === 4 && players.every((r) => r.kind === 'person' && r.budget?.tris === 5000), players.map((r) => r.id).join(' '));
@@ -118,6 +121,32 @@ check('the song is about ten minutes before it rests and starts again', plan.len
   const noDist = budget({ dist: '/nonexistent-dist' });
   check('budget: it reports a missing dist (the CLI then exits 1)', noDist.hasDist === false && b.hasDist === true);
   check('budget: both first loads are under their aims', !b.totals.full.over && !b.totals.lite.over, `${(b.totals.full.firstLoad / 1e6).toFixed(2)} / ${(b.totals.lite.firstLoad / 1e6).toFixed(2)} MB`);
+}
+
+// ---------- streaming and the stroll ----------
+{
+  const MODELS = new URL('../public/models/', import.meta.url);
+  const nodeNames = (f) => { const b = readFileSync(new URL(f, MODELS)); const len = b.readUInt32LE(12); const j = JSON.parse(b.subarray(20, 20 + len).toString('utf8')); return (j.nodes || []).map((n) => `${n.name || ''}:${n.mesh !== undefined ? 'm' : ''}`); };
+  // the stream's graft swaps a lite stall's meshes for the full one's node by node: the two trees must match
+  const layoutJson = JSON.parse(readFileSync(new URL('../src/layout.json', import.meta.url), 'utf8'));
+  // (the stalls and the bandstand, whose nodes the actions hold; the town's and the tree's full files may add detail
+  // nodes, which the graft moves over whole)
+  const streamed = layoutJson.places.filter((e) => e.kind === 'section' || /bandstand/.test(e.id));
+  const bad = [];
+  for (const e of streamed) {
+    const f = e.asset, l = f.replace(/\.glb$/, '.lite.glb');
+    try { const a = nodeNames(f), c = nodeNames(l); if (a.join('|') !== c.join('|')) bad.push(`${f}: ${a.length} vs ${c.length} nodes`); } catch { /* a missing lite file streams nothing */ }
+  }
+  check('streaming: each streamed stall\'s lite and full glbs have the same node tree (the graft\'s precondition)', bad.length === 0, bad.join('; '));
+  const st = layoutJson.stroll;
+  if (st?.legs) {
+    const ids = st.order || [];
+    const has = (a, b) => st.legs.some((g) => (g.from === a && g.to === b) || (g.from === b && g.to === a));
+    const missing = [];
+    for (const a of ids) for (const b of ids) if (a < b && !has(a, b)) missing.push(`${a}-${b}`);
+    check('stroll: a leg joins every pair of stops (a signpost choice walks straight there)', missing.length === 0, missing.join(' '));
+    check('stroll: every stop has an eye and a target, and the Riesenrad its overview', st.stops.every((s) => s.eye?.length === 3 && s.target?.length === 3) && !!st.stops.find((s) => s.id === 'riesenrad')?.overview);
+  }
 }
 
 console.log(failed ? `\n${failed} unit checks failed` : '\nall unit checks passed');

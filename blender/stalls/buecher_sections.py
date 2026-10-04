@@ -40,7 +40,19 @@ CART_FRONT_Y = -2.28              # front face of both carts (stall frame)
 CART_X = 1.40                     # cart centre at x = -1.40 (left) and +1.40 (right)
 CART_TIERS = ((0.62, 0.02), (0.92, 0.27))   # (board top z, board front edge y from the cart front)
 CART_SIGN_Z = 1.31                # back tier's height limit: taller books would hide the cabinet glass
-CART_SIGN = (0.47, 0.24, 0.10)    # cart name board on the front apron: centre z, height, overhang past the cart
+CART_SIGN = (0.47, 0.24, 0.10)
+# ---- close-up cameras (round 4): cam_cat_<key> stands CAM_DIST in front of the section's centre
+# (along the section frame's -Y) at eye height CAM_Z and looks at cam_cat_<key>_target, the centre of
+# the boards plus the sign. 1.75 m frames a ~0.8 m wide section in a portrait (9:16) view at 45 deg
+# vertical FOV and the whole section with its sign in a 16:9 one.
+CAM_DIST = 1.75
+CAM_Z = 1.45
+CAM_TARGET_Z = 0.86
+# The inner rack bays stand behind the carts as seen along their own normal, so their cameras swing
+# CAM_SWING toward the lane (about the target) and stand a little higher: the sightline then passes
+# outside the cart's outer end.
+CAM_SWING = math.radians(40.0)
+CAM_Z_INNER = 1.55    # cart name board on the front apron: centre z, height, overhang past the cart
 # (round 3: the cart signs moved from rods above the back tier to the front apron, because from a
 # 3/4 view a rod sign on the right cart covered the right rack's "Menschen & Gespräche" sign)
 
@@ -147,6 +159,12 @@ def sections():
             sign_local = (W / 2, -0.012, CART_SIGN[0])
             sign_size = (W + CART_SIGN[2], CART_SIGN[1])
             kind = "book cart (%s of the counter)" % ("left" if unit == "cart_l" else "right")
+        cx = x0 + bw / 2
+        cam_target_local = (cx, BOARD_SET + 0.1, CAM_TARGET_Z)
+        inner = (unit == "wing_l" and idx == 1) or (unit == "wing_r" and idx == 0)
+        swing = (-CAM_SWING if unit == "wing_l" else CAM_SWING) if inner else 0.0
+        ox, oy = rot2(swing, 0.0, -CAM_DIST)
+        cam_local = (cx + ox, cam_target_local[1] + oy, CAM_Z_INNER if inner else CAM_Z)
         n = len(c["books"])
         length = sum(b["width"] for b in boards)
         out.append({
@@ -170,13 +188,18 @@ def sections():
             "sign": {"node": "sign_cat_" + key, "text": c["label_de"],
                      "center": to_stall(origin, a, *sign_local),
                      "size": [round(sign_size[0], 3), sign_size[1]]},
+            "cam": "cam_cat_" + key,
+            "cam_position": to_stall(origin, a, *cam_local),
+            "cam_target": "cam_cat_%s_target" % key,
+            "cam_target_position": to_stall(origin, a, *cam_target_local),
             "_local": {"origin": origin, "rot": a, "slot": slot_local, "sign": sign_local,
                        "sign_size": sign_size},
         })
     return out
 
 
-def write_json(path=OUT_JSON):
+def build_doc():
+    """The json document, built in memory from the plan (no file access except categories.json)."""
     secs = sections()
     doc = {
         "version": 1,
@@ -195,6 +218,10 @@ def write_json(path=OUT_JSON):
                    "The cart's upper tier is stepped back (+Y) behind the lower tier's books; its clear_height is a "
                    "sightline limit (taller books would hide the glazed cabinets behind), not a physical one. "
                    "The cart signs are name boards on the carts' front aprons, below the lower tier."),
+        "cam": ("cam_cat_<key> (cam_position) is an optional close-up camera for the section, looking at "
+                "cam_cat_<key>_target (cam_target_position): the centre of its boards and sign. Both are empties "
+                "in stall_buecher.glb and stall_buecher.lite.glb; the camera empty is also rotated to look at "
+                "its target."),
         "mean_spine": MEAN_SPINE,
         "sections": [{k: v for k, v in s.items() if not k.startswith("_")} for s in secs],
         "units": {
@@ -206,6 +233,11 @@ def write_json(path=OUT_JSON):
             "cart_r": {"width": round(cart_width("cart_r"), 3), "front_y": CART_FRONT_Y},
         },
     }
+    return doc
+
+
+def write_json(path=OUT_JSON):
+    doc = build_doc()
     with open(path, "w") as f:
         json.dump(doc, f, indent=1, ensure_ascii=False)
         f.write("\n")
@@ -241,14 +273,44 @@ def check_glb(path, json_path=OUT_JSON, tol=0.002):
         if status != "ok":
             bad.append(f"{s['slot']}: position off by {d:.4f} m, rotation {yaw:.2f} vs {s['slot_rotation_z_deg']}")
         print(f"  {s['slot']:22s} {status}  pos {[round(bx, 4), round(by, 4), round(bz, 4)]}  rotZ {yaw:.2f}")
+        for nk, pk in (("cam", "cam_position"), ("cam_target", "cam_target_position")):
+            if nk not in s:
+                continue
+            m = nodes.get(s[nk])
+            if m is None:
+                bad.append(f"{s[nk]} missing")
+                continue
+            tx, ty, tz = m.get("translation", [0, 0, 0])
+            d = max(abs(tx - s[pk][0]), abs(-tz - s[pk][1]), abs(ty - s[pk][2]))
+            if d > tol:
+                bad.append(f"{s[nk]}: position off by {d:.4f} m")
+            print(f"  {s[nk]:28s} {'ok' if d <= tol else 'MISMATCH'}")
     return bad
+
+
+def check_json(json_path=OUT_JSON):
+    """Compare buecher_sections.json with what this module would write, in memory (read-only).
+    Returns a list of problems (empty = up to date)."""
+    with open(json_path) as f:
+        on_disk = json.load(f)
+    fresh = json.loads(json.dumps(build_doc(), ensure_ascii=False))
+    if on_disk == fresh:
+        return []
+    keys = [k for k in set(on_disk) | set(fresh) if on_disk.get(k) != fresh.get(k)]
+    return [f"buecher_sections.json is out of date (differs in: {', '.join(sorted(keys))}); "
+            f"run python3 blender/stalls/buecher_sections.py to rewrite it"]
 
 
 if __name__ == "__main__":
     import sys
-    if len(sys.argv) > 2 and sys.argv[1] == "--check":
-        problems = []
-        for p in sys.argv[2:]:
+    if "--check" in sys.argv[1:]:
+        # read-only: compares the json with this module and every glb named (default: both
+        # Bücherstand LODs) with the json. It never writes anything.
+        paths = [p for p in sys.argv[1:] if p != "--check"] or [
+            os.path.join(REPO, "site", "public", "models", n) for n in ("stall_buecher.glb", "stall_buecher.lite.glb")]
+        problems = check_json()
+        print("buecher_sections.json", "up to date" if not problems else "OUT OF DATE")
+        for p in paths:
             print(os.path.basename(p))
             problems += check_glb(p)
         print("matches buecher_sections.json" if not problems else "PROBLEMS: " + "; ".join(problems))

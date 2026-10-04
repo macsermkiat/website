@@ -1,7 +1,7 @@
 """Night preview renders of the architect's assets, assembled from the raw glbs + layout.json.
 
 Usage: /home/claude/tools/bpy-venv/bin/python blender/square/preview.py <shot> [samples] [out.jpg]
-shots: home | street | tree | cobbles | church | roofs
+shots: home | stroll | street | tree | cobbles | church | roofs
 Renders at 1280x720 and 48 samples (RES_X and argv[2] override; iterate at RES_X=960 and 32), keeps the PNG in blender/square/out/renders/ and writes a
 1280 px review JPEG.
 
@@ -64,6 +64,11 @@ layout = P.load_layout()
 tree_p = next(p for p in layout["places"] if p["id"] == "tree")
 tp = C.three_to_blender(*tree_p["pos"])
 objs += imp(os.path.join(C.REPO, "blender", "square", "out", "tree_raw.glb"), tp, tree_p.get("rotY", 0))
+# round 5: the stroll's signpost
+sign_p = next((p for p in layout["places"] if p["id"] == "signpost"), None)
+if sign_p:
+    objs += imp(os.path.join(C.REPO, "blender", "square", "out", "signpost_raw.glb"),
+                C.three_to_blender(*sign_p["pos"]), sign_p.get("rotY", 0))
 
 # stand-ins for stalls and landmarks
 clay = C.solid("standin_clay", (0.42, 0.40, 0.38), rough=0.8)
@@ -128,7 +133,15 @@ for p in layout["places"]:
 # light_ empties -> warm point lights (what the browser does with real-time lights)
 church_tower = C.three_to_blender(8, -56)
 for o in list(bpy.data.objects):
-    if o.type == "EMPTY" and o.name.startswith("light_church"):
+    if o.type == "EMPTY" and o.name == "light_church_2":
+        # round 5: grazes the square-side slope of the nave roof
+        p = o.matrix_world.translation
+        aim = Vector((p.x * 1.1, p.y * 1.1, p.z + 6.0))
+        C.add_light("L_" + o.name, "SPOT", p, 6000.0, (1.0, 0.72, 0.45), size=0.3,
+                    rot=(aim - p).to_track_quat("-Z", "Y").to_euler())
+        bpy.data.lights["L_" + o.name].spot_size = math.radians(70)
+        bpy.data.lights["L_" + o.name].spot_blend = 0.7
+    elif o.type == "EMPTY" and o.name.startswith("light_church"):
         # floodlights at the tower foot, aimed up the tower face (the browser may use a spot here)
         p = o.matrix_world.translation
         aim = Vector((church_tower.x, church_tower.y, 22.0))
@@ -155,6 +168,15 @@ if shot == "home":
     hf = 2 * math.atan(math.tan(vf / 2) * 16 / 9)
     C.camera((hp[0], -hp[2], hp[1]), (ht[0], -ht[2], ht[1]), lens=18 / math.tan(hf / 2))
     C.compositor_fog_glare(near=30, far=150, fog_amount=0.45)
+elif shot == "stroll":
+    # round 5: eye height on the stroll's loop leg STROLL_LEG (default bratwurst -> bandstand), a few points
+    # in, looking along the path as the engine's camera would
+    legs = [l for l in layout["stroll"]["legs"] if l["loop"]]
+    leg = next((l for l in legs if f"{l['from']}-{l['to']}" == os.environ.get("STROLL_LEG", "bratwurst-bandstand")), legs[3])
+    k = int(os.environ.get("STROLL_K", 2))
+    a, b = leg["points"][k], leg["points"][min(k + 3, len(leg["points"]) - 1)]
+    C.camera((a[0], -a[2], a[1]), (b[0], -b[2], a[1] - 0.15), lens=20)
+    C.compositor_fog_glare(near=30, far=150, fog_amount=0.35)
 elif shot == "street":
     t0, t1 = math.radians(218), math.radians(262)
     r0 = P.plaza_r(t0) - 4

@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "lib"))
 
 from nmlib import bake, export, mats, render, state  # noqa: E402
 
-ROUND = os.environ.get("NM_ROUND", "3")
+ROUND = os.environ.get("NM_ROUND", "4")
 REVIEW = os.path.join(state.REPO, "review", f"round-{ROUND}", "carpenter")
 
 

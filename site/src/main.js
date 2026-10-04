@@ -1,4 +1,6 @@
 // Mac's Nachtmarkt: boot. Everything else lives in its own module; this file wires them together.
+// Round 5 (docs/adr/0003): a guided stroll instead of free orbit, every section's words on an object in its stall
+// instead of side panels, and the stalls streamed in at full detail as the stroll reaches them.
 import './styles/main.css';
 import * as THREE from 'three';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
@@ -8,6 +10,7 @@ import { buildMarket, viewFor } from './engine/market.js';
 import { setupLighting } from './engine/lighting.js';
 import { placeLights } from './engine/lights.js';
 import { createSnowfall } from './engine/snowfall.js';
+import { createStreamer } from './engine/stream.js';
 import { redrawSigns } from './standins/index.js';
 import { createCrowd } from './crowd.js';
 import { createAudio } from './audio/index.js';
@@ -17,8 +20,16 @@ import { createCameraRig } from './interaction/camera.js';
 import { createPicking } from './interaction/picking.js';
 import { itemFrame } from './interaction/itemFrame.js';
 import { bindKeyboard, watchMotion } from './interaction/keyboard.js';
-import { createPanel, buildPlaceNav } from './ui/panel.js';
-import { createReader, libraryBook } from './ui/reading.js';
+import { createStroll } from './nav/stroll.js';
+import { createSignpost, ARM_NAMES } from './nav/signpost.js';
+import { createGuide } from './nav/guide.js';
+import { createSignboard } from './ui/signboard.js';
+import { createStopbar } from './ui/stopbar.js';
+import { createNote } from './ui/note.js';
+import { libraryBook } from './ui/reading.js';
+import { createWorldReader } from './world/reader.js';
+import { createSurfaces, placeCoasters, hangPlacards } from './world/surfaces.js';
+import { sectionPieces } from './world/sections.js';
 import { SECTIONS, ORDER, bookPicks, phrases, taglineHtml } from './content.js';
 import { createPerfMeter } from './perf.js';
 import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders } from './engine/merge.js';
@@ -41,9 +52,13 @@ function inSeason() {
 function fail(msg, { plain = true } = {}) {
   $('loadingText').textContent = msg;
   $('loadingBar').parentElement.hidden = true;
+  $('still')?.classList.add('done');
   // no 3D here: the text of every section is shown in place of the market (the same content as plain.html)
   if (plain) showPlainFallback(msg);
 }
+
+/** Which layout entries open lite on the full market and get their full model at their stop (streaming). */
+const STREAMED = (e) => e.kind === 'section' || e.place === 'band' || e.kind === 'town' || e.id === 'tree' || e.kind === 'tree';
 
 async function boot() {
   if (!$('tagline').textContent.trim()) $('tagline').innerHTML = taglineHtml();
@@ -77,9 +92,8 @@ async function boot() {
   renderer.setPixelRatio(PR);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setSize(stage.clientWidth, stage.clientHeight, false);
-  // an accessible name from the start (bindKeyboard adds the keys once the market is up)
   renderer.domElement.setAttribute('role', 'img');
-  renderer.domElement.setAttribute('aria-label', "Mac's Nachtmarkt: a 3D Christmas market at night. The places are also listed as buttons below the market.");
+  renderer.domElement.setAttribute('aria-label', "Mac's Nachtmarkt: a 3D Christmas market at night.");
   stage.insertBefore(renderer.domElement, overlay);
 
   const scene = new THREE.Scene();
@@ -87,26 +101,25 @@ async function boot() {
 
   // ---------- the market ----------
   const bar = $('loadingBar');
-  // Both markets open without the rides and the nine deco stalls (about 8 MB of full models, 3.4 MB lite) and
-  // add them just after the first frame. ?defer=0 loads everything up front.
+  // Both markets open without the rides and the nine deco stalls and add them just after the first frame
+  // (?defer=0 loads everything up front). The full market also opens the section stalls, the bandstand, the town
+  // and the tree with their lite models and grafts the full ones on when the stroll reaches them (?stream=0: off).
   const deferOn = params.get('defer') !== '0';
+  const streamOn = !lite && params.get('stream') !== '0';
   const market = await buildMarket({
     scene, lite, warn,
     defer: deferOn ? (e) => e.kind === 'deco' || e.place === 'ferris' || e.place === 'carousel' : undefined,
+    stream: streamOn ? STREAMED : undefined,
     onProgress: (f, e) => { bar.style.width = `${Math.round(f * 85)}%`; $('loadingText').textContent = `Setting up the market… ${e.label || e.id}`; },
   });
   const home = market.layout.home;
   const focus = new THREE.Vector3().fromArray(home.target);
   const { lighting, source: lightingSource } = await setupLighting({ scene, renderer, camera, lite }, warn);
-  // light_ empties become lights: the lighting designer's placement when the module offers one, else the engine's
   const reserved = lite ? 0 : 2; // the bandstand's two spotlights (the lite market fakes its spot)
-  // On the full market the two rides take a real light each once they arrive: keep those two back now.
   const heldForLater = !lite && market.deferred.some((id) => /riesenrad|karussell|ferris|carousel/.test(id)) ? DEFERRED_LIGHTS : 0;
   const fullBudget = Number(lighting.raw?.profile?.lightBudget) || 14;
   const lightInfo = placeMarketLights({ scene, lighting, lightingSource, spots: market.lightSpots, lite, focus, reserved, warn, budget: lite ? undefined : fullBudget - heldForLater });
-  // the ground pools of unlit light_ empties: one instanced draw instead of one each
   instancePools(lightInfo.pools, scene);
-  // the lite market's close-up key: one warm spot that follows the open section stall (see keyLight below)
   const key = lite ? createKeyLight(scene) : null;
   const composer = lighting.composer;
   let outline = null;
@@ -119,53 +132,95 @@ async function boot() {
   }
   bar.style.width = '92%';
 
-  // the lighting module brings its own falling snow; the engine's flakes are only for the stand-in lighting
   const ownSnow = lightingSource === 'lighting' && lighting.raw && 'snowAmount' in lighting.raw;
-  // (The snow fog and flake caps the engine used to apply now live in the lighting module's settings.js.)
   const snowfall = ownSnow ? { set() {}, update() {} } : createSnowfall(scene, { lite });
-  // keep walkers off the stalls (from the layout, so the deco stalls count before their models arrive)
   const avoid = (x, z) => {
     for (const p of Object.values(market.places)) if (Math.hypot(x - p.holder.position.x, z - p.holder.position.z) < (p.radius || 3) + 1) return false;
     for (const e of market.layout.entries) if ((e.kind === 'deco' || e.kind === 'tree' || (e.place && !market.places[e.place])) && Math.hypot(x - e.position[0], z - e.position[2]) < (e.place ? 6 : 3.4)) return false;
+    // the signpost in the foreground of the home view
+    const sp = market.layout.entries.find((e) => e.id === 'signpost')?.position || SIGN_POS;
+    if (Math.hypot(x - sp[0], z - sp[2]) < 1.8) return false;
     return true;
   };
-  const crowd = await createCrowd({ scene, overlay, lite, manager: undefined, warn, avoid, phrases: phrases(), lodFar: quality.lodFar });
-  if (!lite) crowd.group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  // the crowd streams in just after the first frame (round 5: the still and the stalls come first); until then
+  // a stand-in with the same API answers for it. ?crowd=first loads it before the market opens, as round 4 did.
+  const idleCrowd = { group: new THREE.Group(), count: 0, enableLod: async () => 0, setLod() {}, lod: { far: 0, near: 0 }, lodLevels: 0, stats: () => ({ people: 0, hidden: 0, lite: 0, lodFar: 0, vendorsVisible: 0, sharedAnims: null }), hiddenIds: () => [], people: () => [], speak() {}, say() {}, update() {} };
+  let crowdNow = idleCrowd;
+  const crowd = new Proxy({}, { get: (_, k) => { const v = crowdNow[k]; return typeof v === 'function' ? v.bind(crowdNow) : v; } });
+  const loadCrowd = () => createCrowd({ scene, overlay, lite, manager: undefined, warn, avoid, phrases: phrases(), lodFar: quality.lodFar }).then((c) => {
+    crowdNow = c;
+    if (!lite) c.group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    document.documentElement.dataset.crowd = 'ready';
+    return c;
+  }).catch((e) => { warn(`crowd: ${e?.message || e}`); document.documentElement.dataset.crowd = 'failed'; return idleCrowd; });
+  const crowdFirst = params.get('crowd') === 'first';
+  if (crowdFirst) await loadCrowd();
 
   // ---------- sound ----------
   const positions = bandPositions(market);
   const audio = createAudio({ manifest: inventory.audio, positions, getCamera: () => camera, lite, warn });
 
-  // ---------- camera, panel, actions ----------
-  // Phones (a narrow, tall market): the architect's home view shows the stalls as a thin band over a lot of
-  // dark ground. Come in closer and lower, so the four section stalls and the bandstand fill the upper part.
+  // ---------- camera, stroll, words, actions ----------
   const phoneHome = stage.clientWidth < 600 && stage.clientHeight > stage.clientWidth * 0.9;
   const rig = createCameraRig({ camera, dom: renderer.domElement, home: phoneHome ? PHONE_HOME : home, motion });
-  let panel, openedFor = null;
-  // the reading view: a book opened on the Bücherstand shows its page from content/books/<slug>.md
-  // while a book is open the page carries .reading; at 960 px and below the reading view is a sheet along the bottom
-  // and the panel steps aside (main.css), so the open book has the picture above the sheet to itself
-  const reader = createReader({ onToggle: (on) => { document.documentElement.classList.toggle('reading', on); requestAnimationFrame(() => panelShift()); } });
+  const stroll = createStroll({ market, layout: market.layout, order: ORDER, scene });
+  const announceEl = $('announce');
+  const announce = (t) => { announceEl.textContent = t; };
+  let guide = null;
+  const note = createNote({ overlay, announce: announceEl, anchorFor: (id) => noteAnchor(market, id || guide?.here) });
+  let world = null;
   const actions = createActions({
-    reader,
     market, scene, lite, motion, audio, rig, camera, overlay,
     books: bookPicks(),
     sfx: (n) => audio.sfx(n),
-    say: (html) => panel.say(html),
+    say: (html) => note.say(html),
     crowdSay: (text, center, radius) => crowd.say(text, center, radius),
     togglePlay: () => togglePlay(),
-    frame: (o) => frameRegion(o),
-    keyAt: (center, facing) => (center ? key?.aim(center, facing) : key?.follow(market.places[panel.current])),
-    flyBack: (v) => { if (!rig.riding && v) rig.flyTo(v); },
+    frame: (o) => { const b = frameRegion(o); if (b) guide?.markCloseUp(); return b; },
+    keyAt: (center, facing) => (center ? key?.aim(center, facing) : key?.follow(market.places[guide?.here])),
+    flyBack: (v) => { if (!rig.riding && v) { rig.flyTo(v); if (v.exact) guide?.markCloseUp(); } },
+    world: () => world,
   });
+
+  world = createWorldReader({
+    camera, rig, motion, announce,
+    sfx: (n) => audio.sfx(n === 'chalk' || n === 'card' ? 'page' : n),
+    stopView: () => guide?.stopView(),
+    els: { bar: $('readbar'), title: $('readTitle'), page: $('readPage'), prevBtn: $('readPrev'), nextBtn: $('readNext'), closeBtn: $('readClose'), flipBtn: $('readFlip'), copy: $('readCopy') },
+    onOpen: () => { stopbarEl.hidden = true; picking?.refresh(); },
+    onClose: () => { if (guide?.here && guide.arrived) stopbar.show(guide.here, { prevId: stroll.prev(guide.here), nextId: stroll.next(guide.here) }); },
+  });
+  const stopbarEl = $('stopbar');
+  // the writing surfaces (stand-ins until the carpenter's and vendor's write_ props arrive) and their words
+  const pieces = sectionPieces();
+  const surfaces = createSurfaces({ market, camera, warn, stopView: (id) => (stroll.hasStops ? stroll.footOf(id) : null) });
+  surfaces.list.forEach((s) => world.addSurface(s));
+  surfaces.onAdd((s) => { world.addSurface(s); picking?.refresh(); });
+  if (market.places.bier) {
+    const n = pieces['bier.vomfass']?.projects?.length || 0;
+    placeCoasters(market.places.bier, n, camera).forEach((s) => world.addSurface(s));
+  }
+  const hang = (place) => {
+    const qs = pieces['ferris.notice']?.questions || [];
+    hangPlacards(place, Math.max(qs.length, 3)).forEach((s, i) => {
+      world.addSurface(s);
+      // a placard carries its question (or, before any is written, the wheel's own name)
+      world.addPiece({ id: s.id, placeId: 'ferris', surface: s.id, title: qs[i] || 'Big questions', html: pieces['ferris.notice'].html, faces: { main: [{ kind: 'h', level: 1, runs: [{ text: qs[i] || (i === 1 ? 'Große Fragen' : '?') }], size: qs[i] ? 1 : 1.6 }] }, decorative: true });
+    });
+  };
+  if (market.places.ferris) hang(market.places.ferris); else market.whenPlace?.('ferris').then((p) => p && hang(p));
+  for (const p of Object.values(pieces)) world.addPiece(p);
+
+  const signpost = createSignpost({ scene, market, order: ORDER, sub: (id) => SECTIONS[id]?.sub || '', home: phoneHome ? PHONE_HOME : home });
 
   const playBtn = $('play'), np = $('nowplaying');
   const playLabel = () => (audio.playing ? '❚❚ Pause the ballad' : '▶ Play the ballad');
+  let stopbar = null;
   function syncPlay(label) {
     const txt = label || playLabel();
     playBtn.textContent = txt;
     playBtn.setAttribute('aria-pressed', String(audio.playing));
-    panel.syncPlay(txt);
+    stopbar?.syncPlay(txt);
     np.hidden = !audio.playing;
     const title = inventory.audio?.title;
     np.textContent = audio.mode === 'stems'
@@ -182,97 +237,137 @@ async function boot() {
   }
   playBtn.addEventListener('click', togglePlay);
 
-  function goTo(id) {
-    const place = market.places[id];
-    if (!place) {
-      // a ride the lite market is still loading: fly there once it arrives, if its panel is still open
-      market.whenPlace?.(id).then((p) => { if (p && panel.current === id) rig.flyTo(viewFor(p)); });
-      return;
-    }
-    if (actions.rides.riding) actions.rides.endRide(true);
-    rig.flyTo(viewFor(place));
-  }
-  panel = createPanel({
+  // ---------- streaming ----------
+  const streamer = createStreamer({
+    market, lite, warn,
+    after: (rec, { failed }) => {
+      if (failed) { compact([rec]); return; }
+      try { lighting.raw?.tune?.(rec.holder); } catch (e) { warn(`lighting.tune failed: ${e?.message || e}`); }
+      compact([rec]);
+      const place = rec.entry.place && market.places[rec.entry.place];
+      if (place) market.mergeGoods(place);
+      market.snow.forEach((o) => (o.visible = snowOn));
+      if (renderer.shadowMap.autoUpdate === false) renderer.shadowMap.needsUpdate = true;
+      picking?.refresh();
+      report.streamed = streamer.report();
+    },
+  });
+
+  const signboard = createSignboard({ order: ORDER, onChoose: (id) => { showStage(); guide.walkTo(id); }, onHome: () => guide.home(), onFocus: (id) => highlightSign(id) });
+  stopbar = createStopbar({
     actionsFor: (id) => actions.get(id),
     itemsFor: (id) => goodsList(id),
+    readsFor: (id) => readsFor(id),
+    onRead: (pid) => guide.read(pid),
+    onStep: (id) => guide.walkTo(id),
     playButtonLabel: playLabel,
-    onOpen: (id) => {
-      // an open book, a bottle being shown or a raised glass goes back when another place opens
-      if (id !== openedFor) actions.retract();
-      openedFor = id;
-      decoCaption(null);
-      key?.follow(market.places[id]);
-      requestAnimationFrame(() => panelShift());
-    },
-    onClose: () => { actions.retract(); openedFor = null; key?.follow(null); panelShift(); },
   });
-  // a title in the bookshelf list opens that book on its shelf, with its page in the reading view
-  $('pBody').addEventListener('click', (e) => {
-    const a = e.target.closest?.('a[data-book]');
-    if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
-    if (actions.items.handlers.openBySlug?.(a.dataset.book)) e.preventDefault();
-  });
-  // Opening a place from the buttons under the market: bring the market back into view first.
-  // On a phone the panel is a bottom sheet: bring the market to the top of the screen, so the part above the
-  // sheet shows the place.
-  const narrow = window.matchMedia('(max-width: 640px)');
+  guide = createGuide({ camera, rig, stroll, streamer, actions, world, stopbar, signboard, note, key, market, announce, sections: SECTIONS });
+  // the reading bar's "Step back" and Escape both come back to the stop
+
+  /** What there is to read at a stop, as buttons for the bar. */
+  function readsFor(id) {
+    const out = [];
+    for (const p of world.pieces()) {
+      if (p.placeId !== id || p.decorative || p.id === 'books.book') continue;
+      const s = world.surface(p.surface);
+      if (!s) continue;
+      if (s.kind === 'coaster') continue; // listed below as one entry
+      out.push({ id: p.id, label: `Read ${s.label}` });
+    }
+    const coasters = world.pieces().filter((p) => p.placeId === id && /coaster_/.test(p.id));
+    coasters.forEach((p) => out.push({ id: p.id, label: `Pick up: ${p.title}` }));
+    return out;
+  }
+
   const showStage = () => {
     const top = stage.getBoundingClientRect().top;
-    if (top < 0 || (narrow.matches && top > 8)) window.scrollBy({ top: top - 8, behavior: motion.reduced ? 'auto' : 'smooth' });
+    if (top < 0 || top > innerHeight * 0.4) window.scrollBy({ top: top - 8, behavior: motion.reduced ? 'auto' : 'smooth' });
   };
-  const openPlace = (id) => { showStage(); goTo(id); panel.open(id); };
-  let picking = null;
-  buildPlaceNav(openPlace, (id) => picking?.highlight(id));
 
+  let picking = null;
+  function highlightSign(id) {
+    if (!outline) return;
+    const arm = id && signpost.arms[id];
+    outline.selectedObjects = arm ? [arm] : [];
+  }
   picking = createPicking({
     dom: renderer.domElement, camera, market, overlay, outline, items: actions.items,
-    current: () => panel.current,
-    labelFor: (id) => `${SECTIONS[id]?.name} · ${SECTIONS[id]?.sub}`,
-    onPick: (id) => { if (actions.rides.riding?.place?.id === id) return; openPlace(id); },
-    // an item on a counter or shelf: its own action, opening its stall first if the panel is elsewhere
+    current: () => (guide.arrived ? guide.here : null),
+    labelFor: (id) => (guide.here === id && guide.arrived ? `${SECTIONS[id]?.name} · ${SECTIONS[id]?.sub}` : `Walk to the ${SECTIONS[id]?.name} · ${SECTIONS[id]?.sub}`),
+    extraRoots: () => (signpost.group ? [signpost.group] : Object.values(signpost.arms)),
+    readingNow: () => world.isOpen,
+    readLabel: (sid) => { const s = world.surface(sid); const p = world.pieceFor(sid); return p?.decorative ? p.title : `Read ${s?.label || 'this'}${p?.title && s?.kind === 'coaster' ? `: ${p.title}` : ''}`; },
+    signLabel: (id) => `${ARM_NAMES[id] || id}: walk to the ${SECTIONS[id]?.name || id} · ${SECTIONS[id]?.sub || ''}`,
+    onSign: (id) => guide.walkTo(id),
+    onRead: (sid, p) => {
+      const piece = world.pieceFor(sid);
+      if (!piece) return;
+      // reading already: a click on the page turns it (the right half on, the left half back)
+      if (world.isOpen && world.current.surface === sid) {
+        const half = clickHalf(sid, p);
+        if (half !== 0) world.goTo(world.current.view + half);
+        return;
+      }
+      if (piece.decorative) { guide.read('ferris.notice'); return; }
+      guide.read(piece.id);
+    },
+    onLink: (href) => openLink(href),
+    onPick: (id) => {
+      if (actions.rides.riding?.place?.id === id) return;
+      if (guide.here === id && guide.arrived) { if (!world.isOpen) guide.read(); return; }
+      guide.walkTo(id);
+    },
+    // an item on a counter or shelf: its own action, walking to its stall first when the visitor is elsewhere
     onItem: (item) => {
-      if (item.placeId && market.places[item.placeId] && panel.current !== item.placeId) openPlace(item.placeId);
+      if (item.placeId && market.places[item.placeId] && guide.here !== item.placeId) { guide.walkTo(item.placeId); return; }
+      if (world.isOpen && item.kind !== 'book') world.close({ silent: true, keepCamera: true });
       actions.items.click(item);
       focusItem(item);
     },
-    // a deco stall: fly to its close-up (it opens no panel)
     onDeco: (id) => openDeco(id),
   });
-  // the deco stall's name under its close-up, and a hint that its goods can be looked at
+
+  /** -1, 0 or +1: which half of a page a click landed on (for page turns). */
+  function clickHalf(sid, p) {
+    const r = renderer.domElement.getBoundingClientRect();
+    const x = p?.x ?? r.width / 2;
+    return x > r.width * 0.55 ? 1 : x < r.width * 0.45 ? -1 : 1;
+  }
+  function openLink(href) {
+    // in-site links (the text version) open here; others in a new tab
+    if (/^(https?:)?\/\//.test(href)) window.open(href, '_blank', 'noopener');
+    else location.href = href;
+  }
+
+  // the deco stall's name under its close-up
   const caption = document.createElement('p');
   caption.className = 'decocap';
   caption.hidden = true;
   stage.appendChild(caption);
   function decoCaption(d) {
     caption.hidden = !d;
-    if (d) caption.textContent = `${d.entry.label || d.id}. Point at the goods to look closer; Reset view to go back.`;
+    if (d) caption.textContent = `${d.entry.label || d.id}. Point at the goods to look closer; Escape steps back.`;
   }
-  /** Come in close to where a clicked item's little scene plays out (the glass under the tap, the ladle over
-   *  the mug, the sausage on the grill), keeping the direction the visitor looks from. */
   const ITEM_NEAR = 1.7;
   function focusItem(item) {
     const at = actions.items.focusOf(item);
     if (!at || rig.riding) return;
-    // the Bierstand: the tap, the vendor and a full pint in one picture (interaction/itemFrame.js)
     const fr = itemFrame(item, { items: actions.items, people: () => crowd.people() });
-    if (fr) { frameRegion(fr); return; }
+    if (fr) { frameRegion(fr); guide.markCloseUp(); return; }
     const dir = camera.position.clone().sub(at);
     const dist = dir.length();
-    if (dist < ITEM_NEAR * 1.15) return; // already close: no flight for a neighbour
+    if (dist < ITEM_NEAR * 1.15) return;
     dir.y = Math.max(dir.y, dist * 0.25);
     const pos = at.clone().addScaledVector(dir.normalize(), ITEM_NEAR);
     const target = at.clone();
-    // a phone's panel is a sheet over the lower half: the item sits in the upper part of the picture
-    if (camera.aspect < 1) { target.y -= ITEM_NEAR * 0.2; pos.y -= ITEM_NEAR * 0.2; }
     rig.flyTo({ pos, target, near: 1 });
+    guide.markCloseUp();
   }
-
-  /** Frame a box (its centre, the way its face looks, half its width and height in metres) in the part of the
-   *  market the panel or the reading view leaves free, square to its face and a little above it. Returns the
-   *  view it left, so the caller can go back to it. */
+  /** Frame a box (centre, facing, half width and height in metres) square to its face, above the stop bar. */
   function frameRegion({ center, facing, halfW, halfH, depth = 0, lift = 0.25, margin = 1.25, near = 0.5 }) {
     if (rig.riding || !center || !facing) return null;
-    const { fx, fy } = freeFraction();
+    const fx = 1, fy = 1 - Math.min(0.2, 70 / Math.max(300, stage.clientHeight));
     const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
     const d = Math.max((halfH * margin) / (t * fy), (halfW * margin) / (t * camera.aspect * fx), near + 0.15) + depth / 2;
     const dir = facing.clone().setY(0).normalize();
@@ -282,19 +377,18 @@ async function boot() {
     rig.flyTo({ pos: center.clone().addScaledVector(dir, d), target: center.clone(), near });
     return back;
   }
-
   function openDeco(id) {
     const d = market.decos[id];
     if (!d) return;
     if (actions.rides.riding) actions.rides.endRide(true);
-    panel.close();
+    if (world.isOpen) world.close({ silent: true, keepCamera: true });
     rig.flyTo(viewFor(d));
     decoCaption(d);
+    guide.markCloseUp();
   }
+  rig.onArrive(() => { if (!guide.closeUp) decoCaption(null); });
 
   // ---------- fewer draw calls ----------
-  // Now that the lights are placed and the actions hold their nodes, the static meshes of every model are merged
-  // (engine/merge.js): one mesh per material per rigid body, and the deco stalls' shared kit as one row.
   const merges = { before: 0, after: 0, row: 0 };
   const decoRow = new THREE.Group();
   decoRow.name = 'deco_row_merged';
@@ -304,9 +398,9 @@ async function boot() {
   scene.add(snowRow);
   const riderSyncs = [];
   function compact(placed) {
+    if (params.get('merge') === '0') return;
     for (const p of placed) {
       try { const r = mergeStatic(p.root); merges.before += r.before; merges.after += r.after; } catch (e) { warn(`merge ${p.entry.id}: ${e?.message || e}`); }
-      // the gondolas and horses: one instanced draw per part for all of them
       for (const list of [p.nodes?.gondolas, p.nodes?.horses]) {
         if (!list?.length) continue;
         try {
@@ -319,7 +413,6 @@ async function boot() {
     if (deco.length > 1) {
       try { const saved = mergeAcross(deco, decoRow); merges.row += saved; merges.after -= saved; } catch (e) { warn(`merge deco row: ${e?.message || e}`); }
     }
-    // the snow caps of these models: one mesh per look for all of them (the toggle then shows a few draws)
     try {
       const s = mergeSnow(placed.map((p) => p.root), snowRow);
       if (s.added.length) {
@@ -328,9 +421,10 @@ async function boot() {
       }
     } catch (e) { warn(`merge snow caps: ${e?.message || e}`); }
   }
-  if (params.get('merge') !== '0') compact(market.placed);
+  // the streamed models stay unmerged until their full model is grafted on (engine/stream.js)
+  compact(market.placed.filter((p) => !p.streamed));
 
-  // ---------- snow, reset, keyboard ----------
+  // ---------- snow, overview, keyboard ----------
   const snowBtn = $('snow');
   let snowOn = false;
   function setSnow(on) {
@@ -342,75 +436,29 @@ async function boot() {
     snowBtn.setAttribute('aria-pressed', String(on));
   }
   snowBtn.addEventListener('click', () => setSnow(!snowOn));
-  const q = new URLSearchParams(location.search).get('snow');
+  const q = params.get('snow');
   setSnow(q === '1' ? true : q === '0' ? false : inSeason());
 
   function resetView() {
     actions.rides.endRide(true);
-    panel.close();
-    actions.retract();
     decoCaption(null);
-    key?.follow(null);
-    rig.flyTo(null);
+    guide.home();
   }
   $('reset').addEventListener('click', resetView);
-  const mute = setupMute($('mute'), audio);
+  $('stepBack').addEventListener('click', () => { guide.back(); decoCaption(null); });
+  setupMute($('mute'), audio);
   bindKeyboard({
-    canvas: renderer.domElement, order: ORDER, openPlace, rig, resetView,
-    closePanel: () => (reader.isOpen ? reader.close() : panel.close()),
+    canvas: renderer.domElement, order: ORDER, rig,
+    walkTo: (id) => { showStage(); guide.walkTo(id); },
+    home: () => { if (!guide.back()) resetView(); else decoCaption(null); },
+    step: (d) => guide.step(d),
+    read: () => guide.read(),
+    reading: () => world.isOpen,
+    readPage: (d) => world.goTo((world.current?.view ?? 0) + d),
+    closeRead: () => world.close(),
     endRide: () => actions.rides.endRide(false),
     isRiding: () => !!actions.rides.riding,
   });
-  motion.listeners.push((r) => rig.setReduced(r));
-
-  // ---------- keep the chosen place clear of the panel ----------
-  // The panel covers the right of the market on wide screens and the bottom on phones, so the view is
-  // shifted (an off-centre projection) to keep the stall in the part that is still visible.
-  const panelEl = $('panel');
-  const shift = { x: 0, y: 0, tx: 0, ty: 0 };
-  // The open overlay: the reading view while a book is open (on a narrow screen it is a sheet, not the side
-  // panel), else the panel. The picture moves over so its centre is the centre of the part left free.
-  const readerEl = $('reader');
-  function overlayRects() {
-    const el = readerEl && !readerEl.hidden ? readerEl : panelEl.hidden ? null : panelEl;
-    if (!el) return null;
-    const s = stage.getBoundingClientRect(), p = el.getBoundingClientRect();
-    const overlapX = Math.max(0, Math.min(s.right, p.right) - Math.max(s.left, p.left));
-    const overlapY = Math.max(0, Math.min(s.bottom, p.bottom) - Math.max(s.top, p.top));
-    if (!overlapX || !overlapY) return null;
-    const side = p.width < s.width * 0.8;
-    return { s, p, side, ox: Math.min(overlapX, s.width * 0.45), oy: Math.min(overlapY, s.height * 0.6) };
-  }
-  function freeFraction() {
-    const r = overlayRects();
-    if (!r) return { fx: 1, fy: 1 };
-    return r.side ? { fx: 1 - r.ox / r.s.width, fy: 1 } : { fx: 1, fy: 1 - r.oy / r.s.height };
-  }
-  function panelShift() {
-    shift.tx = shift.ty = 0;
-    const r = overlayRects();
-    if (!r) return;
-    if (r.side) shift.tx = (r.p.left > r.s.left + r.s.width / 2 ? 1 : -1) * r.ox / 2;
-    else shift.ty = r.oy / 2;
-  }
-  // the sheet is fixed to the screen, so its overlap with the market changes as the page scrolls
-  let shiftQueued = false;
-  window.addEventListener('scroll', () => {
-    if ((panelEl.hidden && readerEl?.hidden !== false) || shiftQueued) return;
-    shiftQueued = true;
-    requestAnimationFrame(() => { shiftQueued = false; panelShift(); });
-  }, { passive: true });
-  function applyShift(dt) {
-    const k = motion.reduced ? 1 : 1 - Math.exp(-dt * 4);
-    shift.x += (shift.tx - shift.x) * k;
-    shift.y += (shift.ty - shift.y) * k;
-    const w = stage.clientWidth, h = stage.clientHeight;
-    if (Math.abs(shift.x) < 0.5 && Math.abs(shift.y) < 0.5 && !shift.tx && !shift.ty) {
-      if (camera.view?.enabled) { camera.clearViewOffset(); }
-      return;
-    }
-    camera.setViewOffset(w, h, shift.x, shift.y, w, h);
-  }
 
   // ---------- size ----------
   function resize() {
@@ -420,11 +468,10 @@ async function boot() {
     composer.setPixelRatio?.(PR);
     composer.setSize(w, h);
     camera.aspect = w / h;
-    // the architect's framing on wide screens; narrow screens need a wider lens to keep the stalls in view
     const baseFov = home.fov || 42;
     camera.fov = w < 600 ? baseFov + 13 : baseFov;
     camera.updateProjectionMatrix();
-    panelShift();
+    if (world.isOpen) world.refly();
   }
   new ResizeObserver(resize).observe(stage);
   resize();
@@ -436,30 +483,31 @@ async function boot() {
   let T = 0, frames = 0, slowFrames = 0;
   const w0 = { w: stage.clientWidth, h: stage.clientHeight };
   let frozen = false;
-  /** Advance everything that moves by dt seconds (no rendering). */
   function step(dt) {
     const riding = !!actions.rides.riding;
     const still = motion.reduced && !riding;
     if (!still) T += dt;
     audio.update(dt);
     rig.update(dt);
-    applyShift(dt);
+    world.update(dt);
     const L = audio.levels;
     for (const r of market.rides) r.update(still ? 0 : dt, T, 1, !still);
     for (const sync of riderSyncs) sync();
     for (const m of market.mixers) if (!still) m.update(dt);
     const pulse = (L.bass || 0) * 0.35 + (L.drums || 0) * 0.1;
-    // bulbs burn a little brighter in falling snow, so the strings still read through it
     const snowLift = 1 + 0.3 * (lighting.raw?.snowAmount ?? (snowOn ? 1 : 0));
     market.bulbMaterials.forEach((m, i) => { m.emissiveIntensity = m.userData.baseEmissive * snowLift * (0.9 + (still ? 0 : 0.07 * Math.sin(T * 1.3 + i * 1.7)) + pulse); });
     actions.update(dt, T, still);
     key?.update(dt);
-    // from a gondola the lit market is far below: open the exposure up while riding, and back on the ground
-    const wantExp = baseExposure * actions.rides.exposure();
+    // high above the square (the Riesenrad stop's overview, as on the ride) the lit market is small and far
+    // below: the exposure opens up the same way
+    const high = actions.rides.riding ? 1 : 1 + 0.55 * THREE.MathUtils.clamp((camera.position.y - 12) / 10, 0, 1);
+    const wantExp = baseExposure * actions.rides.exposure() * high;
     renderer.toneMappingExposure += (wantExp - renderer.toneMappingExposure) * (motion.reduced ? 1 : 1 - Math.exp(-dt * 2));
     snowfall.update(dt, T, still);
     w0.w = stage.clientWidth; w0.h = stage.clientHeight;
     crowd.update(dt, T, camera, w0.w, w0.h, { still, look: rig.controls.target });
+    note.update(dt, camera);
     try { lighting.update(dt, T); } catch { /* the lighting module's own business */ }
   }
   function frame() {
@@ -487,34 +535,29 @@ async function boot() {
     b.addEventListener('click', () => switchQuality(true));
     stage.appendChild(b);
   }
-
-  // a frame-time meter for measuring on real hardware (?perf): median and 95th percentile, draw calls, triangles
-  // The frame-time governor (full market): if this machine cannot hold ~30 fps once the lighting module has
-  // made its own cuts, the crowd's distance LOD comes in (12 m, then 6 m, then everyone on the lite figure),
-  // the crowd stops casting moon shadows, and last the lite market is offered. ?governor=0 turns it off.
   const governor = !lite && params.get('governor') !== '0' ? createGovernor({
     crowd, lightingStats: () => lighting.raw?.stats?.(), suggestLite,
     onStep: (s) => { report.governor = s; console.info('[market] governor', JSON.stringify(s)); },
   }) : null;
-  const perf = params.has('perf') ? createPerfMeter({ stage, renderer, lite, governor: () => governor?.state || null, tour: { openPlace, resetView, advance: (s) => step(s) } }) : null;
-  // ?perf=tour starts the tour by itself once the deferred models are in (tests/perf.mjs on Mac's own machine)
+  const perf = params.has('perf') ? createPerfMeter({ stage, renderer, lite, governor: () => governor?.state || null, tour: { openPlace: (id) => guide.walkTo(id), resetView, advance: (s) => step(s) } }) : null;
   if (perf && params.get('perf') === 'tour') setTimeout(() => perf.startTour(), 6000);
 
-  // first frame, then reveal (the mark lets tests and ?perf count what was fetched before the market opened)
+  // first frame, then reveal: the still of the home view fades into the live market behind it
   performance.mark?.('market-ready');
   frame();
   bar.style.width = '100%';
   $('loading').classList.add('done');
   $('loading').setAttribute('aria-hidden', 'true');
+  $('still')?.classList.add('done');
+  renderer.domElement.removeAttribute('role');
   document.fonts?.load("700 64px 'Alegreya SC'").then(redrawSigns).catch(() => {});
   setTimeout(() => audio.prefetch(), 4000);
+  // the words in the market (troika and its faces) come in just after the first frame
+  requestAnimationFrame(() => world.start());
 
   // ---------- after the first frame ----------
-  // Full market: people far from the camera switch to their lighter figure (distance LOD).
-  const lodReady = lite ? Promise.resolve(0) : new Promise((res) => setTimeout(res, 300)).then(() => crowd.enableLod()).catch((e) => { warn(`crowd LOD: ${e?.message || e}`); return 0; });
-  // Lite market: the rides and deco stalls arrive now. Their lights become warm pools (the four real lights
-  // stay on the section stalls), the lighting module tunes their bulbs, and they join picking and snow.
-  // Full market: the rides take the two real lights held back for them (a second placement pass).
+  const crowdReady = crowdFirst ? Promise.resolve(crowdNow) : new Promise((res) => requestAnimationFrame(() => res())).then(loadCrowd).then((c) => { report.crowd = c.count; report.lod = c.lod; return c; });
+  const lodReady = lite ? crowdReady.then(() => 0) : crowdReady.then(() => new Promise((res) => setTimeout(res, 300))).then(() => crowd.enableLod()).catch((e) => { warn(`crowd LOD: ${e?.message || e}`); return 0; });
   const deferredReady = !market.deferred.length ? Promise.resolve(null) : new Promise((res) => requestAnimationFrame(() => res())).then(() => market.loadDeferred()).then((added) => {
     const more = placeMarketLights({ scene, lighting, lightingSource, spots: added.spots, lite, focus, reserved: 0, warn, budget: heldForLater, second: true });
     lightInfo.pools.push(...more.pools);
@@ -523,7 +566,9 @@ async function boot() {
     for (const p of added.placed) { try { lighting.raw?.tune?.(p.holder); } catch (e) { warn(`lighting.tune failed: ${e?.message || e}`); } }
     added.snow.forEach((o) => (o.visible = snowOn));
     actions.items.addPlaced(added.placed);
-    if (params.get('merge') !== '0') compact(added.placed);
+    compact(added.placed);
+    streamer.track(added.placed);
+    market.snow.forEach((o) => (o.visible = snowOn));
     picking.refresh();
     report.lights.realtime = lightInfo.lights.length;
     report.lights.places = lightInfo.lights.map(placeOfLight);
@@ -534,12 +579,18 @@ async function boot() {
     document.documentElement.dataset.deferred = 'done';
     return added.placed.length;
   }).catch((e) => { warn(`deferred models: ${e?.message || e}`); return 0; });
+  // the first stop comes in at full detail while the visitor looks at the overview; the town and the tree once
+  // everything else has arrived
+  const streamReady = streamOn ? deferredReady.then(() => new Promise((res) => setTimeout(res, 600))).then(async () => {
+    await streamer.upgrade(stroll.first());
+    for (const rec of market.placed.filter((p) => p.streamed && !p.entry.place)) await streamer.upgradeRecord(rec);
+    document.documentElement.dataset.streamed = 'first';
+  }).catch((e) => warn(`streaming: ${e?.message || e}`)) : Promise.resolve();
 
-  /** The panel's list of goods for a stall: each clickable item once, with a number when names repeat. */
+  /** The stop bar's list of goods for a stall: each clickable item once, with a number when names repeat. */
   function goodsList(id) {
     const featured = new Set(actions.featuredBooks);
     const list = actions.items.of(id).filter((it) => it.clickable && !['tap', 'lid', 'kettle', 'pot', 'served'].includes(it.kind))
-      // books: every one of Mac's books (items.json gives each its slug); stock without a title stays out
       .filter((it) => it.kind !== 'book' || featured.has(it.node) || !!it.info.slug || /counter/i.test(it.info.where || ''));
     const seen = {};
     const total = {};
@@ -547,7 +598,7 @@ async function boot() {
     return list.map((it) => {
       seen[it.label] = (seen[it.label] || 0) + 1;
       const label = total[it.label] > 1 ? `${it.label} (${seen[it.label]})` : it.label;
-      return { name: it.node.name, label: label.replace(/, (full and steaming|upside down to dry)$/, (m) => m), fn: () => actions.items.click(it) };
+      return { name: it.node.name, label, fn: () => { actions.items.click(it); focusItem(it); } };
     });
   }
   function itemCounts() {
@@ -570,6 +621,9 @@ async function boot() {
     merges: { ...merges },
     lod: crowd.lod,
     deferred: market.deferred,
+    stroll: { stops: stroll.stops, lane: stroll.laneSource, signpost: signpost.source },
+    surfaces: Object.fromEntries(surfaces.list.map((s) => [s.id, s.fromModel ? 'model write_ node' : 'engine stand-in'])),
+    streamed: [],
     props: market.propCount,
     crowd: crowd.count,
     scene: sceneStats(scene),
@@ -578,17 +632,42 @@ async function boot() {
   if (debug) console.info('[market] report', report);
   // a small handle for tests and for the curious
   window.__market = {
-    ready: true, report, openPlace, resetView, setSnow, togglePlay,
-    act(id, key) { const a = actions.get(id)?.acts.find((x) => x.key === key); if (!a) throw new Error(`no action ${key} at ${id}`); a.fn(); },
+    ready: true, report, resetView, setSnow, togglePlay,
+    /** Walk to a place's stop (the old name is kept for the tests and the perf tour). */
+    openPlace: (id) => guide.walkTo(id),
+    walkTo: (id) => guide.walkTo(id),
+    home: () => guide.home(),
+    step: (d) => guide.step(d),
+    back: () => guide.back(),
+    get stop() { return guide.here; },
+    get arrived() { return guide.arrived && !rig.moving; },
+    get panel() { return guide.arrived ? guide.here : null; },
+    camera, scene, renderer,
+    cam: () => ({ mode: rig.mode, moving: rig.moving, progress: rig.progress, look: rig.look, pos: camera.position.toArray().map((v) => +v.toFixed(3)), target: rig.controls.target.toArray().map((v) => +v.toFixed(3)) }),
+    nudge: (yaw, zoom, pitch) => rig.nudge(yaw, zoom, pitch),
+    /** The lane path a walk from here to a stop would take (tests check it keeps clear of the stalls). */
+    pathTo: (id) => stroll.pathTo(camera.position, id)?.points.map((p) => p.toArray().map((v) => +v.toFixed(2))) || null,
+    strollInfo: () => ({ stops: stroll.stops, lane: stroll.lane(), source: stroll.laneSource }),
+    placeCenters: () => Object.fromEntries(Object.entries(market.places).map(([k, p]) => [k, { pos: p.holder.position.toArray(), radius: p.radius }])),
+    // reading
+    read: (id) => guide.read(id),
+    readPage: (d) => world.goTo((world.current?.view ?? 0) + d),
+    closeRead: () => world.close(),
+    reading: () => { const c = world.current; return c ? { open: true, ...c, title: world.piece(c.id)?.title || '' } : { open: false }; },
+    textOn: (sid) => world.textOn(sid),
+    pieces: () => world.pieces().map((p) => ({ id: p.id, place: p.placeId, surface: p.surface, title: p.title })),
+    surfaces: () => surfaces.list.map((s) => ({ id: s.id, kind: s.kind, fromModel: s.fromModel })),
+    readCopy: () => ({ hidden: $('readCopy').hidden, text: $('readCopy').textContent.slice(0, 600), links: [...$('readCopy').querySelectorAll('a')].map((a) => a.href) }),
+    streaming: () => ({ state: streamer.state(), report: streamer.report() }),
+    streamReady: () => streamReady,
+    act(id, k) { const a = actions.get(id)?.acts.find((x) => x.key === k); if (!a) throw new Error(`no action ${k} at ${id}`); a.fn(); },
     get riding() { return actions.rides.riding?.type || null; },
-    get panel() { return panel.current; },
     get snow() { return snowOn; },
-    /** The snow caps (tests): how many snow_ entries the toggle drives, merged meshes among them, how many show. */
     snowCaps: () => ({ entries: market.snow.length, merged: market.snow.filter((o) => o.userData.snow).length, visible: market.snow.filter((o) => o.visible).length, saved: merges.snow || 0 }),
-    /** Hold the last rendered frame (tests take screenshots of it; software GL can take seconds per frame). */
     freeze(on = true) { frozen = !!on; if (!frozen) timer.reset?.(); },
-    /** Run the market's clock forward without drawing (tests: see the wheel turn on a 1 fps software renderer). */
     advance(seconds) { for (let t = 0; t < seconds; t += 0.05) step(0.05); },
+    /** For tests: draw a frame now and return the canvas as a data URL (the market only, no page around it). */
+    snapshot(type = 'image/jpeg', quality = 0.86) { composer.render(0); return renderer.domElement.toDataURL(type, quality); },
     get audio() { return { playing: audio.playing, mode: audio.mode, phase: audio.phase, levels: { ...audio.levels }, where: audio.where(), endings: audio.endings, alternatesReady: audio.alternatesReady }; },
     seekSong: (pos, pass) => audio.seek(pos, pass),
     get rideStage() { return actions.rides.stage; },
@@ -596,48 +675,37 @@ async function boot() {
     governor: () => governor?.state || null,
     keyLight: () => key?.state() || null,
     crowd: () => crowd.stats(),
-    /** The tenor's two places (engine/instruments.js): held while the band plays, on its stand while it rests. */
     saxStand: () => { const st = scene.getObjectByName('instrument_sax_stand'), h = scene.getObjectByName('instrument_sax'); return { stand: !!st, standVisible: !!st?.visible, heldVisible: !!h?.visible }; },
     hiddenPeople: () => crowd.hiddenIds(),
     people: () => crowd.people(),
     sceneStats: () => sceneStats(scene),
-    /** Resolves when the after-first-frame work is done (LOD figures, deferred models). */
     settled: () => Promise.all([lodReady, deferredReady]).then(([lod, deferred]) => ({ lod, deferred })),
     featuredBooks: () => actions.featuredBooks.map((n) => n.name),
-    /** The reading view (tests): open, which book, and whether its page has loaded. */
-    reading: () => { const r = document.getElementById('reader'); return { open: reader.isOpen, slug: reader.slug, state: r?.dataset.state || null, title: document.getElementById('rTitle')?.textContent || '', text: (document.getElementById('rBody')?.textContent || '').slice(0, 400) }; },
-    closeReader: () => reader.close(),
-    /** The books "Pick a book for me" offers first, as [title, author] (tests compare a clicked spine with them). */
+    note: () => note.text,
     bookPicks: () => bookPicks().map((b) => [b[0], b[1]]),
-    /** The items (tests): click one by node name as a visitor would, read an item's state. */
     items: () => itemCounts(),
-    clickItem(name, { focus = false } = {}) { const it = actions.items.all().find((i) => i.node.name === name); if (!it) throw new Error(`no item ${name}`); picking.setEnabled(true); if (it.placeId && market.places[it.placeId] && panel.current !== it.placeId) openPlace(it.placeId); const r = actions.items.click(it); if (focus) focusItem(it); return r; },
+    clickItem(name, { focus = false } = {}) { const it = actions.items.all().find((i) => i.node.name === name); if (!it) throw new Error(`no item ${name}`); picking.setEnabled(true); const r = actions.items.click(it); if (focus) focusItem(it); return r; },
     item: (name) => { const it = actions.items.all().find((i) => i.node.name === name); if (!it) return null; const n = it.node; return { name: n.name, kind: it.kind, label: it.label, busy: it.busy, position: n.getWorldPosition(new THREE.Vector3()).toArray().map((v) => +v.toFixed(4)), quaternion: n.getWorldQuaternion(new THREE.Quaternion()).toArray().map((v) => +v.toFixed(4)), visible: n.visible }; },
-    /** Fly in close to an item as its click would (tests take the close-up before clicking). */
     focusOn(name) { const it = actions.items.all().find((i) => i.node.name === name); if (it) focusItem(it); },
     handlers: actions.items.handlers,
-    /** A book's category key on Mac's shelf (content/books/categories.json). */
     bookCategory: (slug) => libraryBook({ slug })?.category || null,
     openedBook: () => actions.items.handlers.openedBook?.() || null,
     itemAt: (x, y) => picking.itemAt(x, y),
-    pickAt: (x, y) => picking.at(x, y),
+    pickAt: (x, y) => picking.full(x, y),
     hoverAt(x, y) { renderer.domElement.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, pointerType: 'mouse', bubbles: true })); },
     get hoveredItem() { return actions.items.hovered?.node.name || null; },
-    /** Draw exactly one frame now (tests: a pose set with advance() while frozen). */
     renderFrame() { composer.render(0.016); },
     muted: () => audio.muted,
     openDeco,
-    /** Client point over the middle of a scene object (tests aim clicks with it). */
     screenPoint(name) {
       const o = scene.getObjectByName(name);
       if (!o) return null;
       const box = new THREE.Box3();
-      o.traverse((m) => { if (m.isMesh) { m.geometry.computeBoundingBox(); box.union(m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld)); } });
+      o.traverse((m) => { if (m.isMesh && !m.isText) { m.geometry.computeBoundingBox(); box.union(m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld)); } });
       const p = (box.isEmpty() ? o.getWorldPosition(new THREE.Vector3()) : box.getCenter(new THREE.Vector3())).project(camera);
       const r = renderer.domElement.getBoundingClientRect();
-      return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height };
+      return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height, onScreen: Math.abs(p.x) < 1 && Math.abs(p.y) < 1 && p.z < 1 };
     },
-    /** People (visible ones) on the line from the camera to the middle of a scene object: tests check the view is clear. */
     blockers(name) {
       const o = scene.getObjectByName(name);
       const people = scene.getObjectByName('crowd');
@@ -660,24 +728,28 @@ async function boot() {
     },
     perf: () => perf?.stats() || null,
     perfTour: () => perf?.tourData || null,
-    camera, scene, renderer,
   };
   document.documentElement.dataset.ready = 'true';
+  // a visitor who arrives with #glueh (or any place id) walks straight there
+  const want = location.hash.slice(1);
+  if (want && SECTIONS[want] && ORDER.includes(want)) setTimeout(() => guide.walkTo(want), 400);
 }
 
-// the home view on a phone (see phoneHome in boot)
-// Between the front row's string-light poles at [0, 7.5] and [7.5, 6.5] (blender/lib/architect_plan.py POLES_THREE),
-// close enough that both stand outside a portrait frame (more than 20 degrees off the axis): no pole runs down the
-// picture. The bandstand sits left of centre, the Bierstand and the tree to the right.
+const SIGN_POS = [-3.4, 0, 19.2];
+// the home view on a phone: closer and lower, between the front row's string-light poles
 const PHONE_HOME = { position: [3.75, 5.6, 16], target: [3.4, 2.4, -4] };
-// the full market holds back one real light for each ride until the ride's model arrives
 const DEFERRED_LIGHTS = 2;
 
+/** Where a note about a place is pinned: above its counter, or the middle of a landmark. */
+function noteAnchor(market, id) {
+  const place = market.places[id];
+  if (!place) return null;
+  if (place.nodes?.slots?.slot_counter) return place.nodes.slots.slot_counter.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.75, 0));
+  return place.center.clone().setY(Math.min(place.center.y, 3.2));
+}
+
 /**
- * The lite market's close-up key light. Its four real lights sit inside the section stalls, so in a close-up
- * the counter front and the vendor's face were in the dark. One warm spot, always in the scene (so no shader
- * recompiles when it moves), fades in under the front eave of the open section stall, aimed at the counter,
- * and fades out at home.
+ * The lite market's close-up key light: one warm spot under the front eave of the stall at the current stop.
  */
 function createKeyLight(scene) {
   const L = new THREE.SpotLight(0xffc98f, 0, 7.5, 0.72, 0.55, 1.6);
@@ -690,9 +762,7 @@ function createKeyLight(scene) {
     follow(place) {
       if (!place || !['glueh', 'bier', 'wurst', 'books'].includes(place.id)) { want = 0; placeId = null; return; }
       placeId = place.id;
-      const c = counterLocal(place); // the counter top, in the stall's frame
-      // under the front eave, a little in front of the counter and above head height, aimed at the counter
-      // front and the vendor behind it
+      const c = counterLocal(place);
       const from = new THREE.Vector3(c.x, 2.35, c.z + 1.25);
       const to = new THREE.Vector3(c.x, 1.05, c.z - 0.1);
       place.holder.localToWorld(from);
@@ -702,7 +772,6 @@ function createKeyLight(scene) {
       L.target.updateMatrixWorld();
       want = INTENSITY;
     },
-    /** Light one part of the open stall (a bookshop shelf the camera looks along): from in front and above. */
     aim(center, facing) {
       if (!placeId || !center || !facing) return;
       L.position.copy(center).addScaledVector(facing.clone().setY(0).normalize(), 1.3).add(new THREE.Vector3(0, 1.1, 0));
@@ -715,11 +784,7 @@ function createKeyLight(scene) {
   };
 }
 
-/**
- * light_ empties become lights: the lighting designer's placement when the module offers one, else the engine's.
- * On the lite market the section stalls are placed first and alone, so its four lights go one to each of
- * the four stalls whose panels look into them; every other light_ becomes a warm pool on the ground.
- */
+/** light_ empties become lights: the lighting designer's placement when the module offers one, else the engine's. */
 function placeMarketLights({ scene, lighting, lightingSource, spots, lite, focus, reserved, warn, budget, second = false }) {
   const theirs = lightingSource === 'lighting' && typeof lighting.raw?.placeLights === 'function';
   const place = (list, opts) => {
@@ -728,7 +793,6 @@ function placeMarketLights({ scene, lighting, lightingSource, spots, lite, focus
     }
     return placeLights(scene, list, { lite, focus, reserved, budget: opts.budget });
   };
-  // a later pass (the deferred models): only the lights held back for it, and no more static shadows
   if (second || budget === 0) return place(spots, { budget: budget || 0, reserved: 0, shadowed: 0 });
   if (!lite) return place(spots, budget != null ? { budget } : {});
   const first = place(spots.filter((s) => s.kind === 'section'), {});
@@ -736,17 +800,14 @@ function placeMarketLights({ scene, lighting, lightingSource, spots, lite, focus
   return { lights: [...first.lights, ...rest.lights], pools: [...first.pools, ...rest.pools], cap: first.cap };
 }
 
-/** The layout id of the model a light hangs in. */
 function placeOfLight(L) {
   let o = L;
   while (o.parent && !o.parent.isScene) o = o.parent;
   return o.userData.entry?.id || o.name;
 }
 
-/** Triangles and meshes in the scene as built (instanced meshes count every copy). */
 function sceneStats(scene) {
   let triangles = 0, meshes = 0;
-  // what is drawn: hidden subtrees (a person's far figure, a merged book's own mesh) do not count
   scene.traverseVisible((o) => {
     if (!o.isMesh || !o.geometry) return;
     const g = o.geometry;

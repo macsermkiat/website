@@ -231,9 +231,28 @@ def shot(cam, top, out_jpg, samples=128, res=(1920, 1080), png_name=None):
     render.camera((loc[0], loc[1], loc[2] + top), (tgt[0], tgt[1], tgt[2] + top), lens=lens, dof=None)
     os.makedirs(RENDERS, exist_ok=True)
     png = os.path.join(RENDERS, (png_name or os.path.basename(out_jpg).replace(".jpg", "")) + ".png")
+    beer_preview()
     glass_no_shadow()
     render.render(png, samples=samples, res=res, jpeg=out_jpg, jpeg_width=1280)
     return png
+
+
+def beer_preview():
+    """Preview only (round 4): the beer is opaque in the glb, because a three.js transmissive glass cannot
+    show a transmissive liquid behind it. Cycles can, so the previews let a part of the light through the
+    column (Transmission 0.6): the lit golden body the browser shows, with the depth and the refracted
+    counter of a clear lager behind it. Full transmission went dark olive here (the column refracts the
+    unlit wall behind it and the stall has no back light); round 3's 0.65 on an orange base read as opaque
+    orange. The meshes it is on stop casting shadows with the glass (glass_no_shadow). Nothing exported
+    changes: the previews render after the glbs are written."""
+    mt = bpy.data.materials.get("vendor_beer")
+    if not mt or mt.get("preview_clear"):
+        return
+    b = mt.node_tree.nodes.get("Principled BSDF")
+    for k, v in (("Transmission Weight", 0.6), ("Roughness", 0.03)):
+        if k in b.inputs:
+            b.inputs[k].default_value = v
+    mt["preview_clear"] = True
 
 
 def glass_no_shadow():
@@ -309,6 +328,7 @@ def shot_at(cam, origin, out_jpg, samples=128, res=(1920, 1080), png_name=None):
     render.camera(tuple(origin + Vector(loc)), tuple(origin + Vector(tgt)), lens=lens, dof=None)
     os.makedirs(RENDERS, exist_ok=True)
     png = os.path.join(RENDERS, (png_name or os.path.basename(out_jpg).replace(".jpg", "")) + ".png")
+    beer_preview()
     glass_no_shadow()
     render.render(png, samples=samples, res=res, jpeg=out_jpg, jpeg_width=1280)
     return png

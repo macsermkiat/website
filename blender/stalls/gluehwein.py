@@ -110,12 +110,17 @@ def build(lite):
     P.box((0, y_front - 0.038, COUNTER_TOP - 0.03), (W - 0.12, 0.01, 0.014), band="gold")
 
     # ---------------------------------------------------------- sign on the lambrequin
-    sign_c = Vector((0, yO - 0.075, zt - 0.07))
-    # cream board, red Fraktur, gold frame: reads under the hemisphere light alone (a red board
-    # with gold letters went dark in three.js); lite and full both drop the letter bevel
-    cp.sign(P, P, "Glühwein", state.font("fraktur_bold"), sign_c, 1.55, 0.44, depth=0.035,
+    # round 4: bigger (2.05 x 0.64 m, was 1.55 x 0.44, letters about 1.4x taller) and lit: the board
+    # and letters are 'paint_lit', a warm emissive copy of the paint (cream glows, red stays red)
+    # that stands in for the two gooseneck lamps above it, so 'Glühwein' reads from the home view
+    # the way 'Bier vom Fass' does. It hangs in front of the tie beam; the arch clears the carved
+    # rake valances and its foot clears the bulb string, which now hangs below it.
+    SL = h.part("sign", "paint_lit", var=0.02)
+    sign_c = Vector((0, yO - 0.075, zt - 0.02))
+    cp.sign(SL, SL, "Glühwein", state.font("fraktur_bold"), sign_c, 2.05, 0.64, depth=0.04,
             board_band="cream", text_band="red", frame_band="gold", board_shape="arch",
-            text_size=0.34, text_depth=0.014, text_dy=-0.035, max_fill=0.84, text_bevel=0.0, resolution=1)
+            text_size=0.72, text_depth=0.016, text_dy=-0.045, max_fill=0.86, text_bevel=0.0, resolution=1)
+    h.sign_lamps((-0.62, 0.62), yO - 0.04, sign_c.z + 0.32, reach=0.28)
 
     # ---------------------------------------------------------- garland, lights, bulbs
     anchors = [(-1.6, yF - 0.08, 2.2), (-0.55, yF - 0.08, 2.2), (0.55, yF - 0.08, 2.2), (1.6, yF - 0.08, 2.2)]
@@ -123,8 +128,8 @@ def build(lite):
         cp.fir_garland(h.fir, h.beads, a, b, sag=0.16, radius=0.045, tufts_per_m=None if lite else 38)
     h.eave_bulbs(sides=False)
     # a string on the tie beam under the lambrequin
-    cp.bulb_string(h.bulbs, h.wire, [(-W / 2, yO - 0.05, zt - 0.3), (0, yO - 0.05, zt - 0.3),
-                                     (W / 2, yO - 0.05, zt - 0.3)], sag=0.07, spacing=0.21)
+    cp.bulb_string(h.bulbs, h.wire, [(-W / 2, yO - 0.05, zt - 0.36), (0, yO - 0.05, zt - 0.36),
+                                     (W / 2, yO - 0.05, zt - 0.36)], sag=0.05, spacing=0.21)
     h.interior_bulbs(xs=(-0.9, 0.0, 0.9), z=2.35)
     # iron: hooks for mugs under the tie beam, strap hinges on the side walls
     for x in (-1.2, -0.6, 0.0, 0.6, 1.2):
@@ -164,6 +169,12 @@ def _lights_and_camera(yF):
     render.add_light("env_fill", 'AREA', (0, 0.2, 2.45), 260, size=2.2, rot=(0, 0, 0))
     render.add_light("env_front", 'POINT', (-0.6, yF - 1.9, 2.4), 45, size=0.5)
     render.add_light("env_neighbour", 'POINT', (-4.8, -1.8, 2.6), 160, size=0.6)
+    # the two gooseneck sign lamps (round 4): narrow spots from the lamp heads aimed at the board
+    # (its 'paint_lit' emission is a stand-in and is off in the Cycles preview)
+    yO, zc = yF - 0.47, 2.64
+    for x in (-0.62, 0.62):
+        render.add_light("env_signlamp", 'SPOT', (x, yO - 0.33, zc + 0.4), 20, size=0.04,
+                         spot_size=math.radians(44), spot_blend=0.4, target=(x * 0.5, yO - 0.08, zc + 0.02))
     return render.camera((-4.3, -7.4, 2.1), (0.1, -0.6, 2.15), lens=30, dof=2.2)
 
 

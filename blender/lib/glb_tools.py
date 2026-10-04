@@ -79,12 +79,13 @@ def node_names(js):
 
 
 def buecher_required():
-    """slot_cat_<key> and sign_cat_<key> for every key in content/books/categories.json."""
+    """slot_cat_<key>, sign_cat_<key>, cam_cat_<key> and cam_cat_<key>_target for every key in content/books/categories.json."""
     import json
     repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     with open(os.path.join(repo, "content", "books", "categories.json")) as f:
         keys = [c["key"] for c in json.load(f)["categories"]]
-    return [f"slot_cat_{k}" for k in keys] + [f"sign_cat_{k}" for k in keys]
+    return ([f"slot_cat_{k}" for k in keys] + [f"sign_cat_{k}" for k in keys] + [f"cam_cat_{k}" for k in keys]
+            + [f"cam_cat_{k}_target" for k in keys])
 
 
 def check_stall(path, extra_required=()):

@@ -422,6 +422,9 @@ def section_slots(secs):
         F = _frame(loc["origin"], loc["rot"])
         p = F @ Vector(loc["slot"])
         export.empty(s["slot"], tuple(p), rot=(0, 0, loc["rot"]))
+        # round 4: optional close-up camera per section (BUILD.md cam_cat_<key>), from buecher_sections.py
+        export.empty(s["cam_target"], tuple(s["cam_target_position"]))
+        export.empty(s["cam"], tuple(s["cam_position"]), look_at=tuple(s["cam_target_position"]))
 
 
 def build_sections(h, lite):

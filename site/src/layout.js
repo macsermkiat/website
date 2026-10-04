@@ -225,5 +225,5 @@ export function resolveLayout() {
   // interactive places first so they load first
   const rank = (e) => (e.place ? PLACE_ORDER.indexOf(e.place) : e.kind === 'ground' ? -1 : 50);
   entries.sort((a, b) => rank(a) - rank(b));
-  return { entries, home: readHome(RAW), notes, bindings, fromFile: !!RAW };
+  return { entries, home: readHome(RAW), notes, bindings, fromFile: !!RAW, raw: RAW };
 }
