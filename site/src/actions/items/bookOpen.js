@@ -87,7 +87,9 @@ function prepare(root) {
   // shows under the words (world/surfaces.js printOnto, as for the Bierdeckel)
   const paperMeshes = [];
   root.traverse((o) => { if (o.isMesh && !/^write_/.test(o.name || '')) paperMeshes.push(o); });
-  root.traverse((o) => { if (o.isMesh && /^write_page/.test(o.name || '')) printOnto(o, root, paperMeshes); });
+  const pages = [];
+  root.traverse((o) => { if (o.isMesh && /^write_page/.test(o.name || '')) pages.push(o); });
+  for (const o of pages) printOnto(o, root, paperMeshes);
   const box = new THREE.Box3().setFromObject(root);
   return { root, size: box.getSize(new THREE.Vector3()), box };
 }

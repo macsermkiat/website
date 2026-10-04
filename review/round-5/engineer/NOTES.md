@@ -16,14 +16,15 @@ All five are done. Previews re-rendered; the old ones are replaced.
      inside its rim. It uses the coaster's own material, with every UV at one plain point of its print, so it is
      the same card, unprinted. The `write_` back card is hidden.
    - The front's `write_` card filled the opening the vendor left in the print. It now takes the print itself:
-     at each corner, the UVs (both sets, colour and baked occlusion) of the coaster's vertex there. The print
-     runs on unbroken under the words (`world/surfaces.js` `printOnto`, `cardBack`).
+     at each corner, the coaster vertex there gives its UVs (both sets: colour and baked occlusion), normal and
+     vertex colour. The print runs on unbroken under the words (`world/surfaces.js` `printOnto`, `cardBack`). The
+     card keeps its own UVs for finding its writing area.
    - The words are centred inside the disc (`fitRound`). The front stays inside the printed ring, the back inside
      the rim. Type on the back shrinks, within a range, so a description fits on one side.
    - When the full model is grafted on (`engine/stream.js`), the coaster dresses itself again from the full print
      (a new `afterGraft` hook).
-   - The smoke test checks it: front printed, back card hidden, round back face, and words reaching at most 0.71
-     (front) and 0.91 (back) of the radius.
+   - The smoke test checks it: front printed, back card hidden, a round back face, and the drawn words reaching
+     0.60 (front) and 0.79 (back) of the radius, within limits of 0.85 and 0.97.
    - The reading camera frames the whole coaster, so its round edge is in the picture.
 2. **The text sits on crafted props.**
    - **`book_open.glb` is the book that opens** (`src/actions/items/bookOpen.js`).
@@ -34,8 +35,9 @@ All five are done. Previews re-rendered; the old ones are replaced.
      - The words go on `write_page_left/right`. A turn swings `act_page_turn`, carrying the old right page on
        its front and the new left page on its back (`write_page_turn_front/back`).
      - The reading camera comes from `cam_read_book`, drawn back as far as the screen's shape needs.
-     - The pages had the coaster's problem: a lighter, then (without the occlusion UVs) a darker card in the
-       page's opening. They now take the paper's own print the same way.
+     - The pages had the coaster's problem: a different-toned card in the page's opening. The vendor's
+       `write_` cards carry a tan vertex colour of their own, and the print's material shows vertex colours. They
+       now take the paper's own print the same way, with its UVs, normals and vertex colours at their corners.
      - If the model is missing or late (5 s), the engine's own book opens as before.
    - **The models' `write_`/`cam_read_` nodes carry the words wherever they exist.** The engine knew different
      names from the ones the carpenter and the ride builder chose, so the table now has aliases:
@@ -219,26 +221,50 @@ The full listing is in `budget.txt`.
 
 ## Verification
 
-`npm run test:unit`: all unit checks pass, including the new ones (stroll legs for every pair of stops, stop
-eyes and the Riesenrad overview, lite/full node parity for the streamed stalls, both first loads below round 4).
+- `npm ci && npm run build` succeeds.
+- `npm run test:unit`: all checks pass. New ones: the write_ names the engine knows, which surfaces the delivered
+  models carry, `book_open.glb`'s nodes, and the round-4 gate.
+- `npm run budget -- --strict` passes (see Budgets).
 
-`node tests/smoke.mjs` (swiftshader, the final build with the vendor's 17:00 models; log in `smoke.log`):
-**192/193** on the full run, no console errors. The one failure was *Prost: the crowd raises a glass*: at the
-Glühwein close-up nobody in view stood within 12 m, so nobody answered. Fixed in `src/crowd.js` (the nearest
-people in view a little further off answer instead) and the check now gives the voices a few seconds. The
-interaction phase was rerun on the rebuilt site: **30/30**, no console errors (appended to `smoke.log`).
+`node tests/smoke.mjs` (swiftshader, pass 2; everything is in `smoke.log`):
 
-Phases: unit; the full market at 1280 px (the still, signpost, walks, ← →, the Riesenrad overview, streaming,
-no orbit, no side panel); reading every surface on the lite market (words drawn in 3D, the hidden copy, the page
-bar, links, Escape, the coaster flip, a book opening and turning a page); every action and both rides; the lite
-market; a phone with reduced motion and touch; plain.html; every model missing; audio.
+- **Full run: 196/200**, no console errors. The four failures were all in the tests, not the site, and each was
+  fixed and its phase rerun:
+  1. The streaming check still expected the town among the lite models at first load. It now checks that the
+     town comes with the rides.
+  2. The coaster's reach probe read lines drawn while the loop was held, before their matrices were updated.
+  3. The book check advanced the clock in one go. The vendor's book starts each stage when the last has ended,
+     so the test now steps the clock until the book is open.
+  4. The stem levels were sampled once and read near zero on a busy machine. They are now sampled for up to half
+     a minute.
+- **Reruns on the final build:**
+  - stroll, reading, audio: 74/76 (the two fixes above not yet in)
+  - reading, audio: 47/47
+  - reading and every interaction: 68/68
+  - No console errors.
 
-Bytes the browser fetched before the market's first frame (`encodedBodySize`, JS gzipped by the preview server):
-**8.34 MB** for the full market (round 4: 18.73 MB measured the same way) and **6.26 MB** for the lite market.
+New checks in pass 2:
 
-The vendor's coasters and Marktblatt were also checked by eye (`tests/dev-r5.mjs`): the front and back of a
-Bierdeckel and the Marktblatt are in `read_bier_coaster_0.jpg`, `read_bier_coaster_back.jpg` and
-`read_wurst_paper.jpg`.
+- The models' write_ props carry the words: seven surfaces, plus the coasters and the placards.
+- A Bierdeckel's words are printed on its own round face: the front card is in the print, the back card is
+  hidden, and the back is a round card face.
+- Its words stay inside its edge: they reach 0.60 of the radius on the front and 0.79 on the back.
+- The book that opens is `book_open.glb`, with its pages printed on its paper, and it turns a leaf.
+- The signpost's hover label stays inside the canvas, and so does a label at every edge and corner.
+- The still fades only after the deferred part is in.
+
+Bytes the browser fetched before the market opened, measured in the smoke run: **7.16 MB** full (pass 1: 8.34 MB)
+and **5.08 MB** lite (pass 1: 6.26 MB). The JavaScript is gzipped by the preview server.
+
+The new previews were checked by eye:
+
+- `read_bier_coaster_0.jpg`, `read_bier_coaster_back.jpg`: the lite coaster, the print unbroken, the words on the
+  round back.
+- `read_book.jpg`, `read_book_page2.jpg`: the vendor's hardback.
+- `read_glueh_board.jpg`, `read_bier_vomfass.jpg`, `read_wurst_menu.jpg`: the carpenter's boards.
+- `read_wurst_paper.jpg`: the vendor's Marktblatt.
+- `read_band_sheet.jpg`, `read_ferris_notice.jpg`, `read_carousel_ticket.jpg`: the ride builder's cards.
+- `read_books_card.jpg`: the one stand-in left.
 
 ## Files (engineer-owned)
 

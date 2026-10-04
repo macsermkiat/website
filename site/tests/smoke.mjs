@@ -609,8 +609,16 @@ try {
       const ok = await page.waitForFunction(() => window.__market.audio.phase === 'stems', null, { timeout: 300000 }).then(() => true, () => false);
       check('the stems take over from the mix', ok, (await state(page, 'audio')).phase);
       await page.evaluate(() => window.__market.act('band', 'sax'));
-      await page.evaluate(() => window.__market.advance(1.5)); // the analysers feed the levels on each step
-      const lv = (await state(page, 'audio')).levels;
+      // the analysers feed the levels on each step; a ballad has quiet bars and a busy machine starves the audio
+      // thread now and then, so the levels are sampled for up to half a minute of real time, the loudest kept
+      let lv = {};
+      for (let i = 0; i < 15; i++) {
+        await page.evaluate(() => window.__market.advance(1.5));
+        const now = (await state(page, 'audio')).levels;
+        for (const [k, v] of Object.entries(now)) lv[k] = Math.max(lv[k] || 0, v);
+        if (Object.values(lv).some((v) => v > 0.01)) break;
+        await page.waitForTimeout(2000);
+      }
       check('stem levels reach the stage', Object.values(lv).some((v) => v > 0.01), JSON.stringify(lv));
       // the road map: on the last pass the stems run on past loopEnd into the written ending
       const w0 = (await state(page, 'audio')).where;

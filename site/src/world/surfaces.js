@@ -12,6 +12,8 @@ import { label } from './text.js';
 import { viewFor } from '../engine/market.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
+// a write_ card given another print's UVs (printOnto) keeps its own here: they say where its writing area is
+const WRITE_UV = new WeakMap();
 
 /** An area frame: a child of `parent`, at the top-left of a w x h rectangle centred at (cx, cy) in the parent's XY. */
 function areaAt(parent, w, h, cx = 0, cy = 0, z = 0.001) {
@@ -345,7 +347,7 @@ export function writeNodes(root) {
 export function areaFromWriteMesh(node, body = null) {
   const mesh = node.isMesh ? node : node.children.find((c) => c.isMesh);
   const g = mesh?.geometry;
-  const pos = g?.attributes.position, uv = g?.attributes.uv;
+  const pos = g?.attributes.position, uv = (g && WRITE_UV.get(g)) || g?.attributes.uv;
   if (!pos || !uv || pos.count < 3) return null;
   // normal equations for [O U V] from rows [1 u v]
   const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], B = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
@@ -560,12 +562,23 @@ export function printOnto(node, body, sources = null) {
   }
   // every UV set the print has (its colour UVs, and the baked occlusion's second set), vertex for vertex
   const g = card.geometry.clone();
-  for (const k of ['uv', 'uv1', 'uv2']) {
+  // the writing area is still found from the card's own UVs (areaFromWriteMesh)
+  WRITE_UV.set(g, WRITE_UV.get(card.geometry) || card.geometry.attributes.uv);
+  // (and its vertex colours: the vendor's cards carry a tan tint of their own, which the print's material shows)
+  for (const k of ['uv', 'uv1', 'uv2', 'color']) {
     const a = from.geometry.attributes[k];
     if (!a) { if (k !== 'uv') g.deleteAttribute(k); continue; }
-    const out = new Float32Array(cp.count * 2);
-    near.forEach((j, i) => { out[i * 2] = a.getX(j); out[i * 2 + 1] = a.getY(j); });
-    g.setAttribute(k, new THREE.BufferAttribute(out, 2));
+    const n = a.itemSize, out = new Float32Array(cp.count * n);
+    near.forEach((j, i) => { for (let c = 0; c < n; c++) out[i * n + c] = a.getComponent(j, c); });
+    g.setAttribute(k, new THREE.BufferAttribute(out, n));
+  }
+  // and the print's normals there (in the card's frame), so the card is lit as the print around it is
+  const fn = from.geometry.attributes.normal;
+  if (fn && g.attributes.normal) {
+    const nm = new THREE.Matrix3().getNormalMatrix(cardInv.clone().multiply(from.matrixWorld));
+    const out = new Float32Array(cp.count * 3), n = new THREE.Vector3();
+    near.forEach((j, i) => { n.fromBufferAttribute(fn, j).applyMatrix3(nm).normalize(); out.set([n.x, n.y, n.z], i * 3); });
+    g.setAttribute('normal', new THREE.BufferAttribute(out, 3));
   }
   const uvA = g.attributes.uv;
   let cu = 0, cv = 0;

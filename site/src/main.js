@@ -677,15 +677,20 @@ async function boot() {
       root.traverse((o) => { if (!disc && o.isMesh && !/^(write_|engine_)/.test(o.name) && !/^write_/.test(o.parent?.name || '')) disc = o; });
       const reach = {};
       for (const [face, f] of Object.entries(s.faces)) {
-        const box = new THREE.Box3();
-        // each drawn line's block bounds (troika's, in the line's own plane), into the world
-        f.area.traverse((o) => { const b = o.isText && o.visible && o.textRenderInfo?.blockBounds; if (b) for (const [x, y] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) box.expandByPoint(new THREE.Vector3(x, y, 0).applyMatrix4(o.matrixWorld)); });
-        if (box.isEmpty() || !f.r) continue;
+        if (!f.r) continue;
+        f.area.updateWorldMatrix(true, true); // the loop may be held (tests): lines added since the last frame
+        // each drawn line's block bounds (troika's, in the line's own plane), into the area's frame, one by one
         const inv = f.area.matrixWorld.clone().invert();
         const c = new THREE.Vector3(f.w / 2, -f.h / 2, 0);
-        let far = 0;
-        for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) { const p = new THREE.Vector3(x, y, z).applyMatrix4(inv); far = Math.max(far, Math.hypot(p.x - c.x, p.y - c.y)); }
-        reach[face] = +(far / f.r).toFixed(3);
+        let far = 0, n = 0;
+        f.area.traverse((o) => {
+          const b = o.isText && o.visible && o.text?.trim() && o.textRenderInfo?.blockBounds;
+          if (!b) return;
+          n++;
+          const m = inv.clone().multiply(o.matrixWorld);
+          for (const [x, y] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) { const p = new THREE.Vector3(x, y, 0).applyMatrix4(m); far = Math.max(far, Math.hypot(p.x - c.x, p.y - c.y)); }
+        });
+        if (n) reach[face] = +(far / f.r).toFixed(3);
       }
       return { fromModel: !!s.fromModel, frontPrinted: !!fc && !!disc && fc.material === disc.material || (!!fc && /vendor_print/.test(fc.material?.name || '')), backCardHidden: !!bc && !bc.visible, roundBack: !!back?.visible, reach };
     },
