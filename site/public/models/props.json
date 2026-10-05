@@ -208,11 +208,55 @@
    "seat": "span"
   },
   {
-   "set": "prop_schmuck_rail_1",
+   "set": "prop_schmuck_harmonica",
    "stall": "deco-schmuck",
-   "slot": "slot_rail_1",
-   "model": "prop_schmuck_rail_1.glb",
-   "lite": "prop_schmuck_rail_1.lite.glb",
+   "slot": "slot_harmonica_rail",
+   "model": "prop_schmuck_harmonica.glb",
+   "lite": "prop_schmuck_harmonica.lite.glb",
+   "asset": "stall_schmuck.glb",
+   "seat": "hang"
+  },
+  {
+   "set": "prop_schmuck_mirrorball",
+   "stall": "deco-schmuck",
+   "slot": "slot_mirrorball",
+   "model": "prop_schmuck_mirrorball.glb",
+   "lite": "prop_schmuck_mirrorball.lite.glb",
+   "asset": "stall_schmuck.glb",
+   "seat": "hang"
+  },
+  {
+   "set": "prop_schmuck_pyramid",
+   "stall": "deco-schmuck",
+   "slot": "slot_pyramid",
+   "model": "prop_schmuck_pyramid.glb",
+   "lite": "prop_schmuck_pyramid.lite.glb",
+   "asset": "stall_schmuck.glb"
+  },
+  {
+   "set": "prop_schmuck_garland",
+   "stall": "deco-schmuck",
+   "slot": "slot_tinsel_2",
+   "model": "prop_schmuck_garland.glb",
+   "lite": "prop_schmuck_garland.lite.glb",
+   "asset": "stall_schmuck.glb",
+   "seat": "hang"
+  },
+  {
+   "set": "prop_schmuck_tinsel_1",
+   "stall": "deco-schmuck",
+   "slot": "slot_tinsel_1",
+   "model": "prop_schmuck_tinsel_1.glb",
+   "lite": "prop_schmuck_tinsel_1.lite.glb",
+   "asset": "stall_schmuck.glb",
+   "seat": "hang"
+  },
+  {
+   "set": "prop_schmuck_tinsel_3",
+   "stall": "deco-schmuck",
+   "slot": "slot_tinsel_3",
+   "model": "prop_schmuck_tinsel_3.glb",
+   "lite": "prop_schmuck_tinsel_3.lite.glb",
    "asset": "stall_schmuck.glb",
    "seat": "hang"
   },
@@ -466,11 +510,46 @@
    "lite": "prop_deco_puffer.lite.glb",
    "asset": "deco_puffer.glb"
   },
-  "prop_schmuck_rail_1": {
-   "slot": "slot_rail_1",
+  "prop_schmuck_harmonica": {
+   "slot": "slot_harmonica_rail",
    "stall": "deco-schmuck",
-   "model": "prop_schmuck_rail_1.glb",
-   "lite": "prop_schmuck_rail_1.lite.glb",
+   "model": "prop_schmuck_harmonica.glb",
+   "lite": "prop_schmuck_harmonica.lite.glb",
+   "asset": "stall_schmuck.glb"
+  },
+  "prop_schmuck_mirrorball": {
+   "slot": "slot_mirrorball",
+   "stall": "deco-schmuck",
+   "model": "prop_schmuck_mirrorball.glb",
+   "lite": "prop_schmuck_mirrorball.lite.glb",
+   "asset": "stall_schmuck.glb"
+  },
+  "prop_schmuck_pyramid": {
+   "slot": "slot_pyramid",
+   "stall": "deco-schmuck",
+   "model": "prop_schmuck_pyramid.glb",
+   "lite": "prop_schmuck_pyramid.lite.glb",
+   "asset": "stall_schmuck.glb"
+  },
+  "prop_schmuck_garland": {
+   "slot": "slot_tinsel_2",
+   "stall": "deco-schmuck",
+   "model": "prop_schmuck_garland.glb",
+   "lite": "prop_schmuck_garland.lite.glb",
+   "asset": "stall_schmuck.glb"
+  },
+  "prop_schmuck_tinsel_1": {
+   "slot": "slot_tinsel_1",
+   "stall": "deco-schmuck",
+   "model": "prop_schmuck_tinsel_1.glb",
+   "lite": "prop_schmuck_tinsel_1.lite.glb",
+   "asset": "stall_schmuck.glb"
+  },
+  "prop_schmuck_tinsel_3": {
+   "slot": "slot_tinsel_3",
+   "stall": "deco-schmuck",
+   "model": "prop_schmuck_tinsel_3.glb",
+   "lite": "prop_schmuck_tinsel_3.lite.glb",
    "asset": "stall_schmuck.glb"
   },
   "prop_schmuck_rail_2": {

@@ -4,6 +4,7 @@ import os
 import time
 
 import bpy
+import numpy as np
 from mathutils import Matrix, Vector
 
 from . import state
@@ -156,8 +157,9 @@ def camera(loc, target, lens=32, dof=None):
     return cam
 
 
-def render(path_png, samples=48, res=(1280, 720), exposure=0.0, jpeg=None, jpeg_width=1280):
-    """Render the scene camera to PNG (and a review JPEG). Device/threads from NM_DEVICE/NM_THREADS, OIDN denoise."""
+def render(path_png, samples=48, res=(1280, 720), exposure=0.0, jpeg=None, jpeg_width=1280, bloom=0.0):
+    """Render the scene camera to PNG (and a review JPEG). Device/threads from NM_DEVICE/NM_THREADS, OIDN denoise.
+    bloom > 0 (round 9) adds a soft glow round the brightest pixels to the review JPEG only (see bloom())."""
     scene = bpy.context.scene
     state.configure_cycles(scene)
     scene.cycles.samples = samples
@@ -180,8 +182,30 @@ def render(path_png, samples=48, res=(1280, 720), exposure=0.0, jpeg=None, jpeg_
     bpy.ops.render.render(write_still=True)
     print(f"[nmlib] rendered {os.path.basename(path_png)} in {time.time() - t0:.1f}s")
     if jpeg:
-        to_jpeg(path_png, jpeg, jpeg_width)
+        if bloom > 0:
+            bp = path_png[:-4] + "_bloom.png"
+            globals()["bloom"](path_png, bp, strength=bloom)
+            to_jpeg(bp, jpeg, jpeg_width)
+        else:
+            to_jpeg(path_png, jpeg, jpeg_width)
     return path_png
+
+
+def bloom(png, out, strength=0.5, threshold=0.62):
+    """Approximate the site's bloom pass on a rendered image (the engine makes emissive bulbs glow
+    with UnrealBloom): the pixels above `threshold` (brightest channel, display-referred) are
+    blurred at two radii and screened back over the image. Writes `out`."""
+    from PIL import Image, ImageFilter
+    im = Image.open(png).convert("RGB")
+    a = np.asarray(im).astype(np.float32) / 255.0
+    m = np.clip((a.max(-1) - threshold) / (1.0 - threshold), 0, 1)[..., None] * a
+    src = Image.fromarray((m * 255).astype(np.uint8))
+    acc = np.zeros_like(a)
+    for rad, w in ((0.004, 0.6), (0.014, 0.45), (0.04, 0.3)):
+        acc += w * np.asarray(src.filter(ImageFilter.GaussianBlur(rad * im.width))).astype(np.float32) / 255.0
+    res = 1.0 - (1.0 - a) * (1.0 - np.clip(strength * acc, 0, 1))
+    Image.fromarray(np.clip(res * 255 + 0.5, 0, 255).astype(np.uint8)).save(out)
+    return out
 
 
 def to_jpeg(png, jpg, width=1280, quality=88):

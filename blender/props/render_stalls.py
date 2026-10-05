@@ -6,8 +6,8 @@
 Reads site/public/models/props.json, imports the stall glb (deco_<key>.glb) and every set listed for that
 stall (full glbs, decoded), parents each set's root at its slot empty, lights the stall's light_ empties as
 warm point lights with a soft fill from the lane, and renders from in front of the stall. Frames go to
-blender/out/vendor/renders/stall_<key>[_<cam>].png and review/round-8/vendor/stall_<key>[_<cam>].jpg.
---sheet builds review/round-8/vendor/deco_goods_contact_sheet.jpg from the eight deco frames (view cam).
+blender/out/vendor/renders/stall_<key>[_<cam>].png and review/round-9/vendor/stall_<key>[_<cam>].jpg.
+--sheet builds review/round-9/vendor/deco_goods_contact_sheet.jpg from the eight deco frames (view cam).
 Render only: nothing in site/public/models changes.
 """
 import json
@@ -38,7 +38,7 @@ CAMS = {
 # the ornament shop (stall_schmuck.glb) is 4.5 m wide: counter at y -1.22, glass case left, tree dais right
 CAMS_SCHMUCK = {
     "view": ((0.6, -5.6, 1.8), (0.0, -0.7, 1.45), 30),
-    "close": ((0.35, -3.0, 1.75), (0.0, -0.9, 1.55), 30),
+    "close": ((0.35, -3.4, 1.75), (0.0, -0.9, 1.7), 28),     # round 9: counter, harmonica and the valance's Lametta
     "shelf": ((0.2, -2.6, 1.8), (0.0, 1.0, 1.6), 30),
     "tree": ((0.9, -3.4, 1.35), (1.65, -0.9, 1.0), 32),
     "case": ((-1.2, -2.9, 1.35), (-1.73, -1.1, 1.05), 32),

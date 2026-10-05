@@ -64,6 +64,12 @@ async function openPage(url, { reducedMotion = 'no-preference', viewport = { wid
   return { ctx, page };
 }
 
+// a stop-bar button: open the folded bar first (a small screen at a busy stop folds its buttons away)
+async function tapAct(page, sel) {
+  if (await page.evaluate(() => document.getElementById('stopbar')?.classList.contains('folded'))) await page.click('#stopFold');
+  await page.click(sel);
+}
+
 async function waitReady(page) {
   const t0 = Date.now();
   await page.waitForFunction(() => document.documentElement.dataset.ready === 'true' || /could not/.test(document.getElementById('loadingText')?.textContent || ''), null, { timeout: READY_S * 1000 });
@@ -469,7 +475,7 @@ try {
     await page.evaluate(() => window.__market.advance(1));
     check('the on-screen signpost walks to the Glühwein stall', (await page.evaluate(() => window.__market.stop)) === 'glueh' && (await page.evaluate(() => window.__market.arrived)));
     check('the stop bar offers the actions as buttons', (await page.locator('#stopActs [data-action="pour"]').count()) === 1);
-    await page.click('#stopActs [data-action="pour"]');
+    await tapAct(page, '#stopActs [data-action="pour"]');
     check('pour a mug (the ladle fills one of the stall\'s own mugs)', await waitN(/poured tonight: 1/), await noteNow());
     await act('glueh', 'prost');
     // the first voice answers at once, the rest a moment apart (timers, not frames): give them a few seconds
@@ -505,15 +511,15 @@ try {
     await page.evaluate(() => window.__market.advance(2));
     await go('band');
     check('lite: the player buttons say they move the spotlight', /Spotlight/.test(await page.textContent('#stopActs [data-action="sax"]')));
-    await page.click('#stopActs [data-action="sax"]');
+    await tapAct(page, '#stopActs [data-action="sax"]');
     check('feature a band member', /sax/i.test(await noteNow()), await noteNow());
-    await page.click('#stopActs [data-action="whole"]');
-    await page.click('#stopActs [data-play]');
+    await tapAct(page, '#stopActs [data-action="whole"]');
+    await tapAct(page, '#stopActs [data-play]');
     await page.waitForFunction(() => /Pause|could not/.test(document.getElementById('play').textContent), null, { timeout: LONG });
     check('the band plays', /Pause/.test(await page.textContent('#play')), await page.textContent('#nowplaying'));
-    await page.click('#stopActs [data-action="drums"]');
+    await tapAct(page, '#stopActs [data-action="drums"]');
     check('featuring while playing', /drums/i.test(await noteNow()));
-    await page.click('#stopActs [data-play]');
+    await tapAct(page, '#stopActs [data-play]');
     check('the band stops', /Play/.test(await page.textContent('#play')));
     const later = await page.evaluate(() => window.__market.settled());
     check('lite: rides and deco stalls arrive after the first frame', later.deferred >= 2, JSON.stringify(later));
@@ -572,19 +578,35 @@ try {
     // (the shop may be one of the models placed just after the market opens: read the report once there)
     const models = await page.evaluate(() => window.__market.report.models.filter((m) => m.place === 'schmuck'));
     check('the shop is the vendor\'s stall_schmuck.glb, not a deco stall', models.some((m) => /stall_schmuck/.test(m.file || '') && m.kind !== 'deco'), JSON.stringify(models));
-    const want = ['ring', 'star', 'nut', 'smoke', 'candles', 'hang', 'pickle'];
-    const bar = await page.evaluate(() => [...document.querySelectorAll('#stopActs [data-action]')].map((b) => b.dataset.action));
-    check('the stop bar offers the shop\'s seven things to do', want.every((k) => bar.includes(k)), bar.join(' '));
+    // on a small screen the shop's seven things to do fold into one button, so the bar keeps off the stall
+    const fb = await page.evaluate(() => { const b = document.getElementById('stopbar'), f = document.getElementById('stopFold'); return { folded: b.classList.contains('folded'), fold: !f.hidden, h: b.getBoundingClientRect().height, vh: innerHeight, expanded: f.getAttribute('aria-expanded') }; });
+    const nActs = await page.evaluate(() => document.querySelectorAll('#stopActs button').length);
+    check('small screen: the shop\'s stop bar keeps off the stall (under 15 % of the view)', fb.h < 0.15 * fb.vh, JSON.stringify(fb));
+    if (nActs >= 6) {
+      check('small screen: with the shop\'s many things to do, the bar starts folded', fb.folded && fb.fold && fb.expanded === 'false', JSON.stringify({ ...fb, nActs }));
+      await page.click('#stopFold');
+      const fo = await page.evaluate(() => ({ folded: document.getElementById('stopbar').classList.contains('folded'), first: document.querySelector('#stopActs [data-action]')?.offsetParent !== null, expanded: document.getElementById('stopFold').getAttribute('aria-expanded') }));
+      check('"Things to do" opens the bar with every button', !fo.folded && fo.first && fo.expanded === 'true', JSON.stringify(fo));
+    } else log(`the shop's bar has ${nActs} buttons: one row, no need to fold`);
     const S = () => page.evaluate(() => window.__market.handlers.schmuck());
     const s0 = await S();
-    check('the shop\'s goods are found (baubles, tree hooks, candles out, star dark)', s0 && s0.baubles >= 8 && s0.hooks >= 8 && s0.candles.of >= 5 && s0.candles.lit === 0 && !s0.star.on, JSON.stringify(s0));
+    // the seven round-8 interactions; the vendor's round-9 set (ADR 0004 revision) keeps only the bauble row (as a
+    // glass harmonica), the mirror ball and the Schwibbogen. Each runs when the shop's set has its parts.
+    const ALL = ['ring', 'star', 'nut', 'smoke', 'candles', 'hang', 'pickle'];
+    const has = s0?.has || {};
+    const want = ALL.filter((k) => has[k]);
+    const bar = await page.evaluate(() => [...document.querySelectorAll('#stopActs [data-action]')].map((b) => b.dataset.action));
+    log(`the shop's set has: ${want.join(' ')}${want.length < ALL.length ? `; not in it: ${ALL.filter((k) => !has[k]).join(' ')}` : ''}`);
+    check('the stop bar offers what the shop has, and nothing it lacks', want.every((k) => bar.includes(k)) && ALL.filter((k) => !has[k]).every((k) => !bar.includes(k)) && has.ring && has.candles, bar.join(' '));
+    check('the shop\'s goods are found (baubles, candles out, and tree hooks and a dark star when the set has them)', s0 && s0.baubles >= 8 && s0.candles.of >= 5 && s0.candles.lit === 0 && (!has.hang || s0.hooks >= 8) && !s0.star.on, JSON.stringify(s0));
+    const names = await page.evaluate(() => window.__market.handlers.baubleNames());
     await page.evaluate(() => window.__market.freeze(true)); // the clock runs by advance(); timers run in real time
     // a bauble spins and rings a soft glass note, a different note for each bauble
-    const notes = await page.evaluate((n) => Array.from({ length: n }, (_, i) => window.__market.handlers.ornamentNote(`act_orn_bauble_${i}`)), s0.baubles);
+    const notes = await page.evaluate((names) => names.map((n) => window.__market.handlers.ornamentNote(n)), names);
     check('every bauble has its own note', notes.every(Boolean) && new Set(notes).size === notes.length, notes.join(' '));
-    const rung = await page.evaluate(() => {
+    const rung = await page.evaluate((pair) => {
       const m = window.__market, out = [];
-      for (const name of ['act_orn_bauble_0', 'act_orn_bauble_5']) {
+      for (const name of pair) {
         const q0 = m.item(name).quaternion;
         m.clickItem(name);
         m.advance(0.3);
@@ -594,19 +616,25 @@ try {
         m.advance(3);
       }
       return out;
-    });
+    }, [names[0], names[5]]);
     check('a clicked bauble spins and rings its own glass note', rung.every((r) => r.spun && r.note && r.note === r.want) && rung[0].note !== rung[1].note, JSON.stringify(rung));
     // the Herrnhut star lights
-    await page.click('#stopActs [data-action="star"]');
+    if (has.star) {
+    await tapAct(page, '#stopActs [data-action="star"]');
     await page.evaluate(() => window.__market.advance(2.5));
     const s1 = await S();
     check('the Herrnhut star lights', s1.star.on && s1.star.glow > s0.star.glow + 0.3, JSON.stringify([s0.star, s1.star]));
+    }
     // the nutcracker's jaw opens
+    if (has.nut) {
     const jaw = await page.evaluate(() => { const m = window.__market; m.act('schmuck', 'nut'); m.advance(0.12); const a = m.handlers.schmuck().jaw; m.advance(2); return { mid: a, after: m.handlers.schmuck().jaw, crack: m.sfxLog().some((x) => x.name === 'crack') }; });
     check('the nutcracker\'s jaw opens (and a nut cracks)', jaw.mid?.angle > 0.15 && jaw.after.angle < 0.05 && jaw.crack, JSON.stringify(jaw));
+    }
     // the Räuchermännchen puffs smoke
+    if (has.smoke) {
     const sm = await page.evaluate(() => { const m = window.__market; m.act('schmuck', 'smoke'); m.advance(1.2); return m.handlers.schmuck().smoke; });
     check('the Räuchermännchen puffs smoke', sm.left > 0 && sm.opacity > 0, JSON.stringify(sm));
+    }
     // the Schwibbogen's candles light one by one
     const seq = await page.evaluate(() => new Promise((res) => {
       const m = window.__market; m.act('schmuck', 'candles');
@@ -615,31 +643,39 @@ try {
     }));
     check('the Schwibbogen\'s candles light one by one', seq.seen.at(-1) === seq.of && seq.seen.length >= 3, JSON.stringify(seq));
     // an ornament hangs on the tree's hooks, and a second click puts it back on its rail
-    const hung = await page.evaluate(() => {
-      const m = window.__market, name = 'act_orn_bauble_3';
+    if (has.hang) {
+    const hung = await page.evaluate((name) => {
+      const m = window.__market;
       const p0 = m.item(name).position;
       m.clickItem(name); m.advance(2);
       m.act('schmuck', 'hang'); m.advance(3);
       const s = m.handlers.schmuck(), p1 = m.item(name).position;
       m.clickItem(name); m.advance(3);
       return { hung: s.hung, moved: Math.hypot(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]), back: m.handlers.schmuck().hung, home: Math.hypot(...m.item(name).position.map((v, i) => v - p0[i])) };
-    });
-    check('an ornament hangs on a hook of the display tree, and goes back to its rail', hung.hung.includes('act_orn_bauble_3') && hung.moved > 0.1 && !hung.back.length && hung.home < 0.01, JSON.stringify(hung));
+    }, names[3]);
+    check('an ornament hangs on a hook of the display tree, and goes back to its rail', hung.hung.includes(names[3]) && hung.moved > 0.1 && !hung.back.length && hung.home < 0.01, JSON.stringify(hung));
+    }
     // the pickle: a reward, a gentle chime and a line of words in the shop
-    await page.click('#stopActs [data-action="pickle"]');
-    await page.click('#stopActs [data-action="pickle"]');
+    if (has.pickle) {
+    await tapAct(page, '#stopActs [data-action="pickle"]');
+    await tapAct(page, '#stopActs [data-action="pickle"]');
     await page.evaluate(() => window.__market.advance(1.2));
     const pk = await page.evaluate(() => ({ s: window.__market.handlers.schmuck().pickle, chime: window.__market.sfxLog().some((x) => x.name === 'reward'), flag: document.documentElement.dataset.pickle, text: window.__market.textOn ? null : null }));
     check('finding the pickle gives a reward: a chime and a line of words in the scene', pk.s.found && pk.s.reward && /Weihnachtsgurke/.test(pk.s.text || '') && pk.chime && pk.flag === 'found', JSON.stringify(pk));
+    }
+    if (nActs >= 6) {
+      await page.click('#stopFold'); // fold it away again for the picture
+      check('"Things to do" folds the bar away again', await page.evaluate(() => document.getElementById('stopbar').classList.contains('folded')));
+    }
     await page.evaluate(() => window.__market.freeze(false));
     await shot(page, 'stop_schmuck.jpg', '#stage');
     await page.evaluate(() => window.__market.freeze(true));
     await page.evaluate(() => window.__market.advance(9));
-    check('the reward\'s words go after a few seconds', !(await S()).pickle.reward);
+    if (has.pickle) check('the reward\'s words go after a few seconds', !(await S()).pickle.reward);
     // a click in 3D on one of the shop's pieces does its thing
     {
       let done = null;
-      for (const name of ['act_orn_nutcracker', 'act_orn_smoker', 'act_orn_schwibbogen', 'act_orn_herrnhut', 'act_orn_bauble_8', 'act_orn_bauble_2']) {
+      for (const name of ['act_orn_nutcracker', 'act_orn_smoker', 'act_orn_schwibbogen', 'act_orn_herrnhut', 'act_orn_mirrorball', names[8], names[2]]) {
         const aim = await aimAt(page, name);
         if (!aim) continue;
         const n0 = (await page.evaluate(() => window.__market.sfxLog().length));
@@ -705,7 +741,11 @@ try {
       return { seen: [...seen], others: [...seen].filter((n) => !mine.includes(n)) };
     }, st.books);
     check('only the open cabinet\'s books are pickable', grid.seen.length > 0 && !grid.others.length, JSON.stringify(grid).slice(0, 300));
-    const sizes = await page.evaluate((names) => names.map((n) => ({ n, ...window.__market.screenBox(n) })), st.books);
+    const sizes = await page.evaluate((names) => {
+      // a cover under the bar of things to do (or any other control over the canvas) is not in view
+      const bars = [...document.querySelectorAll('#stopbar, #readbar, #signboard')].filter((e) => e.offsetParent !== null).map((e) => e.getBoundingClientRect());
+      return names.map((n) => { const b = window.__market.screenBox(n); const hidden = !!b && bars.some((r) => b.x > r.left && b.x < r.right && b.y > r.top && b.y < r.bottom); return { n, ...b, onScreen: !!b?.onScreen && !hidden }; });
+    }, st.books);
     const small = sizes.filter((b) => !b.onScreen || Math.min(b.w, b.h) < 44);
     check('every cover in the open cabinet is at least 44 px on a 390 px screen, and in view', !small.length, `${sizes.length} covers; smallest ${Math.min(...sizes.map((b) => Math.min(b.w, b.h))).toFixed(1)} px; ${JSON.stringify(small.map((b) => [b.n, Math.round(b.w), Math.round(b.h)]).slice(0, 4))}`);
     await shot(page, 'phone_cabinet_open.jpg', null, { keepScroll: true });
@@ -740,6 +780,9 @@ try {
     await page.evaluate(() => window.__market.advance(2));
     const back = await page.evaluate(() => ({ cab: window.__market.handlers.cabinetState(), stop: window.__market.stop, door: document.documentElement.dataset.cabinet || null }));
     check('Step back shuts the cabinet and returns to the stall\'s view', back.cab === null && back.stop === 'books' && !back.door, JSON.stringify(back));
+    await stillCamera(page);
+    const turnedBack = await page.evaluate((key) => { const m = window.__market, b = m.screenBox(`engine_cabinet_proxy_${key}`); return { faced: m.handlers.facedCabinet(), x: b && Math.round(b.x), onScreen: !!b?.onScreen, closeup: document.documentElement.classList.contains('closeup') }; }, key);
+    check('Step back keeps the view turned toward that cabinet (in view, and ‹ › go on from it)', turnedBack.faced === key && turnedBack.onScreen && turnedBack.x > 20 && turnedBack.x < 370 && !turnedBack.closeup, JSON.stringify(turnedBack));
     const closedPick = await page.evaluate((names) => names.filter((n) => { const b = window.__market.screenBox(n); return b && window.__market.itemAt(b.x, b.y) === n; }), st.books);
     check('with the cabinet shut its books no longer answer the pointer', !closedPick.length, closedPick.join(' '));
     await ctx.close();
@@ -842,7 +885,7 @@ try {
     check('missing glbs are reported as bindings that did not resolve (nothing guessed)', report.bindings.length >= 10 && report.bindings.every((b) => /(is|are) not in site\/public\/models|nor .* is in site\/public\/models|no asset/.test(b.problem)), JSON.stringify(report.bindings.filter((b) => !/(is|are) not in site\/public\/models|nor .* is in site\/public\/models|no asset/.test(b.problem)).slice(0, 4)));
     await page.evaluate(() => window.__market.walkTo('glueh'));
     await page.evaluate(() => window.__market.advance(1));
-    await page.click('#stopActs [data-action="pour"]');
+    await tapAct(page, '#stopActs [data-action="pour"]');
     await page.evaluate(() => window.__market.advance(6));
     check('stand-ins keep the actions working', /poured tonight: 1/.test(await note(page)), await note(page));
     check('stand-ins keep the writing surfaces (the chalkboard is still read in 3D)', await page.evaluate(() => window.__market.read('glueh.board')) && (await page.evaluate(() => window.__market.pieces().length)) >= 9);
@@ -856,6 +899,13 @@ try {
     check('?perf shows the frame-time meter with its Tour button', await p2.locator('.perf button', { hasText: 'Tour' }).isVisible());
     await p2.evaluate(() => window.__market.settled());
     const r2 = await p2.evaluate(() => window.__market.report.models);
+    // the writing surfaces' troika text used to count Infinity triangles on the frame before its first glyph sync
+    await p2.evaluate(() => window.__market.read('glueh.board'));
+    await frames(p2, 4);
+    await p2.evaluate(() => window.__market.closeRead());
+    await frames(p2, 2);
+    const ps = await p2.evaluate(() => window.__market.perf());
+    check('the triangle count stays finite on every frame (troika text before its first sync)', ps && ps.badTriangles === 0 && Number.isFinite(ps.triangles) && ps.triangles > 0, JSON.stringify({ bad: ps?.badTriangles, tris: ps?.triangles, frames: ps?.frames }));
     check('two missing glbs: just those two are stand-ins', r2.filter((m) => m.source === 'standin').map((m) => m.id).sort().join() === 'bierstand,riesenrad', JSON.stringify(r2.filter((m) => m.source === 'standin')));
     await c2.close();
   }

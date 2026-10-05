@@ -89,8 +89,11 @@ function triangles(doc, frame) {
       if ((nm.startsWith('act_') || nm.startsWith('rot_')) && !nm.endsWith('_mesh')) { owner = nm; break; }
       p = parentOf.get(p);
     }
-    const W = F ? mul(F, node.getWorldMatrix()) : node.getWorldMatrix();
-    for (const prim of mesh.listPrimitives()) {
+    const W0 = F ? mul(F, node.getWorldMatrix()) : node.getWorldMatrix();
+    // round 9: an EXT_mesh_gpu_instancing node draws its mesh once per instance (TRS relative to the node)
+    const batch = node.getExtension('EXT_mesh_gpu_instancing');
+    const Ws = batch ? instanceMatrices(batch).map((M) => mul(W0, M)) : [W0];
+    for (const W of Ws) for (const prim of mesh.listPrimitives()) {
       if (prim.getMode() !== 4) continue;
       const pos = prim.getAttribute('POSITION').getArray();
       const idx = prim.getIndices() ? prim.getIndices().getArray() : null;
@@ -103,6 +106,23 @@ function triangles(doc, frame) {
       }
       out.push({ owner, verts: vs, tris });
     }
+  }
+  return out;
+}
+
+function instanceMatrices(batch) {
+  const T = batch.getAttribute('TRANSLATION'), R = batch.getAttribute('ROTATION'), S = batch.getAttribute('SCALE');
+  const n = (T || R || S).getCount();
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const t = T ? T.getElement(i, []) : [0, 0, 0];
+    const [x, y, z, w] = R ? R.getElement(i, []) : [0, 0, 0, 1];
+    const s = S ? S.getElement(i, []) : [1, 1, 1];
+    out.push([
+      (1 - 2 * (y * y + z * z)) * s[0], (2 * (x * y + z * w)) * s[0], (2 * (x * z - y * w)) * s[0], 0,
+      (2 * (x * y - z * w)) * s[1], (1 - 2 * (x * x + z * z)) * s[1], (2 * (y * z + x * w)) * s[1], 0,
+      (2 * (x * z + y * w)) * s[2], (2 * (y * z - x * w)) * s[2], (1 - 2 * (x * x + y * y)) * s[2], 0,
+      t[0], t[1], t[2], 1]);
   }
   return out;
 }

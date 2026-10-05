@@ -24,15 +24,17 @@ FAIL (exit 1):
 - full / lite bounds parity: every act_ node's subtree (the node and everything under it) has the same
   world bounding box in the lite glb as in the full glb within 1 cm, and every named mesh node within 2 cm
   (so a lite simplification that changes the shape, e.g. a foam head growing into a column, fails)
-- round 8 (ADR 0004): every deco stall <= 20k with its goods and no act_ nodes (scenery since 2026-10-05); the ornament shop (stall_schmuck.glb) <= 40k triangles and 2 MB with its goods, and it carries
-  >= 12 act_orn_bauble_<n>, act_orn_pickle, the pine cone, bird, mushroom, icicle, straw/wooden stars, angels,
-  act_orn_herrnhut with a bulb_warm core, act_orn_nutcracker_jaw, act_orn_smoker with fx_smoke_<n>, the
-  Schwibbogen with act_orn_candle_<n> and hook_tree_<n> empties; every deco act_ item has a label and action.
+- round 8 (ADR 0004): every deco stall <= 20k with its goods and no act_ nodes (scenery since 2026-10-05).
+- round 9 (ADR 0004 revision): the ornament shop (stall_schmuck.glb) <= 60k triangles and 3 MB with its goods
+  and their shared textures; exactly three interactive groups: act_orn_harmonica_0..11 in one row (left to
+  right, one level), act_orn_mirrorball with cam_dive / cam_dive_target, act_orn_schwibbogen with
+  act_orn_candle_0..6; no other act_orn_ node and no items.json entry for anything else in the shop; rot_pyramid,
+  at least two tinsel_<n> meshes, fx_smoke_1 and a bulb_warm (the Herrnhut stars) present.
   Sets with a 'seat' of hang / stand / ground skip the board y-range test (collisions are still tested).
 WARN (listed, exit 0): lite versions above 38 % of the full triangles (target about a third).
 
     python3 blender/props/check_props.py --notes   also rewrites the budget tables in
-                                                   review/round-8/vendor/NOTES.md from the current glbs
+                                                   review/round-9/vendor/NOTES.md from the current glbs
 """
 import json
 import os
@@ -60,14 +62,15 @@ SECTION_SETS = ["prop_gluehwein_counter", "prop_gluehwein_shelf", "prop_gluehwei
 STALL_BUDGET = {"buecherstand": (80000, 4.0)}
 DECO_KEYS = ["lebkuchen", "mandeln", "kerzen", "spielzeug", "schmuck", "kaese", "crepes", "maroni", "puffer"]
 FILL_KEYS = [d for d in DECO_KEYS if d != "schmuck"]
-SCHMUCK_SETS = [f"prop_schmuck_{g}" for g in ("rail_1", "rail_2", "rail_3", "rail_4", "counter", "shelf", "case", "tree")]
-SCHMUCK_TRIS, SCHMUCK_MB = 40000, 2.0
+SCHMUCK_SETS = [f"prop_schmuck_{g}" for g in ("harmonica", "mirrorball", "pyramid", "garland", "tinsel_1", "tinsel_3",
+                                               "rail_2", "rail_3", "rail_4", "counter", "shelf", "case", "tree")]
+SCHMUCK_TRIS, SCHMUCK_MB = 60000, 3.0         # BUILD.md round 9: the ornament shop with its goods
 # BUILD.md: a deco stall with its goods <= 1 MB. Round 8 pass 2 (judges): counted as the stall glb plus its own
 # goods glb only; the shared prop textures (prop_tex_*) load once for the whole market, so they are reported in
 # their own column and not charged to every stall (the ornament shop still counts them, the stricter reading)
 DECO_MB = 1.0
 NO_AO = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade",
-         "write_")
+         "write_", "vendor_mercury", "vendor_gloss", "tinsel")
 BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|sausage|coaster)_\d+$|^act_grill$"
                         r"|^act_writing_paper$")
 # round 6 pass 2 (judges): back to 2k of headroom under each section stall's 60k, after trimming the props
@@ -75,7 +78,7 @@ BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|
 HEADROOM, SECTION_TRIS, SECTION_MB, DECO_TRIS = 2000, 60000, 3.0, 20000
 LITE_RATIO = 0.38
 ACT_BBOX_TOL, MESH_BBOX_TOL = 0.01, 0.02          # m: full vs lite bounds of act_ subtrees / mesh nodes
-NOTES = os.path.join(REPO, "review", "round-8", "vendor", "NOTES.md")
+NOTES = os.path.join(REPO, "review", "round-9", "vendor", "NOTES.md")
 SEAT = os.path.join(HERE, "seat_check.mjs")
 
 fails, warns = [], []
@@ -339,7 +342,13 @@ def check_bounds_parity(name, js_full, js_lite):
     within MESH_BBOX_TOL (glTF frame, metres). Returns the worst difference seen (for the summary)."""
     bf, bl = node_boxes(js_full), node_boxes(js_lite)
     worst, bad_act, bad_mesh = 0.0, [], []
+    inst = {nd.get("name") for js in (js_full, js_lite) for nd in js.get("nodes", [])
+            if "EXT_mesh_gpu_instancing" in nd.get("extensions", {})}
     for n in sorted(set(bf) & set(bl)):
+        if n in inst:
+            # round 9: an instanced batch's own box is its proto in quantised space, not where its copies stand;
+            # the copies' places are the same in both builds (one layout), only the proto's segment count differs
+            continue
         (of, sf), (ol, sl) = bf[n], bl[n]
         if is_act(n) and sf and sl:
             d = _box_diff(sf, sl)
@@ -588,39 +597,56 @@ def check_books(items, seen):
 
 
 def check_fill(sets, items, seen):
-    """Round 8 (ADR 0004): deco items carry label and action; the ornament shop has its named pieces."""
+    """Round 9 (ADR 0004 revision): the ornament shop has exactly its three interactive groups."""
     for n, st in seen.items():
         it = items.get(n, {})
         if it.get("kind") == "deco" and not (it.get("label") and it.get("action")):
             fail(f"items.json: {n} ({st}) lacks label or action")
     orn = {n for n, st in seen.items() if st in SCHMUCK_SETS}
-    baubles = [n for n in orn if re.match(r"^act_orn_bauble_\d+$", n)]
-    if len(baubles) < 12:
-        fail(f"ornament shop: {len(baubles)} act_orn_bauble_<n> (want at least 12)")
-    for want in ("act_orn_pickle", "act_orn_herrnhut", "act_orn_nutcracker_jaw", "act_orn_smoker",
-                 "act_orn_schwibbogen"):
-        if want not in orn:
-            fail(f"ornament shop: missing {want}")
-    for kind in ("pinecone", "bird", "mushroom", "icicle", "strawstar", "woodstar", "angel", "candle"):
-        if not any(re.match(rf"^act_orn_{kind}_\d+$", n) for n in orn):
-            fail(f"ornament shop: no act_orn_{kind}_<n>")
-    extra = {}
+    want = {f"act_orn_harmonica_{i}" for i in range(12)} | {"act_orn_mirrorball", "act_orn_schwibbogen"} | \
+        {f"act_orn_candle_{i}" for i in range(7)}
+    if orn - want:
+        fail(f"ornament shop: act_ nodes beyond the three interactive groups: {sorted(orn - want)}")
+    if want - orn:
+        fail(f"ornament shop: missing {sorted(want - orn)}")
+    stale = sorted(k for k, it in items.items() if it.get("stall") == "deco-schmuck" and k not in want)
+    if stale:
+        fail(f"items.json: stale ornament shop entries {stale[:8]}")
+    rep = json.load(open(REPORT)) if os.path.exists(REPORT) else {}
+    piv = rep.get("prop_schmuck_harmonica", {}).get("pivots", {})
+    org = [piv.get(f"act_orn_harmonica_{i}", {}).get("origin") for i in range(12)]
+    if all(org):
+        xs = [o[0] for o in org]
+        if any(b <= a for a, b in zip(xs[:-1], xs[1:])):
+            fail("ornament shop: act_orn_harmonica_0..11 do not run left to right")
+        if max(o[2] for o in org) - min(o[2] for o in org) > 0.005 or max(o[1] for o in org) - min(o[1] for o in org) > 0.005:
+            fail("ornament shop: the harmonica's knots are not in one row")
+    else:
+        fail("ornament shop: no pivot report for the harmonica (run build_props.py)")
+    names = {}
     for name in SCHMUCK_SETS:
         if name not in sets:
+            fail(f"ornament shop: {name} missing from props.json")
             continue
         js, _ = glb_tools.read_glb(os.path.join(MODELS, sets[name]["model"]))
-        names = glb_tools.node_names(js)
-        extra[name] = names
-        mats = {m.get("name", "") for m in js.get("materials", [])}
-        if name == "prop_schmuck_rail_1" and "bulb_warm" not in mats:
-            fail("act_orn_herrnhut has no bulb_warm material inside")
-    allnames = [n for v in extra.values() for n in v]
-    if not any(n.startswith("fx_smoke_") for n in allnames):
-        fail("ornament shop: act_orn_smoker has no fx_smoke_<n> empty")
-    hooks = [n for n in allnames if re.match(r"^hook_tree_\d+$", n)]
-    if not hooks:
-        fail("ornament shop: the display tree has no hook_tree_<n> empties")
-    print(f"\nornament shop: {len(orn)} act_orn nodes ({len(baubles)} baubles), {len(hooks)} tree hooks")
+        names[name] = (glb_tools.node_names(js), {m.get("name", "") for m in js.get("materials", [])})
+    alln = [n for v, _ in names.values() for n in v]
+    allm = set().union(*(m for _, m in names.values())) if names else set()
+    mb = names.get("prop_schmuck_mirrorball", ([], set()))[0]
+    for e in ("cam_dive", "cam_dive_target"):
+        if e not in mb:
+            fail(f"ornament shop: prop_schmuck_mirrorball has no {e}")
+    if "rot_pyramid" not in names.get("prop_schmuck_pyramid", ([], set()))[0]:
+        fail("ornament shop: prop_schmuck_pyramid has no rot_pyramid")
+    tins = sorted({n for n in alln if re.match(r"^tinsel_\d+$", n)})
+    if len(tins) < 2:
+        fail(f"ornament shop: {len(tins)} tinsel_<n> swags (want at least 2)")
+    if "fx_smoke_1" not in alln:
+        fail("ornament shop: the smoker has no fx_smoke_1")
+    if "bulb_warm" not in allm:
+        fail("ornament shop: no bulb_warm (the Herrnhut stars' cores)")
+    print(f"\nornament shop: {len(orn)} act_orn nodes (harmonica 12, mirror ball, Schwibbogen + 7 candles), "
+          f"{len(tins)} tinsel swags {tins}, rot_pyramid, cam_dive")
 
 
 def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite):
@@ -641,10 +667,10 @@ def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite
     for st, a, b, tot, room, mb, lt, lmb in section_rows:
         L.append(f"| {st} | {a} | {b} | {tot} / {lt // 1000}k {'OK' if room >= HEADROOM else 'FAIL'} | {room} | "
                  f"{mb:.2f} / {lmb:.0f} |")
-    L += ["", "Deco stalls, stall plus its one scenery goods set against 20k (the ornament shop, stall_schmuck.glb, with its eight goods sets against "
-          "40k and 2 MB; check_props fails over). MB is the stall glb plus its goods glb against the 1 MB budget; the "
+    L += ["", "Deco stalls, stall plus its one scenery goods set against 20k (the ornament shop, stall_schmuck.glb, with its "
+          f"{len(SCHMUCK_SETS)} goods sets against 60k and 3 MB; check_props fails over)." " MB is the stall glb plus its goods glb against the 1 MB budget; the "
           "shared prop textures load once for the whole market and are listed apart (the ornament shop's MB includes "
-          "them, against its 2 MB):", "",
+          "them, against its 3 MB):", "",
           "| deco stall | stall tris | goods | total / budget | room | act_ nodes (0: scenery) | MB stall + goods / budget "
           "| shared textures used (loaded once) |",
           "|---|---|---|---|---|---|---|---|"]
@@ -785,8 +811,8 @@ def main():
         if tot > lim:
             fail(f"deco {d}: stall {sr['triangles']} + goods {pt} = {tot} > {lim} "
                  f"({'the stall alone leaves ' + str(max(0, lim - sr['triangles'])) + ' for goods'})")
-        if d == "schmuck" and n_act < 5:
-            fail(f"ornament shop: only {n_act} clickable act_ nodes")
+        if d == "schmuck" and n_act != 21:
+            fail(f"ornament shop: {n_act} clickable act_ nodes (want 21: 12 harmonica, mirror ball, Schwibbogen, 7 candles)")
         if d != "schmuck" and n_act:
             fail(f"deco {d}: {n_act} act_ nodes (deco stalls are scenery since 2026-10-05)")
         if d != "schmuck" and any(it.get("stall") == sid for it in items.values()):

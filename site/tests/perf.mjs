@@ -73,12 +73,14 @@ try {
     const t = TARGET[market] || TARGET.full;
     const stops = tour.lines.map((s) => ({ ...s, ok: s.p50 <= t.p50 && s.p95 <= t.p95 }));
     for (const s of stops) console.log(`  ${s.ok ? 'ok  ' : 'MISS'} ${s.view.padEnd(12)} median ${String(s.p50).padStart(5)} ms  p95 ${String(s.p95).padStart(5)} ms  ${s.calls} draws  ${(s.triangles / 1000).toFixed(0)}k tris`);
+    const badTriangles = await page.evaluate(() => window.__market.perf()?.badTriangles ?? 0);
+    console.log(`  triangle count: ${badTriangles ? `${badTriangles} frames counted a non-finite number of triangles` : 'finite on every frame'}`);
     const crowd = await page.evaluate(() => { const c = window.__market.crowd(); return { people: c.people, lodFar: c.lodFar, far: c.far, mixers: c.mixers, updateMs: c.updateMs }; });
     console.log(`  crowd ${crowd.people} people: ${crowd.far?.drawn ?? 0} drawn as far instances in ${crowd.far?.meshes ?? 0} draws (${crowd.far?.figures ?? 0} figures baked in ${crowd.far?.bakeMs ?? 0} ms); mixers ran ${crowd.mixers?.ran ?? '?'}, throttled ${crowd.mixers?.throttled ?? '?'}; crowd update ${crowd.updateMs ?? '?'} ms/frame`);
     const software = SOFTWARE.test(gpu);
     if (software) { console.log('  software GL: these numbers are not a GPU measurement'); verdict = 2; }
     else if (stops.some((s) => !s.ok) && verdict === 0) verdict = 1;
-    report.markets[market] = { gpu, software, target: t, firstLoadBytes: firstLoad, crowd, stops, errors };
+    report.markets[market] = { gpu, software, target: t, firstLoadBytes: firstLoad, crowd, badTriangles, stops, errors };
     await ctx.close();
   }
 } finally {

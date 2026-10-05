@@ -363,6 +363,10 @@ export function renderPage(page, { theme: themeKey = 'print', glow = 0.12, z = 0
     for (const { s, line, dx } of specs) {
       const t = new troika.Text();
       t.isText = true;
+      // troika's glyph geometry is an InstancedBufferGeometry whose instanceCount starts at Infinity until its first
+      // glyph sync; three draws it once before then (no instance attributes, so no _maxInstanceCount cap) and adds
+      // Infinity to renderer.info.render.triangles. Nothing is drawn: start the count at 0 (the sync sets it).
+      t.geometry.instanceCount = 0;
       t.text = s.text;
       t.font = FONTS[s.font].url;
       t.fontSize = s.size;

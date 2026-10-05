@@ -151,6 +151,11 @@ mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-rad
 .stopbar .goods { margin: 0; font-size: 13px; position: relative; }
 .stopbar .goods summary { cursor: pointer; color: var(--muted); padding: 6px 8px; }
 .stopbar .goods[open] .goodslist { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: min(560px, 86vw); max-height: 190px; overflow: auto; background: rgba(10, 12, 22, .92); border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+/* a small screen at a busy stop: the things to do fold into one button, so the stall stays in view */
+.stopbar .fold { min-height: 34px; font-size: 13.5px; padding: 5px 12px; }
+.stopbar .fold::after { content: " \25B4"; }
+.stopbar .fold[aria-expanded="true"]::after { content: " \25BE"; }
+.stopbar.folded .acts, .stopbar.folded .goods { display: none; }
 .stepback { position: absolute; right: 12px; top: 12px; z-index: 4; display: none; min-height: 36px; font-size: 14px; }
 .closeup .stepback { display: inline-block; }
 /* a narrow screen at the Bücherstand: turn to the cabinets off either edge (hidden in a close-up, while reading) */
@@ -158,6 +163,8 @@ mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-rad
 .cabturn.left { left: 8px; } .cabturn.right { right: 8px; }
 @media (max-width: 640px) {
   html[data-stop="books"][data-walking="false"]:not(.closeup):not(.reading) .cabturn { display: inline-block; }
+  /* an open cabinet fills the phone's screen: the bar of things to do steps aside (Step back is the way out) */
+  html[data-cabinet] .stopbar { display: none; }
 }
 .reading .stepback, .reading .stopbar { display: none; }
 .readbar .readtitle { font-size: 13.5px; color: var(--ink); padding: 0 6px; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }

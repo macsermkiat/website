@@ -39,7 +39,7 @@ def setup_device(scene=None, var="NM_DEVICE"):
 
 # materials that get no occlusion texture: see-through or self-lit
 AO_SKIP = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade",
-           "write_")
+           "write_", "vendor_mercury", "vendor_gloss", "tinsel")
 
 
 def bake_ao(name, res, samples=32, distance=0.12, floor=0.4):
@@ -52,7 +52,7 @@ def bake_ao(name, res, samples=32, distance=0.12, floor=0.4):
     t0 = time.time()
     # the plain write_ faces get no AO (docs/adr/0003: a clean surface for the engine's text)
     targets = [o for o in state.export_collection().all_objects if o.type == 'MESH' and o.data.polygons
-               and not o.name.startswith("write_")]
+               and not o.name.startswith("write_") and o.data.users == 1]   # round 9: no AO on instanced repeats
     if not targets:
         return None
     scene = bpy.context.scene

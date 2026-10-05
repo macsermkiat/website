@@ -89,8 +89,11 @@ def buecher_required():
 
 
 # round 8 (docs/adr/0004): the ornament shop's extra nodes (slot_rail_<n> checked as a prefix)
-SCHMUCK_REQUIRED = ["slot_tree", "slot_cabinet", "light_0", "light_1"]
-SCHMUCK_PREFIXES = ["slot_rail_"]
+SCHMUCK_REQUIRED = ["slot_tree", "slot_cabinet", "light_0", "light_1",
+                    # round 9 (ADR 0004 revision): the sparkle pass and the three interactions' slots
+                    "slot_harmonica_rail", "slot_mirrorball", "slot_pyramid"]
+SCHMUCK_PREFIXES = ["slot_rail_", "slot_tinsel_", "mirror_"]
+SCHMUCK_MATERIALS = ["mirror_foxed"]
 # round 8: every deco stall has a hanging rail and a crate spot for the vendor's goods
 DECO_REQUIRED = ["slot_rail_1", "slot_crate"]
 
@@ -130,6 +133,16 @@ def check_stall(path, extra_required=()):
     mats = [m.get("name") for m in js.get("materials", [])]
     if not any(m in ("bulb_warm", "bulb_cold") for m in mats):
         missing.append("material bulb_warm|bulb_cold")
+    if base.startswith("stall_schmuck"):
+        missing += [f"material {m}" for m in SCHMUCK_MATERIALS if m not in mats]
+        # round 9: the mirror mesh must carry mirror_foxed, and the canopy needs more than one bulbs_ mesh
+        for n in js.get("nodes", []):
+            if n.get("name", "").startswith("mirror_") and "mesh" in n:
+                prims = js["meshes"][n["mesh"]]["primitives"]
+                if not all(js["materials"][p["material"]].get("name") == "mirror_foxed" for p in prims if "material" in p):
+                    missing.append(f"{n['name']} material mirror_foxed")
+        if sum(1 for nm in names if nm.startswith("bulbs_")) < 2:
+            missing.append("bulbs_* (eave and canopy)")
     return missing
 
 

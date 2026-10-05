@@ -419,6 +419,9 @@ def add_face_out(s, nn, b, loc, lean, cmax):
     return w
 
 
+COVER_GLOW_MID, COVER_GLOW_RIGHT, COVER_GLOW_LEFT = 0.1, 0.14, 0.24    # added to vlib.BOOK_GLOW (0.3), round 9
+
+
 def section_set(key):
     """prop_books_<key> (round 8, ADR 0004): Mac's books of one category face-out in the category's glazed
     cabinet (buecher_sections.json): one act_book_<nn> per title at the board's cover_slots_x, filled from the
@@ -434,9 +437,16 @@ def section_set(key):
     s = vlib.PropSet(f"prop_books_{key}", sec["slot"], "buecherstand", footprint=(W, sec["spine_board"]["depth"]))
     m = s.static
     cmax = sec["cover_max"]
+    glow = {}
     for (nn, b), (bd, x) in zip(books, places):
         ox, oy, oz = bd["offset"]
         lean = math.radians(bd["lean_deg"])
+        # round 9 (judges, round 8: the lives cabinet's left column still read dim at cam_cat): every cover glows
+        # a little more than in round 8, and the outer columns more again, where the cabinet's stiles shade them
+        # from its lamps (the left one most: the lamps sit right of centre in the cam_cat views)
+        cols = sorted(bd["cover_slots_x"])
+        glow[nn] = vlib.BOOK_GLOW + (COVER_GLOW_LEFT if x == cols[0] else COVER_GLOW_RIGHT if x == cols[-1]
+                                     else COVER_GLOW_MID)
         # the foot's back edge 3 mm in front of the backboard's foot (ledge_depth behind the lip), so the cover
         # leans parallel to the backboard without touching it
         add_face_out(s, nn, b, (ox + x + rng.uniform(-0.002, 0.002), oy + bd["ledge_depth"] - 0.004, oz), lean, cmax)
@@ -451,6 +461,10 @@ def section_set(key):
     x, k = filler_run(m, x0, x1, oy + SPINE_SET + 0.012, oz, min(sb["clear_height"] - 0.06, 0.16), min(sb["depth"], 0.2), k)
     bookend(m, T(x + 0.003, oy + SPINE_SET + 0.012, oz), side=-1)
     s.finish()
+    for nn, g in glow.items():
+        b_ = vlib.material(f"book:{nn:02d}").node_tree.nodes["Principled BSDF"]
+        b_.inputs["Emission Strength"].default_value = g
+    s.report_extra = {"cover_glow": {f"book_cover_{nn:02d}": round(g, 2) for nn, g in glow.items()}}
     return s
 
 

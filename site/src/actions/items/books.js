@@ -366,6 +366,20 @@ export function createBooks(ctx) {
     return cab.key;
   }
 
+  /** The view to step back to from an open cabinet: from the stop, still turned toward that cabinet (so a phone's
+   *  ‹ › go on from it). Null when no cabinet is open. It also marks that cabinet as the one faced. */
+  let faceAfter = -1;
+  function backView() {
+    if (!openCab) return null;
+    const v = ctx.stopEye?.();
+    const c = centreOf(openCab);
+    if (!v || !c) return null;
+    const dist = c.distanceTo(v.pos);
+    const t = Math.tan(THREE.MathUtils.degToRad((ctx.camera?.fov || 55) / 2));
+    faceAfter = cabinetsLeftToRight().indexOf(openCab);
+    return { pos: v.pos.clone(), target: c.clone().addScaledVector(UP, -dist * t * 0.3), near: 0.5 };
+  }
+
   /** The arrows at the Bücherstand (keyboard.js asks first). Returns true when the key was used. */
   function cabinetKey(key) {
     if (!cabinets.length) return false;
@@ -417,6 +431,7 @@ export function createBooks(ctx) {
       closeCabinet: () => closeCabinet(),
       /** Turn toward the next (1) or previous (-1) cabinet from the stop (a narrow screen); 0 turns back. */
       turnCabinets,
+      backView,
       facedCabinet: () => (faced >= 0 ? cabinetsLeftToRight()[faced]?.key || null : null),
       /** The open cabinet (tests): its key, door angle, its books and which of them the pointer may pick. */
       cabinetState: () => (openCab ? { key: openCab.key, open: openCab.open, focus: focusIdx >= 0 ? openCab.books[focusIdx]?.name : null, books: openCab.books.map((n) => n.name), door: openCab.door ? +(2 * Math.acos(Math.min(1, Math.abs(openCab.door.quaternion.dot(openCab.r0.q))))).toFixed(3) : null } : null),
@@ -437,7 +452,7 @@ export function createBooks(ctx) {
       /** The book standing open (for tests): its node name, title and state. */
       openedBook: () => (open ? { name: open.n.name, slug: open.d.slug, title: open.d.title, author: open.d.author, note: open.d.note, mac: !!open.d.mac, state: open.state, model: open.group?.fromModel ? 'book_open.glb' : open.group ? 'engine' : null } : null),
     },
-    retract: () => { close({ retract: true }); closeCabinet(); faced = -1; },
+    retract: () => { close({ retract: true }); closeCabinet(); faced = faceAfter; faceAfter = -1; },
     /** Books in a cabinet answer the pointer only while that cabinet is open; the rest only while none is. */
     pickable(item) {
       if (item.kind !== 'book' || !cabinets.length) return undefined;

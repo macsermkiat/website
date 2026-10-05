@@ -9,9 +9,37 @@ const $ = (id) => document.getElementById(id);
 
 export function createStopbar({ actionsFor, itemsFor, readsFor, onRead, onStep, playButtonLabel }) {
   const bar = $('stopbar'), acts = $('stopActs'), goods = $('goods'), here = $('hereName'), hereSub = $('hereSub');
-  const prev = $('prevStop'), next = $('nextStop');
+  const prev = $('prevStop'), next = $('nextStop'), fold = $('stopFold');
   let current = null;
   let steps = { prev: null, next: null };
+  // On a small screen a busy stop (the ornament shop's seven things to do) would cover the lower third of the
+  // stall, so its buttons fold into one "Things to do" button. A visitor who opens it keeps it open.
+  const small = window.matchMedia?.('(max-width: 640px), (max-height: 720px)');
+  let userOpen = false;
+
+  function setFolded(on) {
+    bar.classList.toggle('folded', on);
+    fold.setAttribute('aria-expanded', String(!on));
+  }
+  function autoFold() {
+    if (!current) return;
+    setFolded(false);
+    fold.hidden = true;
+    const count = acts.children.length + (goods.hidden ? 0 : 1);
+    const tall = bar.offsetHeight > 0.2 * window.innerHeight;
+    const can = !!small?.matches && count > 3 && tall;
+    fold.hidden = !can;
+    fold.textContent = `Things to do (${acts.children.length})`;
+    if (can && !userOpen) setFolded(true);
+  }
+  fold.addEventListener('click', () => {
+    const open = bar.classList.contains('folded');
+    userOpen = open;
+    setFolded(!open);
+    if (open) acts.querySelector('button')?.focus({ preventScroll: true });
+  });
+  small?.addEventListener?.('change', autoFold);
+  window.addEventListener('resize', () => { if (current && !bar.hidden) autoFold(); });
 
   prev.addEventListener('click', () => steps.prev && onStep(steps.prev));
   next.addEventListener('click', () => steps.next && onStep(steps.next));
@@ -82,11 +110,14 @@ export function createStopbar({ actionsFor, itemsFor, readsFor, onRead, onStep, 
       box.appendChild(b);
     }
     goods.open = false;
+    autoFold();
   }
 
   return {
     show,
     hide() { show(null); },
+    get folded() { return bar.classList.contains('folded'); },
+    unfold() { userOpen = true; setFolded(false); },
     get current() { return current; },
     syncPlay(label) { bar.querySelectorAll('[data-play]').forEach((b) => (b.textContent = label)); },
     refresh() { if (current) show(current, { prevId: steps.prev, nextId: steps.next }); },

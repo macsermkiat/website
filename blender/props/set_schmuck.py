@@ -1,194 +1,310 @@
-"""Round 8 (ADR 0004): the ornament shop's goods, prop_schmuck_<group>.glb (+ lite), at the slots of the
-carpenter's stall_schmuck.glb (blender/stalls/schmuck_slots.json; it replaces deco_schmuck at deco-schmuck):
+"""Round 9 (ADR 0004 revision, Mac 2026-10-05): the ornament shop's goods, prop_schmuck_<group>.glb (+ lite), at
+the slots of the carpenter's stall_schmuck.glb (blender/stalls/schmuck_slots.json).
 
-    prop_schmuck_rail_1   slot_rail_1   front rail over the counter: 16 glass baubles (two octaves) and the
-                                        lit Herrnhut star in the middle
-    prop_schmuck_rail_2   slot_rail_2   inner rail over the counter's back edge: figure ornaments (the pickle
-                                        among green baubles, pine cone, clip-on bird, mushroom, icicles),
-                                        straw stars, carved stars, angels, six more baubles
-    prop_schmuck_rail_3   slot_rail_3   rail over the glass case: straw and carved stars, an angel, an icicle
-    prop_schmuck_rail_4   slot_rail_4   short drop over the tree: clip-on birds and small straw stars
-    prop_schmuck_counter  slot_counter  nutcracker (jaw), Räuchermännchen (smoke), Schwibbogen (candles),
-                                        trays of baubles, boxes
-    prop_schmuck_shelf    slot_shelf_1  the three shelf tiers (offsets from schmuck_slots.json): boxes, standing
-                                        angels, straw stars, a pair of soldier nutcrackers, the menu board
-    prop_schmuck_case     slot_cabinet  the glass case: a velvet tray of mirror baubles, angels on the glass shelf
-    prop_schmuck_tree     slot_tree     the little display tree on the dais with hook_tree_<n> empties
+    "Ornament shop should have more sparkle decoration and goods. No need to be interactive in everything,
+     but the one that interactive must be wow. not slop."
 
-Node rules (BUILD.md, "Ornament shop"): every ornament is act_orn_<kind>_<n> with its origin at its hanging
-point (the ribbon's knot or the clip); standing pieces (nutcracker, smoker, Schwibbogen) at their base.
-act_orn_herrnhut has an emissive bulb_warm core; act_orn_nutcracker_jaw is a child of the nutcracker, its
-origin on the jaw's hinge (rotate about local X, negative opens); act_orn_smoker carries fx_smoke_1 at its
-mouth; act_orn_schwibbogen carries act_orn_candle_<n>, each a flame with its origin at the wick.
-items.json: name, label, action (ring | light | jaw | smoke | candles | hang | find), baubles a "note".
+Only three things are interactive (BUILD.md, ornament shop round 9):
+    act_orn_harmonica_0..11   prop_schmuck_harmonica, slot_harmonica_rail: twelve glass baubles in one row,
+                              graded in size like the bowls of a glass harmonica (largest, lowest note, on the
+                              left), mercury silver and champagne alternating with clear glass orbs that hold a
+                              small gold core. Each node's origin is its ribbon's knot under the rail.
+    act_orn_mirrorball        prop_schmuck_mirrorball, slot_mirrorball: one 18 cm mercury-glass ball, origin at
+                              its knot, with cam_dive / cam_dive_target empties in front of it (set root, so the
+                              camera does not swing with the ball).
+    act_orn_schwibbogen       on the counter, with its seven act_orn_candle_<n> flames (origin at each wick).
+Everything else is decoration: plain names, no items.json entry. The smoker keeps fx_smoke_1 at its mouth; the
+pickle hides among the teal baubles on the inner rail.
+
+Sparkle, in three tiers with dark wood left between the clusters:
+    hero     the harmonica row, the mirror ball, the turning Erzgebirge candle pyramid (prop_schmuck_pyramid at
+             slot_pyramid; its turning part is rot_pyramid; flames are the emissive `flame` material)
+    medium   mercury-glass (metallic, roughness 0.05) and high-gloss baubles in silver, gold, copper and deep
+             teal in five sizes, twisted glass icicles, glass pine cones, three Lametta swags (tinsel_0..2,
+             thin metal-foil ribbon meshes), glass bead garlands sagging across the front rail and the back
+             wall, four Rauschgoldengel on the top shelf and a large one on the display tree
+    subtle   four snow globes, spun-glass birds with fine tails, three lit Herrnhut stars at different heights
+Repeated baubles are instanced: one mesh per size and colour, placed as inst_* copies that instance.mjs folds
+into EXT_mesh_gpu_instancing nodes (vlib.PropSet.proto / inst).
+
+Slots the carpenter has not yet published fall back to the stand-ins in STANDIN (stall frame, Blender axes);
+props.json carries them as "standin_position" so the engine can place the sets until the hut has the empties.
 """
+import contextlib
+import json
 import math
+import os
+import random
 
 from mathutils import Matrix, Vector
 
 import vlib
-from vlib import C, T, WHITE, drng, jit, seg
+from vlib import C, T, WHITE, seg
 import set_decofill as F
-from set_deco import ROD_Y, ROD_Z, irng, nutcracker, rod, star_poly
+from set_deco import nutcracker, price_tag, star_poly
 
 TWO_PI = 2 * math.pi
 MK, MG = "market", "market_glaze"
-W = 3.4
 STALL = "deco-schmuck"
-# stall_schmuck.glb slot data (schmuck_slots.json): rail lengths and drops, shelf tiers relative to slot_shelf_1
-SLOTS = __import__("json").load(open(__import__("os").path.join(vlib.REPO, "blender", "stalls", "schmuck_slots.json")))["slots"]
+SLOTS = json.load(open(os.path.join(vlib.REPO, "blender", "stalls", "schmuck_slots.json")))["slots"]
 RAIL_R = 0.011
 KNOT_Z = -(RAIL_R + 0.008)          # the ribbon's knot just under the brass rail (clear of it)
-NOTES = ["C5", "D5", "E5", "F5", "G5", "A5", "B5", "C6", "D6", "E6", "F6", "G6", "A6", "B6", "C7", "D7",
-         "E7", "F7", "G7", "A7", "B7", "C8"]
-COLOUR_NAME = {"a8161d": "deep red", "d8b048": "gold", "1d3a78": "midnight blue", "eeeae2": "snow white",
-               "1f5a3a": "fir green", "6a1f52": "plum", "c8ccd0": "silver", "d8782a": "amber", "b01e24": "red",
-               "8ab8d8": "ice blue", "e8a0b0": "rose", "1e6a6a": "teal", "f2f0ea": "white", "2a2a5a": "night blue"}
+
+# Stand-ins (stall frame) for the round 9 slots until stall_schmuck.glb carries them. The harmonica hangs from the
+# front rail over the counter (BUILD.md: "in one row on the front rail"), so its stand-in is slot_rail_1; the
+# mirror ball hangs from the middle of the rail over the glass case; the pyramid stands right of centre on the
+# counter (0.40 m right of slot_counter, 0.06 m back).
+_r1, _r3, _ct = SLOTS["slot_rail_1"], SLOTS["slot_rail_3"], SLOTS["slot_counter"]["position"]
+STANDIN = {
+    "slot_harmonica_rail": {"position": list(_r1["position"]), "length": _r1["length"], "rail_radius": RAIL_R,
+                            "clear_drop": _r1["clear_drop"],
+                            "about": "stand-in: the front rail (slot_rail_1); the row runs along +X from here"},
+    "slot_mirrorball": {"position": [round(_r3["position"][0] + _r3["length"] / 2, 3), _r3["position"][1],
+                                     _r3["position"][2]],
+                        "about": "stand-in: the hanging point at the middle of the rail over the glass case"},
+    "slot_pyramid": {"position": [round(_ct[0] + 0.40, 3), round(_ct[1] + 0.06, 3), _ct[2]],
+                     "about": "stand-in: on the counter top, 0.40 m right of slot_counter and 0.06 m back"},
+}
 
 
-def orn(s, name, origin, display, label, action, detail, pivot="hang", **extra):
-    from set_deco import item
-    pv = "hang: the ribbon's knot or the clip; the ornament swings or turns about it" if pivot == "hang" else pivot
-    return item(s, name, origin, display, detail, pivot=pv, label=label, action=action, **extra)
+def slot(name):
+    return SLOTS.get(name) or STANDIN[name]
 
 
-def ribbon(m, top, drop, col=C("d8b048"), r=0.0011):
+def lv(full, lite):
+    return lite if vlib.lite() else full
+
+
+# ------------------------------------------------------------------ palette
+MERC = {"silver": C("eef0f2"), "gold": C("f2cf86"), "copper": C("e9a27c"), "teal": C("3b9aa2"),
+        "champagne": C("ece0c4")}
+GLOSS = {"teal": C("0e5560"), "ivory": C("efe7d6"), "copper": C("8a3a22")}
+CAP = C("e2c27e")
+SIZES = {"xs": 0.022, "s": 0.028, "m": 0.036, "l": 0.045, "xl": 0.055}
+SEGS = {"xs": ((6, 4), (5, 3)), "s": ((8, 5), (6, 4)), "m": ((8, 6), (6, 4)), "l": ((10, 7), (7, 5)),
+        "xl": ((12, 8), (8, 5))}
+
+
+def bauble_key(finish, colour, size):
+    return f"{finish}_{colour}_{size}"
+
+
+def bauble_proto(s, finish, colour, size):
+    """A bauble with its gold cap as an instanced piece; origin at the top of the cap (the hanging point), the
+    ball below it along -Z. finish: merc (mercury glass), gloss (lacquered), clear (clear glass, gold core)."""
+    key = bauble_key(finish, colour, size)
+    r = SIZES[size]
+    (n, rings), (nl, rl) = SEGS[size]
+
+    def build(m):
+        nn, rr = lv(n, nl), lv(rings, rl)
+        cz = -r * 0.28 - r
+        if finish == "merc":
+            m.sphere(r, nn, rr, "sw_satin", T(0, 0, cz), MERC[colour], "mercury")
+        elif finish == "gloss":
+            m.sphere(r, nn, rr, "sw_satin", T(0, 0, cz), GLOSS[colour], "gloss")
+        else:
+            m.sphere(r, nn, rr, "sw_satin", T(0, 0, cz), C("f4f0e6"), "glass")
+            m.sphere(r * 0.42, lv(8, 6), lv(5, 4), "sw_satin", T(0, 0, cz), MERC["gold"], "mercury")
+        m.cyl(r * 0.3, r * 0.26, r * 0.34, lv(6, 4), "sw_satin", T(0, 0, -r * 0.34), CAP, "mercury", caps=False)
+    s.proto(key, build)
+    return key, r
+
+
+def place_bauble(s, finish, colour, size, centre, rx=0.0, ry=0.0, rz=0.0):
+    """An instanced bauble whose ball centre is at `centre`, the cap turned by (rx, ry, rz) from straight up."""
+    key, r = bauble_proto(s, finish, colour, size)
+    s.inst(key, T(*centre, rx=rx, ry=ry, rz=rz) @ T(0, 0, r * 1.28))
+    return r
+
+
+def hang_bauble(s, m, knot, drop, finish, colour, size, ribbon_col=C("d8b048"), sway=0.0):
+    """A bauble hanging `drop` below `knot` on a satin ribbon (ribbon in the static mesh `m`)."""
+    x, y, z = knot
+    key, r = bauble_proto(s, finish, colour, size)
+    top = Vector((x + sway, y, z - drop))
+    m.tube([(x, y, z - 0.004), tuple(top)], 0.0010, 3, "sw_satin", None, ribbon_col)
+    s.inst(key, T(top.x, top.y, top.z, rz=random.Random(hash((x, y, z))).uniform(0, TWO_PI)))
+    return top, r
+
+
+def ribbon(m, top, drop, col=C("d8b048"), r=0.0011, knot=True):
     x, y, z = top
-    m.tube([(x, y, z - 0.006), (x, y, z - drop)], r, 3, "sw_satin", None, col)
-    m.box((0.007, 0.016, 0.005), T(x, y, z + 0.004), "sw_satin", col, skip=("nz",))   # the knot (lite too: same bounds)
+    m.tube([(x, y, z - 0.004), (x, y, z - drop)], r, 3, "sw_satin", None, col)
+    if knot:
+        m.box((0.007, 0.012, 0.005), T(x, y, z + 0.002), "sw_satin", col, skip=("nz",))
     return Vector((x, y, z - drop))
 
 
-def cap(m, p, r):
-    """A gold cap with a wire loop at p (the top of the ornament)."""
-    m.cyl(r * 0.3, r * 0.26, r * 0.32, 6 if not vlib.lite() else 4, "sw_metal", T(p.x, p.y, p.z - r * 0.3),
-          C("d8c080"), caps=False)
+# ------------------------------------------------------------------ small helpers
+@contextlib.contextmanager
+def plain(s, name, origin, parent=None):
+    """A decoration node with its own name (no act_, no items.json entry): geometry built in set coordinates
+    inside the `with` lands in the node, its origin at `origin` (set frame; relative to the parent's origin
+    when a parent node is given)."""
+    po = (0.0, 0.0, 0.0)
+    if parent:
+        po = next(loc for _, nm, loc, _ in s.nodes if nm == parent)
+    m = s.node(name, tuple(o - p for o, p in zip(origin, po)), parent=parent)
+    yield m
+    ox, oy, oz = origin
+    m.V[:] = [(x - ox, y - oy, z - oz) for x, y, z in m.V]
 
 
-def bauble(m, top, r, region, n=None, rings=None, scale=(1, 1, 1)):
-    """A glass bauble hanging from `top` (the cap's loop): its own painted wrap from the market atlas."""
-    n = n or (8 if not vlib.lite() else 7)      # round 8 pass 2: 9 -> 8 sides (shop headroom)
-    rings = rings or (6 if not vlib.lite() else 5)
-    c = Vector((top.x, top.y, top.z - r * 0.28 - r * scale[2]))
-    m.sphere(r, n, rings, region, T(c.x, c.y, c.z, rz=math.pi / 2), WHITE, MG, scale=scale, v_by="z")
-    cap(m, top, r)
+def sag(a, b, depth, n):
+    """Points on a hanging curve from a to b sagging `depth` at the middle (a parabola is close enough)."""
+    a, b = Vector(a), Vector(b)
+    return [a.lerp(b, i / n) - Vector((0, 0, depth * 4 * (i / n) * (1 - i / n))) for i in range(n + 1)]
 
 
-def dome(m, M, r, h, region, n, rings, col=WHITE, mat=MK):
-    """A dome (mushroom cap) with planar UVs from above, so the spots land as round spots."""
-    reg = vlib.R(region)
-    verts = [(0.0, 0.0, h)]
-    for i in range(1, rings + 1):
-        a = (math.pi / 2) * i / rings
-        rr, zz = r * math.sin(a), h * math.cos(a)
-        verts += [(rr * math.cos(TWO_PI * j / n), rr * math.sin(TWO_PI * j / n), zz) for j in range(n)]
-    faces = [(0, 1 + j, 1 + (j + 1) % n) for j in range(n)]
-    for i in range(rings - 1):
-        a0, b0 = 1 + i * n, 1 + (i + 1) * n
-        faces += [(a0 + j, b0 + j, b0 + (j + 1) % n, a0 + (j + 1) % n) for j in range(n)]
-    uvs = [[reg.uv(0.5 + 0.5 * verts[i][0] / r, 0.5 + 0.5 * verts[i][1] / r) for i in f] for f in faces]
-    m.add(verts, faces, uvs, M, col, mat, True)
+def along(pts, step, start=0.0):
+    """Stations every `step` metres along a polyline: (point, unit tangent)."""
+    out, carry = [], start
+    for a, b in zip(pts[:-1], pts[1:]):
+        d = b - a
+        L = d.length
+        t = d / L
+        s_ = carry
+        while s_ < L:
+            out.append((a + t * s_, t))
+            s_ += step
+        carry = s_ - L
+    return out
 
 
-# ------------------------------------------------------------------ figure ornaments
+def frame(t):
+    up = Vector((0, 0, 1)) if abs(t.z) < 0.9 else Vector((1, 0, 0))
+    n1 = t.cross(up).normalized()
+    return n1, t.cross(n1).normalized()
+
+
+def beads(m, pts, step=0.027, r=0.0064, cols=("gold", "clear")):
+    """A glass bead garland along a polyline: faceted beads (octahedra, 8 triangles) alternating mercury gold
+    and clear glass. Lite keeps every second bead (larger)."""
+    st = along(pts, step * lv(1, 2))
+    rr = r * lv(1.0, 1.2)
+    for i, (p, t) in enumerate(st):
+        n1, n2 = frame(t)
+        a = 0.7 * i
+        e1 = (n1 * math.cos(a) + n2 * math.sin(a)) * rr
+        e2 = t.cross(e1.normalized()) * rr
+        ax = t * rr * 1.15
+        V = [p + e1, p + e2, p - e1, p - e2, p + ax, p - ax]
+        Fc = [(0, 1, 4), (1, 2, 4), (2, 3, 4), (3, 0, 4), (1, 0, 5), (2, 1, 5), (3, 2, 5), (0, 3, 5)]
+        c = cols[i % len(cols)]
+        mat, col = ("glass", C("f6f2ea")) if c == "clear" else ("mercury", MERC[c])
+        m.add([tuple(v) for v in V], Fc, [[(0, 0)] * 3] * 8, None, col, mat, False)
+
+
+def tinsel(m, pts, col, seed, step=0.03, strands=2, drip_every=4, reach=(0.016, 0.03), drip=(0.035, 0.085)):
+    """A Lametta swag: a thin foil core with radial foil strands round it and longer strands dripping down,
+    every strand a narrow twisted quad (double-sided, metallic `tinsel` material) whose own tilt catches the
+    light differently. Built along polyline `pts`."""
+    rnd = random.Random(seed)
+    st = along(pts, step * lv(1, 1.8))
+    m.tube([tuple(p) for p in pts], 0.0022, 3, "sw_satin", None, col, "tinsel")
+    w = 0.0032
+    for i, (p, t) in enumerate(st):
+        n1, n2 = frame(t)
+        k = strands if not vlib.lite() else 1
+        for _ in range(k):
+            a = rnd.uniform(0, TWO_PI)
+            d = (n1 * math.cos(a) + n2 * math.sin(a))
+            d.z -= 0.35
+            d.normalize()
+            L = rnd.uniform(*reach)
+            e = d.cross(Vector((rnd.uniform(-1, 1), rnd.uniform(-1, 1), rnd.uniform(-1, 1)))).normalized() * w / 2
+            tip = p + d * L
+            q = [p - e, p + e, tip + e * 0.7, tip - e * 0.7]
+            m.add([tuple(v) for v in q], [(0, 1, 2, 3)], [[(0, 0)] * 4], None, vlib.jit(col, 0.12), "tinsel", False)
+        if i % drip_every == 0:
+            L = rnd.uniform(*drip)
+            lean = Vector((rnd.uniform(-0.15, 0.15), rnd.uniform(-0.1, 0.1), -1)).normalized()
+            e = Vector((math.cos(i), math.sin(i), 0)) * (w * 0.4)
+            tip = p + lean * L
+            q = [p - e, p + e, tip + e, tip - e]
+            m.add([tuple(v) for v in q], [(0, 1, 2, 3)], [[(0, 0)] * 4], None, vlib.jit(col, 0.12), "tinsel", False)
+
+
+def icicle(m, top, L=0.13, mat="mercury", col=None):
+    """A twisted glass icicle: a three-fluted star section turning a half turn down its length, a gold cap."""
+    col = col or (MERC["silver"] if mat == "mercury" else C("eef4f6"))
+    rings, pts_n = lv(6, 4), 6
+    R0 = 0.0085
+    out = []
+    for i in range(rings + 1):
+        f = i / rings
+        z = top[2] - 0.006 - L * f
+        rad = R0 * (1 - f) ** 0.9 + 0.0004
+        tw = math.pi * f
+        out.append([(top[0] + rad * (1.0 if j % 2 == 0 else 0.45) * math.cos(tw + TWO_PI * j / pts_n),
+                     top[1] + rad * (1.0 if j % 2 == 0 else 0.45) * math.sin(tw + TWO_PI * j / pts_n), z)
+                    for j in range(pts_n)])
+    m.loft(out, "sw_satin", None, col, mat, closed=True, smooth=False)
+    m.cyl(0.0055, 0.0045, 0.007, 6, "sw_satin", T(top[0], top[1], top[2] - 0.007), CAP, "mercury", caps=False)
+
+
+def pinecone(m, top, mat="mercury", col=None):
+    """A blown-glass pine cone: a scalloped spindle (alternating rings of scales), gold or copper mercury glass."""
+    col = col or MERC["gold"]
+    n = lv(7, 5)
+    prof = [(0.007, 0.0), (0.019, 0.012), (0.016, 0.02), (0.023, 0.032), (0.019, 0.042), (0.021, 0.054),
+            (0.015, 0.064), (0.013, 0.074), (0.0, 0.088)]
+    if vlib.lite():
+        prof = [prof[0], prof[3], prof[5], prof[7], prof[8]]
+    m.lathe(prof, n, "sw_satin", T(top[0], top[1], top[2] - 0.006, rx=math.pi), col, mat, v_by="z")
+    m.cyl(0.0065, 0.0055, 0.007, 6, "sw_satin", T(top[0], top[1], top[2] - 0.007), CAP, "mercury", caps=False)
+
+
+def pinecone_lying(m, foot, rz, col):
+    """A glass pine cone lying on its side on a shelf (`foot`: where it touches the board)."""
+    n = lv(7, 5)
+    prof = [(0.007, 0.0), (0.019, 0.012), (0.016, 0.02), (0.023, 0.032), (0.019, 0.042), (0.021, 0.054),
+            (0.015, 0.064), (0.013, 0.074), (0.0, 0.088)]
+    if vlib.lite():
+        prof = [prof[0], prof[3], prof[5], prof[7], prof[8]]
+    M = T(foot[0], foot[1], foot[2] + 0.021, rz=rz) @ T(-0.044, 0, 0, ry=math.pi / 2)
+    m.lathe(prof, n, "sw_satin", M, col, "mercury", v_by="z")
+
+
 def pickle(m, top):
-    """The Weihnachtsgurke: a warty green glass gherkin hanging nose down, slightly bent."""
-    n = 8 if not vlib.lite() else 6
+    """The Weihnachtsgurke: a warty green glass gherkin hanging nose down, slightly bent (decoration)."""
+    n = lv(8, 6)
     L, r = 0.11, 0.017
     prof = [(0.004, 0.0), (r * 0.8, 0.012), (r, 0.035), (r * 1.05, 0.06), (r * 0.95, 0.085), (r * 0.6, 0.104), (0.0, L)]
     if vlib.lite():
         prof = [prof[0], prof[2], prof[4], prof[6]]
-    M = T(top.x, top.y, top.z - r * 0.3, rx=math.pi, ry=0.12)
-    m.lathe(prof, n, "pickle", M, WHITE, MG, v_by="z")
-    cap(m, top, r * 1.4)
+    m.lathe(prof, n, "pickle", T(top.x, top.y, top.z - r * 0.3, rx=math.pi, ry=0.12), WHITE, MG, v_by="z")
+    m.cyl(r * 0.42, r * 0.36, r * 0.45, 6, "sw_satin", T(top.x, top.y, top.z - r * 0.45), CAP, "mercury", caps=False)
 
 
-def pinecone(m, top):
-    n = 8 if not vlib.lite() else 6
-    prof = [(0.008, 0.0), (0.02, 0.012), (0.024, 0.03), (0.021, 0.055), (0.013, 0.075), (0.0, 0.088)]
-    if vlib.lite():
-        prof = [prof[0], prof[2], prof[4], prof[5]]
-    m.lathe(prof, n, "pinecone", T(top.x, top.y, top.z - 0.006, rx=math.pi), WHITE, MG, v_by="z")
-    cap(m, top, 0.03)
-
-
-def icicle(m, top, L=0.13):
-    n = 6 if not vlib.lite() else 5
-    m.lathe([(0.0085, 0.0), (0.006, L * 0.4), (0.003, L * 0.8), (0.0, L)], n, "sw_vgloss",
-            T(top.x, top.y, top.z - 0.005, rx=math.pi, rz=0.4), C("e2eef4"), "glaze")
-    cap(m, top, 0.02)
-
-
-def mushroom(m, top):
-    """A glass fly agaric: white stem, red spotted cap, hanging on a short ribbon from the cap's top."""
-    n = 8 if not vlib.lite() else 6
-    zc = top.z - 0.004
-    dome(m, T(top.x, top.y, zc - 0.022), 0.028, 0.022, "mushroom", n, 3 if not vlib.lite() else 2, mat=MG)
-    m.lathe([(0.026, 0.0), (0.0, 0.002)], n, "sw_satin", T(top.x, top.y, zc - 0.022), C("f0e8d8"), "atlas")
-    m.lathe([(0.011, -0.035), (0.013, -0.018), (0.009, 0.0)], n, "sw_gloss", T(top.x, top.y, zc - 0.022), C("f4f0e8"),
-            "glaze", cap0=True)
-
-
-def bird(m, clip):
-    """A clip-on glass bird sitting on the rod: blue and white body, spun-glass tail, the clip under it."""
-    n = 8 if not vlib.lite() else 6
-    x, y, z = clip
-    m.box((0.01, 0.008, 0.02), T(x, y, z), "sw_metal", C("d8c080"))
-    M = T(x, y, z + 0.024, ry=math.pi / 2 + 0.15)
-    m.lathe([(0.0, -0.045), (0.012, -0.03), (0.017, -0.008), (0.016, 0.012), (0.01, 0.028), (0.0, 0.036)], n, "bird",
-            M, WHITE, MG, v_by="z")
-    m.lathe([(0.003, 0.036), (0.0, 0.046)], 4, "sw_satin", M, C("e0a030"), "glaze")
-    tail = [(-0.04, 0.0, 0.0), (-0.085, -0.016, 0.02), (-0.085, 0.016, 0.02)]
-    m.add([(x + a, y + b, z + 0.024 + c) for a, b, c in tail], [(0, 1, 2), (0, 2, 1)],
-          [[(0, 0), (1, 0), (0.5, 1)]] * 2, None, C("f4f6f8"), "atlas", False)
-
-
-def straw_star(m, top, r=0.06):
-    """A Strohstern: eight split-straw strips crossed at the centre, a red thread through the middle."""
-    strips = 8 if not vlib.lite() else 4
-    reg = vlib.R("straw")
-    c = Vector((top.x, top.y, top.z - r - 0.01))
-    for k in range(strips):
-        a = math.pi * k / strips
-        L = r * (1.0 if k % 2 == 0 else 0.72)
-        w = 0.0045
-        d = Vector((math.cos(a), 0, math.sin(a)))
-        nrm = Vector((-math.sin(a), 0, math.cos(a))) * w / 2
-        p = [c - d * L - nrm, c + d * L - nrm, c + d * L + nrm, c - d * L + nrm]
-        yy = -0.0006 * (k % 2)
-        quad = [(v.x, v.y + yy, v.z) for v in p]
-        m.add(quad, [(0, 1, 2, 3), (3, 2, 1, 0)], [[reg.uv(0, 0), reg.uv(1, 0), reg.uv(1, 1), reg.uv(0, 1)]] * 2,
-              None, C("e8c880"), "atlas", False)
-    m.cyl(0.006, 0.006, 0.003, 6, "sw_satin", T(c.x, c.y - 0.0015, c.z, rx=math.pi / 2), C("b0282a"))
-
-
-def wood_star(m, top, r=0.055):
-    """A carved wooden star (Erzgebirge): a five-point star with a bevelled face and a gold-painted edge."""
-    m.extrude(star_poly(r, r * 0.45, 5), 0.008, T(top.x, top.y + 0.004, top.z - r - 0.006, rx=math.pi / 2),
-              vlib.RW("wood"), "sw_metal", C("d8b07a"), back=True, bevel=0.0 if vlib.lite() else 0.002)
-
-
-def angel(m, top, s=1.0):
-    """A small turned and painted Erzgebirge angel hanging from a loop on her head: white gown with gold dots,
-    golden wings, a rosy face (market atlas 'angel')."""
-    n = 5      # round 8 pass 2: 6 -> 5 sides, full and lite (the angels are 3-4 cm turned figures)
-    S = T(top.x, top.y, top.z - 0.012) @ Matrix.Diagonal((s, s, s, 1))
-    face = vlib.R("angel", (0.0, 0.62, 1.0, 1.0))
-    gown = vlib.R("angel", (0.0, 0.0, 1.0, 0.55))
-    m.lathe([(0.026, -0.09), (0.02, -0.06), (0.011, -0.03), (0.008, -0.022)], n, gown, S @ T(0, 0, 0, rz=-math.pi / 2),
-            WHITE, MG, v_by="z", cap0=True)
-    m.sphere(0.011, n, 4, face, S @ T(0, 0, -0.012, rz=-math.pi / 2), WHITE, MG)
+def bird(m, perch, facing=0.0, body=C("f2f4f6"), wing=C("d8b048")):
+    """A clip-on spun-glass bird: silvered body, painted wing, and a long tail of spun-glass fibres (a fan of
+    fine strands, double-sided). `perch` is the clip's foot."""
+    n = lv(8, 6)
+    x, y, z = perch
+    R = T(x, y, z, rz=facing)
+    m.box((0.008, 0.008, 0.016), R @ T(0, 0, 0.008), "sw_metal", C("d8c080"))
+    M = R @ T(0, 0, 0.026, ry=math.pi / 2 + 0.12)
+    m.lathe([(0.0, -0.04), (0.011, -0.027), (0.016, -0.006), (0.015, 0.012), (0.009, 0.026), (0.0, 0.034)], n,
+            "sw_satin", M, body, "mercury", v_by="z")
+    m.lathe([(0.0028, 0.034), (0.0, 0.044)], 4, "sw_satin", M, C("e0a030"), "gloss")
     for sx in (-1, 1):
-        wing = [(0.0, 0.0), (0.03, 0.012), (0.034, -0.012), (0.012, -0.03)]
-        m.extrude([(sx * x, y) for x, y in wing][::sx], 0.002, S @ T(0, 0.006, -0.03, rx=math.pi / 2),
-                  "sw_metal", "sw_metal", C("d8b048"), back=True)
-    m.torus(0.009, 0.0012, 5, 3, "sw_metal", S @ T(0, 0, 0.0, rx=0.2), C("d8b048"))
+        m.add([tuple(R @ Vector(v)) for v in ((0.012, sx * 0.012, 0.03), (-0.016, sx * 0.019, 0.034), (-0.004, sx * 0.016, 0.024))],
+              [(0, 1, 2), (0, 2, 1)], [[(0, 0)] * 3] * 2, None, wing, "mercury", False)
+    k = lv(9, 4)
+    for i in range(k):
+        a = (i / (k - 1) - 0.5) * 0.9
+        L = 0.075 + 0.02 * math.cos(a * 3)
+        base = R @ Vector((-0.036, 0, 0.026))
+        tip = R @ Vector((-0.036 - L * math.cos(a), L * math.sin(a), 0.026 + 0.022 + 0.006 * (i % 2)))
+        e = (R.to_3x3() @ Vector((0, 0.0012, 0)))
+        m.add([tuple(base - e), tuple(base + e), tuple(tip + e * 0.3), tuple(tip - e * 0.3)], [(0, 1, 2, 3), (3, 2, 1, 0)],
+              [[(0, 0)] * 4] * 2, None, C("f8faff"), "glass", False)
 
 
-def herrnhut(m, glow, c, R=0.12):
-    """A 26-point Herrnhut star (18 square-based and 8 triangular points) with a warm bulb_warm core in
-    `glow`. Points are pyramids of red paper; the core shows through the gaps."""
-    lite = vlib.lite()
+def herrnhut(m, c, R=0.12, region="herrnhut", col=WHITE):
+    """A 26-point Herrnhut star (18 square-based and 8 triangular points) round a warm bulb_warm core."""
     dirs = []
     for x in (-1, 0, 1):
         for y in (-1, 0, 1):
@@ -196,14 +312,10 @@ def herrnhut(m, glow, c, R=0.12):
                 if (x, y, z) == (0, 0, 0):
                     continue
                 k = abs(x) + abs(y) + abs(z)
-                if k <= 2:
-                    dirs.append((Vector((x, y, z)).normalized(), 4))      # 6 face + 12 edge points
-                else:
-                    dirs.append((Vector((x, y, z)).normalized(), 3))      # 8 corner points
+                dirs.append((Vector((x, y, z)).normalized(), 4 if k <= 2 else 3))
     base_r = R * 0.36
+    reg = vlib.R(region)
     for d, sides in dirs:
-        if d.z < -0.9:                                                   # the bottom point is a short cone
-            pass
         L = R if sides == 4 else R * 0.9
         q = d.to_track_quat('Z', 'Y')
         M = T(*c) @ q.to_matrix().to_4x4() @ T(0, 0, base_r * 0.9)
@@ -212,185 +324,87 @@ def herrnhut(m, glow, c, R=0.12):
                for j in range(sides)]
         verts = pts + [(0.0, 0.0, L - base_r * 0.9)]
         faces = [(j, (j + 1) % sides, sides) for j in range(sides)]
-        reg = vlib.R("herrnhut")
-        uvs = [[reg.uv(0, 0), reg.uv(1, 0), reg.uv(0.5, 1)] for _ in faces]
-        m.add(verts, faces, uvs, M, WHITE if (d.z > -0.5 or lite) else C("f2e8d8"), MK, False)
-    glow.sphere(base_r * 1.15, 8 if not lite else 6, 5 if not lite else 4, "sw_satin", T(*c), WHITE, "bulb_warm")
+        m.add(verts, faces, [[reg.uv(0, 0), reg.uv(1, 0), reg.uv(0.5, 1)] for _ in faces], M, col, MK, False)
+    m.sphere(base_r * 1.15, lv(8, 6), lv(5, 4), "sw_satin", T(*c), WHITE, "bulb_warm")
 
 
-# ================================================================== the sets
-def rail_1():
-    """Front rail over the counter (slot_rail_1, along +X): 16 baubles (two octaves of a scale) and the
-    Herrnhut star in the middle. Knots sit under the rail (z = -rail radius)."""
-    L = SLOTS["slot_rail_1"]["length"]
-    s = vlib.PropSet("prop_schmuck_rail_1", "slot_rail_1", STALL, footprint=(L, 0.12))
-    meta = __import__("atlas_market").BAUBLES
-    step = (L - 0.16) / 16
-    xs = [0.08 + step * k for k in range(17)]
-    mid = xs.pop(8)
-    kz = KNOT_Z
-    for i, x in enumerate(xs):
-        name, base, paint, kind, finish = meta[i]
-        r = (0.032, 0.038, 0.045, 0.036)[i % 4]
-        drop = 0.08 + 0.2 * ((i * 5) % 7) / 6
-        cname = COLOUR_NAME.get(base, "glass")
-        what = __import__("atlas_market").BAUBLE_LABELS[kind]
-        fin = {"gloss": "glossy", "matte": "satin matt", "mirror": "mirror-silvered"}[finish]
-        with orn(s, f"act_orn_bauble_{i}", (x, 0.0, kz), f"Glass bauble, {cname}",
-                 f"Glaskugel, {cname} · {round(r * 200)} cm", "ring",
-                 f"A mouth-blown Lauscha glass bauble, {fin} {cname} with {what}, {round(r * 200)} cm across. "
-                 f"Tap it and it rings a soft {NOTES[i]}. 5 to 9 €.", note=NOTES[i], hangable=True, region=name) as bm:
-            top = ribbon(bm, (x, 0.0, kz), drop, C(("d8b048", "b0282a", "e8e4dc")[i % 3]))
-            bauble(bm, top, r, name)
-    with orn(s, "act_orn_herrnhut", (mid, 0.0, kz), "Herrnhut star", "Herrnhuter Stern · 29 €", "light",
-             "A paper Herrnhut star with 26 points, folded by hand in Herrnhut in Saxony since the 1850s: it "
-             "lights from inside. Click it and it glows.", lit_material="bulb_warm") as hm:
-        top = ribbon(hm, (mid, 0.0, kz), 0.05, C("e8e4dc"), 0.0016)
-        hm.cyl(0.004, 0.004, 0.05, 5, "sw_matte", T(mid, 0.0, top.z - 0.05), C("f2ead8"), caps=False)
-        glow = s.node("herrnhut_core", (mid, 0.0, top.z - 0.05 - 0.12), parent="act_orn_herrnhut")
-        herrnhut(hm, glow, (mid, 0.0, top.z - 0.05 - 0.12), 0.11)
-    # the core's mesh was built in set coordinates: move it into its node's frame
-    _localise(s, "herrnhut_core", "act_orn_herrnhut")
-    s.finish()
-    return s
+def hang_herrnhut(m, knot, drop, R, region="herrnhut", col=WHITE):
+    top = ribbon(m, knot, drop, C("e8e4dc"), 0.0016)
+    m.cyl(0.004, 0.004, 0.04, 5, "sw_matte", T(top.x, top.y, top.z - 0.04), C("f2ead8"), caps=False)
+    herrnhut(m, (top.x, top.y, top.z - 0.04 - R), R, region, col)
 
 
-def _localise(s, child, parent):
-    """A child node built in set coordinates: shift its verts into its own frame and make its loc relative to
-    the parent node's origin (PropSet.finish parents without an inverse)."""
-    locs = {name: loc for _, name, loc, _ in s.nodes}
-    out = []
-    for mm, name, loc, par in s.nodes:
-        if name == child:
-            mm.V[:] = [(x - loc[0], y - loc[1], z - loc[2]) for x, y, z in mm.V]
-            p = locs[parent]
-            loc = (loc[0] - p[0], loc[1] - p[1], loc[2] - p[2])
-        out.append((mm, name, loc, par))
-    s.nodes = out
+def rauschgold(m, M, s=1.0):
+    """A Rauschgoldengel (Nuremberg gold-foil angel), about 22 cm at s = 1, origin at the hem's centre, facing
+    -Y: a pleated gold-foil skirt, foil bodice and sleeves, a wax face with golden hair, a zigzag crown and two
+    large pleated foil wings fanned behind."""
+    S = M @ Matrix.Diagonal((s, s, s, 1))
+    gold, pale = C("e8c066"), C("f4dc96")
+    P = lv(9, 6)
+    rings = []
+    for z, r in ((0.0, 0.058), (0.07, 0.042), (0.13, 0.02)):
+        rings.append([((r * (1.0 if j % 2 == 0 else 0.84)) * math.cos(math.pi * j / P),
+                       (r * (1.0 if j % 2 == 0 else 0.84)) * math.sin(math.pi * j / P), z) for j in range(2 * P)])
+    m.loft(rings, "sw_metal", S, gold, "atlas", closed=True, smooth=False)
+    m.lathe([(0.02, 0.13), (0.015, 0.155), (0.009, 0.165)], lv(6, 5), "sw_metal", S, pale, "atlas")
+    m.sphere(0.017, lv(6, 5), lv(4, 3), "sw_satin", S @ T(0, 0, 0.183), C("f4dcc6"), "glaze")
+    m.sphere(0.019, lv(5, 4), 3, "sw_metal", S @ T(0, 0.006, 0.188), C("d8a848"), "atlas", scale=(1.0, 0.9, 0.95))
+    cr = 10
+    band = [(0.012 * math.cos(TWO_PI * j / cr), 0.012 * math.sin(TWO_PI * j / cr)) for j in range(cr)]
+    for j in range(cr):
+        a, b = band[j], band[(j + 1) % cr]
+        z0 = 0.2
+        ztip = z0 + (0.014 if j % 2 == 0 else 0.006)
+        m.add([(a[0], a[1], z0), (b[0], b[1], z0), (b[0], b[1], z0 + 0.008), (a[0], a[1], ztip)], [(0, 1, 2, 3)],
+              [[(0, 0)] * 4], S, gold, "atlas", False)
+    for sx in (-1, 1):
+        m.tube([(sx * 0.016, 0.0, 0.15), (sx * 0.02, -0.012, 0.12), (sx * 0.006, -0.026, 0.11)], 0.0055, 4, "sw_metal",
+               S, pale, "atlas")
+        k = lv(6, 3)
+        hinge = Vector((sx * 0.006, 0.014, 0.15))
+        fan = [hinge]
+        for i in range(k + 1):
+            a = math.radians(5 + 95 * i / k)
+            L = 0.105 * (1 - 0.25 * (i / k - 0.6) ** 2)
+            fan.append(Vector((sx * L * math.cos(a) * 0.95, 0.018 + 0.012 * (i % 2), 0.15 + L * math.sin(a) * 0.9 - 0.03)))
+        faces = [(0, i, i + 1) if sx > 0 else (0, i + 1, i) for i in range(1, k + 1)]
+        m.add([tuple(v) for v in fan], faces, [[(0, 0)] * 3] * len(faces), S, gold, "atlas", False)
+        # (atlas uv 0,0 is the first swatch: the foil reads as plain gold metal)
+    m.cyl(0.0012, 0.0012, 0.05, 4, "sw_metal", S @ T(0.0, -0.03, 0.09, rx=0.3), pale)
 
 
-def rail_2():
-    """The inner rail over the counter's back edge (slot_rail_2, 0.31 m clear drop): the figure ornaments,
-    straw and wooden stars, angels and six more baubles; the pickle hangs among the green ones."""
-    L = SLOTS["slot_rail_2"]["length"]
-    s = vlib.PropSet("prop_schmuck_rail_2", "slot_rail_2", STALL, footprint=(L, 0.12))
-    RZ, RY = KNOT_Z, 0.0
-    meta = __import__("atlas_market").BAUBLES
-    plan = [("bauble", 16), ("strawstar", 0), ("angel", 0), ("pinecone", 0), ("bauble", 17), ("woodstar", 0),
-            ("icicle", 0), ("bird", 0), ("strawstar", 1), ("bauble", 18), ("mushroom", 0), ("bauble", 19),
-            ("pickle", None), ("bauble", 20), ("strawstar", 2), ("angel", 1), ("icicle", 1), ("woodstar", 1),
-            ("bauble", 21), ("strawstar", 3)]
-    xs = [0.07 + (L - 0.14) * i / (len(plan) - 1) for i in range(len(plan))]
-    green = {18: 4, 19: 11, 20: 4, 21: 9}           # baubles round the pickle: fir green and teal wraps
-    for i, ((kind, k), x) in enumerate(zip(plan, xs)):
-        drop = 0.05 + 0.1 * ((i * 3) % 5) / 4
-        knot = (x, RY, RZ)
-        if kind == "bauble":
-            j = green.get(k, k - 16 + 2) % len(meta)
-            name, base, paint, kp, finish = meta[j]
-            r = 0.03 + 0.006 * (i % 3)
-            cname = COLOUR_NAME.get(base, "glass")
-            with orn(s, f"act_orn_bauble_{k}", knot, f"Glass bauble, {cname}", f"Glaskugel, {cname}", "ring",
-                     f"A smaller Lauscha bauble, {cname}, {round(r * 200)} cm. It rings a {NOTES[k]}.",
-                     note=NOTES[k], hangable=True, region=name) as bm:
-                bauble(bm, ribbon(bm, knot, drop), r, name)
-        elif kind == "pickle":
-            with orn(s, "act_orn_pickle", knot, "Christmas pickle", "Weihnachtsgurke · 6 €", "find",
-                     "The Weihnachtsgurke, a green glass gherkin hidden among the green baubles. The legend says "
-                     "whoever finds the pickle on the tree gets an extra present. You found it!", hangable=True,
-                     reward=True) as pm:
-                pickle(pm, ribbon(pm, knot, drop + 0.02, C("2a6a3a")))
-        elif kind == "pinecone":
-            with orn(s, f"act_orn_pinecone_{k}", knot, "Glass pine cone", "Tannenzapfen aus Glas", "hang",
-                     "A blown-glass pine cone, brown with frosted gold tips, as the Thuringian glassblowers made "
-                     "them before the round bauble. Click to hang it on the display tree.", hangable=True) as pm:
-                pinecone(pm, ribbon(pm, knot, drop))
-        elif kind == "icicle":
-            with orn(s, f"act_orn_icicle_{k}", knot, "Glass icicle", "Eiszapfen aus Glas", "hang",
-                     "A twisted clear-glass icicle with a gold cap: it catches every lamp in the shop.",
-                     hangable=True) as im:
-                icicle(im, ribbon(im, knot, drop * 0.6), 0.12 + 0.03 * k)
-        elif kind == "mushroom":
-            with orn(s, f"act_orn_mushroom_{k}", knot, "Glass mushroom", "Fliegenpilz aus Glas", "hang",
-                     "A little glass fly agaric, red with white spots: a lucky charm on German trees.",
-                     hangable=True) as mm:
-                mushroom(mm, ribbon(mm, knot, drop))
-        elif kind == "bird":
-            clip = (x, RY, RAIL_R + 0.0105)
-            with orn(s, f"act_orn_bird_{k}", clip, "Clip-on glass bird", "Vogel mit Klammer", "hang",
-                     "A clip-on glass bird with a spun-glass tail, sitting on the rail: it clips to a branch.",
-                     hangable=True, pivot="clip: the clip's foot on the rail; the bird sits above it") as bm:
-                bird(bm, clip)
-        elif kind == "strawstar":
-            with orn(s, f"act_orn_strawstar_{k}", knot, "Straw star", "Strohstern · 1,50 €", "hang",
-                     "A Strohstern of split straw strips crossed and tied with red thread: the oldest of German "
-                     "tree ornaments, light enough for the thinnest twig.", hangable=True) as sm:
-                straw_star(sm, ribbon(sm, knot, drop * 0.5, C("b0282a")), 0.055 + 0.01 * (k % 2))
-        elif kind == "woodstar":
-            with orn(s, f"act_orn_woodstar_{k}", knot, "Carved wooden star", "Holzstern, geschnitzt", "hang",
-                     "A star carved from lime wood in the Erzgebirge, its edge painted gold.", hangable=True) as wm:
-                wood_star(wm, ribbon(wm, knot, drop * 0.5, C("b0282a")))
-        elif kind == "angel":
-            with orn(s, f"act_orn_angel_{k}", knot, "Wooden angel", "Engel aus dem Erzgebirge", "hang",
-                     "A turned and painted Erzgebirge angel in a white gown with golden dots and gold wings.",
-                     hangable=True) as am:
-                angel(am, ribbon(am, knot, drop * 0.4, C("d8b048")), 1.0)
-    s.finish()
-    return s
+def snow_globe(m, M, scene=0, s=1.0):
+    """A snow globe, about 12 cm at s = 1: a turned walnut base, a clear glass ball, a snowy ground with a fir and
+    a little half-timbered house (or a church), flakes floating in the water."""
+    S = M @ Matrix.Diagonal((s, s, s, 1))
+    m.lathe([(0.05, 0.0), (0.052, 0.008), (0.046, 0.02), (0.04, 0.034), (0.034, 0.036)], lv(9, 6), vlib.RW("wood"),
+            S, C("4a2a18"), cap1=True)
+    m.cyl(0.044, 0.044, 0.004, lv(9, 6), "sw_metal", S @ T(0, 0, 0.012), CAP, caps=False)
+    c = 0.036 + 0.042
+    m.sphere(0.046, lv(10, 8), lv(6, 5), "sw_satin", S @ T(0, 0, c), C("f6f6f2"), "glass")
+    m.disc(0.036, lv(10, 6), "sw_matte", S @ T(0, 0, 0.042), C("f4f6f8"))
+    m.cyl(0.004, 0.003, 0.012, 4, vlib.RW("wood"), S @ T(-0.014, 0.008, 0.042), C("4a3020"), caps=False)
+    m.lathe([(0.016, 0.0), (0.0, 0.046)], lv(7, 5), "sw_satin", S @ T(-0.014, 0.008, 0.052), C("1f4a30"), "glaze")
+    if scene == 0:
+        m.box((0.022, 0.016, 0.016), S @ T(0.012, -0.004, 0.05), "sw_satin", C("efe2c8"))
+        m.extrude([(-0.013, 0.0), (0.013, 0.0), (0.0, 0.012)], 0.018, S @ T(0.012, 0.005, 0.058, rx=math.pi / 2),
+                  "sw_satin", None, C("8a2a1a"))
+        m.box((0.006, 0.001, 0.006), S @ T(0.012, -0.0125, 0.05), "sw_satin", C("f2b040"), "bulb_warm")
+    else:
+        m.box((0.014, 0.014, 0.02), S @ T(0.012, 0.0, 0.052), "sw_satin", C("f2ead8"))
+        m.lathe([(0.0085, 0.0), (0.0, 0.022)], 4, "sw_satin", S @ T(0.012, 0.0, 0.062), C("5a2a1a"))
+    rnd = random.Random(31 + scene)
+    for i in range(lv(10, 5)):
+        a, rr, z = rnd.uniform(0, TWO_PI), 0.033 * math.sqrt(rnd.random()), rnd.uniform(0.05, 0.11)
+        p = (rr * math.cos(a), rr * math.sin(a), z)
+        f = 0.0016
+        m.add([(p[0] - f, p[1], p[2] - f), (p[0] + f, p[1], p[2] - f), (p[0], p[1], p[2] + f)], [(0, 1, 2), (0, 2, 1)],
+              [[(0, 0)] * 3] * 2, S @ T(rz=a), C("ffffff"), "atlas", False)
 
 
-STRAW = ("Straw star", "Strohstern · 1,50 €", "A Strohstern of split straw strips crossed and tied with red thread: "
-         "the oldest of German tree ornaments, light enough for the thinnest twig.")
-
-
-def _short_rail(name, slot, plan, seed_tag):
-    """A short rail (slot_rail_3 over the glass case, slot_rail_4 over the tree): a few light ornaments."""
-    L = SLOTS[slot]["length"]
-    s = vlib.PropSet(name, slot, STALL, footprint=(L, 0.12))
-    xs = [0.08 + (L - 0.16) * i / max(1, len(plan) - 1) for i in range(len(plan))]
-    for i, ((kind, k, drop), x) in enumerate(zip(plan, xs)):
-        knot = (x, 0.0, KNOT_Z)
-        if kind == "strawstar":
-            with orn(s, f"act_orn_strawstar_{k}", knot, *STRAW[:2], "hang", STRAW[2], hangable=True) as sm:
-                straw_star(sm, ribbon(sm, knot, drop, C("b0282a")), 0.05 + 0.012 * (k % 2))
-        elif kind == "woodstar":
-            with orn(s, f"act_orn_woodstar_{k}", knot, "Carved wooden star", "Holzstern, geschnitzt", "hang",
-                     "A star carved from lime wood in the Erzgebirge, its edge painted gold.", hangable=True) as wm:
-                wood_star(wm, ribbon(wm, knot, drop, C("b0282a")))
-        elif kind == "angel":
-            with orn(s, f"act_orn_angel_{k}", knot, "Wooden angel", "Engel aus dem Erzgebirge", "hang",
-                     "A turned and painted Erzgebirge angel in a white gown with golden dots and gold wings.",
-                     hangable=True) as am:
-                angel(am, ribbon(am, knot, drop, C("d8b048")), 1.0)
-        elif kind == "icicle":
-            with orn(s, f"act_orn_icicle_{k}", knot, "Glass icicle", "Eiszapfen aus Glas", "hang",
-                     "A twisted clear-glass icicle with a gold cap: it catches every lamp in the shop.",
-                     hangable=True) as im:
-                icicle(im, ribbon(im, knot, drop), 0.15)
-        elif kind == "bird":
-            clip = (x, 0.0, RAIL_R + 0.0105)
-            with orn(s, f"act_orn_bird_{k}", clip, "Clip-on glass bird", "Vogel mit Klammer", "hang",
-                     "A clip-on glass bird with a spun-glass tail, sitting on the rail: it clips to a branch.",
-                     hangable=True, pivot="clip: the clip's foot on the rail; the bird sits above it") as bm:
-                bird(bm, clip)
-    s.finish()
-    return s
-
-
-def rail_3():
-    return _short_rail("prop_schmuck_rail_3", "slot_rail_3",
-                       [("strawstar", 4, 0.12), ("angel", 2, 0.06), ("woodstar", 2, 0.16), ("icicle", 2, 0.05),
-                        ("strawstar", 5, 0.09)], "r3")
-
-
-def rail_4():
-    return _short_rail("prop_schmuck_rail_4", "slot_rail_4",
-                       [("icicle", 3, 0.03), ("strawstar", 6, 0.04), ("woodstar", 3, 0.03), ("icicle", 4, 0.03)], "r4")
-
-
+# ------------------------------------------------------------------ figures (decoration)
 def smoker(m, M):
-    """A Räuchermännchen (incense smoker): a turned wooden pipe smoker, about 21 cm, in a green coat and a
-    fur hat, the mouth a round hole where the smoke comes out."""
+    """A Räuchermännchen (incense smoker), about 23 cm, in a green coat and a fur hat."""
     n = seg(8, 6)
     m.cyl(0.045, 0.045, 0.015, n, vlib.RW("wood"), M, C("6a4a2c"))
     for sx in (-1, 1):
@@ -402,37 +416,40 @@ def smoker(m, M):
     m.cyl(0.025, 0.025, 0.045, n, "sw_gloss", M @ T(0, 0, 0.15), C("f0c8a0"), "glaze")
     m.box((0.04, 0.003, 0.04), M @ T(0, -0.0255, 0.172), "smoker_face", WHITE, MK, faces={"ny": "smoker_face"})
     m.lathe([(0.027, 0.193), (0.031, 0.2), (0.03, 0.225), (0.0, 0.232)], n, "sw_matte", M, C("5a3a22"), "atlas")
-    # the long pipe from the mouth down to a bowl at his chest
     m.tube([(0.0, -0.027, 0.165), (0.012, -0.05, 0.14), (0.018, -0.06, 0.11)], 0.003, 4, vlib.RW("wood"), M,
            C("3a2414"))
     m.cyl(0.009, 0.008, 0.018, 6, vlib.RW("wood"), M @ T(0.018, -0.06, 0.1), C("3a2414"))
 
 
+def F_area(p):
+    return sum(p[i][0] * p[(i + 1) % len(p)][1] - p[(i + 1) % len(p)][0] * p[i][1] for i in range(len(p))) / 2
+
+
 def schwibbogen(s, m, M, origin, n_candles=7):
-    """A Schwibbogen: a fretwork candle arch, 46 cm, dark-stained: base plank, the arch band, a fretwork scene
-    (firs, a church and two miners) and seven candles on the arch, each flame an act_orn_candle_<n> node."""
+    """A Schwibbogen: a fretwork candle arch, 46 cm, dark-stained, with firs, a church and two miners cut out,
+    and seven candles on the arch, each flame an act_orn_candle_<n> node (origin at the wick)."""
     Wd, H, band = 0.46, 0.27, 0.03
     dark = C("4a2e1a")
     m.box((Wd + 0.04, 0.07, 0.022), M @ T(0, 0, 0.011), vlib.RW("wood"), C("5a3a22"), skip=("nz",))
-    nseg = 14 if not vlib.lite() else 8
+    nseg = lv(14, 8)
     outer = [(Wd / 2 * math.cos(math.pi * i / nseg), 0.022 + (H - 0.03) * math.sin(math.pi * i / nseg)) for i in range(nseg + 1)]
     inner = [((Wd / 2 - band) * math.cos(math.pi * i / nseg), 0.022 + (H - 0.03 - band) * math.sin(math.pi * i / nseg))
              for i in range(nseg + 1)]
     poly = outer + inner[::-1]
     m.extrude(poly[::-1] if F_area(poly) < 0 else poly, 0.012, M @ T(0, 0.006, 0, rx=math.pi / 2), vlib.RW("wood"),
               vlib.RW("wood"), dark, back=True)
-    scene = [  # (polygon in arch x/z, colour)
-        ([(-0.17, 0.022), (-0.11, 0.022), (-0.14, 0.13)], C("3a2414")),
-        ([(-0.19, 0.022), (-0.15, 0.022), (-0.17, 0.09)], C("3a2414")),
-        ([(0.11, 0.022), (0.17, 0.022), (0.14, 0.12)], C("3a2414")),
-        ([(-0.05, 0.022), (0.05, 0.022), (0.05, 0.09), (0.0, 0.13), (-0.05, 0.09)], C("3a2414")),
-        ([(0.025, 0.09), (0.04, 0.09), (0.04, 0.17), (0.0325, 0.19), (0.025, 0.17)], C("3a2414")),
-        ([(-0.1, 0.022), (-0.075, 0.022), (-0.078, 0.08), (-0.087, 0.095), (-0.097, 0.08)], C("3a2414")),
-        ([(0.075, 0.022), (0.1, 0.022), (0.097, 0.08), (0.087, 0.095), (0.078, 0.08)], C("3a2414")),
+    scene = [
+        [(-0.17, 0.022), (-0.11, 0.022), (-0.14, 0.13)],
+        [(-0.19, 0.022), (-0.15, 0.022), (-0.17, 0.09)],
+        [(0.11, 0.022), (0.17, 0.022), (0.14, 0.12)],
+        [(-0.05, 0.022), (0.05, 0.022), (0.05, 0.09), (0.0, 0.13), (-0.05, 0.09)],
+        [(0.025, 0.09), (0.04, 0.09), (0.04, 0.17), (0.0325, 0.19), (0.025, 0.17)],
+        [(-0.1, 0.022), (-0.075, 0.022), (-0.078, 0.08), (-0.087, 0.095), (-0.097, 0.08)],
+        [(0.075, 0.022), (0.1, 0.022), (0.097, 0.08), (0.087, 0.095), (0.078, 0.08)],
     ]
-    for poly2, col in scene:
+    for poly2 in scene:
         p = poly2 if F_area(poly2) > 0 else poly2[::-1]
-        m.extrude(p, 0.008, M @ T(0, 0.004, 0, rx=math.pi / 2), vlib.RW("wood"), vlib.RW("wood"), col,
+        m.extrude(p, 0.008, M @ T(0, 0.004, 0, rx=math.pi / 2), vlib.RW("wood"), vlib.RW("wood"), C("3a2414"),
                   back=not vlib.lite())
     for i in range(n_candles):
         a = math.pi * (i + 0.5) / n_candles
@@ -444,67 +461,11 @@ def schwibbogen(s, m, M, origin, n_candles=7):
         name = f"act_orn_candle_{i}"
         fl = s.node(name, (wick.x - origin[0], wick.y - origin[1], wick.z - origin[2]), parent="act_orn_schwibbogen")
         fl.lathe([(0.0, 0.0), (0.0035, 0.007), (0.002, 0.017), (0.0, 0.026)], 6, "sw_satin", None, WHITE, "flame")
+        # the candles light from the outside in (ADR 0004 revision): order 0 for the two outer candles
+        order = min(i, n_candles - 1 - i)
         s.item(name, f"Schwibbogen candle {i + 1}", "deco", pivot="the wick: the flame's foot",
-               label=f"Kerze {i + 1} am Schwibbogen", action="light", order=i,
-               detail="One of the seven candles on the Schwibbogen; they light one after another.")
-
-
-def F_area(p):
-    return sum(p[i][0] * p[(i + 1) % len(p)][1] - p[(i + 1) % len(p)][0] * p[i][1] for i in range(len(p))) / 2
-
-
-def counter():
-    s = vlib.PropSet("prop_schmuck_counter", "slot_counter", STALL)
-    m = s.static
-    # the big nutcracker at the left end, his jaw a node of its own
-    nx, ny, sc = -1.08, 0.06, 1.15
-    with orn(s, "act_orn_nutcracker", (nx, ny, 0.0), "Nutcracker", "Nussknacker, König · 39 €", "jaw",
-             "A king nutcracker from the Erzgebirge, 39 cm, turned and painted: lift the lever at his back and his "
-             "jaw opens for a walnut.", pivot="base", jaw="act_orn_nutcracker_jaw") as nm:
-        nutcracker(nm, T(nx, ny, 0.0), C("a8181c"), C("f2ead8"), C("d8b048"), s=sc)
-    jaw_z = 0.226 * sc
-    jaw = s.node("act_orn_nutcracker_jaw", (0.0, -0.012 * sc, jaw_z), parent="act_orn_nutcracker")
-    jaw.box((0.042 * sc, 0.03 * sc, 0.022 * sc), T(0, -0.008 * sc, -0.011 * sc), "sw_gloss", C("f4f1ea"), "glaze")
-    jaw.box((0.03 * sc, 0.004, 0.006 * sc), T(0, -0.0235 * sc, -0.002 * sc), "sw_gloss", C("8a1a1a"), "glaze")
-    s.item("act_orn_nutcracker_jaw", "Nutcracker's jaw", "deco", pivot="the jaw's hinge; rotate about local X "
-           "(negative opens, about 0.5 rad)", label="Unterkiefer des Nussknackers", action="jaw",
-           detail="The nutcracker's lower jaw and white beard.")
-    # the Räuchermännchen, smoke at his mouth
-    sx_, sy_ = -0.82, -0.08
-    with orn(s, "act_orn_smoker", (sx_, sy_, 0.0), "Räuchermännchen", "Räuchermännchen · 32 €", "smoke",
-             "A Räuchermännchen, the Erzgebirge incense smoker: lift off his top half, light a little cone of "
-             "incense inside, and fir-scented smoke curls out of his mouth.", pivot="base", fx="fx_smoke_1") as rm:
-        smoker(rm, T(sx_, sy_, 0.0))
-    s.empty("fx_smoke_1", (0.0, -0.03, 0.172), parent="act_orn_smoker")
-    # the Schwibbogen at the back left of centre
-    bx, by = -0.38, 0.12
-    with orn(s, "act_orn_schwibbogen", (bx, by, 0.0), "Schwibbogen", "Schwibbogen · 45 €", "candles",
-             "A Schwibbogen, the candle arch of the Erzgebirge mining towns, with firs, a church and two miners "
-             "cut in fretwork: its seven candles light one by one.", pivot="base",
-             candles=[f"act_orn_candle_{i}" for i in range(7)]) as am:
-        schwibbogen(s, am, T(bx, by, 0.0), (bx, by, 0.0))
-    # trays of baubles in egg crates on the right half of the counter, boxes, price tags
-    meta = __import__("atlas_market").BAUBLES
-    for t, tx in enumerate((0.12, 0.6)):
-        Mt = T(tx, -0.02, 0)
-        m.box((0.44, 0.3, 0.035), Mt @ T(0, 0, 0.0175), "kraft", C("d8c8a8"), skip=("nz",))
-        m.box((0.44, 0.004, 0.14), Mt @ T(0, 0.155, 0.1, rx=-0.2), "kraft", C("d0bf9c"))
-        for k in range(12):
-            if (vlib.lite() and k % 2) or k in (3, 6, 9):      # a few sold-out holes
-                continue
-            cx, cy = -0.165 + (k % 4) * 0.11, -0.1 + (k // 4) * 0.1
-            r = 0.034
-            reg = meta[(k * 5 + t * 7) % len(meta)][0]
-            c = Mt @ Vector((cx, cy, 0.035 + r * 0.6))
-            m.sphere(r, seg(6, 6), seg(4, 3), reg, T(c.x, c.y, c.z, rx=drng.uniform(-0.4, 0.4), rz=drng.uniform(0, 6)),
-                     WHITE, MG)
-    for j in range(3):
-        F.carton(m, T(1.08, 0.08 - j * 0.004, j * 0.08, rz=0.05 * (j - 1)), 0.2, 0.14, 0.08, "bx_schmuck")
-    from set_deco import price_tag
-    for k, (x, y) in enumerate(((0.12, -0.21), (0.6, -0.21), (-0.82, -0.2))):
-        price_tag(m, T(x, y + 0.01, 0), 4)
-    s.finish()
-    return s
+               label=f"Kerze {i + 1} am Schwibbogen", action="light", order=order,
+               detail="One of the seven candles on the Schwibbogen. They light from the outside in.")
 
 
 def _tier(n):
@@ -513,123 +474,562 @@ def _tier(n):
     return p[0] - p0[0], p[1] - p0[1], p[2] - p0[2]
 
 
+# ================================================================== hero: the glass harmonica
+HARMONICA_ROW = (0.17, 0.25)      # spacing between baubles (m, stand-in only), centre line below the knot (m)
+
+
+def harmonica():
+    """Twelve baubles in one row (act_orn_harmonica_0..11, left to right), centred on the rail, their ball centres
+    on one level line HARMONICA_ROW[1] under the knots so the row reads as an instrument; radii graded from 4.7
+    to 3.3 cm (left = largest = lowest note, like the bowls of a glass harmonica). Even ones are mercury glass
+    (silver and champagne in turn), odd ones clear glass with a small gold core."""
+    sl = slot("slot_harmonica_rail")
+    L = sl["length"]
+    s = vlib.PropSet("prop_schmuck_harmonica", "slot_harmonica_rail", STALL, footprint=(L, 0.12))
+    step, below = HARMONICA_ROW
+    # the carpenter's twelve brass rings (hooks_x along the rail, ring bottoms hook_drop under the axis)
+    xs = sl.get("hooks_x") or [L / 2 - step * 5.5 + step * i for i in range(12)]
+    kz = -sl.get("hook_drop", -KNOT_Z)
+    for i in range(12):
+        x = xs[i]
+        r = 0.047 - 0.014 * i / 11
+        knot = (x, 0.0, kz)
+        clear = i % 2 == 1
+        tone = ("silver", "champagne")[(i // 2) % 2]
+        name = f"act_orn_harmonica_{i}"
+        node = s.node(name, knot)
+        cz = -below                                   # ball centre, node frame
+        top = cz + r * 1.28
+        node.tube([(0, 0, -0.002), (0, 0, top)], 0.0011, 4, "sw_satin", None, C("e8e2d4"))
+        node.box((0.007, 0.006, 0.004), T(0, 0, -0.001), "sw_satin", C("e8e2d4"), skip=("nz",))
+        n, rings = lv(10, 7), lv(8, 6)
+        if clear:
+            node.sphere(r, n, rings, "sw_satin", T(0, 0, cz), C("f6f2e8"), "glass")
+            node.sphere(r * 0.4, lv(6, 5), lv(4, 3), "sw_satin", T(0, 0, cz), MERC["gold"], "mercury")
+        else:
+            node.sphere(r, n, rings, "sw_satin", T(0, 0, cz), MERC[tone], "mercury")
+        node.lathe([(r * 0.3, cz + r * 0.94), (r * 0.31, cz + r * 1.12), (r * 0.26, top - 0.002), (r * 0.08, top)],
+                   lv(6, 5), "sw_satin", None, CAP, "mercury")
+        what = "a clear glass orb with a small gold core" if clear else f"a {tone} mercury-glass bauble"
+        s.item(name, f"Glass harmonica, bauble {i + 1}", "deco", label=f"Glasharmonika · Kugel {i + 1} von 12",
+               action="harmonica", index=i, radius_m=round(r, 4), finish="clear" if clear else "mercury",
+               pivot="hang: the ribbon's knot at the bottom of its brass ring; the bauble swings about it",
+               detail=f"One of twelve baubles tuned like a glass harmonica: {what}, {round(r * 200, 1)} cm across. "
+                      "Brush across the row to play the tune.")
+    s.finish()
+    return s
+
+
+# ================================================================== hero: the mirror ball
+MIRROR_R = 0.09
+DIVE = 0.15        # cam_dive distance from the ball's centre (see mirrorball())
+DIVE_DIR = Vector((0.34, -0.94, 0.0)).normalized()     # toward the lane, a little toward the market's centre
+
+
+def mirrorball():
+    """One 18 cm mercury-glass ball (act_orn_mirrorball, origin at its ribbon's knot) with a fluted crown cap.
+    It hangs by a short brass wire loop straight from the hook (slot_mirrorball, the forged bracket on the left
+    front post), its centre about 0.12 m below the hook. cam_dive stands DIVE from the ball's centre, level with
+    it, toward the lane (DIVE_DIR: -Y and a little +X), and cam_dive_target on the centre: at the site's 42 degree
+    vertical field of view a 16:9 frame's corners are 36.6 degrees off axis, and the ball (r = 9 cm) spans
+    asin(0.09 / 0.15) = 36.9 degrees there, so its reflection fills the frame. cam_dive_approach, 0.7 m out on
+    the same line, is where the dive can start (the carpenter's suggested framing)."""
+    s = vlib.PropSet("prop_schmuck_mirrorball", "slot_mirrorball", STALL, footprint=(0.2, 0.2))
+    R = MIRROR_R
+    knot = (0.0, 0.0, 0.0)
+    node = s.node("act_orn_mirrorball", knot)
+    top = -0.012
+    cz = top - 0.02 - R * 0.97
+    node.torus(0.007, 0.0014, lv(10, 6), 4, "sw_satin", T(0, 0, -0.006, rx=math.pi / 2), CAP, "mercury")
+    node.sphere(R, lv(24, 16), lv(16, 10), "sw_satin", T(0, 0, cz), MERC["silver"], "mercury")
+    fl = lv(16, 8)
+    crown = []
+    for zf, rf in ((0.0, 0.29), (0.6, 0.31), (1.0, 0.22)):
+        crown.append([(R * rf * (1.0 if j % 2 == 0 else 0.9) * math.cos(TWO_PI * j / fl),
+                       R * rf * (1.0 if j % 2 == 0 else 0.9) * math.sin(TWO_PI * j / fl),
+                       cz + R * 0.95 + (top - cz - R * 0.95) * zf) for j in range(fl)])
+    node.loft(crown, "sw_satin", None, CAP, "mercury", closed=True, cap1=True, smooth=False)
+    ball = (knot[0], knot[1], knot[2] + cz)
+    bc = Vector(ball)
+    s.empty("cam_dive", tuple(bc + DIVE_DIR * DIVE))
+    s.empty("cam_dive_target", ball)
+    s.empty("cam_dive_approach", tuple(bc + DIVE_DIR * 0.7))
+    s.item("act_orn_mirrorball", "Mercury-glass ball", "deco", label="Spiegelkugel · 18 cm", action="dive",
+           cam="cam_dive", cam_target="cam_dive_target", radius_m=R,
+           pivot="hang: the top of its wire loop, on the bracket's hook; the ball's centre is "
+                 f"{round(-cz, 3)} m below it",
+           detail="A big mercury-glass ball, silvered inside by hand. Tap it and look into the reflection.")
+    s.report_extra = {"cam_dive_distance_m": DIVE, "ball_centre_local": [round(v, 3) for v in ball]}
+    s.finish()
+    return s
+
+
+# ================================================================== hero: the Erzgebirge pyramid
+def pyramid():
+    """A three-tier Erzgebirge candle pyramid, 0.55 m to the tip of its propeller, origin on the counter at the
+    centre of its base. Static: the hexagonal base, six slanted posts with a top bearing ring, and six candles
+    on brass cups at the posts' feet (emissive `flame`). rot_pyramid (origin on the axis; the engine spins it
+    about three.js Y = Blender Z): the shaft, three tier discs with turned figures (the nativity, shepherds with
+    sheep, angels) and the eight-bladed propeller on top that the candles' heat turns."""
+    s = vlib.PropSet("prop_schmuck_pyramid", "slot_pyramid", STALL, footprint=(0.36, 0.36))
+    m = s.static
+    dark, light, red = C("4a2c1a"), C("c89a62"), C("9a2420")
+    hexp = [(0.165 * math.cos(TWO_PI * j / 6 + math.pi / 6), 0.165 * math.sin(TWO_PI * j / 6 + math.pi / 6)) for j in range(6)]
+    m.extrude(hexp, 0.022, T(0, 0, 0), vlib.RW("wood"), vlib.RW("wood"), dark, back=False, bevel=lv(0.004, 0.0))
+    top_r, top_z = 0.07, 0.43
+    for j in range(6):
+        a = TWO_PI * j / 6 + math.pi / 6
+        p0 = (0.145 * math.cos(a), 0.145 * math.sin(a), 0.022)
+        p1 = (top_r * math.cos(a), top_r * math.sin(a), top_z)
+        m.tube([p0, p1], 0.0065, lv(5, 4), vlib.RW("wood"), None, light)
+        m.cyl(0.011, 0.009, 0.012, 6, "sw_metal", T(*p0), CAP, caps=False)
+        # the candle on a brass cup at the post's foot, just outside it
+        cx, cy = 0.13 * math.cos(a + 0.52), 0.13 * math.sin(a + 0.52)
+        m.cyl(0.011, 0.0095, 0.01, 6, "sw_metal", T(cx, cy, 0.022), CAP, caps=False)
+        m.cyl(0.0058, 0.0058, 0.07, lv(6, 5), vlib.RW("wax"), T(cx, cy, 0.032), C("c8302a") if j % 2 else C("f4ecdc"))
+        m.lathe([(0.0, 0.0), (0.0042, 0.008), (0.0024, 0.02), (0.0, 0.031)], 5, "sw_satin", T(cx, cy, 0.104), WHITE, "flame")
+    m.torus(top_r, 0.006, lv(16, 8), 4, vlib.RW("wood"), T(0, 0, top_z), light)
+    for j in range(3):
+        a = TWO_PI * j / 3
+        m.tube([(top_r * math.cos(a), top_r * math.sin(a), top_z), (0, 0, top_z + 0.004)], 0.004, 4, vlib.RW("wood"), None, light)
+    m.cyl(0.012, 0.012, 0.012, lv(8, 6), "sw_metal", T(0, 0, top_z - 0.004), CAP)
+    rot = s.node("rot_pyramid", (0.0, 0.0, 0.0))
+    rot.cyl(0.004, 0.004, 0.52, lv(6, 4), vlib.RW("wood"), T(0, 0, 0.024), light, caps=False)
+    tiers = [(0.05, 0.105, 0.07), (0.19, 0.092, 0.058), (0.31, 0.066, 0.048)]
+    rnd = random.Random(77)
+    for ti, (z, r, h) in enumerate(tiers):
+        rot.cyl(r, r, 0.008, lv(12, 8), vlib.RW("wood"), T(0, 0, z), red if ti == 0 else light)
+        figs = [5, 6, 4][ti] if not vlib.lite() else [3, 3, 3][ti]
+        for k in range(figs):
+            a = TWO_PI * k / figs + 0.3 * ti
+            fx, fy = r * 0.72 * math.cos(a), r * 0.72 * math.sin(a)
+            Mf = T(fx, fy, z + 0.008, rz=a + math.pi / 2)
+            if ti == 1 and k % 2 == 1:
+                # a sheep: a woolly body and a dark head
+                rot.sphere(0.013, lv(7, 5), lv(4, 3), "sw_matte", Mf @ T(0, 0, 0.016), C("f2ece0"), scale=(1.5, 1.0, 1.0))
+                rot.sphere(0.006, 5, 3, "sw_matte", Mf @ T(0.021, 0, 0.022), C("2a2220"))
+                continue
+            coat = [C("2a4a8a"), C("8a2a22"), C("c8a050"), C("3a5a2a"), C("6a3a5a"), C("efe6d2")][(k + ti * 2) % 6]
+            if ti == 2:
+                coat = C("f4eee2")
+            hh = h * rnd.uniform(0.9, 1.05)
+            rot.lathe([(0.012, 0.0), (0.011, hh * 0.3), (0.007, hh * 0.72), (0.0, hh * 0.76)], lv(5, 4),
+                      "sw_gloss", Mf, coat, "glaze")
+            rot.sphere(0.0075, 4, 3, "sw_satin", Mf @ T(0, 0, hh * 0.86), C("f0c8a0"), "glaze")
+            if ti == 2:
+                for sx in (-1, 1):
+                    rot.add([(0, 0.004, hh * 0.6), (sx * 0.02, 0.008, hh * 0.85), (sx * 0.012, 0.006, hh * 0.45)],
+                            [(0, 1, 2), (0, 2, 1)], [[(0, 0)] * 3] * 2, Mf, C("d8b048"), "atlas", False)
+            elif ti == 1:
+                rot.cyl(0.0015, 0.0015, hh * 1.05, 3, vlib.RW("wood"), Mf @ T(0.014, 0, 0), C("6a4a2c"), caps=False)
+    # the crib on the bottom tier's centre: a manger with the child
+    rot.box((0.03, 0.018, 0.012), T(0, 0.0, 0.064), vlib.RW("wood"), C("8a5a34"))
+    rot.sphere(0.006, 5, 3, "sw_satin", T(0, 0, 0.074), C("f2ead8"), "glaze", scale=(1.6, 1, 0.8))
+    # the propeller: eight pitched blades on a hub
+    hub_z = 0.53
+    rot.cyl(0.016, 0.012, 0.014, lv(10, 6), vlib.RW("wood"), T(0, 0, hub_z), light)
+    nb = 8
+    for k in range(nb):
+        a = TWO_PI * k / nb
+        Mb = T(0, 0, hub_z + 0.007, rz=a) @ T(0, 0, 0, rx=math.radians(28))
+        blade = [(0.016, -0.012, 0.0), (0.155, -0.024, 0.0), (0.16, 0.024, 0.0), (0.016, 0.012, 0.0)]
+        rot.add(blade, [(0, 1, 2, 3), (3, 2, 1, 0)], [[(0, 0)] * 4] * 2, Mb, light if k % 2 else C("d8b48a"), "atlas", False)
+    rot.lathe([(0.006, 0.0), (0.0, 0.014)], 6, "sw_metal", T(0, 0, hub_z + 0.014), CAP)
+    s.finish()
+    return s
+
+
+# ================================================================== rails
+def _anchors(slot_name, fallback):
+    """The carpenter's swag anchors for a slot_tinsel_<n>, relative to the slot (its first anchor), and the sag."""
+    sl = SLOTS.get(slot_name)
+    if not sl:
+        return fallback
+    p = Vector(sl["position"])
+    return [Vector(a) - p for a in sl["anchors"]], sl.get("sag", 0.08)
+
+
+def swag_set(name, slot_name, n, colour, seed, fallback, label, off=(0.0, -0.035, -0.012), **kw):
+    """A Lametta swag tinsel_<n> hung between the carpenter's anchors (slot_tinsel_<k>), sagging as the slot says,
+    with a small gilt rosette at each anchor."""
+    s = vlib.PropSet(name, slot_name, STALL, footprint=(2.6, 0.1))
+    anchors, sg = _anchors(slot_name, fallback)
+    anchors = [a + Vector(off) for a in anchors]       # hung just in front of the beam or valance it is pinned to
+    with plain(s, f"tinsel_{n}", (0.0, 0.0, 0.0)) as tm:
+        for a, b in zip(anchors[:-1], anchors[1:]):
+            tinsel(tm, sag(a, b, sg, 10), colour, seed + int(a.x * 10), **kw)
+    for a in anchors:
+        s.static.sphere(0.012, lv(8, 6), lv(5, 4), "sw_satin", T(a.x, a.y, a.z + 0.004), MERC["gold"], "mercury")
+    s.finish()
+    return s
+
+
+def tinsel_canopy():
+    """tinsel_0: gold Lametta under the scalloped valance across the counter bay (slot_tinsel_1)."""
+    return swag_set("prop_schmuck_tinsel_1", "slot_tinsel_1", 0, MERC["gold"], 11,
+                    ([Vector((0, 0, 0)), Vector((1.28, 0, 0)), Vector((2.56, 0, 0))], 0.13), "canopy",
+                    step=0.022, drip_every=2, drip=(0.05, 0.13))
+
+
+def tinsel_beam():
+    """tinsel_1: silver Lametta along the tie beam inside the canopy (slot_tinsel_3), doubled in the mirror."""
+    return swag_set("prop_schmuck_tinsel_3", "slot_tinsel_3", 1, MERC["silver"], 23,
+                    ([Vector((0.95 * k, 0, 0)) for k in range(5)], 0.07), "beam", off=(0.0, -0.05, -0.02), step=0.036)
+
+
+def garland():
+    """The front bead garland (slot_tinsel_2): faceted glass beads, mercury gold and clear, draped over the
+    harmonica rail between its three hangers in two shallow curves above the baubles' rings, with a few longer
+    loose strands hanging at the hangers."""
+    s = vlib.PropSet("prop_schmuck_garland", "slot_tinsel_2", STALL, footprint=(2.2, 0.06))
+    m = s.static
+    anchors, sg = _anchors("slot_tinsel_2", ([Vector((1.08 * k, 0, 0)) for k in range(3)], 0.05))
+    for a, b in zip(anchors[:-1], anchors[1:]):
+        a2, b2 = a + Vector((0, -0.026, -0.006)), b + Vector((0, -0.026, -0.006))
+        beads(m, sag(a2, b2, sg + 0.025, 18), cols=("gold", "clear", "gold", "silver"))
+    for k, a in enumerate(anchors):
+        tail = [a + Vector((0, -0.026, -0.014)), a + Vector((0.01 * (k - 1), -0.028, -0.08 - 0.02 * (k % 2)))]
+        beads(m, tail, step=0.02, cols=("clear", "gold"))
+        m.sphere(0.01, lv(8, 6), lv(5, 4), "sw_satin", T(a.x, a.y - 0.026, a.z - 0.004), MERC["gold"], "mercury")
+    s.finish()
+    return s
+
+
+def rail_2():
+    """The inner rail over the counter's back edge (slot_rail_2, 0.31 m clear drop): four clusters of mercury and
+    high-gloss baubles with bare rail between them, two lit Herrnhut stars at different heights (red, 22 cm, and
+    yellow, 16 cm), two spun-glass birds clipped on the rail, icicles, a pine cone, and the pickle hidden among
+    the teal baubles (decoration)."""
+    L = SLOTS["slot_rail_2"]["length"]
+    s = vlib.PropSet("prop_schmuck_rail_2", "slot_rail_2", STALL, footprint=(L, 0.12))
+    m = s.static
+    clusters = [
+        (0.16, [("merc", "silver", "l", 0.12), ("gloss", "teal", "m", 0.2), ("icicle", 0, 0, 0.04),
+                ("merc", "copper", "s", 0.17)]),
+        (0.98, [("gloss", "teal", "m", 0.1), ("merc", "teal", "s", 0.19), ("pickle", 0, 0, 0.09),
+                ("merc", "teal", "l", 0.14), ("gloss", "teal", "s", 0.05)]),
+        (1.42, [("merc", "copper", "m", 0.08), ("pine", 0, 0, 0.13), ("merc", "silver", "xl", 0.12)]),
+        (2.08, [("merc", "gold", "m", 0.17), ("icicle", 0, 0, 0.03), ("merc", "silver", "m", 0.08)]),
+    ]
+    for cx, items in clusters:
+        n = len(items)
+        for k, (kind, a, b, drop) in enumerate(items):
+            x = cx + (k - (n - 1) / 2) * 0.062
+            y = 0.012 * ((k % 2) * 2 - 1)
+            knot = (x, y, KNOT_Z)
+            if kind in ("merc", "gloss"):
+                hang_bauble(s, m, knot, drop, kind, a, b, C("e8e2d4") if kind == "merc" else C("d8b048"))
+            elif kind == "icicle":
+                icicle(m, ribbon(m, knot, drop, C("e8e2d4")), 0.15, "glass")
+            elif kind == "pine":
+                pinecone(m, ribbon(m, knot, drop, C("b0282a")))
+            elif kind == "pickle":
+                pickle(m, ribbon(m, knot, drop, C("2a6a3a")))
+    hang_herrnhut(m, (0.6, 0.0, KNOT_Z), 0.03, 0.105)
+    hang_herrnhut(m, (1.76, 0.0, KNOT_Z), 0.1, 0.075, "sw_satin", C("f2c64a"))
+    for x, f in ((0.4, 0.3), (1.92, math.pi - 0.3)):
+        bird(m, (x, 0.0, RAIL_R + 0.001), facing=f)
+    s.finish()
+    return s
+
+
+def rail_3():
+    """The rail over the glass case (slot_rail_3) around the mirror ball: an icicle and a small mercury bauble at
+    each end, and a short bead swag between."""
+    L = SLOTS["slot_rail_3"]["length"]
+    s = vlib.PropSet("prop_schmuck_rail_3", "slot_rail_3", STALL, footprint=(L, 0.12))
+    m = s.static
+    for x, col in ((0.05, "gold"), (L - 0.05, "copper")):
+        icicle(m, ribbon(m, (x, 0.0, KNOT_Z), 0.03, C("e8e2d4")), 0.18)
+        hang_bauble(s, m, (x + (0.06 if x < L / 2 else -0.06), 0.0, KNOT_Z), 0.13, "merc", col, "s")
+    beads(m, sag((0.02, -0.024, KNOT_Z - 0.002), (L - 0.02, -0.024, KNOT_Z - 0.002), 0.05, 10), cols=("silver", "clear"))
+    s.finish()
+    return s
+
+
+def rail_4():
+    """The short drop over the tree (slot_rail_4, 0.21 m clear): a small white Herrnhut star, lit, between two
+    silver icicles."""
+    L = SLOTS["slot_rail_4"]["length"]
+    s = vlib.PropSet("prop_schmuck_rail_4", "slot_rail_4", STALL, footprint=(L, 0.12))
+    m = s.static
+    hang_herrnhut(m, (L / 2, 0.0, KNOT_Z), 0.02, 0.06, "sw_satin", C("f6f2ea"))
+    for x in (0.08, L - 0.08):
+        icicle(m, ribbon(m, (x, 0.0, KNOT_Z), 0.02, C("e8e2d4")), 0.14)
+    s.finish()
+    return s
+
+
+# ================================================================== counter, shelves, case, tree
+def counter():
+    """The counter (slot_counter): the nutcracker and the smoker (fx_smoke_1 at his mouth) at the left end, the
+    Schwibbogen (act_orn_schwibbogen, the one interactive piece here) left of centre, two snow globes, a velvet
+    tray of mercury baubles and a footed glass bowl heaped with them at the right, a short carton stack and two
+    price tags. The pyramid is its own set (slot_pyramid, 0.12 m right of and 0.10 m behind slot_counter); its 0.34 m
+    circle is left clear."""
+    s = vlib.PropSet("prop_schmuck_counter", "slot_counter", STALL)
+    m = s.static
+    nx, ny, sc = -1.06, 0.07, 1.15
+    with plain(s, "nutcracker", (nx, ny, 0.0)) as nm:
+        nutcracker(nm, T(nx, ny, 0.0), C("a8181c"), C("f2ead8"), C("d8b048"), s=sc)
+    sx_, sy_ = -0.84, -0.06
+    with plain(s, "smoker", (sx_, sy_, 0.0)) as rm:
+        smoker(rm, T(sx_, sy_, 0.0))
+    s.empty("fx_smoke_1", (0.0, -0.03, 0.172), parent="smoker")
+    bx, by = -0.42, 0.11
+    node = s.node("act_orn_schwibbogen", (bx, by, 0.0))
+    schwibbogen(s, node, T(0, 0, 0), (0.0, 0.0, 0.0))      # built in the arch node's own frame
+    s.item("act_orn_schwibbogen", "Schwibbogen", "deco", pivot="base", label="Schwibbogen · 45 €", action="candles",
+           candles=[f"act_orn_candle_{i}" for i in range(7)],
+           detail="A Schwibbogen, the candle arch of the Erzgebirge mining towns, with firs, a church and two "
+                  "miners cut in fretwork. Light it and its seven candles wake the town, from the outside in.")
+    snow_globe(m, T(0.42, -0.13, 0.0, rz=0.3), 0, 1.15)
+    snow_globe(m, T(-0.11, -0.18, 0.0, rz=-0.4), 1, 0.85)
+    # velvet tray with eight nested mercury baubles
+    tx, ty = 0.86, -0.05
+    m.box((0.28, 0.25, 0.03), T(tx, ty, 0.015), "sw_matte", C("123a44"), skip=("nz",))
+    m.box((0.24, 0.21, 0.002), T(tx, ty, 0.031), "sw_matte", C("0c2a32"))
+    cols = ["silver", "gold", "teal", "copper"]
+    for k in range(4):
+        cx, cy = tx - 0.055 + (k % 2) * 0.11, ty - 0.05 + (k // 2) * 0.1
+        place_bauble(s, "merc", cols[k], "m", (cx, cy, 0.032 + 0.032), rx=math.radians(70), rz=k * 0.8 + 0.4)
+    # footed glass bowl with a heap of small baubles
+    gx, gy = 0.56, 0.15
+    m.lathe([(0.045, 0.0), (0.04, 0.006), (0.008, 0.012), (0.007, 0.06), (0.03, 0.075), (0.075, 0.11), (0.08, 0.116)],
+            lv(10, 7), "sw_satin", T(gx, gy, 0), C("f4f2ec"), "glass", cap0=True)
+    heap = [(0.036, 0.018, 0.112, "silver"), (-0.036, 0.022, 0.112, "copper"), (0.0, -0.036, 0.112, "teal"),
+            (0.0, 0.0, 0.138, "gold")]
+    for k, (hx, hy, hz, col) in enumerate(heap):
+        place_bauble(s, "merc", col, "s", (gx + hx, gy + hy, hz), rx=1.2 + k, rz=k * 1.3)
+    for j in range(2):
+        F.carton(m, T(1.1, 0.17, j * 0.08, rz=0.05 * (j - 0.5)), 0.18, 0.13, 0.08, "bx_schmuck")
+    for k, (x, y) in enumerate(((0.86, -0.22), (-0.84, -0.2))):
+        price_tag(m, T(x, y + 0.01, 0), 4 + k)
+    s.finish()
+    return s
+
+
+def bauble_stand(s, m, x, y, z, cols, h=0.26):
+    """A brass bauble stand: a turned foot, a rod and three tiers of curled arms, a bauble hanging from each."""
+    m.cyl(0.04, 0.034, 0.012, lv(10, 6), "sw_metal", T(x, y, z), CAP)
+    m.cyl(0.0035, 0.0035, h, 4, "sw_metal", T(x, y, z + 0.012), CAP, caps=False)
+    k = 0
+    for ti, (zz, reach, arms) in enumerate(((0.11, 0.07, 3), (0.19, 0.05, 2))):
+        for a in range(arms):
+            ang = TWO_PI * a / arms + ti * 0.6
+            p0 = (x, y, z + zz)
+            p1 = (x + reach * math.cos(ang), y + reach * math.sin(ang), z + zz + 0.012)
+            m.tube([p0, p1], 0.0018, 3, "sw_metal", None, CAP)
+            col = cols[k % len(cols)]
+            size = ("s", "xs", "xs")[ti]
+            r = SIZES[size]
+            hang_bauble(s, m, (p1[0], p1[1], p1[2] + 0.004), 0.012 + 0.01 * (a % 2), "merc", col, size, C("e8e2d4"))
+            k += 1
+
+
 def shelf():
-    """The three tiers behind the counter (one set at slot_shelf_1; tiers 2 and 3 by their offsets)."""
+    """The three tiers behind the counter (one set at slot_shelf_1; tiers 2 and 3 by their offsets), dressed in
+    clusters with dark wood between, the middle brace (x 0) and the end brackets kept clear:
+      tier 1: two open boxes of four mercury baubles with their lids leaning behind, two footed glass bowls
+              heaped with baubles, the big snow globe
+      tier 2: two spun-glass birds on a birch log, three large mercury baubles on brass rings, glass pine cones
+              lying on a velvet runner
+      tier 3: three Rauschgoldengel (gold-foil angels) and the menu board; a glass bead garland sags across the
+              back-wall mirror above in three curves, so the mirror doubles it."""
     L = SLOTS["slot_shelf_1"]["length"]
     s = vlib.PropSet("prop_schmuck_shelf", "slot_shelf_1", STALL, footprint=(L, SLOTS["slot_shelf_1"]["depth"]))
     m = s.static
     hw = L / 2 - 0.12
-    # tier 1 (0.42 deep, 0.30 clear): stacked ornament cartons
+    # ---- tier 1
     _, y1, _ = _tier(1)
-    for k, x in enumerate((-hw + 0.1, -hw + 0.32, hw - 0.32, hw - 0.1)):
-        for j in range(2 if k % 2 == 0 else 1):
-            F.carton(m, T(x, y1 + 0.07, j * 0.08, rz=drng.uniform(-0.04, 0.04)), 0.2, 0.12, 0.08, "bx_schmuck")
-    for x in (-0.55, -0.3, 0.3, 0.55):
-        F.carton(m, T(x, y1 + 0.05, 0.0, rz=drng.uniform(-0.04, 0.04)), 0.22, 0.2, 0.05, "bx_schmuck")
-        F.carton(m, T(x, y1 + 0.05, 0.05, rz=drng.uniform(-0.04, 0.04)), 0.22, 0.2, 0.05, "bx_schmuck")
-    # tier 2 (0.33 deep): a row of standing angels and straw stars on little stands
+    for bx, cols in ((-hw + 0.13, ("silver", "gold", "copper", "teal", "gold", "silver")),
+                     (hw - 0.13, ("teal", "silver", "gold", "silver", "copper", "gold"))):
+        m.box((0.17, 0.15, 0.03), T(bx, y1 + 0.02, 0.015), "kraft", C("d8c8a8"), skip=("nz",))
+        m.box((0.15, 0.13, 0.002), T(bx, y1 + 0.02, 0.031), "sw_matte", C("7a1820"))
+        F.carton(m, T(bx, y1 + 0.12, 0.0, rx=-0.25), 0.17, 0.02, 0.16, "bx_schmuck")
+        for k in range(4):
+            cx, cy = bx - 0.04 + (k % 2) * 0.08, y1 - 0.012 + (k // 2) * 0.064
+            place_bauble(s, "merc", cols[k], "s", (cx, cy, 0.032 + 0.026), rx=math.radians(80), rz=k * 1.1)
+    for gx, cols in ((-0.52, ("gold", "silver", "teal", "copper", "gold", "silver", "teal")),
+                     (0.6, ("silver", "copper", "gold", "teal", "silver", "gold", "copper"))):
+        gy = y1 + 0.03
+        m.lathe([(0.05, 0.0), (0.044, 0.006), (0.009, 0.014), (0.008, 0.07), (0.035, 0.085), (0.085, 0.125), (0.09, 0.131)],
+                lv(10, 7), "sw_satin", T(gx, gy, 0), C("f4f2ec"), "glass", cap0=True)
+        heap = [(0.042, 0.02, 0.127), (-0.042, 0.025, 0.127), (0.0, -0.04, 0.127), (0.0, 0.0, 0.15)]
+        for k, (hx, hy, hz) in enumerate(heap):
+            place_bauble(s, "merc", cols[k], "s", (gx + hx, gy + hy, hz), rx=1.0 + k, rz=k * 1.7)
+    snow_globe(m, T(-0.2, y1 - 0.02, 0.0, rz=0.2), 1, 1.35)
+    # ---- tier 2
     x2, y2, z2 = _tier(2)
-    for k, x in enumerate((-0.95, -0.82, -0.69, 0.69, 0.82, 0.95)):
-        angel(m, Vector((x, y2 + 0.02, z2 + 0.1 + 0.012)), 1.1)
-        m.cyl(0.03, 0.03, 0.01, 6, vlib.RW("wood"), T(x, y2 + 0.02, z2), C("6a4a2c"))
-    for k, x in enumerate((-0.45, 0.2, 0.45)):      # clear of the tier's middle brace at x 0
-        m.box((0.012, 0.012, 0.15), T(x, y2 + 0.0, z2 + 0.075), vlib.RW("wood"), C("6a4a2c"))
-        straw_star(m, Vector((x, y2 - 0.01, z2 + 0.16)), 0.065)
-    for x in (-hw + 0.12, hw - 0.12):
-        for j in range(3):
-            F.carton(m, T(x, y2 + 0.04, z2 + j * 0.04), 0.22, 0.2, 0.04, "bx_schmuck")
-    # tier 3 (0.24 deep, 0.46 clear): the menu board and a pair of soldier nutcrackers guarding it
+    m.cyl(0.028, 0.03, 0.3, lv(8, 6), vlib.RW("wood"), T(-1.07, y2 - 0.04, z2 + 0.028, ry=math.pi / 2, rz=0.06), C("e8e2d6"))
+    for k, x in enumerate((-1.0, -0.84)):
+        bird(m, (x, y2 - 0.04 + 0.006 * k, z2 + 0.052), facing=-math.pi / 2 + 0.35 * (k - 1),
+             body=(MERC["silver"], MERC["gold"], C("cfe6f0"))[k], wing=(C("d8b048"), C("b8242a"), C("1e5a8a"))[k])
+    for k, x in enumerate((-0.42, -0.28, -0.14)):
+        m.torus(0.016, 0.003, lv(10, 6), 3, "sw_metal", T(x, y2 - 0.02, z2 + 0.003), CAP)
+        size = ("l", "xl", "l")[k]
+        r = SIZES[size]
+        place_bauble(s, "merc", ("teal", "silver", "copper")[k], size, (x, y2 - 0.02, z2 + 0.003 + r * 0.92),
+                     rx=-0.25, rz=0.3 * k)
+    m.box((0.34, 0.1, 0.004), T(0.66, y2 - 0.03, z2 + 0.002), "sw_matte", C("123a44"))
+    for k in range(2):
+        pinecone_lying(m, (0.58 + k * 0.09, y2 - 0.04 + 0.015 * (k % 2), z2 + 0.004), 0.4 * k - 0.4,
+                       (MERC["gold"], MERC["copper"], MERC["gold"])[k])
+    # ---- tier 3
     x3, y3, z3 = _tier(3)
-    F.menu_board(m, T(0.0, y3 - 0.03, z3), 0.38, 0.28, "mn_schmuck", lean=0.08)
-    for sx in (-1, 1):
-        nutcracker(m, T(sx * 0.34, y3, z3), C("1d3a78") if sx < 0 else C("1f5a3a"), C("f2ead8"), C("141414"), s=0.62)
-    for x in (-hw + 0.15, -hw + 0.42, hw - 0.42, hw - 0.15):
-        F.carton(m, T(x, y3 + 0.03, z3), 0.2, 0.14, 0.14, "bx_schmuck")
+    for k, x in enumerate((-1.06, -0.62, 1.0)):
+        m.cyl(0.04, 0.04, 0.012, lv(10, 6), vlib.RW("wood"), T(x, y3, z3), C("4a2c1a"))
+        rauschgold(m, T(x, y3, z3 + 0.012, rz=0.15 * (1 if x < 0 else -1)), 1.0 + 0.08 * (k % 2))
+    F.menu_board(m, T(0.62, y3 - 0.03, z3), 0.3, 0.22, "mn_schmuck", lean=0.08)
+    # the back garland hangs in front of the mirror (mirror_0) from its frame and its two glazing bars, so the
+    # mirror doubles it; it stays under the canopy's sight line from the lane
+    mir = SLOTS.get("mirror_0", {}).get("glass", [[-1.5, 1.234, 1.1], [1.5, 1.234, 2.62]])
+    p0 = SLOTS["slot_shelf_1"]["position"]
+    back = mir[0][1] - p0[1] - 0.024     # the gilt glazing bars stand about 1.4 cm proud of the glass
+    gz = 2.44 - p0[2]
+    nails = [mir[0][0] + 0.02, -0.5, 0.5, mir[1][0] - 0.02]
+    for a, b in zip(nails[:-1], nails[1:]):
+        beads(m, sag((a, back, gz), (b, back, gz), 0.085, 18), step=0.036, cols=("gold", "clear", "silver", "clear"))
+    for i, x in enumerate(nails):
+        # the outer nails go into the frame at the glass; the gilt glazing bars stand proud, so those nails are short
+        # (the cylinder runs from its origin toward -Y): outer nails from the glass, bar nails from the bar face
+        tail = 0.022 if i in (0, len(nails) - 1) else 0.008
+        m.cyl(0.004, 0.004, tail + 0.004, 5, "sw_metal", T(x, back + tail, gz, rx=math.pi / 2), CAP)
     s.finish()
     return s
 
 
 def case():
-    """The glass case in the left bay (slot_cabinet, on its velvet floor; a glass shelf at shelf_height):
-    a velvet tray of mirror and painted baubles below, standing angels and boxed stars on the glass shelf."""
+    """The glass case (slot_cabinet, on its velvet floor; a glass shelf at shelf_height): a deep blue velvet tray
+    of ten large mercury baubles below; on the glass shelf a Rauschgoldengel between two spun-glass birds and a
+    small pyramid of gold and silver baubles."""
     sw, sd, sh = SLOTS["slot_cabinet"]["inner_size"]
     gz = SLOTS["slot_cabinet"]["shelf_height"]
     s = vlib.PropSet("prop_schmuck_case", "slot_cabinet", STALL, footprint=(sw, sd))
     m = s.static
-    meta = __import__("atlas_market").BAUBLES
-    # floor: an open presentation box lined in cream satin, 2 x 5 baubles, and a lidded box leaning behind
-    m.box((0.5, 0.2, 0.028), T(0.0, -0.03, 0.014), "kraft", C("e8dcc0"), skip=("nz",))
-    for k in range(10):
-        cx, cy, r = -0.2 + (k % 5) * 0.1, -0.075 + (k // 5) * 0.09, 0.034
-        m.sphere(r, seg(6, 6), seg(4, 3), meta[(k * 7 + 3) % len(meta)][0], T(cx, cy, 0.028 + r * 0.7, rz=k), WHITE, MG)
-    F.carton(m, T(0.0, 0.11, 0.0, rx=-0.12), 0.5, 0.03, 0.2, "bx_schmuck")
-    # the glass shelf: three angels and two carved stars on stands
-    for k, x in enumerate((-0.12, 0.0, 0.12)):
-        m.cyl(0.028, 0.028, 0.01, 6, vlib.RW("wood"), T(x, 0.0, gz), C("6a4a2c"))
-        angel(m, Vector((x, 0.0, gz + 0.1 + 0.022)), 1.15)
-    for x in (-0.26, 0.26):
-        m.box((0.012, 0.012, 0.1), T(x, 0.03, gz + 0.05), vlib.RW("wood"), C("6a4a2c"))
-        wood_star(m, Vector((x, 0.024, gz + 0.17)), 0.06)
+    m.box((0.54, 0.22, 0.026), T(0.0, -0.02, 0.013), "sw_matte", C("14244a"), skip=("nz",))
+    cols = ["silver", "teal", "gold", "copper", "silver", "gold", "copper", "silver", "teal", "gold"]
+    for k in range(6):
+        cx, cy = -0.12 + (k % 3) * 0.12, -0.07 + (k // 3) * 0.1
+        place_bauble(s, "merc", cols[k], "m" if k % 3 else "l", (cx, cy, 0.026 + 0.026), rx=math.radians(75), rz=0.7 * k)
+    m.cyl(0.04, 0.04, 0.01, lv(10, 6), vlib.RW("wood"), T(-0.03, 0.02, gz), C("4a2c1a"))
+    rauschgold(m, T(-0.03, 0.02, gz + 0.01), 0.95)
+    pyr = [(-0.03, 0.0), (0.03, 0.0), (0.0, 0.05)]
+    for k, (px, py) in enumerate(pyr):
+        place_bauble(s, "merc", ("gold", "silver", "copper")[k], "s", (0.15 + px, -0.04 + py * 0.4, gz + 0.026),
+                     rx=1.3, rz=k * 2.0)
+    place_bauble(s, "merc", "gold", "s", (0.15, -0.03, gz + 0.072), rx=0.2, rz=0.5)
     s.finish()
     return s
 
 
 def tree():
     """The display tree on the dais in the right bay (slot_tree, top 0.5 x 0.4, 1.45 m max): a 1.15 m fir in a
-    wooden tub, a gold star on top, twelve hook_tree_<n> empties at branch tips where a clicked ornament can be
-    hung (the engine hangs it by its own origin, the hanging point)."""
+    wooden tub, a large Rauschgoldengel on top, thirteen mercury and gloss baubles, a spiral of gold glass beads
+    and silver Lametta strands hanging from the tier skirts (tinsel_2). The
+    hook_tree_<n> empties stay (decoration, BUILD.md round 9)."""
     s = vlib.PropSet("prop_schmuck_tree", "slot_tree", STALL, footprint=tuple(SLOTS["slot_tree"]["top_size"]))
     m = s.static
-    x0, y0 = 0.0, 0.0
-    n = 12        # full and lite alike: the tiers' outline (and so the tree's bounds) must match
-    m.lathe([(0.14, 0.0), (0.17, 0.2), (0.18, 0.22), (0.0, 0.22)], seg(12, 8), vlib.RW("stave"), T(x0, y0, 0), C("8a5a34"))
+    n = 12
+    m.lathe([(0.14, 0.0), (0.17, 0.2), (0.18, 0.22), (0.0, 0.22)], lv(12, 8), vlib.RW("stave"), T(0, 0, 0), C("8a5a34"))
     for z in (0.05, 0.17):
-        m.cyl(0.145 + z * 0.15, 0.145 + z * 0.15, 0.015, 8 if vlib.lite() else n, "sw_metal_rough", T(x0, y0, z), C("3a3a3a"), caps=False)
-    m.cyl(0.025, 0.02, 0.2, 6, vlib.RW("wood"), T(x0, y0, 0.2), C("4a3020"), caps=False)
+        m.cyl(0.145 + z * 0.15, 0.145 + z * 0.15, 0.015, lv(n, 8), "sw_metal_rough", T(0, 0, z), C("3a3a3a"), caps=False)
+    m.cyl(0.025, 0.02, 0.2, 6, vlib.RW("wood"), T(0, 0, 0.2), C("4a3020"), caps=False)
     tiers = [(0.34, 0.3, 0.56), (0.29, 0.48, 0.74), (0.23, 0.64, 0.9), (0.16, 0.8, 1.04), (0.1, 0.94, 1.14)]
     if vlib.lite():
         tiers = [tiers[0], tiers[2], tiers[4]]
     for r, z0, z1 in tiers:
         rr = [r * (1 + 0.12 * ((j * 7) % 3 - 1)) for j in range(n)]
-        ring0 = [(x0 + rr[j] * math.cos(TWO_PI * j / n), y0 + rr[j] * math.sin(TWO_PI * j / n), z0 - 0.02 * (j % 2))
-                 for j in range(n)]
-        mid = [(x0 + rr[j] * 0.55 * math.cos(TWO_PI * (j + 0.5) / n), y0 + rr[j] * 0.55 * math.sin(TWO_PI * (j + 0.5) / n),
+        ring0 = [(rr[j] * math.cos(TWO_PI * j / n), rr[j] * math.sin(TWO_PI * j / n), z0 - 0.02 * (j % 2)) for j in range(n)]
+        mid = [(rr[j] * 0.55 * math.cos(TWO_PI * (j + 0.5) / n), rr[j] * 0.55 * math.sin(TWO_PI * (j + 0.5) / n),
                 (z0 + z1) / 2) for j in range(n)]
-        top = [(x0, y0, z1)] * n
-        m.loft([ring0, mid, top], "garland", None, C("ffffff"), MK, closed=True, cap0=True)
-    m.extrude(star_poly(0.07, 0.03, 5), 0.01, T(x0, y0 + 0.004, 1.2, rx=math.pi / 2), "sw_metal", "sw_metal", C("d8b048"))
-    meta = __import__("atlas_market").BAUBLES
+        m.loft([ring0, mid, [(0, 0, z1)] * n], "garland", None, C("ffffff"), MK, closed=True, cap0=True)
+    rauschgold(m, T(0, 0, 1.1), 1.35)
+
+    def surface(z):
+        """Radius of the tree's outline at height z (the tier skirts)."""
+        best = 0.0
+        for r, z0, z1 in [(0.34, 0.3, 0.56), (0.29, 0.48, 0.74), (0.23, 0.64, 0.9), (0.16, 0.8, 1.04), (0.1, 0.94, 1.14)]:
+            if z0 - 0.02 <= z <= z1:
+                best = max(best, r * (z1 - z) / (z1 - z0 + 0.02))
+        return best
+
+    # gold bead spiral from the bottom tier up to the angel, a little off the branch tips
+    pts = []
+    for i in range(61):
+        f = i / 60
+        z = 0.34 + 0.72 * f
+        a = -math.pi / 2 + 2.4 * TWO_PI * f
+        r = surface(z) * 0.93 + 0.012
+        pts.append(Vector((r * math.cos(a), r * math.sin(a), z)))
+    beads(m, pts, step=0.04, r=0.0058, cols=("gold", "gold", "clear"))
     hooks = []
     for ti, (r, z0, z1) in enumerate([(0.34, 0.3, 0.56), (0.29, 0.48, 0.74), (0.23, 0.64, 0.9), (0.16, 0.8, 1.04)]):
         for j in range(3 if ti < 3 else 2):
             a = -math.pi / 2 + (j - (1 if ti < 3 else 0.5)) * 0.85 + 0.3 * (ti % 2)
-            rr = r * 0.82
-            hooks.append((x0 + rr * math.cos(a), y0 + rr * math.sin(a), z0 + 0.03))
-    hooks += [(x0 + 0.28 * math.cos(a), y0 + 0.28 * math.sin(a), 0.36) for a in (0.6, 2.5)]
+            hooks.append((r * 0.82 * math.cos(a), r * 0.82 * math.sin(a), z0 + 0.03))
+    hooks += [(0.28 * math.cos(a), 0.28 * math.sin(a), 0.36) for a in (0.6, 2.5)]
     for i, h in enumerate(hooks):
         s.empty(f"hook_tree_{i}", h)
-    for i in (1, 4, 8):
-        hx, hy, hz = hooks[i]
-        bauble(m, Vector((hx, hy, hz)), 0.03, meta[(i * 3) % len(meta)][0], n=seg(8, 6), rings=seg(5, 4))
+    cols = ["silver", "teal", "gold", "copper", "silver", "gold", "teal", "copper", "gold", "silver", "teal", "gold", "copper", "silver"]
+    for i, (hx, hy, hz) in enumerate(hooks):
+        size = ("m", "s", "m", "l")[i % 4] if hz < 0.7 else "s"
+        if i % 2 == 1:
+            size = "xs" if hz > 0.7 else "s"
+        r = SIZES[size]
+        top = (hx * 1.04, hy * 1.04, hz - 0.01)
+        m.tube([(hx, hy, hz + 0.004), top], 0.001, 3, "sw_satin", None, C("e8e2d4"))
+        key, r = bauble_proto(s, "merc" if i % 5 else "gloss", cols[i] if i % 5 else "teal", size)
+        s.inst(key, T(*top, rz=i))
+    # Lametta: silver foil strands hanging from the tier skirts (tinsel_2, the engine's glint shader)
+    rnd = random.Random(5)
+    # the strands are drawn from one seeded list; lite keeps every third plus the ones that set the bounds
+    strands = []
+    for ti, (r, z0, z1) in enumerate([(0.34, 0.3, 0.56), (0.29, 0.48, 0.74), (0.23, 0.64, 0.9), (0.16, 0.8, 1.04)]):
+        k = (40, 34, 26, 18)[ti]
+        for j in range(k):
+            a = -math.pi / 2 + (j / k - 0.5) * 4.4 + rnd.uniform(-0.05, 0.05)    # the front 250 degrees
+            rr = r * rnd.uniform(0.86, 1.04)
+            p = Vector((rr * math.cos(a), rr * math.sin(a), z0 + rnd.uniform(0.0, 0.03)))
+            L = rnd.uniform(0.05, 0.11)
+            tip = p + Vector((rnd.uniform(-0.01, 0.01), rnd.uniform(-0.01, 0.01), -L))
+            e = Vector((-math.sin(a + rnd.uniform(-1, 1)), math.cos(a), 0)).normalized() * 0.0014
+            strands.append(([p - e, p + e, tip + e, tip - e], vlib.jit(MERC["silver"], 0.1)))
+    keep = set(range(0, len(strands), 3)) if vlib.lite() else set(range(len(strands)))
+    for ax in range(3):
+        keep.add(min(range(len(strands)), key=lambda i: min(v[ax] for v in strands[i][0])))
+        keep.add(max(range(len(strands)), key=lambda i: max(v[ax] for v in strands[i][0])))
+    with plain(s, "tinsel_2", (0.0, 0.0, 0.0)) as tm:
+        for i in sorted(keep):
+            q, col = strands[i]
+            tm.add([tuple(v) for v in q], [(0, 1, 2, 3)], [[(0, 0)] * 4], None, col, "tinsel", False)
     s.report_extra = {"hooks": len(hooks)}
     s.finish()
     return s
 
 
-def _def(fn, slot, seed, kind, cam, label):
-    return dict(fn=fn, slot=slot, stall=STALL, kind=kind, section=False, seed=seed, label=label, width=4.5,
-                cam=cam, fill=True, ao_size=(256, 128),     # small AO maps keep the shop under its 2 MB
-                seat=("hang" if slot.startswith("slot_rail") else "stand" if slot == "slot_tree" else
-                      "tiers" if fn is shelf else "board"))
+def _def(fn, slot_name, seed, kind, label, seat=None):
+    d = dict(fn=fn, slot=slot_name, stall=STALL, kind=kind, section=False, seed=seed, label=label, width=4.5,
+             cam=None, fill=True, ao_size=(256, 128),
+             seat=seat or ("hang" if "rail" in slot_name or "tinsel" in slot_name or slot_name == "slot_mirrorball" else
+                           "stand" if slot_name == "slot_tree" else "tiers" if fn is shelf else "board"))
+    if slot_name not in SLOTS:
+        d["standin"] = STANDIN[slot_name]
+    return d
 
 
 SETS = {
-    "prop_schmuck_rail_1": _def(rail_1, "slot_rail_1", 81, "rail", None, "Ornament shop: front rail"),
-    "prop_schmuck_rail_2": _def(rail_2, "slot_rail_2", 82, "rail", None, "Ornament shop: inner rail"),
-    "prop_schmuck_rail_3": _def(rail_3, "slot_rail_3", 86, "rail", None, "Ornament shop: rail over the case"),
-    "prop_schmuck_rail_4": _def(rail_4, "slot_rail_4", 87, "rail", None, "Ornament shop: rail over the tree"),
-    "prop_schmuck_counter": _def(counter, "slot_counter", 83, "counter", None, "Ornament shop: counter"),
-    "prop_schmuck_shelf": _def(shelf, "slot_shelf_1", 84, "shelf", None, "Ornament shop: shelves"),
-    "prop_schmuck_case": _def(case, "slot_cabinet", 88, "case", None, "Ornament shop: glass case"),
-    "prop_schmuck_tree": _def(tree, "slot_tree", 85, "front", None, "Ornament shop: display tree"),
+    "prop_schmuck_harmonica": _def(harmonica, "slot_harmonica_rail", 89, "rail", "Ornament shop: glass harmonica"),
+    "prop_schmuck_mirrorball": _def(mirrorball, "slot_mirrorball", 90, "rail", "Ornament shop: mirror ball"),
+    "prop_schmuck_pyramid": _def(pyramid, "slot_pyramid", 91, "counter", "Ornament shop: candle pyramid"),
+    "prop_schmuck_garland": _def(garland, "slot_tinsel_2", 81, "rail", "Ornament shop: front bead garland", "hang"),
+    "prop_schmuck_tinsel_1": _def(tinsel_canopy, "slot_tinsel_1", 92, "rail", "Ornament shop: gold Lametta", "hang"),
+    "prop_schmuck_tinsel_3": _def(tinsel_beam, "slot_tinsel_3", 93, "rail", "Ornament shop: silver Lametta", "hang"),
+    "prop_schmuck_rail_2": _def(rail_2, "slot_rail_2", 82, "rail", "Ornament shop: inner rail"),
+    "prop_schmuck_rail_3": _def(rail_3, "slot_rail_3", 86, "rail", "Ornament shop: rail over the case"),
+    "prop_schmuck_rail_4": _def(rail_4, "slot_rail_4", 87, "rail", "Ornament shop: rail over the tree"),
+    "prop_schmuck_counter": _def(counter, "slot_counter", 83, "counter", "Ornament shop: counter"),
+    "prop_schmuck_shelf": _def(shelf, "slot_shelf_1", 84, "shelf", "Ornament shop: shelves"),
+    "prop_schmuck_case": _def(case, "slot_cabinet", 88, "case", "Ornament shop: glass case"),
+    "prop_schmuck_tree": _def(tree, "slot_tree", 85, "front", "Ornament shop: display tree"),
 }

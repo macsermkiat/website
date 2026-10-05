@@ -1,0 +1,21 @@
+· the Bücherstand cabinets on a 390 px phone: tap, open, its books only, covers ≥ 44 px, arrows, a way back
+· ready in 11.8 s
+  ok   phone: the signpost walks to the Bücherstand 
+  ok   the Bücherstand has its six cabinets, each with a door (act_cab_), a sign (sign_cat_) and a tap target ([{"key":"physics","label":"Physik & Kosmos","en":"Physics and the Universe","books":10,"door":true,"sign":true,"proxy":true},{"key":"lives",)
+  ok   phone: ‹ › buttons beside the stall turn to the cabinets 
+  ok   › turns to a cabinet, now in view (and big enough to tap) ({"key":"people","faced":{"x":192,"y":440,"w":135,"h":197,"onScreen":true}})
+  ok   tapping a cabinet moves to its view, opens its door and brings its books forward ({"tapAt":{"x":195,"y":438.23979330026333,"via":"engine_cabinet_proxy_people"},"st":{"key":"people","open":true,"focus":null,"books":["act_bo)
+  ok   a clear way back is on screen (Step back) 
+  ok   only the open cabinet's books are pickable ({"seen":["act_book_25","act_book_26","act_book_27","act_book_28","act_book_29","act_book_30","act_book_31","act_book_32","act_book_33","act_)
+  ok   every cover in the open cabinet is at least 44 px on a 390 px screen, and in view (14 covers; smallest 69.0 px; [])
+· screenshot ../../../../tmp/claude-0/-home-claude-website/1be5eec7-c481-5143-a957-0d64882788ad/scratchpad/r8out/phone_cabinet_open.jpg
+  ok   ← → move between the open cabinet's books (["act_book_26","act_book_25"])
+  ok   ↓ opens the next cabinet (the first one shuts) ({"key":"decisions","open":true,"focus":"act_book_39","books":["act_book_39","act_book_40","act_book_41","act_book_42","act_book_43","act_boo)
+  ok   ↑ goes back to the cabinet before 
+  ok   tapping a cover opens that book ({"bAim":{"x":82.04541418143117,"y":429.62053332380185},"ob":{"name":"act_book_25","slug":"unreasonable-hospitality","title":"Unreasonable Ho)
+  ok   Escape puts the book back, and the cabinet is still open ({"book":null,"cab":"people"})
+  ok   Step back shuts the cabinet and returns to the stall's view ({"cab":null,"stop":"books","door":null})
+  ok   with the cabinet shut its books no longer answer the pointer 
+
+15/15 checks passed
+No console errors.

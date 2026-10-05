@@ -1,5 +1,5 @@
 {
- "about": "Christbaumschmuck ornament shop (carpenter, blender/stalls/schmuck.py -> stall_schmuck.glb). Slot data for the vendor's goods. slot_rail_<n> sits at the rail's LEFT end (visitor's view) on the rail's centre line; the rail runs along +X for length metres; ornaments hang anywhere along it (about 0.12 m apart reads well); clear_drop is the free height under the rail. Rails 1, 3 and 4 hang in front of the header (1 over the counter, 3 over the glass case, 4 over the tree); rail 2 hangs inside over the counter's back edge.",
+ "about": "Christbaumschmuck ornament shop (carpenter, blender/stalls/schmuck.py -> stall_schmuck.glb). Slot data for the vendor's goods. slot_rail_<n> sits at the rail's LEFT end (visitor's view) on the rail's centre line; the rail runs along +X for length metres; ornaments hang anywhere along it (about 0.12 m apart reads well); clear_drop is the free height under the rail. Round 9 (ADR 0004 revision): rail 1 is now the glass-harmonica rail at 2.0 m (slot_harmonica_rail, the same rail, with twelve brass rings at hooks_x); rail 2 hangs inside over the counter's back edge; rails 3 and 4 hang in front of the header over the glass case and the tree. slot_mirrorball is the hook of the forged bracket on the left front post (the 18 cm mercury-glass bauble); slot_pyramid is on the counter right of the Schwibbogen; slot_tinsel_1..3 are the left anchors of three tinsel swags (all anchors and a sag per swag below; use two or three of them). mirror_0 is the back-wall mirror's glass (not a slot). Keep dark wood showing between clusters: the tiers, the frame and the canopy are dark walnut on purpose.",
  "frame": "Stall frame: Blender metres, Z up, origin on the ground at the footprint centre, front toward -Y (three.js: x = x, y = z, z = -y). All slots have no rotation.",
  "footprint": [
   4.5,
@@ -36,6 +36,94 @@
    "depth": 0.24,
    "clear_height": 0.46
   },
+  "slot_tinsel_1": {
+   "position": [
+    -1.28,
+    -1.68,
+    2.2714
+   ],
+   "anchors": [
+    [
+     -1.28,
+     -1.68,
+     2.2714
+    ],
+    [
+     0.0,
+     -1.68,
+     2.2714
+    ],
+    [
+     1.28,
+     -1.68,
+     2.2714
+    ]
+   ],
+   "sag": 0.13,
+   "about": "canopy edge: under the scalloped valance across the counter bay"
+  },
+  "slot_tinsel_2": {
+   "position": [
+    -1.08,
+    -1.45,
+    2.004
+   ],
+   "anchors": [
+    [
+     -1.08,
+     -1.45,
+     2.004
+    ],
+    [
+     0.0,
+     -1.45,
+     2.004
+    ],
+    [
+     1.08,
+     -1.45,
+     2.004
+    ]
+   ],
+   "sag": 0.05,
+   "about": "front rail: draped over the harmonica rail between its three hangers, above the baubles' rings"
+  },
+  "slot_tinsel_3": {
+   "position": [
+    -1.9,
+    -0.78,
+    2.655
+   ],
+   "anchors": [
+    [
+     -1.9,
+     -0.78,
+     2.655
+    ],
+    [
+     -0.95,
+     -0.78,
+     2.655
+    ],
+    [
+     0.0,
+     -0.78,
+     2.655
+    ],
+    [
+     0.95,
+     -0.78,
+     2.655
+    ],
+    [
+     1.9,
+     -0.78,
+     2.655
+    ]
+   ],
+   "sag": 0.07,
+   "about": "inside: along the tie beam under the canopy (doubled in the mirror)"
+  },
   "slot_cabinet": {
    "position": [
     -1.735,
@@ -63,15 +151,70 @@
    "max_height": 1.45,
    "about": "top of the dais in the right bay; the bay's lower front wall is 0.42 m, so the tree shows from the lane down to its pot."
   },
+  "slot_window_l": {
+   "position": [
+    -2.365,
+    -0.08,
+    1.02
+   ],
+   "inner_size": [
+    0.14,
+    0.8,
+    0.73
+   ],
+   "faces": "-X",
+   "about": "on the sill of the lit side window (Schaukasten), centred; inner_size is (depth out from the wall, width along the wall, height). Optional: a few hanging baubles, a spun-glass bird or a small angel read well; keep it sparse."
+  },
+  "slot_window_r": {
+   "position": [
+    2.365,
+    -0.08,
+    1.02
+   ],
+   "inner_size": [
+    0.14,
+    0.8,
+    0.73
+   ],
+   "faces": "+X",
+   "about": "on the sill of the lit side window (Schaukasten), centred; inner_size is (depth out from the wall, width along the wall, height). Optional: a few hanging baubles, a spun-glass bird or a small angel read well; keep it sparse."
+  },
   "slot_rail_1": {
    "position": [
     -1.16,
-    -1.43,
-    2.08
+    -1.45,
+    2.0
    ],
    "length": 2.32,
    "rail_radius": 0.011,
-   "clear_drop": 0.58
+   "clear_drop": 0.55,
+   "about": "same rail as slot_harmonica_rail"
+  },
+  "slot_harmonica_rail": {
+   "position": [
+    -1.16,
+    -1.45,
+    2.0
+   ],
+   "length": 2.32,
+   "rail_radius": 0.011,
+   "hooks_x": [
+    0.225,
+    0.395,
+    0.565,
+    0.735,
+    0.905,
+    1.075,
+    1.245,
+    1.415,
+    1.585,
+    1.755,
+    1.925,
+    2.095
+   ],
+   "hook_drop": 0.022,
+   "clear_drop": 0.55,
+   "about": "the front rail at 2.0 m, the glass harmonica: hang act_orn_harmonica_0..11 left to right from the bottoms of the twelve brass rings (x offsets hooks_x from this empty, along +X; ring bottom hook_drop below the rail axis). The same rail is slot_rail_1 (kept for the round-8 set; the harmonica set replaces prop_schmuck_rail_1)."
   },
   "slot_rail_2": {
    "position": [
@@ -102,6 +245,53 @@
    "length": 0.65,
    "rail_radius": 0.011,
    "clear_drop": 0.21
+  },
+  "mirror_0": {
+   "glass": [
+    [
+     -1.5,
+     1.234,
+     1.1
+    ],
+    [
+     1.5,
+     1.234,
+     2.62
+    ]
+   ],
+   "about": "the back-wall mirror (mesh mirror_0, material mirror_foxed): its glass plane faces -Y; gilt glazing bars at x = -0.5 and 0.5."
+  },
+  "slot_mirrorball": {
+   "position": [
+    -2.2,
+    -1.94,
+    2.1
+   ],
+   "ball_diameter": 0.18,
+   "clear_radius": 0.4,
+   "about": "the open hook under the forged corner bracket (left front post); hang act_orn_mirrorball by its cap here, ball centre about 0.12 m below (18 cm ball). No other ornament within clear_radius. A camera for the dive fits in front of it, e.g. cam_dive about 0.7 m toward -Y and 0.25 m toward +X of the ball, cam_dive_target on the ball centre: from there the ball mirrors the lane and the lit market behind the camera."
+  },
+  "slot_pyramid": {
+   "position": [
+    0.12,
+    -1.12,
+    1.05
+   ],
+   "max_diameter": 0.34,
+   "max_height": 0.62,
+   "about": "on the counter top, right of the Schwibbogen (which stands at about x = -0.38 from slot_counter): the Erzgebirge candle pyramid; its turning part is the vendor's rot_pyramid. The harmonica's lowest baubles end about 0.3 m in front of and above its top."
+  },
+  "cam_view": {
+   "position": [
+    0.0,
+    -5.6,
+    1.8
+   ],
+   "target": [
+    0.0,
+    -1.0,
+    1.62
+   ]
   },
   "slot_counter": {
    "position": [

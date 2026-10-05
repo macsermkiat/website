@@ -911,10 +911,12 @@ function createKeyLight(scene) {
     },
     aim(center, facing) {
       if (!placeId || !center || !facing) return;
-      L.position.copy(center).addScaledVector(facing.clone().setY(0).normalize(), 1.3).add(new THREE.Vector3(0, 1.1, 0));
+      // a cabinet's pale face-out covers stand close to it: a softer light from a little further off, so they
+      // read as paper and not as a white glare
+      L.position.copy(center).addScaledVector(facing.clone().setY(0).normalize(), 1.7).add(new THREE.Vector3(0, 1.0, 0));
       L.target.position.copy(center);
       L.target.updateMatrixWorld();
-      want = INTENSITY;
+      want = INTENSITY * 0.3;
     },
     update(dt) { L.intensity += (want - L.intensity) * Math.min(1, dt * 3); },
     state: () => ({ place: placeId, intensity: +L.intensity.toFixed(2), position: L.position.toArray().map((v) => +v.toFixed(2)) }),

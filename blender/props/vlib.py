@@ -36,7 +36,7 @@ from nmlib import state  # noqa: E402
 TWO_PI = 2 * math.pi
 ATLAS_DIR = os.path.join(REPO, "blender", "out", "vendor")
 MODELS = os.path.join(REPO, "site", "public", "models")
-REVIEW = os.path.join(REPO, "review", "round-8", "vendor")
+REVIEW = os.path.join(REPO, "review", "round-9", "vendor")
 _REG = None
 LITE = {"on": False}
 # Two random streams. `rng` is the layout stream: where goods stand, their sizes and which book is which.
@@ -618,6 +618,32 @@ def material(key):
             b.inputs["Specular IOR Level"].default_value = 0.35
         _MATS[key] = m
         return m
+    if key == "gloss":
+        # round 9: high-gloss painted glass baubles (lacquer over clear glass, not silvered): COLOR_0 under a
+        # clear coat, no texture and no baked AO, so the pieces can be instanced
+        m = bpy.data.materials.new("vendor_gloss")
+        m.use_nodes = True
+        b = m.node_tree.nodes["Principled BSDF"]
+        _vcol_mult(m.node_tree, (1.0, 1.0, 1.0), b)
+        b.inputs["Roughness"].default_value = 0.06
+        b.inputs["Coat Weight"].default_value = 1.0
+        b.inputs["Coat Roughness"].default_value = 0.02
+        _MATS[key] = m
+        return m
+    if key in ("mercury", "tinsel"):
+        # round 9 (ADR 0004 revision): mercury glass (silvered inside, so it reads as a near-perfect metal
+        # mirror tinted by its lacquer: silver, gold, copper, deep teal from COLOR_0) and Lametta tinsel (thin
+        # metal foil strips, double-sided; the engine swaps in its glint shader on tinsel_<n> meshes). No texture:
+        # flat factors, so they cost no bytes; no baked AO (vstage.AO_SKIP), which would dull the reflections.
+        m = bpy.data.materials.new("vendor_mercury" if key == "mercury" else "tinsel")
+        m.use_nodes = True
+        b = m.node_tree.nodes["Principled BSDF"]
+        _vcol_mult(m.node_tree, (1.0, 1.0, 1.0), b)
+        b.inputs["Metallic"].default_value = 1.0
+        b.inputs["Roughness"].default_value = 0.05 if key == "mercury" else 0.2
+        m.use_backface_culling = False
+        _MATS[key] = m
+        return m
     names = {"atlas": "vendor_atlas", "glaze": "vendor_glaze", "glass": "vendor_glass", "liquid": "vendor_liquid",
              "beer": "vendor_beer", "coal_glow": "coal_glow", "flame": "flame", "lamp": "lamp_glow",
              "grill_iron": "grill_iron", "lamp_shade": "vendor_lamp_shade", "foam": "vendor_foam", "glass_pint": "vendor_glass_pint",
@@ -743,6 +769,27 @@ class PropSet:
         self.empties = []            # (name, loc)
         self.rot = {}                # node name -> Euler XYZ applied after finish()
         self.items = {}              # act_ node -> display data for items.json
+        self.protos = {}             # round 9: key -> Mesh, a repeated piece built once
+        self.insts = []              # (key, Matrix): where each copy of a proto stands (set frame)
+
+    INST_MATS = ("mercury", "gloss", "tinsel", "glass", "flame", "bulb_warm")   # no baked AO: safe to share one mesh
+
+    def proto(self, key, build):
+        """Round 9: a repeated piece (a bauble of one size and colour, a bead): `build(mesh)` fills it once in
+        its own frame; place copies with inst(). Copies share one mesh datablock, export as one glTF mesh used
+        by several inst_* nodes, and blender/props/instance.mjs folds them into one EXT_mesh_gpu_instancing
+        node (one draw call per group). Only materials without baked AO may be used (INST_MATS)."""
+        if key not in self.protos:
+            m = Mesh(f"inst_{key}")
+            build(m)
+            bad = [k for k in m.mats if k not in self.INST_MATS]
+            if bad:
+                raise RuntimeError(f"proto {key}: materials {bad} carry baked AO; instanced pieces may use {self.INST_MATS}")
+            self.protos[key] = m
+        return self.protos[key]
+
+    def inst(self, key, M):
+        self.insts.append((key, M))
 
     def node(self, name, loc=(0, 0, 0), parent=None, rot=None):
         m = Mesh(name)
@@ -803,11 +850,25 @@ class PropSet:
             objs[name] = e
         for k, r in self.rot.items():
             objs[k].rotation_euler = r
+        data, count = {}, {}
+        for key, M in self.insts:
+            i = count.get(key, 0)
+            count[key] = i + 1
+            if key not in data:
+                ob = self.protos[key].to_object(f"inst_{key}_0", (0, 0, 0), root)
+                data[key] = ob.data
+            else:
+                ob = bpy.data.objects.new(f"inst_{key}_{i}", data[key])
+                state.export_collection().objects.link(ob)
+                ob.parent = root
+            ob.matrix_basis = M
+            objs[ob.name] = ob
         self.objs = objs
         return objs
 
     def tris(self):
-        return self.static.tris + sum(m.tris for m, *_ in self.nodes)
+        return (self.static.tris + sum(m.tris for m, *_ in self.nodes)
+                + sum(self.protos[k].tris for k, _ in self.insts))
 
 
 def world_bbox(objs):
@@ -868,15 +929,48 @@ def export_set(name, lite_mode, items=None):
         with open(os.path.join(ATLAS_DIR, "regions.json")) as f:
             bh = json.load(f)["books"].get("height", 2048)
         size = int(size * bh / 2048)
-    rep = nexport.export_glb(out, texture_size=size,
-                             externalize=(lambda n: n.startswith(SHARED_TEX), tex_uri(lite_mode)))
+    shared = any(o.type == 'MESH' and o.data.users > 1 for o in state.export_collection().all_objects)
+    ext = (lambda n: n.startswith(SHARED_TEX), tex_uri(lite_mode))
+    rep = nexport.export_glb(out, texture_size=size, externalize=None if shared else ext)
     path = os.path.join(MODELS, out + ".glb")
+    if shared:
+        # round 9: repeated goods (inst_* objects sharing a mesh) become EXT_mesh_gpu_instancing batches under
+        # the set root, then the shared textures move out of the glb as usual
+        import subprocess
+        r = subprocess.run(["node", os.path.join(HERE, "instance.mjs"), path, path, "--min", "2"],
+                           capture_output=True, text=True)
+        print(r.stdout.strip(), r.stderr.strip()[-400:])
+        if r.returncode != 0:
+            raise RuntimeError("instance.mjs failed")
+        sys.path.insert(0, os.path.join(REPO, "blender", "lib"))
+        import glb_tools
+        rep["external"] = glb_tools.externalize_images(path, ext[0], ext[1], MODELS)
+        r2 = glb_tools.report(path)
+        rep.update({k: r2[k] for k in ("bytes", "triangles", "nodes", "materials") if k in r2})
     mats = split_book_materials(path)
     if mats:
         rep["materials"] = mats
     if items:
         add_node_extras(path, items)
+    add_spin_axes(path)
     return rep
+
+
+def add_spin_axes(path):
+    """Round 9: a vendor rot_ node (the Erzgebirge pyramid's turning part) spins about its own vertical axis.
+    Its extras say so ({"axis": "y"}, three.js userData.axis), because the engine otherwise guesses the axis from
+    the node's thinnest extent, and the pyramid's propeller makes it wider than it is tall."""
+    import glb_tools
+    js, binchunk = glb_tools.read_glb(path)
+    hit = False
+    for nd in js.get("nodes", []):
+        if nd.get("name", "").startswith("rot_") and not nd.get("name", "").endswith("_mesh"):
+            ex = dict(nd.get("extras", {}), axis="y")
+            if nd.get("extras") != ex:
+                nd["extras"] = ex
+                hit = True
+    if hit:
+        glb_tools.write_glb(path, js, binchunk)
 
 
 EXTRA_KEYS = ("name", "kind", "title", "author", "cover_material", "project", "write")

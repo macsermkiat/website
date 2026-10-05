@@ -475,9 +475,13 @@ def sign(board, letters, text, font, center, w, h, depth=0.03, text_depth=0.012,
                         tint=text_tint, spacing=spacing, resolution=resolution, bevel=text_bevel)
 
 
-def bulb_string(bulbs, wire, anchors, sag=0.06, spacing=0.2, bulb_r=0.028, drop=0.05, seg=None, rings=None):
+def bulb_string(bulbs, wire, anchors, sag=0.06, spacing=0.2, bulb_r=0.028, drop=0.05, seg=None, rings=None,
+                socket=True, wire_r=0.004, wire_detail=2):
     """Fairy bulbs hanging from a sagging wire through `anchors`. bulbs: Part('bulb_warm').
-    seg/rings: sphere detail of each bulb (default 7x5; lite caps it at 5x3)."""
+    seg/rings: sphere detail of each bulb (default 7x5; lite caps it at 5x3).
+    socket=False (round 9) leaves out the little socket sleeve: small rice bulbs sitting on a
+    short drop, about a third fewer triangles per bulb (strings seen inside a canopy).
+    wire_detail: catenary points per bulb on the wire (2; 1 halves a thin wire's triangles)."""
     seg = seg or 7
     rings = rings or 5
     if state.lite():                    # lite caps the detail, whatever the caller asked for
@@ -486,12 +490,12 @@ def bulb_string(bulbs, wire, anchors, sag=0.06, spacing=0.2, bulb_r=0.028, drop=
         a, b = Vector(a), Vector(b)
         L = (b - a).length
         n = max(1, round(L / spacing))
-        pts = catenary(a, b, sag, max(3, n) if state.lite() else max(4, n * 2))
-        wire.tube(pts, 0.004, tseg=3 if state.lite() else 4)
+        pts = catenary(a, b, sag, max(3, n) if state.lite() else max(4, n * wire_detail))
+        wire.tube(pts, wire_r, tseg=3 if state.lite() or wire_detail < 2 else 4)
         for i in range(n):
             t = (i + 0.5) / n
             p = a.lerp(b, t) - Vector((0, 0, sag * 4 * t * (1 - t)))
-            if not state.lite():
+            if socket and not state.lite():
                 wire.cyl(p - Vector((0, 0, drop * 0.45)), 0.011, 0.009, drop * 0.5, seg=5, caps=False)
             bulbs.sphere(p - Vector((0, 0, drop + bulb_r * 0.6)), bulb_r, seg=seg, rings=rings,
                          scale=(1, 1, 1.35), var=0.05)

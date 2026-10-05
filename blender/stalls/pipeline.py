@@ -40,6 +40,8 @@ def args():
     ap.add_argument("--extra-view", action="append", default=[],
                     help="name=x,y,z,tx,ty,tz[,lens]: one more render at --read-res (repeatable)")
     ap.add_argument("--read-samples", type=int, default=32)
+    ap.add_argument("--bloom", type=float, default=0.0,
+                    help="round 9: soft glow round the brightest pixels in the review JPEGs (the site's bloom)")
     a, _ = ap.parse_known_args(sys.argv[1:])
     return a
 
@@ -156,7 +158,7 @@ def run(name, build, preview=None, seed=1, externalize="kit"):
                 w, h = (int(v) for v in a.res.split("x"))
                 pn = a.preview_name or f"{name}_preview"
                 render.render(os.path.join(state.OUT_DIR, "renders", f"{pn}.png"), samples=a.samples,
-                              res=(w, h), jpeg=os.path.join(REVIEW, f"{pn}.jpg"))
+                              res=(w, h), jpeg=os.path.join(REVIEW, f"{pn}.jpg"), bloom=a.bloom)
             if (a.read_views or a.read_only) and not a.extra_only:
                 read_views(name, a)
             for ev in a.extra_view:
@@ -166,7 +168,7 @@ def run(name, build, preview=None, seed=1, externalize="kit"):
                 w, h = (int(t) for t in a.read_res.split("x"))
                 render.render(os.path.join(state.OUT_DIR, "renders", f"{name}_{key}.png"),
                               samples=a.read_samples, res=(w, h),
-                              jpeg=os.path.join(REVIEW, f"{name}_{key}.jpg"), jpeg_width=w)
+                              jpeg=os.path.join(REVIEW, f"{name}_{key}.jpg"), jpeg_width=w, bloom=a.bloom)
     with open(rep_path, "w") as f:
         json.dump(reports, f, indent=1)
     for k, r in reports.items():

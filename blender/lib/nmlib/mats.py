@@ -750,6 +750,120 @@ def pattern_material(key):
     return m
 
 
+# ============================================================ aged mirror glass (round 9)
+# A small set of tiling textures generated with numpy (no bake), embedded in the glb of the
+# stall that uses them: base colour, roughness/metal (glTF channels G and B) and a normal map.
+# mirror_foxed: an antique silvered mirror, dark-tinted, low roughness and metallic, with faint
+# foxing (brown-grey desilvered spots in loose clusters), a few cloudy patches and the slight
+# waviness of old hand-drawn glass. Edge desilvering is not in the tile: give the mirror mesh a
+# vertex-colour shade (see blender/stalls/schmuck.py, mirror_shade) so it can follow the frame.
+MIRROR_VERSION = "m5"  # m5: flat glass, bumps only on the foxing spots; m4: faint again, normal strength 1 in Blender (amplitude lives in the map); m3: waviness and spot bumps scaled apart so the waviness survives 8-bit/WebP; m2: gentler waviness (m1 read as crinkled foil)
+MIRRORS = {"mirror_foxed": dict(res=512, seed=29)}
+
+
+def _periodic_field(res, size_px, rng):
+    """Tileable smooth noise (FFT-filtered white noise), zero mean and unit deviation; size_px
+    is the feature size in pixels."""
+    w = rng.normal(size=(res, res))
+    f = np.sqrt(np.fft.fftfreq(res)[:, None] ** 2 + np.fft.fftfreq(res)[None, :] ** 2)
+    n = np.real(np.fft.ifft2(np.fft.fft2(w) * np.exp(-(f * size_px) ** 2)))
+    return (n - n.mean()) / (n.std() + 1e-9)
+
+
+def _mirror_pixels(res=512, seed=29):
+    """(colour sRGB, rm, normal) float arrays (res, res, 3), row 0 at the bottom, all tiling."""
+    rng = np.random.default_rng(seed)
+    y, x = np.mgrid[0:res, 0:res].astype(np.float32)
+    # foxing: spots in loose clusters, each a soft disc with a ragged edge and a darker rim
+    fox = np.zeros((res, res), np.float32)
+    rim = np.zeros((res, res), np.float32)
+    ragged = _periodic_field(res, 3.0, rng)
+    centres = rng.uniform(0, res, (9, 2))
+    for k in range(70):
+        cx, cy = centres[k % len(centres)] + rng.normal(0, res * 0.09, 2)
+        r = rng.uniform(1.5, 9.0) if rng.random() < 0.85 else rng.uniform(10.0, 18.0)
+        dx = (x - cx + res / 2) % res - res / 2
+        dy = (y - cy + res / 2) % res - res / 2
+        d = np.sqrt(dx * dx + dy * dy) / r + 0.18 * ragged
+        fox = np.maximum(fox, np.clip(1.3 - d, 0, 1) ** 0.8 * rng.uniform(0.45, 1.0))
+        rim = np.maximum(rim, np.exp(-((d - 1.0) / 0.22) ** 2) * rng.uniform(0.3, 0.8))
+    # cloudy patches where the silver has gone milky-grey, and a faint fine mottle
+    cloud = np.clip((_periodic_field(res, 70.0, rng) - 0.9) / 1.2, 0, 1)
+    mott = _periodic_field(res, 2.0, rng)
+    silver = np.array([0.30, 0.295, 0.27], np.float32)          # dark-tinted silver (linear)
+    milky = np.array([0.20, 0.195, 0.18], np.float32)
+    brown = np.array([0.075, 0.055, 0.038], np.float32)
+    col = silver * (1 + 0.025 * mott[..., None])
+    col = col * (1 - cloud[..., None]) + milky * cloud[..., None]
+    col = col * (1 - 0.6 * rim[..., None]) + brown * 0.6 * rim[..., None]
+    col = col * (1 - fox[..., None]) + brown * fox[..., None]
+    rough = 0.05 + 0.12 * cloud + 0.4 * fox + 0.12 * rim + 0.01 * mott
+    metal = 1.0 - 0.6 * fox - 0.25 * cloud
+    rm = np.stack([np.zeros_like(rough), np.clip(rough, 0, 1), np.clip(metal, 0, 1)], -1)
+    # height: only the foxing spots, a hair proud (tarnish blooms). A glass waviness term was
+    # tried (m1-m4): any amplitude that survives 8-bit/WebP turns a mirror's reflections into
+    # squiggles at the grazing angles this one is seen at, so the glass itself stays flat.
+    def grad(h):
+        return (np.roll(h, -1, 1) - np.roll(h, 1, 1)) / 2, (np.roll(h, -1, 0) - np.roll(h, 1, 0)) / 2
+    sx, sy = grad(0.25 * fox + 0.1 * rim)
+    gx, gy = 0.3 * sx, 0.3 * sy
+    nrm = np.stack([-gx, -gy, np.ones_like(gx)], -1)
+    nrm /= np.linalg.norm(nrm, axis=-1, keepdims=True)
+    srgb = np.where(col <= 0.0031308, col * 12.92, 1.055 * np.power(np.clip(col, 0, 1), 1 / 2.4) - 0.055)
+    return np.clip(srgb, 0, 1), rm, nrm * 0.5 + 0.5
+
+
+def mirror_paths(key):
+    return {kind: os.path.join(state.KIT_DIR, f"{key}_{kind}.png") for kind in ("color", "rm", "normal")}
+
+
+def _ensure_mirror(key):
+    paths = mirror_paths(key)
+    stamp = paths["color"] + ".version"
+    if all(os.path.exists(p) for p in paths.values()) and os.path.exists(stamp) and \
+            open(stamp).read().strip() == MIRROR_VERSION:
+        return paths
+    from PIL import Image
+    os.makedirs(state.KIT_DIR, exist_ok=True)
+    col, rm, nrm = _mirror_pixels(**MIRRORS[key])
+    for kind, arr in (("color", col), ("rm", rm), ("normal", nrm)):
+        Image.fromarray(np.clip(arr[::-1] * 255.0 + 0.5, 0, 255).astype(np.uint8)).save(paths[kind])
+    with open(stamp, "w") as f:
+        f.write(MIRROR_VERSION)
+    return paths
+
+
+def mirror_material(key):
+    paths = _ensure_mirror(key)
+    m, nt, bsdf, L = _node_mat(key)
+    N = nt.nodes
+    uv = N.new("ShaderNodeUVMap")
+    uv.uv_map = "UVMap"
+    tex = {}
+    for kind in ("color", "rm", "normal"):
+        name = f"{key}_{kind}"
+        img = bpy.data.images.get(name)
+        if img is None:
+            img = bpy.data.images.load(paths[kind])
+            img.name = name
+            img.colorspace_settings.name = "sRGB" if kind == "color" else "Non-Color"
+        t = N.new("ShaderNodeTexImage")
+        t.image = img
+        L.new(uv.outputs[0], t.inputs[0])
+        tex[kind] = t
+    _vcol_multiply(nt, L, tex["color"].outputs["Color"], bsdf)
+    sep = N.new("ShaderNodeSeparateColor")
+    L.new(tex["rm"].outputs["Color"], sep.inputs[0])
+    L.new(sep.outputs[1], bsdf.inputs["Roughness"])
+    L.new(sep.outputs[2], bsdf.inputs["Metallic"])
+    nm = N.new("ShaderNodeNormalMap")
+    nm.uv_map = "UVMap"
+    nm.inputs["Strength"].default_value = 1.0
+    L.new(tex["normal"].outputs["Color"], nm.inputs["Color"])
+    L.new(nm.outputs[0], bsdf.inputs["Normal"])
+    return m
+
+
 def get(key):
     """Material for a key (created once per build): kit keys and kit variants are textured
     with the shared kit maps, pattern keys with their own small texture, others simple."""
@@ -760,6 +874,8 @@ def get(key):
             _mats[key] = kit_variant_material(key)
         elif key in PATTERNS:
             _mats[key] = pattern_material(key)
+        elif key in MIRRORS:
+            _mats[key] = mirror_material(key)
         else:
             _mats[key] = simple_material(key)
     return _mats[key]

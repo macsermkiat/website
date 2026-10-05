@@ -24,7 +24,7 @@ export function createPerfMeter({ stage, renderer, lite, governor, tour }) {
   stage.appendChild(box);
   // count every pass of the composer (render, outline, bloom, grade) as one frame
   renderer.info.autoReset = false;
-  let calls = 0, triangles = 0;
+  let calls = 0, triangles = 0, badTriangles = 0;
 
   function stats(samples = null) {
     const a = (samples ? samples.slice() : Array.from(ft.slice(0, Math.min(n, N)))).sort((x, y) => x - y);
@@ -37,6 +37,7 @@ export function createPerfMeter({ stage, renderer, lite, governor, tour }) {
       fps: a.length ? +(1000 / q(0.5)).toFixed(1) : 0,
       calls,
       triangles,
+      badTriangles,
       pixelRatio: renderer.getPixelRatio(),
       size: `${renderer.domElement.width}x${renderer.domElement.height}`,
       gpu: gpuName(renderer),
@@ -97,7 +98,10 @@ export function createPerfMeter({ stage, renderer, lite, governor, tour }) {
     /** Call once per rendered frame with the unclamped frame time in seconds. */
     frame(dt) {
       calls = renderer.info.render.calls;
+      // (a troika text block drawn before its first glyph sync once counted Infinity triangles: world/text.js now starts
+      // its instance count at 0. A non-finite count is counted here, never hidden: the smoke test and bench check it)
       triangles = renderer.info.render.triangles;
+      if (!Number.isFinite(triangles)) badTriangles++;
       renderer.info.reset();
       if (dt > 0 && dt < 2) { ft[n++ % N] = dt * 1000; total++; }
       // the tour keeps every frame, however slow (on software GL a frame can take seconds: the tour must still end)

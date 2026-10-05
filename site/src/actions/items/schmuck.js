@@ -9,6 +9,9 @@
 //            clicked again it goes back to its rail. A bauble rings when clicked; the stop bar hangs it.
 //   find     the Weihnachtsgurke, hidden among the green baubles: finding it gives a gentle chime and a line of
 //            words in the shop
+// Round 9 (ADR 0004 revision) is arriving from the vendor while round 8 closes: its glass harmonica
+// (act_orn_harmonica_<n>, action "harmonica") rings like the baubles, and its mirror ball (action "dive") spins and
+// rings a low note until the round-9 camera dive lands. The stop bar offers only what the shop's set has.
 // The sounds are synthesised in the market's own stall-sound bus (audio/sfx.js), quiet and warm.
 import * as THREE from 'three';
 import { boxOf, rest, restore, worldDirToParent, UP } from './common.js';
@@ -22,9 +25,10 @@ const byIndex = (a, b) => a.node.name.localeCompare(b.node.name, 'en', { numeric
 /** What an ornament does: items.json `action`, else its kind word (act_orn_<kind>_<n>). */
 export function ornamentAction(item) {
   const a = item.info?.action || item.node.userData?.item?.action;
+  if (a === 'harmonica' || a === 'dive') return 'ring';
   if (a) return String(a);
   const k = /^act_orn_([a-z]+)/i.exec(item.node.name)?.[1]?.toLowerCase();
-  return { bauble: 'ring', herrnhut: 'light', nutcracker: 'jaw', smoker: 'smoke', schwibbogen: 'candles', candle: 'candles', pickle: 'find' }[k] || 'hang';
+  return { bauble: 'ring', harmonica: 'ring', mirrorball: 'ring', herrnhut: 'light', nutcracker: 'jaw', smoker: 'smoke', schwibbogen: 'candles', candle: 'candles', pickle: 'find' }[k] || 'hang';
 }
 
 export function createSchmuck(ctx) {
@@ -37,7 +41,7 @@ export function createSchmuck(ctx) {
     place = p;
     const all = items.of('schmuck', 'orn');
     const named = (re) => all.find((i) => re.test(i.node.name)) || null;
-    const baubles = all.filter((i) => /^act_orn_bauble_/i.test(i.node.name)).sort(byIndex);
+    const baubles = all.filter((i) => /^act_orn_(bauble|harmonica)_/i.test(i.node.name)).sort(byIndex);
     const candles = all.filter((i) => /^act_orn_candle_/i.test(i.node.name)).sort(byIndex);
     const hooks = [];
     p.root.traverse((o) => { if (/^hook_tree_\d+/i.test(o.name || '')) hooks.push(o); });
@@ -94,8 +98,16 @@ export function createSchmuck(ctx) {
 
   // ---------- each ornament's action ----------
 
+  /** A bauble's note: items.json `note`, else its place in the row up the scale (the mirror ball rings low). */
+  function noteOf(item) {
+    const n = item.info?.note || item.node.userData?.item?.note;
+    if (n) return n;
+    const i = S.baubles.indexOf(item);
+    return i >= 0 ? NOTES[i % NOTES.length] : /mirrorball/i.test(item.node.name) ? 'G4' : 'C5';
+  }
+
   function ring(item, { quiet = false } = {}) {
-    const note = item.info?.note || item.node.userData?.item?.note || NOTES[S.baubles.indexOf(item) % NOTES.length] || 'C5';
+    const note = noteOf(item);
     sfx('glass', { note, pan: panOf(item.node) });
     S.rings++;
     if (!quiet) say(`${esc(item.info?.label || item.label)}: <b>${esc(note)}</b>. <em>A row of them plays a scale.</em>`);
@@ -331,14 +343,14 @@ export function createSchmuck(ctx) {
     addPlace(p) { if (p.id === 'schmuck') setup(p); },
     /** The stop bar's buttons at the ornament shop. */
     actsList: () => [
-      { key: 'ring', label: 'Ring the baubles', fn: ringScale },
-      { key: 'star', label: 'Light the Herrnhut star', fn: () => S && lightStar() },
-      { key: 'nut', label: 'Crack a nut', fn: () => S && jaw() },
-      { key: 'smoke', label: 'Light the Räuchermännchen', fn: () => S && smoke() },
-      { key: 'candles', label: 'Light the Schwibbogen', fn: () => S && candles() },
-      { key: 'hang', label: 'Hang an ornament on the tree', fn: hangSelected },
-      { key: 'pickle', label: 'Look for the pickle', fn: lookForPickle },
-    ],
+      { key: 'ring', label: S?.baubles.some((b) => /harmonica/i.test(b.node.name)) ? 'Play the glass harmonica' : 'Ring the baubles', fn: ringScale, has: () => S.baubles.length > 0 },
+      { key: 'star', label: 'Light the Herrnhut star', fn: () => S && lightStar(), has: () => !!S.star },
+      { key: 'nut', label: 'Crack a nut', fn: () => S && jaw(), has: () => !!(S.jaw || S.nut) },
+      { key: 'smoke', label: 'Light the Räuchermännchen', fn: () => S && smoke(), has: () => !!S.smoker },
+      { key: 'candles', label: 'Light the Schwibbogen', fn: () => S && candles(), has: () => S.candles.length > 0 },
+      { key: 'hang', label: 'Hang an ornament on the tree', fn: hangSelected, has: () => S.hooks.length > 0 && S.all.some((i) => i.info?.hangable || ornamentAction(i) === 'hang') },
+      { key: 'pickle', label: 'Look for the pickle', fn: lookForPickle, has: () => !!S.pickle },
+    ].filter((a) => !S || a.has()),
     api: {
       schmuckActs: () => self.actsList(),
       /** For tests: the shop's state. */
@@ -350,8 +362,11 @@ export function createSchmuck(ctx) {
         jaw: S.jaw ? { busy: !!S.jaw.busy, angle: +(2 * Math.acos(Math.min(1, Math.abs(S.jaw.node.quaternion.dot(S.jaw.home.q))))).toFixed(3) } : null,
         pickle: { found: S.found, reward: !!reward && reward.parent != null, text: reward?.userData.text || null },
         rings: S.rings, cracks: S.cracks || 0,
+        has: Object.fromEntries(self.actsList().map((x) => [x.key, true])),
       } : null),
-      ornamentNote: (name) => { const it = S?.all.find((i) => i.node.name === name); return it ? it.info?.note || null : null; },
+      ornamentNote: (name) => { const it = S?.all.find((i) => i.node.name === name); return it ? noteOf(it) : null; },
+      /** For tests: the baubles' node names, in order along the row. */
+      baubleNames: () => (S ? S.baubles.map((b) => b.node.name) : []),
     },
     retract() {
       if (!S) return;

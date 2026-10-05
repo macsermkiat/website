@@ -97,8 +97,10 @@ export function createGuide({ camera, rig, stroll, streamer, actions, world, sto
     if (!closeUp) return false;
     closeUp = false;
     document.documentElement.classList.remove('closeup');
+    // from an open cabinet: back to the stop's view, still turned toward that cabinet
+    const turned = here ? actions.items?.handlers?.backView?.() : null;
     actions.retract();
-    if (here) rig.flyTo(stroll.viewOf(here)); else rig.flyTo(null, { home: true });
+    if (turned) rig.flyTo(turned); else if (here) rig.flyTo(stroll.viewOf(here)); else rig.flyTo(null, { home: true });
     return true;
   }
 

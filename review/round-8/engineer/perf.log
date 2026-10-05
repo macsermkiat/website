@@ -1,0 +1,24 @@
+
+full market on ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0
+  first load 7.25 MB (fetched before the market opened)
+  MISS home         median 10367.5 ms  p95 33916.8 ms  642 draws  Infinityk tris
+  MISS Glühwein     median 14822.2 ms  p95 45469.3 ms  1512 draws  Infinityk tris
+  MISS bandstand    median 24240 ms  p95 46134.3 ms  1996 draws  1500k tris
+  MISS Bücherstand  median 29370.1 ms  p95 57869.6 ms  1762 draws  Infinityk tris
+  MISS Riesenrad    median 36123.4 ms  p95 88540.9 ms  2125 draws  2422k tris
+  MISS home again   median 40114.5 ms  p95 75658 ms  1588 draws  1733k tris
+  crowd 87 people: 5 drawn as far instances in 5 draws (5 figures baked in 1342 ms); mixers ran 27, throttled 55; crowd update 0.744 ms/frame
+  software GL: these numbers are not a GPU measurement
+
+lite market on ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0
+  first load 5.14 MB (fetched before the market opened)
+  MISS home         median 166.1 ms  p95 24917.3 ms  606 draws  304k tris
+  MISS Glühwein     median 7433.8 ms  p95 8390.5 ms  605 draws  304k tris
+  MISS bandstand    median 4693.3 ms  p95 7401.4 ms  599 draws  301k tris
+  MISS Bücherstand  median 4176.8 ms  p95 5770.7 ms  598 draws  300k tris
+  MISS Riesenrad    median 4164.8 ms  p95 4333.1 ms  596 draws  300k tris
+  MISS home again   median  4528 ms  p95 6196.3 ms  606 draws  304k tris
+  crowd 40 people: 40 drawn as far instances in 11 draws (11 figures baked in 3225 ms); mixers ran 0, throttled 0; crowd update 0.293 ms/frame
+  software GL: these numbers are not a GPU measurement
+
+not a real GPU; written to ../review/round-8/engineer/perf/2026-10-05-05-43.json
