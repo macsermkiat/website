@@ -10,12 +10,15 @@ The nine deco stalls stand on the outer lanes (x = ±21) and the back row (z ≈
 
 ## Decision
 
-### Deco stalls are full and worth a click
+### Deco stalls are full, as cheap scenery
+
+Mac (2026-10-05): "There's no need to fully render object in side stores, because there will be no interaction to save the loading time."
 
 - Every deco stall is visibly stocked from the lane: goods on the counter, on the back shelves, hanging from the eaves or a rail, and a crate or basket out front. No bare boards.
+- The goods are low-detail scenery merged into one or two meshes per stall on the shared atlas: no `act_` nodes, no `items.json` entries, no clicks, no close-up, and the stall never streams beyond its light file.
 - Each stall has a vendor behind its counter and one or two customers at it.
-- Each stall has at least five clickable goods (`act_` nodes with an `items.json` entry: name, a one-line German or English label, and the action). Actions are small and stall-specific: lift and turn, steam rises from Maroni and Crêpes, a candle flame flickers up, a wooden toy spins or rolls, a cheese wheel is cut.
-- The stroll's loop passes the left lane, the back row and the right lane, so every deco stall is seen up close at walking pace. Clicking a deco stall flies to its `cam_view`; the goods are clickable there.
+- The stroll's loop passes the left lane, the back row and the right lane, so the stalls are seen at walking pace.
+- The ornament shop is the one side stall that stays interactive.
 
 ### More people, everywhere
 
