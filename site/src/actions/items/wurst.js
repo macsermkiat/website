@@ -8,9 +8,15 @@
 // _curry) lift off the counter, turn over above the plate and pipe a glossy squiggle from their fx_sauce_ nozzle
 // over whatever is on it (a dollop on the side of an empty plate). The curry tin (act_shaker_curry) shakes powder
 // over the food. Tapping the plate hands it over the counter: "Guten Appetit". The actions follow items.json
-// (`action`: plate, sauce, dust, clear). The grill swings on its tripod, the coals glow, and smoke drifts.
+// (`action`: plate, sauce, dust, clear). A Thüringer or a Krakauer tapped while an empty Brötchen waits on the
+// plate goes into it. The grill swings on its tripod, the coals glow, and smoke drifts.
+//
+// The sausages on the grill are scenery, not clickable one by one, but the prototype's "Turn the sausages" stays: the
+// panel button turns the whole grate in a ripple, tongs-style, each sausage hopping over about its own length
+// (grillSausages.js cuts the vendor's merged `sausages_grill` mesh into its sausages for that).
 import * as THREE from 'three';
 import { boxOf, rest, restore, worldDirToParent, createSparks, createStream, UP, esc } from './common.js';
+import { createGrillSausages } from './grillSausages.js';
 import { createEmitter } from '../effects.js';
 import { act, acts, findNode, counterLocal, toLocal, worldOf } from '../util.js';
 import { actionNote, crowdLine } from '../../content.js';
@@ -57,6 +63,25 @@ export function createWurst(ctx) {
     flare = Math.min(2.2, flare + 0.8 * n);
     if (grill) sparks.burst(sp.clone().add(new THREE.Vector3(0, -0.06, 0)), Math.round(6 * n));
     smoke.boost = Math.max(smoke.boost || 0, 0.9 * n);
+  }
+
+  // ---------- turning the sausages on the grill (the panel button) ----------
+  const grillRoots = [];
+  place.root.traverse((o) => { if (/^sausages_grill/.test(o.name) && !grillRoots.some((r) => r === o.parent || r.getObjectById(o.id))) grillRoots.push(o); });
+  const grillS = grillRoots.length ? createGrillSausages(grillRoots, { anim }) : null;
+  let turns = 0;
+  const TURN_NOTES = ['Turned. Nicely browned on this side.', 'The coals flare up and the smoke drifts over the crowd.', 'Almost ready. Mustard or ketchup?'];
+  function turnAll() {
+    const n = turns++;
+    const note = actionNote('wurst', 'turn', TURN_NOTES[n % 3], { n });
+    sfx('sizzle');
+    fatFlare(1.2);
+    if (!grillS) { say(note); return false; }
+    // a ripple along the grate, left to right; reduced motion turns them all at once
+    let turned = 0;
+    grillS.list.forEach((_, i) => grillS.turn(i, { delay: motion.reduced ? 0 : i * 0.09, done: () => { if (++turned === grillS.list.length) fatFlare(0.5); } }));
+    say(`${note} <em>(${grillS.list.length} on the grate${n ? `, turned ${n + 1}×` : ''})</em>`);
+    return true;
   }
 
   // ---------- the plate set ----------
@@ -147,11 +172,14 @@ export function createWurst(ctx) {
       return;
     }
     const key = keyOf(item);
-    const entry = { key, g: null, box: null, landed: false, gen: P.gen };
+    // a long sausage goes into a Brötchen that waits empty on the plate
+    if (!onto && (key === 'thueringer' || key === 'krakauer')) onto = cur().find((f) => f.key === 'roll' && !f.filled) || null;
+    if (onto) onto.filled = true;
+    const entry = { key, g: null, box: null, landed: false, gen: P.gen, onto: onto ? onto.key : null };
     P.food.push(entry); // the spot is taken at the tap
     const n = cur().length;
     const spot = P.spots[Math.min(n - 1, P.spots.length - 1)];
-    if (!quiet) say(`<b>${esc(item.info.name || nameOf(item))}</b> on the plate${n > 1 ? ` (${n} of ${P.max})` : ''}. ${n === 1 ? 'A sauce next? Senf, Ketchup or Currysauce.' : esc(item.info.detail || '')}`);
+    if (!quiet) say(onto ? `<b>${esc(item.info.name || nameOf(item))}</b> into the Brötchen. A sauce on it? Senf, Ketchup or Currysauce.` : `<b>${esc(item.info.name || nameOf(item))}</b> on the plate${n > 1 ? ` (${n} of ${P.max})` : ''}. ${n === 1 ? 'A sauce next? Senf, Ketchup or Currysauce.' : esc(item.info.detail || '')}`);
     enqueue((done) => {
       items.release(item);
       const src = item.node, r0 = rest(src);
@@ -446,8 +474,7 @@ export function createWurst(ctx) {
     if (cur().length) clearPlate({ quiet: true });
     say(actionNote('wurst', 'bun', 'One Bratwurst im Brötchen with mustard. <em>That will be 4 euros.</em>'));
     toPlate(roll, { quiet: true });
-    const rollEntry = P.food[P.food.length - 1];
-    toPlate(wurst, { quiet: true, onto: rollEntry });
+    toPlate(wurst, { quiet: true }); // into the roll that just went down
     const senf = sauceBy('senf') || sauces[0];
     if (senf) squeeze(senf, { quiet: true });
     enqueue((done) => { crowdSay(crowdLine('wurst', 'bun', 'Smells good!'), place.center.clone().setY(0), 9); done(); });
@@ -483,9 +510,13 @@ export function createWurst(ctx) {
     api: {
       plateReady: !!P && kinds.length > 0,
       bunPlate, mixPlate,
+      grillReady: !!grillS,
+      turnAll,
+      /** For tests: how many sausages lie on the grate and how often each has been turned. */
+      grill: () => (grillS ? { n: grillS.list.length, turns: grillS.list.map((s) => s.turns), busy: grillS.list.some((s) => s.busy), angles: grillS.list.map((s) => +s.angle.toFixed(3)) } : null),
       clearPlate: () => clearPlate(),
       /** For tests: what is on the plate. */
-      plate: () => (P ? { food: P.food.filter((f) => f.landed).map((f) => f.key), sauces: P.sauces.map((s) => s.key), dust: P.dust.reduce((a, d) => a + d.n, 0), served: P.served, max: P.max, busy: running || queue.length > 0, kinds: kinds.map(keyOf), bottles: sauces.map((s) => s.info.sauce || keyOf(s)), shaker: !!shaker } : null),
+      plate: () => (P ? { food: P.food.filter((f) => f.landed).map((f) => f.key), filled: P.food.filter((f) => f.landed && f.onto === 'roll').map((f) => f.key), sauces: P.sauces.map((s) => s.key), dust: P.dust.reduce((a, d) => a + d.n, 0), served: P.served, max: P.max, busy: running || queue.length > 0, kinds: kinds.map(keyOf), bottles: sauces.map((s) => s.info.sauce || keyOf(s)), shaker: !!shaker } : null),
     },
     retract() {},
     update(dt, t, still) {

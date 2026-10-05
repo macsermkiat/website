@@ -1,5 +1,5 @@
 // The bar along the foot of the market at a stop: the way back and on (the neighbouring stops), the things to do
-// here (pour a mug, pull a pint, Prost, a Bratwurst in a bun, mix a plate, pick a book, feature a player, the
+// here (pour a mug, pull a pint, Prost, turn the sausages, a Bratwurst in a bun, mix a plate, pick a book, feature a player, the
 // rides), what there is to read here, and the goods one by one for the keyboard. No section text lives here:
 // that is in the market, on its boards, coasters, papers and pages.
 import { SECTIONS, panelActions } from '../content.js';

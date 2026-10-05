@@ -504,21 +504,50 @@ try {
     check('pull a pint (starts)', /Pouring|pulled tonight: 1/.test(await noteNow()), await noteNow());
     check('pull a pint (finishes)', await waitN(/pulled tonight: 1/, 30), await noteNow());
     await go('wurst');
-    await act('wurst', 'turn');
+    // the Bratwurst (round 10, ADR 0004 revision): the grill's sausages turn from the button (scenery, not one by one),
+    // and four kinds, a roll, three sauces, the curry tin and the paper plate are the clickable set
+    check('the Bratwurst has the round-10 plate set (no clickable sausage rows left)', (await wurstSet(page)) === 'plate', await wurstSet(page));
+    check('the Bratwurst\'s buttons: Turn the sausages, One in a bun, Mix me a plate', (await page.locator('#stopActs [data-action="turn"]').count()) === 1 && (await page.locator('#stopActs [data-action="bun"]').count()) === 1 && (await page.locator('#stopActs [data-action="plate"]').count()) === 1);
+    const g0 = await page.evaluate(() => window.__market.handlers.grill());
+    await tapAct(page, '#stopActs [data-action="turn"]');
     check('turn the sausages', /Turned|flare|Almost/.test(await noteNow()), await noteNow());
+    await page.evaluate(() => window.__market.advance(1.5));
+    const g1 = await page.evaluate(() => window.__market.handlers.grill());
+    check('turn the sausages: every sausage on the grate turns over (the vendor\'s merged grill cut into its sausages)', !!g0 && g0.n >= 6 && g1.turns.every((n) => n === 1) && !g1.busy && g1.angles.every((a) => Math.abs(a - Math.PI) < 0.01), JSON.stringify({ g0: g0 && g0.n, g1 }));
+    check('the grill\'s sausages are not clickable one by one', await page.evaluate(() => { const m = window.__market; let o = null; m.scene.traverse((x) => { if (!o && /^grill_sausage_\d/.test(x.name) && x.isMesh) o = x; }); return !!o && !m.items()['wurst:sausage']; }));
+    const plateNow = () => page.evaluate(() => window.__market.handlers.plate());
+    const settlePlate = () => page.evaluate(() => { const m = window.__market; for (let t = 0; t < 20 && m.handlers.plate().busy; t += 0.5) m.advance(0.5); m.advance(0.5); return m.handlers.plate(); });
     await act('wurst', 'bun');
     check('a sausage in a bun', /Brötchen/.test(await noteNow()), await noteNow());
-    check('a sausage in a bun: one sits in a roll, with mustard', (await page.evaluate(() => window.__market.handlers.bunCount())) === 1);
-    // a click in 3D on one sausage
-    const aim = await aimAt(page, 'act_sausage_2');
-    if (!aim && (await wurstSet(page)) === 'plate') skip('clicking one sausage in 3D turns that sausage (its node rotates)', 'the vendor\'s round-10 plate set is on disk: the sausage rows are merged scenery now; the engine port of the plate is round-10 work');
-    else if (aim) {
-      const q0 = (await page.evaluate(() => window.__market.item('act_sausage_2'))).quaternion;
-      await page.mouse.click(aim.x, aim.y);
-      await page.evaluate(() => window.__market.advance(1.5));
-      const q1 = (await page.evaluate(() => window.__market.item('act_sausage_2'))).quaternion;
-      check('clicking one sausage in 3D turns that sausage (its node rotates)', q0.some((v, i) => Math.abs(v - q1[i]) > 0.05), `${q0} -> ${q1}`);
-    } else check('clicking one sausage in 3D turns that sausage (its node rotates)', false, 'no clear pixel on act_sausage_2');
+    const pb = await settlePlate();
+    check('a sausage in a bun: a roll goes on the plate, a Thüringer into it, with Senf', pb.food.join() === 'roll,thueringer' && pb.filled.join() === 'thueringer' && pb.sauces.join() === 'senf', JSON.stringify(pb));
+    // a click in 3D on a kind: a fresh one arcs onto the plate
+    await page.evaluate(() => { window.__market.handlers.clearPlate(); });
+    const pc = await settlePlate();
+    check('tapping the plate hands it over (Guten Appetit) and a fresh, empty plate is set out', pc.food.length === 0 && pc.sauces.length === 0 && pc.served === 1 && /Guten Appetit/.test(await noteNow()), JSON.stringify(pc));
+    const kAim = await aimAt(page, 'act_wurst_krakauer');
+    if (kAim) {
+      const k0 = (await page.evaluate(() => window.__market.item('act_wurst_krakauer'))).position;
+      await page.mouse.click(kAim.x, kAim.y);
+      const pk = await settlePlate();
+      const k1 = (await page.evaluate(() => window.__market.item('act_wurst_krakauer'))).position;
+      check('clicking a Krakauer in 3D puts a fresh one on the plate (the one on the board stays)', pk.food.join() === 'krakauer' && k0.every((v, i) => Math.abs(v - k1[i]) < 0.002), JSON.stringify({ pk, k0, k1 }));
+    } else check('clicking a Krakauer in 3D puts a fresh one on the plate (the one on the board stays)', false, 'no clear pixel on act_wurst_krakauer');
+    await page.evaluate(() => { const m = window.__market; m.clickItem('act_wurst_nuernberger'); m.clickItem('act_sauce_ketchup'); m.clickItem('act_sauce_curry'); m.clickItem('act_shaker_curry'); });
+    const ps = await settlePlate();
+    check('sauces and curry: each bottle squeezes its own squiggle over the plate, the tin dusts curry powder', ps.food.join() === 'krakauer,nuernberger' && ps.sauces.join() === 'ketchup,curry' && ps.dust > 50, JSON.stringify(ps));
+    check('the sauce is a glossy line draped over the food (a tube on the plate, drawn in as it is piped)', await page.evaluate(() => { const m = window.__market; let n = 0, ok = true; m.scene.traverse((o) => { if (/^item_sauce_/.test(o.name) && o.isMesh) { n++; o.geometry.computeBoundingBox(); const b = o.geometry.boundingBox; ok = ok && b.max.x - b.min.x > 0.04 && o.geometry.drawRange.count > 100; } }); return n === 2 && ok; }));
+    await page.evaluate(() => { const m = window.__market; for (const k of ['act_wurst_curry', 'act_roll', 'act_wurst_thueringer']) m.clickItem(k); });
+    const pf = await settlePlate();
+    check('the plate holds four at most (a fifth gets "the plate is full")', pf.food.length === 4 && /full/.test(await noteNow()), JSON.stringify({ food: pf.food, note: await noteNow() }));
+    const plAim = await aimAt(page, 'act_plate');
+    if (plAim) { await page.mouse.click(plAim.x, plAim.y); } else await page.evaluate(() => window.__market.clickItem('act_plate'));
+    const pe = await settlePlate();
+    check('clicking the plate clears it: Guten Appetit', pe.food.length === 0 && pe.sauces.length === 0 && pe.dust === 0 && pe.served === 2 && /Guten Appetit/.test(await noteNow()), JSON.stringify({ pe, by: plAim ? '3D click' : 'clickItem', note: await noteNow() }));
+    await act('wurst', 'plate');
+    const pm = await settlePlate();
+    check('mix me a plate: the vendor puts a kind on and a sauce over it', pm.food.length === 1 && pm.sauces.length + (pm.dust ? 1 : 0) === 1, JSON.stringify(pm));
+    await shot(page, 'stop_bratwurst_plate.jpg', null, { keepScroll: true });
     await go('books');
     await act('books', 'book');
     await page.evaluate(() => window.__market.advance(3));
@@ -811,15 +840,22 @@ try {
     await page.evaluate(() => window.__market.act('schmuck', 'candles'));
     // the view over the arch with the town still dark, four flames and the town waking, the wave of light at its
     // height (the bulbs flaring as it passes, the bloom swelled), and the market settled in its lasting glow
-    const times = [[4.25, 'schwib_1_town_dark.jpg'], [6.8, 'schwib_2_town_waking.jpg'], [12.0, 'schwib_3_light_wave.jpg'], [18, 'schwib_4_settled.jpg']];
+    // (the wave's frame is timed by the wave itself: its front 2.4 s out, about 17 m, over the stalls across the
+    // square, so the frame shows it: the near strings flaring, the far ones still dim, the bloom near its height)
+    const times = [[4.25, 'schwib_1_town_dark.jpg'], [6.8, 'schwib_2_town_waking.jpg'], ['wave', 'schwib_3_light_wave.jpg'], [19, 'schwib_4_settled.jpg']];
+    const WAVE_SNAP = 2.4;
     let at = 0;
     const peaks = [];
     for (const [t, name] of times) {
-      await page.evaluate((d) => window.__market.advance(d), t - at); at = t; await snapTo(name);
+      if (t === 'wave') at += await page.evaluate((w) => { const m = window.__market; let a = 0; while (a < 12) { const x = m.handlers.schmuck().schwibbogen.wave; if (x.running && x.t >= w) break; m.advance(0.1); a += 0.1; } return a; }, WAVE_SNAP);
+      else { await page.evaluate((d) => window.__market.advance(d), t - at); at = t; }
+      await snapTo(name);
       const x = (await S()).schwibbogen;
-      peaks.push({ name, burning: x.burning, windows: x.windows.lit, hush: x.windows.hush, quiet: x.windows.quiet, bloom: x.wave.bloom, cam: x.cam });
+      const near = await page.evaluate(() => +window.__market.handlers.waveBulbGainAt(8).toFixed(2)), far = await page.evaluate(() => +window.__market.handlers.waveBulbGainAt(30).toFixed(2));
+      peaks.push({ name, at: +at.toFixed(2), burning: x.burning, windows: x.windows.lit, hush: x.windows.hush, quiet: x.windows.quiet, bloom: x.wave.bloom, waveT: x.wave.t, front: x.wave.front, marketHush: x.wave.hush, near, far, cam: x.cam });
     }
-    check('full market: the screenshots catch each beat (the town gone quiet over unlit candles, waking, the wave\'s bloom at its height, settled)', peaks[0].burning === 0 && peaks[0].windows === 0 && peaks[0].hush > 0.9 && peaks[0].quiet > 100 && peaks[0].cam === 'hold' && peaks[1].windows > 0 && peaks[1].burning >= 3 && peaks[2].windows > peaks[1].windows && peaks[2].bloom > 1.5 && peaks[3].bloom < peaks[2].bloom, JSON.stringify(peaks));
+    check('full market: the screenshots catch each beat (the town gone quiet over unlit candles, waking, the wave\'s bloom at its height, settled)', peaks[0].burning === 0 && peaks[0].windows === 0 && peaks[0].hush > 0.9 && peaks[0].quiet > 100 && peaks[0].cam === 'hold' && peaks[1].windows > 0 && peaks[1].burning >= 3 && peaks[2].windows > peaks[1].windows && peaks[2].bloom > 2 && peaks[3].bloom < peaks[2].bloom, JSON.stringify(peaks));
+    check('full market: the wave\'s frame shows its front (the market dimmed while it waited; bulbs 8 m out flaring, 30 m out still dim)', peaks[1].marketHush > 0.5 && peaks[2].near > 1.5 && peaks[2].far < 0.6 && peaks[3].marketHush === 0, JSON.stringify(peaks.map((p) => ({ name: p.name, marketHush: p.marketHush, near: p.near, far: p.far, front: p.front }))));
     const swF = (await S()).schwibbogen;
     check('full market: the Schwibbogen sequence ran (seven flames, windows warm, the wave)', swF.burning === 7 && swF.windows.lit > 0.9 * swF.windows.candidates && swF.wave.settle > 0.1, JSON.stringify(swF));
     await page.evaluate(() => { const m = window.__market; m.handlers.shopEnd(); for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.25) m.advance(0.25); m.advance(1); });
@@ -971,15 +1007,14 @@ try {
     await frames(page, 1);
     check('reduced motion: the walk is a cut', (await page.evaluate(() => window.__market.arrived)) && (await state(page, 'stop')) === 'wurst');
     await frames(page, 2);
-    const tAim = await aimAt(page, 'act_sausage_5');
-    if (!tAim && (await wurstSet(page)) === 'plate') skip('phone: tapping a sausage turns it', 'the vendor\'s round-10 plate set is on disk: no single sausages to tap');
-    else if (tAim) {
-      const q0 = (await page.evaluate(() => window.__market.item('act_sausage_5'))).quaternion;
+    const tAim = await aimAt(page, 'act_wurst_thueringer');
+    if (tAim) {
+      await page.evaluate(() => window.__market.handlers.clearPlate());
+      await page.evaluate(() => { const m = window.__market; for (let t = 0; t < 10 && m.handlers.plate().busy; t += 0.5) m.advance(0.5); });
       await page.touchscreen.tap(tAim.x, tAim.y);
-      await frames(page, 2);
-      const q1 = (await page.evaluate(() => window.__market.item('act_sausage_5'))).quaternion;
-      check('phone: tapping a sausage turns it', q0.some((v, i) => Math.abs(v - q1[i]) > 0.05), `${q0} -> ${q1}`);
-    } else check('phone: tapping a sausage turns it', false, 'no clear pixel on act_sausage_5');
+      const pt = await page.evaluate(() => { const m = window.__market; for (let t = 0; t < 10 && m.handlers.plate().busy; t += 0.5) m.advance(0.5); m.advance(0.5); return m.handlers.plate(); });
+      check('phone: tapping a Thüringer puts one on the plate (reduced motion: it lands at once)', pt.food.join() === 'thueringer', JSON.stringify(pt));
+    } else check('phone: tapping a Thüringer puts one on the plate (reduced motion: it lands at once)', false, 'no clear pixel on act_wurst_thueringer');
     await page.evaluate(() => window.__market.read('wurst.menu'));
     await page.evaluate(() => window.__market.advance(1));
     await page.waitForFunction(() => window.__market.textOn('wurst.menu').length > 10, null, { timeout: LONG }).catch(() => {});

@@ -1,5 +1,5 @@
-// The panel buttons of the four section stalls: pour a mug, pull a pint, Prost, a Bratwurst in a bun, mix a plate,
-// and pick a book. Each drives the same code as clicking the item itself (actions/items/*); a stand-in
+// The panel buttons of the four section stalls: pour a mug, pull a pint, Prost, turn the sausages, a Bratwurst in a
+// bun, mix a plate, and pick a book. Each drives the same code as clicking the item itself (actions/items/*); a stand-in
 // stall without those items falls back to the prototype's versions made here.
 import * as THREE from 'three';
 import { act, acts, counterLocal, toLocal, worldOf } from './util.js';
@@ -131,7 +131,13 @@ export function createStallActions(ctx) {
   const prostBier = () => { if (H.beerReady) H.prostBier(); else prost('bier'); };
   const prostGlueh = () => { prost('glueh'); if (H.mugsReady) H.prostMugs(); };
 
-  // ---------- Bratwurst (round 10: the plate) ----------
+  // ---------- Bratwurst (round 10: the plate; the grill's sausages still turn from the button) ----------
+  let turnN = 0;
+  function turnSausages() {
+    if (H.grillReady) return H.turnAll();
+    sfx('sizzle');
+    say(actionNote('wurst', 'turn', 'Turned. Nicely browned on this side.', { n: turnN++ }));
+  }
   function bun() {
     if (H.plateReady && H.bunPlate()) return;
     sfx('sizzle');
@@ -143,15 +149,14 @@ export function createStallActions(ctx) {
     sfx('sizzle');
     say('A Nürnberger trio with Senf on a paper plate. <em>Guten Appetit!</em>');
   }
-  // the writer's round-1 hint is about turning sausages, which the plate replaced (ADR 0004 revision)
-  const wurstHint = (() => { const fb = 'Put a few kinds on the paper plate, then a sauce.'; const w = actionHint('wurst', fb); return /turn|flip/i.test(w) ? fb : w; })();
+  const wurstHint = actionHint('wurst', 'Turn the sausages on the grill, or mix a plate.');
 
   // ---------- Bücherstand ----------
 
   return {
     glueh: { hint: actionHint('glueh', 'Pour a cup of Glühwein, then raise it with the crowd.') + itemHint('glueh'), acts: [{ key: 'pour', label: 'Pour a cup', fn: pourMug }, { key: 'prost', label: 'Prost!', fn: prostGlueh }] },
     bier: { hint: actionHint('bier', 'Pull a pint from the middle tap.') + itemHint('bier'), acts: [{ key: 'pint', label: 'Pull a pint', fn: pullPint }, { key: 'prost', label: 'Prost!', fn: prostBier }] },
-    wurst: { hint: wurstHint + itemHint('wurst'), acts: [{ key: 'bun', label: 'One in a bun, please', fn: bun }, { key: 'plate', label: 'Mix me a plate', fn: mixPlate }] },
+    wurst: { hint: wurstHint + itemHint('wurst'), acts: [{ key: 'turn', label: 'Turn the sausages', fn: turnSausages }, { key: 'bun', label: 'One in a bun, please', fn: bun }, { key: 'plate', label: 'Mix me a plate', fn: mixPlate }] },
     books: { hint: actionHint('books', 'Tap a cabinet to open it, then a cover; or let the bookseller choose.') + ' <em>Every book in the cabinets is one Mac has read; it opens with his notes on it.</em>', acts: [{ key: 'book', label: 'Pick a book for me', fn: () => H.pickBook?.() }],
       // one button per category cabinet (ADR 0004): the camera comes to it, its door opens and its covers come forward
       views: { label: 'Open a cabinet', list: () => (H.cabinets?.() || []).map((c) => ({ key: c.key, label: c.label, title: c.en, fn: () => H.openCabinet?.(c.key) })) } },

@@ -158,6 +158,8 @@ export function createSchmuck(ctx) {
       harmonicaStrike: (i, v = 0.6) => S?.harmonica?.strike(i, { velocity: v, source: 'test' }),
       /** For tests: the market's bulb gain at a distance from the wave's origin, now. */
       waveGainAt: (d) => wave?.gainAt(d) ?? 1,
+      /** For tests: the bulbs' gain (the shader's curve) at a distance from the wave's origin, now. */
+      waveBulbGainAt: (d) => wave?.bulbGainAt(d) ?? 1,
       shopEnd: () => end(),
     },
     retract() {

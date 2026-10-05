@@ -5,7 +5,9 @@
 // vertex buffers and has only its own triangles in a new index, so the GPU holds the vertices once. A stand-in grill
 // (a group of separate sausage meshes) needs no cutting.
 //
-// Each sausage turns about its own long axis through its middle, with a small hop, as tongs would turn it.
+// Each sausage turns about its own long axis through its middle, with a small hop, as tongs would turn it. The
+// sausages are not clickable one by one (ADR 0004 revision): the stall's "Turn the sausages" button turns the whole
+// grate in a ripple (actions/items/wurst.js).
 import * as THREE from 'three';
 import { worldDirToParent, UP } from './common.js';
 
@@ -74,15 +76,17 @@ function pieceGeometry(geo, index, box) {
 }
 
 /**
- * The grill's sausages as separately turnable pieces. `root` is the `sausages_grill` node (or a stand-in group).
+ * The grill's sausages as separately turnable pieces. `root` is the `sausages_grill` node (or the stand-in's
+ * separate `sausages_grill` meshes, as an array).
  * Returns { list: [{ mesh, pivot, axis, angle, turns }], turn(i, opts), rebuild() } or null.
  */
 export function createGrillSausages(root, { anim }) {
-  if (!root) return null;
+  const roots = (Array.isArray(root) ? root : [root]).filter(Boolean);
+  if (!roots.length) return null;
   const list = [];
   // a stand-in grill: separate sausage meshes already
   const loose = [];
-  root.traverse((o) => { if (o.isMesh && !o.userData.itemFx && !o.userData.grillPiece) loose.push(o); });
+  for (const r of roots) r.traverse((o) => { if (o.isMesh && !o.userData.itemFx && !o.userData.grillPiece && !loose.includes(o)) loose.push(o); });
   const merged = loose.length === 1 ? loose[0] : null;
   if (merged) build(merged);
   else for (const m of loose) list.push(wrapLoose(m));

@@ -198,6 +198,7 @@ export function createSchwibbogen({ place, arch, candles, town, wave, rig, camer
     for (const c of C) { c.lit = false; c.want = 0; }
     phase = 'waking'; t = 0; litOrder = []; waved = false;
     hushWant = 1;
+    wave.setHush(1, arch.node.getWorldPosition(new THREE.Vector3())); // the market's own lights dim with the town
     nextFlame = motion.reduced ? 0.2 : 4.3; // the first flame once the camera stands behind the arch, the town still dark
     startCamera();
     announce?.('The Schwibbogen: its seven candles light one by one, and the old town wakes.');
