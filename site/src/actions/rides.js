@@ -98,11 +98,24 @@ export function createRideActions({ market, rig, say, sfx, motion }) {
     const seat = seatOffset(h, 1.0, r.horses.map((x) => x.obj));
     const c = carousel.holder.position;
     riding = { type: 'carousel', place: carousel, rides: r };
+    // forward is the way the horse is actually moving (the platform's sign and its local axis can each flip it),
+    // measured frame to frame and kept steady; until it has moved, the spin sign gives a first guess
+    const prev = new THREE.Vector3(), fwd = new THREE.Vector3();
+    let seen = false;
     rig.startRide('carousel', () => {
       const pos = h.localToWorld(seat.clone());
       const out = new THREE.Vector3(pos.x - c.x, 0, pos.z - c.z).normalize();
-      const dir = r.platform && r.platform.speed > 0 ? -1 : 1;
-      const tan = new THREE.Vector3(out.z, 0, -out.x).multiplyScalar(dir);
+      if (!seen) {
+        const dir = r.platform && r.platform.speed > 0 ? 1 : -1;
+        fwd.set(out.z, 0, -out.x).multiplyScalar(dir);
+        seen = true;
+      } else {
+        const v = new THREE.Vector3(pos.x - prev.x, 0, pos.z - prev.z);
+        if (v.lengthSq() > 1e-8) fwd.lerp(v.normalize(), 0.2);
+      }
+      prev.copy(pos);
+      // keep it tangent to the circle
+      const tan = fwd.clone().addScaledVector(out, -fwd.dot(out)).normalize();
       // forward along the ride, turned a little inward to the mirrors, the lights and the other horses
       return { pos, look: new THREE.Vector3(pos.x + tan.x * 3 - out.x * 3, pos.y - 0.4, pos.z + tan.z * 3 - out.z * 3) };
     });
