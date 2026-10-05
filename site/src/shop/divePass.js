@@ -37,7 +37,7 @@ vec3 warped( vec2 uv ) {
   float band = smoothstep( 0.78, 0.98, r ) * uWarp;
   q = mix( q, q * ( 1.0 - 0.55 * band ) , band );
   // the glass splits the colours a hair at the edge
-  float ca = 0.0022 * uWarp * r2;
+  float ca = 0.0014 * uWarp * r2;
   vec2 s = q / vec2( uAspect, 1.0 ) + 0.5;
   vec2 d = normalize( p + 1e-5 ) * ca / vec2( uAspect, 1.0 );
   vec3 c;

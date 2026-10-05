@@ -52,3 +52,24 @@
 · schwib_2_town_waking.jpg (223 s)
 · screenshot ../review/round-9/engineer/schwib_3_light_wave.jpg
 · schwib_3_light_wave.jpg (251 s)
+· screenshot ../review/round-9/engineer/schwib_4_settled.jpg
+· schwib_4_settled.jpg (280 s)
+  ok   full market: the screenshots catch each beat (the town gone quiet over unlit candles, waking, the wave's bloom at its height, settled) ([{"name":"schwib_1_town_dark.jpg","burning":0,"windows":0,"hush":1,"quiet":709,"bloom":1,"cam":"hold"},{"name":"schwib_2_town_waking.jpg","b)
+  ok   full market: the Schwibbogen sequence ran (seven flames, windows warm, the wave) ({"phase":"lit","lit":["act_orn_candle_0","act_orn_candle_6","act_orn_candle_1","act_orn_candle_5","act_orn_candle_2","act_orn_candle_4","act)
+· screenshot ../review/round-9/engineer/harmonica_mid_phrase.jpg
+· harmonica_mid_phrase.jpg (326 s)
+  ok   full market: a bauble glows mid-phrase on the harmonica (the camera leaned in to the row) ([0.011,0.018,0.09,0.505,0.615,0,0,0,0,0,0,0])
+· screenshot ../review/round-9/engineer/dive_1_approach.jpg
+· dive_1_approach.jpg (409 s)
+· screenshot ../review/round-9/engineer/dive_2_reflection.jpg
+· dive_2_reflection.jpg (446 s)
+· screenshot ../review/round-9/engineer/dive_3_into_glass.jpg
+· dive_3_into_glass.jpg (502 s)
+· screenshot ../review/round-9/engineer/dive_4_inside.jpg
+· dive_4_inside.jpg (524 s)
+  ok   full market: the dive reaches the inside of the glass (512 px cube) ({"phase":"inside","env":{"size":512,"captures":1},"glass":"engine_mirrorball_glass","pass":{"enabled":true,"mix":1,"warp":1,"veil":0,"captur)
+  ok   full market: the dive comes back out 
+
+44/44 checks passed
+No console errors.
+EXIT 0
