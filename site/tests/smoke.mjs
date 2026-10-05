@@ -53,9 +53,6 @@ const errors = [];
 const log = (...a) => console.log('·', ...a);
 const results = [];
 const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); console.log(ok ? '  ok  ' : '  FAIL', name, detail ? `(${String(detail).slice(0, 140)})` : ''); };
-const skipped = [];
-/** A check whose contract the files on disk have moved past (a later round's set): logged, not counted. */
-const skip = (name, why) => { skipped.push({ name, why }); console.log('  skip', name, `(${why})`); };
 /** The Bratwurst's set on disk: the round-8 rows of clickable sausages, or the round-10 plate (BUILD.md, ADR 0004). */
 const wurstSet = (page) => page.evaluate(() => { const c = window.__market.items(); return c['wurst:sausage'] ? 'sausages' : c['wurst:wurst'] ? 'plate' : 'none'; });
 const LONG = +opt('--long', 180) * 1000; // ms a click or wait may take (software GL on a busy machine: raise it)
@@ -730,7 +727,7 @@ try {
       for (let t = 0; t < 24; t += 0.25) {
         m.advance(0.25);
         const s = m.handlers.schmuck().schwibbogen;
-        seen.push({ t, burning: s.burning, lit: s.windows.lit, wake: s.wake, chord: s.chord, wave: s.wave.running, bloom: s.wave.bloom, cam: s.cam, gain: +m.handlers.waveGainAt(12).toFixed(2) });
+        seen.push({ t, burning: s.burning, lit: s.windows.lit, wake: s.wake, chord: s.chord, wave: s.wave.running, bloom: s.wave.bloom, cam: s.cam, gain: +m.handlers.waveGainAt(12).toFixed(2), wash: +m.handlers.waveWashAt(12).toFixed(2), washed: s.wave.washed });
       }
       const s = m.handlers.schmuck().schwibbogen;
       const cam = m.cam();
@@ -746,6 +743,8 @@ try {
     const crest = Math.max(...sw.seen.map((x) => x.gain)), bloomPeak = Math.max(...sw.seen.map((x) => x.bloom));
     const firstWave = sw.seen.findIndex((x) => x.wave), lastLight = sw.seen.findIndex((x) => x.burning === 7);
     check('Schwibbogen: after the last flame a wave of light runs across the market (bulbs flare in turn, the bloom swells and settles)', firstWave > lastLight && crest > 1.8 && bloomPeak > 1.5 && sw.seen.at(-1).bloom < 1.25, JSON.stringify({ firstWave, lastLight, crest, bloomPeak, end: sw.seen.at(-1).bloom }));
+    const washPeak = Math.max(...sw.seen.map((x) => x.wash));
+    check('Schwibbogen: the wave washes over the square\'s cobbles too (a warm band on the ground at the front, a faint warmth behind it)', sw.seen.at(-1).washed > 0 && washPeak > 1.5 && sw.seen.at(-1).wash > 0.1 && sw.seen.at(-1).wash < 0.6 && sw.seen.slice(0, Math.max(0, firstWave)).every((x) => x.wash === 0), JSON.stringify({ washed: sw.seen.at(-1).washed, washPeak, end: sw.seen.at(-1).wash }));
     check('Schwibbogen: the camera stands behind the arch looking out over the candles, the bar steps aside', sw.cam.mode === 'drive' && sw.s.cam === 'hold' && sw.busy === 'schwibbogen' && sw.moment === 'schwibbogen' && !sw.barShown, JSON.stringify({ cam: sw.cam, phase: sw.s.cam, busy: sw.busy, bar: sw.barShown }));
     await page.keyboard.press('Escape');
     const back = await page.evaluate(() => { const m = window.__market; for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.25) m.advance(0.25); m.advance(0.5); return { busy: m.handlers.schmuck().busy, mode: m.cam().mode, stop: m.stop, burning: m.handlers.schmuck().schwibbogen.burning, moment: document.documentElement.dataset.moment || null }; });
@@ -840,10 +839,11 @@ try {
     await page.evaluate(() => window.__market.act('schmuck', 'candles'));
     // the view over the arch with the town still dark, four flames and the town waking, the wave of light at its
     // height (the bulbs flaring as it passes, the bloom swelled), and the market settled in its lasting glow
-    // (the wave's frame is timed by the wave itself: its front 2.4 s out, about 17 m, over the stalls across the
-    // square, so the frame shows it: the near strings flaring, the far ones still dim, the bloom near its height)
+    // (the wave's frame is timed by the wave itself: 3.1 s after the last flame its front is 22 m out and the warm band
+    // on the cobbles is over the stalls across the square, so the frame shows it: the near ground back to a glow, the
+    // band bright, the far ground and the far strings still dim, the bloom near its height)
     const times = [[4.25, 'schwib_1_town_dark.jpg'], [6.8, 'schwib_2_town_waking.jpg'], ['wave', 'schwib_3_light_wave.jpg'], [19, 'schwib_4_settled.jpg']];
-    const WAVE_SNAP = 2.4;
+    const WAVE_SNAP = 3.1;
     let at = 0;
     const peaks = [];
     for (const [t, name] of times) {
@@ -852,10 +852,11 @@ try {
       await snapTo(name);
       const x = (await S()).schwibbogen;
       const near = await page.evaluate(() => +window.__market.handlers.waveBulbGainAt(8).toFixed(2)), far = await page.evaluate(() => +window.__market.handlers.waveBulbGainAt(30).toFixed(2));
-      peaks.push({ name, at: +at.toFixed(2), burning: x.burning, windows: x.windows.lit, hush: x.windows.hush, quiet: x.windows.quiet, bloom: x.wave.bloom, waveT: x.wave.t, front: x.wave.front, marketHush: x.wave.hush, near, far, cam: x.cam });
+      const wash = await page.evaluate(() => +window.__market.handlers.waveWashAt(14).toFixed(2));
+      peaks.push({ wash, washed: x.wave.washed, name, at: +at.toFixed(2), burning: x.burning, windows: x.windows.lit, hush: x.windows.hush, quiet: x.windows.quiet, bloom: x.wave.bloom, waveT: x.wave.t, front: x.wave.front, marketHush: x.wave.hush, near, far, cam: x.cam });
     }
     check('full market: the screenshots catch each beat (the town gone quiet over unlit candles, waking, the wave\'s bloom at its height, settled)', peaks[0].burning === 0 && peaks[0].windows === 0 && peaks[0].hush > 0.9 && peaks[0].quiet > 100 && peaks[0].cam === 'hold' && peaks[1].windows > 0 && peaks[1].burning >= 3 && peaks[2].windows > peaks[1].windows && peaks[2].bloom > 2 && peaks[3].bloom < peaks[2].bloom, JSON.stringify(peaks));
-    check('full market: the wave\'s frame shows its front (the market dimmed while it waited; bulbs 8 m out flaring, 30 m out still dim)', peaks[1].marketHush > 0.5 && peaks[2].near > 1.5 && peaks[2].far < 0.6 && peaks[3].marketHush === 0, JSON.stringify(peaks.map((p) => ({ name: p.name, marketHush: p.marketHush, near: p.near, far: p.far, front: p.front }))));
+    check('full market: the wave\'s frame shows its front (the market dimmed while it waited; bulbs 8 m out flaring, 30 m out still dim; the cobbles lit at the front)', peaks[1].marketHush > 0.5 && peaks[2].near > 1.5 && peaks[2].far < 0.6 && peaks[3].marketHush === 0 && peaks[2].washed > 0 && peaks[2].wash > 1.5 && peaks[1].wash === 0, JSON.stringify(peaks.map((p) => ({ name: p.name, marketHush: p.marketHush, near: p.near, far: p.far, front: p.front, wash: p.wash }))));
     const swF = (await S()).schwibbogen;
     check('full market: the Schwibbogen sequence ran (seven flames, windows warm, the wave)', swF.burning === 7 && swF.windows.lit > 0.9 * swF.windows.candidates && swF.wave.settle > 0.1, JSON.stringify(swF));
     await page.evaluate(() => { const m = window.__market; m.handlers.shopEnd(); for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.25) m.advance(0.25); m.advance(1); });
@@ -1187,7 +1188,6 @@ try {
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
-if (skipped.length) console.log(`${skipped.length} skipped (a later round's files on disk): ${skipped.map((x) => x.name).join('; ')}`);
 if (errors.length) console.log('Console errors:\n  ' + errors.join('\n  '));
 else console.log('No console errors.');
 process.exit(failed.length || errors.length ? 1 : 0);

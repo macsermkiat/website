@@ -1,6 +1,72 @@
-> **Market owner note (2026-10-05 16:00 UTC), read first.** Pass 2 was interrupted after two copies of the engineer worked on the Bratwurst plate port at the same time. Both partial versions are on disk (commit 5cf4818): (a) a rewrite of `site/src/actions/items/wurst.js` with its own plate code, plus changes in `site/src/standins/plate.js`, `site/src/engine/standinGoods.js`, `site/src/standins/stall.js` and `site/src/engine/market.js`; (b) `site/src/actions/items/plate.js`, `site/src/actions/items/grillSausages.js` and the `sfx.js` cleanup. Nobody else is editing site/ now. Reconcile them into one implementation of the plate described in the "Revision: Bratwurst plate instead of many sausages" section of docs/adr/0004 (tap a kind and a fresh copy arcs onto act_plate at the next free plate_spot_0..3, four at most; sauce bottles squeeze a glossy squiggle from fx_sauce_; the shaker dusts curry; tap the plate to clear with "Guten Appetit"; no per-sausage turning; no stand-in sausages when act_wurst_ nodes exist), delete whatever is left unused, then do the judges' other fixes and one clean full smoke run.
-
 # Engineer, round 9: the ornament shop's three moments (ADR 0004 revision)
+
+## Pass 2: the judges' fixes
+
+1. **One clean full smoke run, with the Bratwurst plate ported and tested instead of skipped.** `smoke.log` (16:42-17:53 UTC, every
+   section, served from a frozen copy of today's `dist/`, against the shop and plate files now on disk): **291/291
+   checks passed, no console errors, nothing skipped.** After the run had started I made two edits to `tests/smoke.mjs` that change no check:
+   I deleted the unused skip helper, and I renamed the wave-frame check (its logic, with the ground band, was already
+   in the run). So the log shows that check's old name.
+   - The two half-finished plate ports left by the interrupted pass are now one, in `src/actions/items/wurst.js`
+     (with `grillSausages.js` beside it). `src/actions/items/plate.js` is deleted, and nothing in `src/` refers to
+     `act_sausage_`, `act_bun` or the old stand-in rows any more.
+   - It follows the ADR 0004 revision "Bratwurst plate instead of many sausages" and the vendor's round-10 set
+     (`prop_wurst_counter*.glb`, `items.json`):
+     - Tap a kind (`act_wurst_thueringer`, `_nuernberger`, `_krakauer`, `_curry`) or the Brötchen (`act_roll`):
+       a fresh copy arcs onto `act_plate` at the next free `plate_spot_0..3`, four at most. The one on the board
+       stays. A fifth gets "The plate is full". A Thüringer or Krakauer tapped while an empty Brötchen waits goes
+       into it.
+     - The three bottles (`act_sauce_senf`, `_ketchup`, `_curry`) lift, turn over above the plate and pipe a glossy
+       squiggle from their `fx_sauce_` nozzle. The squiggle is a tube draped over the food and drawn in as it is
+       piped. The tin (`act_shaker_curry`) dusts curry powder from `fx_shaker_curry`.
+     - Tap the plate to hand it over the counter: "Guten Appetit", and a fresh plate is set out.
+     - The buttons stay: "One in a bun, please" (a roll, a Thüringer into it, Senf) and "Mix me a plate" (a kind and
+       a sauce).
+   - **Turning the sausages still works.** The vendor merged the ten grill sausages into one mesh
+     (`sausages_grill`, riding `act_grill_swing`). At load, `grillSausages.js` cuts that mesh into its sausages
+     (connected pieces welded by position, small touching pieces joined to their sausage). Each piece shares the
+     merged vertex buffers and has its own index, so the GPU holds the vertices once. The "Turn the sausages" button
+     turns the whole grate in a ripple, each sausage hopping over about its own long axis as tongs would turn it.
+     They are not clickable one by one (ADR 0004).
+   - The smoke test now checks all of this in the `interact` section (14 Bratwurst checks, in place of the 2 that
+     skipped in pass 1):
+     - the plate set is present and the three buttons are there;
+     - turn the sausages: every sausage on the grate turns over exactly once, and none is clickable on its own;
+     - a sausage in a bun;
+     - a click in 3D on the Krakauer puts a fresh one on the plate;
+     - sauces and curry powder, and the sauce squiggle's geometry;
+     - four at most;
+     - a click in 3D on the plate clears it ("Guten Appetit");
+     - mix me a plate.
+     The `phone` section taps a Thüringer onto the plate in reduced motion. Screenshot: `stop_bratwurst_plate.jpg`.
+2. **The market light wave reads in a still frame.** Three changes in `src/shop/lightWave.js`:
+   - **The light runs over the ground.** The square's cobbles, setts, granite bands and puddles (the architect's
+     `square.glb` materials, or a stand-in `ground` mesh) get a shader patch. Where the wave is passing, it adds
+     warm light to their own colour, so the setts keep their pattern. It is a band about 8 m across that peaks
+     7 m behind the front, with a slightly ragged edge, as light finds its way between the stalls. Behind it the
+     ground keeps a faint warmth while the candles burn. The band fades out by the square's edge and does not light
+     the ground under the arch. Reduced motion: one gentle rise everywhere at once.
+   - **The market waits in the dark.** While the candles light, the market's bulbs dim to 30 % and its lamps to
+     45 %, with the town. The wave then relights them as it passes, so a frame shows lit behind the front and dim
+     ahead of it. (This went in at the start of this pass, before the restart.)
+   - **A bigger bloom swell:** up to 3.1x at its height (pass 1: 1.9x), rising and settling over 6 s. The bulbs
+     flare to 3.6x as the front passes (pass 1: 2.6x), and the front moves at 7 m/s (pass 1: 11), slow enough to
+     follow.
+   - **The screenshot is timed by the wave itself.** `schwib_3_light_wave.jpg` is taken 3.1 s after the wave
+     starts. The front is then 22 m out and the warm band on the cobbles lies across the square at the stalls. The
+     near ground is back to a glow, the far ground and the far strings are still dim, and the bloom is near its
+     height. Compare it with `schwib_2_town_waking.jpg`, where the market is hushed, and `schwib_4_settled.jpg`.
+   - New checks:
+     - `schmuck`: the wash reaches the cobbles, peaks, settles to a faint warmth and is zero before the wave.
+     - `moments`: the wave frame has the band on the ground at 14 m, the near bulbs flaring and the far ones dim.
+3. **Committing:** my brief from the session that started me says not to run git commit or push, because that
+   session does it. Everything the judges listed is on disk for it: `tests/smoke.mjs`, this file, the logs and the
+   screenshots. The pass-1 logs are moved to `pass1/` (staged as renames) so that `smoke.log` is this pass's clean
+   run.
+4. **Real-GPU numbers** need Mac (see Open issues). I can't measure them on this machine: it has no GPU.
+
+---
+
 
 Mac: "No need to be interactive in everything, but the one that interactive must be wow. not slop." This round
 the shop has three moments and nothing else to click. The carpenter's and vendor's round-9 shop files now on disk
@@ -31,7 +97,7 @@ Code (all in `site/`):
     because so many windows are lit by default. Compare `schwib_1_town_dark.jpg` with `schwib_3_light_wave.jpg`.
   - `lightWave.js`, the wave of light. A shader patch on every bulb material scales its glow by the wave at that
     point, so a string of lights brightens bulb by bulb. The lamps follow the same curve on the CPU, and the bloom
-    swells by up to about 1.9x and then settles.
+    swells (pass 2: up to 3.1x) and then settles. Pass 2 adds the hush and the warm band on the cobbles (see above).
   - `harmonica.js` + `audio/glass.js`, the glass harmonica. The twelve baubles are tuned to the first twelve notes
     of "Lanterns After Closing" (music/score/LEADSHEET.md, head in G minor: D Bb A | G A C | Eb D F# | G, F Ab), two
     octaves up. A drag that starts on the row, by mouse or finger, claims the pointer, so the head does not turn,
@@ -91,25 +157,22 @@ Tests: `tests/smoke.mjs`
 ## Results
 
 - `npm ci && npm run build` in `site/`: succeeds (three 0.186, Vite 8; base `/website/`).
-- **Full smoke run, today's code, shop files on disk** (`smoke.log`, 14:28-15:17, served from a frozen copy of
-  `dist/`): **277/279 checks, no console errors**. The two failures are the sausage clicks ("clicking one sausage
-  in 3D", "phone: tapping a sausage"). The vendor's round-10 Bratwurst plate set (`prop_wurst_counter*.glb`,
-  `items.json`, written at 14:10 under the round-10 BUILD.md line "the old act_sausage_<n> rows become merged
-  scenery") was already on disk when the run started. It has no single sausages left to click. The engine handles
-  it without errors (turn the sausages and the bun still work), but porting the plate's interactions is round-10
-  engineer work. Both checks now detect the plate set and log a **skip** with the reason instead of failing. A
-  re-run of the two sections that contain them (`interact,phone`, `smoke_rerun_interact_phone.log`) gives
-  **38/38 checks, 2 skipped, no console errors**. Taken together, every section passes on the files now on disk,
-  including all three moments (schmuck 37, moments 7, and the phone's reduced-motion versions).
-- Earlier runs, kept for the record:
-  - `smoke_killed_run.log`: killed from outside after 100 checks, all passing. The machine was shared with the
-    vendor's Blender build.
-  - `smoke_run2_crash.log`: 244/245, then a real bug. The reduced-motion dive crashed on its way out, because
-    `go('back')` ended the dive inside the pose function, which then read `S.cut`. Fixed in `dive.js`, proven by
-    the phone section above. The one failure in that run was the projects-board check: it expected a GitHub link
-    that Mac removed from `content/projects.md`. It now checks for the links that `projects.md` actually holds
-    (ProtoCol and the YouTube playlist).
-  - `smoke_shop.log`: `schmuck,moments` 44/44 after the polish pass.
+- **Full smoke run (pass 2), today's code, shop and plate files on disk** (`smoke.log`, 16:42-17:53 UTC, served
+  from a frozen copy of `dist/`): **291/291 checks, no console errors, nothing skipped**. Per section:
+  - interact: 40, including the 14 Bratwurst checks;
+  - schmuck: 38, including the new wash check;
+  - moments: 8;
+  - the rest as in pass 1, all passing: unit, stroll, reading, cabinet, lite, phone (with the plate tap and the
+    reduced-motion moments), plain, missing, audio.
+  - First load: full market 7.29 MB (limit 9 MB), lite 5.19 MB.
+- Pass-1 runs, kept for the record in `pass1/`:
+  - `pass1/smoke.log`: 277/279. The two sausage clicks failed against the vendor's round-10 plate set, which landed
+    mid-round.
+  - `pass1/smoke_rerun_interact_phone.log`: 38/38 with 2 skipped.
+  - `pass1/smoke_killed_run.log`: killed from outside after 100 checks, all passing.
+  - `pass1/smoke_run2_crash.log`: 244/245, then the reduced-motion dive crashed on its way out. That was fixed in
+    `dive.js` in pass 1.
+  - `pass1/smoke_shop.log`: `schmuck,moments` 44/44.
 - Bench (judge note), re-run with today's code: `perf.log` and `perf/2026-10-05-11-55.json`. Software GL only, so
   these are not GPU numbers:
   - Full market: first load **7.26 MB**, with the deco stalls lite-only (round 8: 7.25 MB). The triangle count is
@@ -119,10 +182,11 @@ Tests: `tests/smoke.mjs`
   - Lite market: first load 5.10 MB, 609-633 draws, about 300k triangles, 40 people in 11 draws.
   - The bench's own stdout was cut off by `process.exit()` before its lines were written (fixed in
     `tests/perf.mjs`), so `perf.log` was rebuilt from the JSON.
-- Screenshots (full market, 1280x720, from the `moments` section of the full run):
+- Screenshots (full market, 1280x720, from the `moments` section of the pass-2 full run):
   - `shop_stop.jpg`: the shop at its stop.
   - The Schwibbogen: `schwib_1_town_dark.jpg` (the town gone quiet over unlit candles), `schwib_2_town_waking.jpg`,
-    `schwib_3_light_wave.jpg` (the peak: seven flames, windows warm, the string lights flaring, bloom 1.9x) and
+    `schwib_3_light_wave.jpg` (pass 2: 3.1 s into the wave, the warm band on the cobbles across the square at the
+    stalls, the near strings flaring, the far ones still dim, bloom 3.1x) and
     `schwib_4_settled.jpg`.
   - `harmonica_mid_phrase.jpg`: the camera leaned in, the fifth note just struck and the fourth still glowing.
   - The dive: `dive_1_approach.jpg`, `dive_2_reflection.jpg` (the lit market curving in the mercury glass),
@@ -132,12 +196,20 @@ Tests: `tests/smoke.mjs`
 
 ## Open issues
 
-- Real-GPU frame times still need Mac: `cd site && npm ci && npm run build && npx playwright install chromium &&
-  npm run perf` on his laptop. A real GPU is the only way to judge the dive's cube render (one 512 px capture per
-  tap), the 640 px mirror drawn every frame near the shop, and the 1372 draws at the full market's home view.
-- The Bratwurst plate (round 10) needs its engine port: `act_wurst_*`, `act_sauce_*` with `fx_sauce_*`,
-  `act_shaker_curry`, `act_plate` with `plate_spot_0..3`. Until then the two sausage checks skip, and the old
-  `act_sausage_*` stand-ins stay hidden behind the vendor's merged grill.
+- **For Mac (judges' item 4): real-GPU frame times.** On his laptop, run `cd site && npm ci && npm run build &&
+  npx playwright install chromium && npm run perf`. It writes `perf.log` and a JSON file to
+  `review/round-9/engineer/perf/`. Three things need a real GPU to judge:
+  - the 1372 draws at the full market's home view;
+  - the 640 px mirror target drawn every frame near the shop;
+  - the dive's 512 px cube capture per tap.
+  The bench on this machine is software GL and can't stand in for it. If the mirror is costly, the fix is ready to
+  make: refresh it every few frames, as the lite market does.
+- The ground wash patches the square's materials by name (`cobble*`, `setts*`, `granite_bands`, `puddle*`). If the
+  architect renames them, the wave still runs over the bulbs and lamps, but not over the ground; the `schmuck`
+  wash check will then fail and say so.
+- The grill's sausages turn by cutting the vendor's merged `sausages_grill` mesh into its connected pieces at load.
+  If a later export welds two sausages together, they turn as one, and the check that every sausage turns once
+  still passes.
 - The clear harmonica shells are made see-through by the engine. The vendor's file has `vendor_glass` as an opaque
   white, which reads as porcelain in any other viewer. If the vendor exports it as glTF transmission or BLEND, the
   engine's override becomes a fallback.

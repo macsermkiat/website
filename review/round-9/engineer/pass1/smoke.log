@@ -51,14 +51,14 @@
   ok   unit: production content: all 55 books from categories.json, each with its reading page (55 books,  without a page) 
   ok   unit: budget: a glb's external textures are counted with it (deco_kit_wood_normal.webp deco_kit_wood_color.webp deco_kit_wood_rm.webp deco_kit_oak_normal.webp deco_kit_oak_color.webp deco_kit_oak_rm.webp deco_kit_paint_normal.webp deco_kit_paint_color.webp deco_kit_paint_rm.webp deco_kit_iron_normal.webp deco_kit_iron_color.webp deco_kit_iron_rm.webp) 
   ok   unit: budget: a texture several assets share is charged once (deco_kit_wood_color.webp: 8 users) 
-  ok   unit: budget: deferred assets and the crowd's distance level are counted ({"firstLoad":8390550,"deferred":9074818,"onDemand":16247616,"everything":33712984,"aim":25000000,"round4":19700000,"over":false,"grew":false}) 
-  ok   unit: budget: the full market's full-detail stalls are counted on demand, not in the first load ({"full":{"firstLoad":8390550,"deferred":9074818,"onDemand":16247616,"everything":33712984,"aim":25000000,"round4":19700000,"over":false,"grew":false},"lite":{"firstLoad":6287538,"deferred":5585118,"onDemand":0,"everything":11872656,"aim":8000000,"round4":7440000,"over":false,"grew":false}}) 
-  ok   unit: budget: both first loads are smaller than round 4 (19.70 MB full, 7.44 MB lite) (8.39 / 6.29 MB) 
+  ok   unit: budget: deferred assets and the crowd's distance level are counted ({"firstLoad":8371829,"deferred":9074818,"onDemand":16247616,"everything":33694263,"aim":25000000,"round4":19700000,"over":false,"grew":false}) 
+  ok   unit: budget: the full market's full-detail stalls are counted on demand, not in the first load ({"full":{"firstLoad":8371829,"deferred":9074818,"onDemand":16247616,"everything":33694263,"aim":25000000,"round4":19700000,"over":false,"grew":false},"lite":{"firstLoad":6268817,"deferred":5585118,"onDemand":0,"everything":11853935,"aim":8000000,"round4":7440000,"over":false,"grew":false}}) 
+  ok   unit: budget: both first loads are smaller than round 4 (19.70 MB full, 7.44 MB lite) (8.37 / 6.27 MB) 
   ok   unit: budget: the shared clips (people_anims.glb) are counted  
   ok   unit: budget: the bandstand is charged with its instruments, its four players as person variants (people_band_sax people_band_piano people_band_bass people_band_drums) 
   ok   unit: budget: a shared texture is charged to each user in equal parts (19444.477564102566 of 256214) 
   ok   unit: budget: it reports a missing dist (the CLI then exits 1)  
-  ok   unit: budget: both first loads are under their aims (8.39 / 6.29 MB) 
+  ok   unit: budget: both first loads are under their aims (8.37 / 6.27 MB) 
   ok   unit: streaming: each streamed stall's lite and full glbs have the same node tree (the graft's precondition)  
   ok   unit: stroll: a leg joins every pair of stops (a signpost choice walks straight there)  
   ok   unit: stroll: every stop has an eye and a target, and the Riesenrad its overview  
@@ -68,7 +68,7 @@
   ok   unit: Riesenrad: parking eases to a stop on a whole turn, in the time it said (longest 8.3 s, top speed 1.13 rad/s) 
 · full market, 1280 px: the still, the signpost, a walk, the stops, streaming, no orbit and no side panel
   ok   a still of the home view shows before the market is ready 
-· ready in 19.9 s
+· ready in 19.7 s
 · full: 7.29 MB downloaded when the market opens
   ok   full: the first load stays near 8 MB (round 9: under 9 MB; the deco stalls are their lite files, the rest streams in at the stops) (7.29 MB)
   ok   full market chosen with ?quality=full 
@@ -80,16 +80,16 @@
   ok   the on-screen signpost has eight arms (the ornament shop too) and an overview 
   ok   streaming: the section stalls and the bandstand open at lite detail ({"square":"full","gluehwein":"lite","bierstand":"lite","bratwurst":"lite","buecherstand":"lite","bandstand":"lite","tree":"lite","signpost":)
   ok   streaming: the town ring comes just after the first frame, with the rides (["riesenrad","karussell","deco-schmuck","town","deco-lebkuchen","deco-mandeln","deco-kerzen","deco-spielzeug","deco-kaese","deco-crepes","de)
-  ok   no orbit: a long drag turns the head at most 15°, and the camera stays where it is ({"c0":[3.279,9.248,32.977],"c1":[3.555,9.217,32.954],"look":{"yaw":0.2617977792481168,"pitch":0,"zoom":1}})
+  ok   no orbit: a long drag turns the head at most 15°, and the camera stays where it is ({"c0":[3.282,9.248,32.976],"c1":[3.558,9.217,32.954],"look":{"yaw":0.2617977792481168,"pitch":0,"zoom":1}})
   ok   zoom stays in its small band (1.1199992626945177)
 · screenshot ../review/round-9/engineer/home_signpost.jpg
   ok   deco stalls: every one is in the market, at its lite file only (no full-detail download, nothing streams) ({"ids":["deco-lebkuchen","deco-mandeln","deco-kerzen","deco-spielzeug","deco-kaese","deco-crepes","deco-maroni","deco-kartoffelpuffer"],"fil)
-  ok   deco stalls are not clickable: a click on deco-lebkuchen picks nothing, shows no label, and the view stays home (no close-up) ({"hit":{"id":"deco-lebkuchen","x":479.62152553680977,"y":427.5962854240773,"pick":null},"tip":null,"after":{"stop":null,"mode":"home","readi)
+  ok   deco stalls are not clickable: a click on deco-lebkuchen picks nothing, shows no label, and the view stays home (no close-up) ({"hit":{"id":"deco-lebkuchen","x":479.5191263313183,"y":427.60071882278163,"pick":null},"tip":null,"after":{"stop":null,"mode":"home","readi)
   ok   no deco stops in the stroll and no deco fly-to 
   ok   the signpost's hover label stays inside the canvas ({"tip":[439,490,861,525],"canvas":[17,119,1263,709],"text":"Christbaumschmuck: walk to the Christbaumschmuck · Ornaments","hidden":false})
   ok   the hover label stays inside the canvas at every edge and corner ([{"at":[1244,296],"inside":true},{"at":[2,296],"inside":true},{"at":[1244,4],"inside":true},{"at":[2,4],"inside":true},{"at":[623,3],"inside)
-  ok   clicking the signpost's Glühwein board walks to the Glühwein stall ({"x":555.3176126534797,"y":529.6164592747316})
-  ok   the camera walks (not flies) to the stop ({"kind":"walk","t":0,"dur":11.986471173260632,"length":38.35670775443403})
+  ok   clicking the signpost's Glühwein board walks to the Glühwein stall ({"x":555.4730976797782,"y":529.8274831641057})
+  ok   the camera walks (not flies) to the stop ({"kind":"walk","t":0,"dur":11.986485170234877,"length":38.35675254475161})
   ok   walking pace (about 3 m/s; never a dash) (3.20 m/s over 38.4 m)
   ok   mid-stroll the camera is on its way, down at eye level and off the straight line ([1.668,3.531,22.345])
   ok   arrived at the Glühwein stop, with its bar of things to do ({"arrived":true,"cam":{"mode":"stop","moving":false,"progress":null,"look":{"yaw":0,"pitch":0,"zoom":1},"pos":[-5.422,1.8,3.028],"target":[-)
@@ -105,7 +105,7 @@
   ok   streaming: walking to a stall brings it in at full detail 
   ok   0 goes back to the overview of the square 
 · reading on the writing surfaces (lite market, 1280 px)
-· ready in 11.4 s
+· ready in 7.8 s
 · writing surfaces on the models' own write_ nodes: glueh.board bier.vomfass wurst.menu wurst.paper books.card band.sheet ferris.notice carousel.ticket; stand-ins: none
   ok   the carpenter's, vendor's and ride builder's write_ props carry the words where they exist (Glühwein board, vom Fass board, menu, Marktblatt, sheet music, noticeboard, ticket) ([{"id":"glueh.board","kind":"chalk","fromModel":true},{"id":"bier.vomfass","kind":"chalk","fromModel":true},{"id":"wurst.menu","kind":"chalk)
   ok   a writing surface for each section (board, coasters, menu, paper, card, sheet, noticeboard, ticket) (glueh.board bier.vomfass bier.coaster_0 bier.coaster_1 bier.coaster_2 wurst.menu wurst.paper books.card band.sheet ferris.notice carousel.ti)
@@ -152,29 +152,18 @@
   ok   Escape closes the book and puts it back 
   ok   Enter at a stop reads its main piece (the Karussell ticket) 
 · every action, both rides, snow, the overview, the keyboard and a click in 3D (lite market, small viewport)
-· ready in 10.9 s
+· ready in 7.1 s
   ok   the crowd streams in after the first frame 
   ok   the on-screen signpost walks to the Glühwein stall 
   ok   the stop bar offers the actions as buttons 
   ok   pour a mug (the ladle fills one of the stall's own mugs) (Blue mug with white snowflakes, filled. Mugs poured tonight: 1. Red wine, cinnamon, clove and orange. Careful, it's hot.)
-  ok   Prost: the crowd raises a glass (1 speaking)
+  ok   Prost: the crowd raises a glass (2 speaking)
   ok   pull a pint (starts) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
   ok   pull a pint (finishes) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
-  ok   the Bratwurst has the round-10 plate set (no clickable sausage rows left) (plate)
-  ok   the Bratwurst's buttons: Turn the sausages, One in a bun, Mix me a plate 
-  ok   turn the sausages (Turned. Nicely browned on this side. (10 on the grate))
-  ok   turn the sausages: every sausage on the grate turns over (the vendor's merged grill cut into its sausages) ({"g0":10,"g1":{"n":10,"turns":[1,1,1,1,1,1,1,1,1,1],"busy":false,"angles":[3.142,3.142,3.142,3.142,3.142,3.142,3.142,3.142,3.142,3.142]}})
-  ok   the grill's sausages are not clickable one by one 
+  ok   turn the sausages (Turned. Nicely browned on this side.)
   ok   a sausage in a bun (One Bratwurst im Brötchen with mustard. That will be 4 euros.)
-  ok   a sausage in a bun: a roll goes on the plate, a Thüringer into it, with Senf ({"food":["roll","thueringer"],"filled":["thueringer"],"sauces":["senf"],"dust":0,"served":0,"max":4,"busy":false,"kinds":["curry","krakauer")
-  ok   tapping the plate hands it over (Guten Appetit) and a fresh, empty plate is set out ({"food":[],"filled":[],"sauces":[],"dust":0,"served":1,"max":4,"busy":false,"kinds":["curry","krakauer","nuernberger","thueringer","roll"],")
-  ok   clicking a Krakauer in 3D puts a fresh one on the plate (the one on the board stays) ({"pk":{"food":["krakauer"],"filled":[],"sauces":[],"dust":0,"served":1,"max":4,"busy":false,"kinds":["curry","krakauer","nuernberger","thuer)
-  ok   sauces and curry: each bottle squeezes its own squiggle over the plate, the tin dusts curry powder ({"food":["krakauer","nuernberger"],"filled":[],"sauces":["ketchup","curry"],"dust":120,"served":1,"max":4,"busy":false,"kinds":["curry","kra)
-  ok   the sauce is a glossy line draped over the food (a tube on the plate, drawn in as it is piped) 
-  ok   the plate holds four at most (a fifth gets "the plate is full") ({"food":["krakauer","nuernberger","curry","roll"],"note":"The plate is full (4 at most). Tap the plate: Guten Appetit!"})
-  ok   clicking the plate clears it: Guten Appetit ({"pe":{"food":[],"filled":[],"sauces":[],"dust":0,"served":2,"max":4,"busy":false,"kinds":["curry","krakauer","nuernberger","thueringer","ro)
-  ok   mix me a plate: the vendor puts a kind on and a sauce over it ({"food":["nuernberger"],"filled":[],"sauces":["senf"],"dust":0,"served":2,"max":4,"busy":false,"kinds":["curry","krakauer","nuernberger","th)
-· screenshot ../review/round-9/engineer/stop_bratwurst_plate.jpg
+  ok   a sausage in a bun: one sits in a roll, with mustard 
+  FAIL clicking one sausage in 3D turns that sausage (its node rotates) (no clear pixel on act_sausage_2)
   ok   pull a book: the bookseller picks one and it opens ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
   ok   lite: the player buttons say they move the spotlight 
   ok   feature a band member (The spotlight is on the tenor sax. The lite market plays the band as one mix, so this light is only for the eyes. Switch to the full market )
@@ -183,7 +172,7 @@
   ok   the band stops 
   ok   lite: rides and deco stalls arrive after the first frame ({"lod":40,"deferred":12})
   ok   Riesenrad ride 
-  ok   Riesenrad: the ride stops at the top for the view ({"t":13.5,"stage":"top","cam":24.42754762996355})
+  ok   Riesenrad: the ride stops at the top for the view ({"t":13.5,"stage":"top","cam":24.425646092462923})
 · screenshot ../review/round-9/engineer/ride_riesenrad.jpg
   ok   get off the wheel 
   ok   carousel ride 
@@ -196,7 +185,7 @@
   ok   Escape at a stop goes back to the overview 
   ok   Enter on a signpost arm walks there 
 · the ornament shop (round 9): a stroll stop with three moments and nothing else to click (lite market, 960 px)
-· ready in 11.6 s
+· ready in 8.3 s
   ok   the ornament shop is a stop on the stroll, between the Bücherstand and the Karussell (glueh,band,bier,books,schmuck,carousel,ferris,wurst)
   ok   the signpost has an arm for it, in the market (act_sign_schmuck) and on screen 
   ok   the signpost arm walks to the ornament shop ({"stop":"schmuck","arrived":true,"here":"Christbaumschmuck"})
@@ -209,8 +198,8 @@
   ok   the harmonica's twelve baubles are tuned to the opening of the ballad (D Bb A G A C Eb D F# G F Ab) (["D5","Bb5","A5","G5","A5","C6","Eb6","D6","F#5","G5","F5","Ab5"])
   ok   a mouse brush across the row rings the baubles left to right (the tune) ({"order":[0,1,2,3,4,5,6,7,8,9,10,11],"onCanvas":"CANVAS"})
   ok   brushing does not turn the head (the row claims the pointer from the look-around) (0)
-  ok   each bauble glows on its note and swings on its ribbon ({"glow":[0.705,0.516,0.536,0.544,0.537,0.547,0.543,0.516,0.536,0.534,0.544,0.545],"swing":[0.1236,0.0713,0.0767,0.079,0.0771,0.0799,0.0786,0)
-  ok   velocity follows the brush: a fast stroke rings louder than a slow one ({"slow":0.32,"fast":0.88,"n":12})
+  ok   each bauble glows on its note and swings on its ribbon ({"glow":[0.624,0.535,0.552,0.545,0.54,0.539,0.545,0.541,0.545,0.544,0.542,0.545],"swing":[0.1011,0.0766,0.0811,0.0793,0.0778,0.0777,0.0794,0)
+  ok   velocity follows the brush: a fast stroke rings louder than a slow one ({"slow":0.32,"fast":0.87,"n":12})
   ok   tapping the baubles in order plays the phrase, and after a pause the next bauble glows faintly ({"log":[0,1,2,3,4],"expect":5,"hint":5})
   ok   touch: a finger drag across the row plays it and leaves the look-around alone ({"log":[2,3,4,5,6,7,8,9],"yaw":0})
   ok   played through, the row answers (a ripple of light, and a word about the ballad) (The glass harmonica: you played the opening of Lanterns After Closing, the ballad the band plays at the bandstand.)
@@ -220,8 +209,7 @@
   ok   Schwibbogen: from the outside in (the vendor's order) (act_orn_candle_0,act_orn_candle_6,act_orn_candle_1,act_orn_candle_5,act_orn_candle_2,act_orn_candle_4,act_orn_candle_3)
   ok   Schwibbogen: with each flame a share of the town's dark windows turns warm, until most are lit ({"windows":{"meshes":1,"candidates":384,"lit":356,"quiet":488,"hush":1,"wake":1.06},"half":286})
   ok   Schwibbogen: a low warm chord builds, one voice per flame ([0,0,0,1,3,5,7,7,7,7,7,7,7,7,7,7])
-  ok   Schwibbogen: after the last flame a wave of light runs across the market (bulbs flare in turn, the bloom swells and settles) ({"firstWave":38,"lastLight":34,"crest":3.79,"bloomPeak":3.199,"end":1.1})
-  ok   Schwibbogen: the wave washes over the square's cobbles too (a warm band on the ground at the front, a faint warmth behind it) ({"washed":6,"washPeak":2.59,"end":0.4})
+  ok   Schwibbogen: after the last flame a wave of light runs across the market (bulbs flare in turn, the bloom swells and settles) ({"firstWave":38,"lastLight":34,"crest":2.78,"bloomPeak":1.937,"end":1.09})
   ok   Schwibbogen: the camera stands behind the arch looking out over the candles, the bar steps aside ({"cam":{"mode":"drive","moving":false,"progress":null,"look":{"yaw":0,"pitch":0,"zoom":1},"pos":[23.1,1.527,10.165],"target":[8.255,2.327,9.)
   ok   Escape steps back round the arch to the stop; the candles keep burning ({"busy":null,"mode":"stop","stop":"schmuck","burning":7,"moment":null})
   ok   a click on the arch again lets it fade back (candles out, the town back as it was, the glow gone) ({"phase":"off","burning":0,"wake":0,"hush":0,"chord":0,"settle":0,"label":"Light the Schwibbogen"})
@@ -232,44 +220,43 @@
   ok   dive: a tap ends it too ({"before":"inside","after":null,"mode":"stop"})
   ok   sparkle: the foxed mirror gets a reflection (mirror_0, rendered while the visitor is near) ({"mirrors":1,"mirrorRenders":1,"mirrorSize":[256,130],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":10.933,"smoke":0.22})
   ok   sparkle: the tinsel swags carry the glint shader ({"mirrors":1,"mirrorRenders":1,"mirrorSize":[256,130],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":10.933,"smoke":0.22})
-  ok   sparkle: the candle pyramid turns slowly about its upright axis, its flames flicker ({"p0":{"axis":"y","angle":-37.919},"p1":{"axis":"y","angle":-38.335},"f0":10.27,"f1":10.933})
+  ok   sparkle: the candle pyramid turns slowly about its upright axis, its flames flicker ({"p0":{"axis":"y","angle":-37.918},"p1":{"axis":"y","angle":-38.334},"f0":10.259,"f1":10.933})
   ok   sparkle: the Räuchermännchen smokes on his own (fx_smoke_1) ({"mirrors":1,"mirrorRenders":1,"mirrorSize":[256,130],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":10.933,"smoke":0.22})
 · screenshot ../review/round-9/engineer/stop_schmuck.jpg
-  ok   a click in 3D on a harmonica bauble rings that bauble once ([{"i":6,"note":"Eb6","v":0.5,"source":"brush","t":123.95}])
+  ok   a click in 3D on a harmonica bauble rings that bauble once ([{"i":6,"note":"Eb6","v":0.5,"source":"brush","t":123.94}])
 · the ornament shop's three moments at their peaks (full market, 1280 px): screenshots
-· ready in 17.1 s
-· settled (94 s)
-· at the shop, streamed (95 s)
+· ready in 13.8 s
+· settled (63 s)
+· at the shop, streamed (63 s)
   ok   full market: the shop streams in at full detail at its stop ("full")
 · screenshot ../review/round-9/engineer/shop_stop.jpg
-· shop_stop.jpg (272 s)
-  ok   full market: the mirror reflection is 640 px wide and drawn every frame at the shop ({"mirrors":1,"mirrorRenders":1,"mirrorSize":[640,324],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":9.487,"smoke":0.22})
+· shop_stop.jpg (167 s)
+  ok   full market: the mirror reflection is 640 px wide and drawn every frame at the shop ({"mirrors":1,"mirrorRenders":1,"mirrorSize":[640,324],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":9.533,"smoke":0.22})
 · screenshot ../review/round-9/engineer/schwib_1_town_dark.jpg
-· schwib_1_town_dark.jpg (312 s)
+· schwib_1_town_dark.jpg (198 s)
 · screenshot ../review/round-9/engineer/schwib_2_town_waking.jpg
-· schwib_2_town_waking.jpg (346 s)
+· schwib_2_town_waking.jpg (225 s)
 · screenshot ../review/round-9/engineer/schwib_3_light_wave.jpg
-· schwib_3_light_wave.jpg (380 s)
+· schwib_3_light_wave.jpg (252 s)
 · screenshot ../review/round-9/engineer/schwib_4_settled.jpg
-· schwib_4_settled.jpg (413 s)
-  ok   full market: the screenshots catch each beat (the town gone quiet over unlit candles, waking, the wave's bloom at its height, settled) ([{"wash":0,"washed":6,"name":"schwib_1_town_dark.jpg","at":4.25,"burning":0,"windows":0,"hush":1,"quiet":709,"bloom":1,"waveT":-10000,"front)
-  ok   full market: the wave's frame shows its front (the market dimmed while it waited; bulbs 8 m out flaring, 30 m out still dim) ([{"name":"schwib_1_town_dark.jpg","marketHush":1,"near":0.3,"far":0.3,"front":null,"wash":0},{"name":"schwib_2_town_waking.jpg","marketHush")
+· schwib_4_settled.jpg (279 s)
+  ok   full market: the screenshots catch each beat (the town gone quiet over unlit candles, waking, the wave's bloom at its height, settled) ([{"name":"schwib_1_town_dark.jpg","burning":0,"windows":0,"hush":1,"quiet":709,"bloom":1,"cam":"hold"},{"name":"schwib_2_town_waking.jpg","b)
   ok   full market: the Schwibbogen sequence ran (seven flames, windows warm, the wave) ({"phase":"lit","lit":["act_orn_candle_0","act_orn_candle_6","act_orn_candle_1","act_orn_candle_5","act_orn_candle_2","act_orn_candle_4","act)
 · screenshot ../review/round-9/engineer/harmonica_mid_phrase.jpg
-· harmonica_mid_phrase.jpg (467 s)
+· harmonica_mid_phrase.jpg (322 s)
   ok   full market: a bauble glows mid-phrase on the harmonica (the camera leaned in to the row) ([0.011,0.018,0.09,0.505,0.615,0,0,0,0,0,0,0])
 · screenshot ../review/round-9/engineer/dive_1_approach.jpg
-· dive_1_approach.jpg (569 s)
+· dive_1_approach.jpg (406 s)
 · screenshot ../review/round-9/engineer/dive_2_reflection.jpg
-· dive_2_reflection.jpg (611 s)
+· dive_2_reflection.jpg (442 s)
 · screenshot ../review/round-9/engineer/dive_3_into_glass.jpg
-· dive_3_into_glass.jpg (681 s)
+· dive_3_into_glass.jpg (500 s)
 · screenshot ../review/round-9/engineer/dive_4_inside.jpg
-· dive_4_inside.jpg (708 s)
+· dive_4_inside.jpg (523 s)
   ok   full market: the dive reaches the inside of the glass (512 px cube) ({"phase":"inside","env":{"size":512,"captures":1},"glass":"engine_mirrorball_glass","pass":{"enabled":true,"mix":1,"warp":1,"veil":0,"captur)
   ok   full market: the dive comes back out 
 · the Bücherstand cabinets on a 390 px phone: tap, open, its books only, covers ≥ 44 px, arrows, a way back
-· ready in 9.4 s
+· ready in 6.2 s
   ok   phone: the signpost walks to the Bücherstand 
   ok   the Bücherstand has its six cabinets, each with a door (act_cab_), a sign (sign_cat_) and a tap target ([{"key":"physics","label":"Physik & Kosmos","en":"Physics and the Universe","books":10,"door":true,"sign":true,"proxy":true},{"key":"lives",)
   ok   phone: ‹ › buttons beside the stall turn to the cabinets 
@@ -288,20 +275,20 @@
   ok   Step back keeps the view turned toward that cabinet (in view, and ‹ › go on from it) ({"faced":"people","x":228,"onScreen":true,"closeup":false})
   ok   with the cabinet shut its books no longer answer the pointer 
 · lite market, auto-detected
-· ready in 11.0 s
-· lite: 5.19 MB downloaded when the market opens
-  ok   lite: the first load is smaller than round 4 (7.44 MB) (5.19 MB)
+· ready in 8.0 s
+· lite: 5.18 MB downloaded when the market opens
+  ok   lite: the first load is smaller than round 4 (7.44 MB) (5.18 MB)
   ok   lite market detected on a weak GPU (software GPU: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver))
   ok   lite: no shadows 
   ok   lite: fewer lights ({"realtime":4,"pools":24,"cap":4,"places":["bierstand","gluehwein","bratwurst","buecherstand"]})
 · screenshot ../review/round-9/engineer/home_lite_stage.jpg
 · phone, reduced motion, touch
-· ready in 9.2 s
+· ready in 5.9 s
   ok   lite market on a phone-sized screen 
   ok   reduced motion: the home view holds still 
   ok   phone: the signpost folds into one button 
   ok   reduced motion: the walk is a cut 
-  ok   phone: tapping a Thüringer puts one on the plate (reduced motion: it lands at once) ({"food":["thueringer"],"filled":[],"sauces":[],"dust":0,"served":0,"max":4,"busy":false,"kinds":["curry","krakauer","nuernberger","thueringe)
+  FAIL phone: tapping a sausage turns it (no clear pixel on act_sausage_5)
   ok   phone: reading the menu board fills the screen with it 
 · screenshot ../review/round-9/engineer/phone_reading_menu.jpg
   ok   phone: at the ornament shop the stop bar folds away (judge note, round 8) ({"stop":"schmuck","folded":true})
@@ -329,28 +316,29 @@
   ok   the canvas has an accessible name 
   ok   mute covers the band and the stall sounds 
 · every model missing and layout.json ignored: the BUILD.md layout with labelled stand-ins
-· ready in 32.1 s
+· ready in 21.4 s
   ok   missing glbs: every place is a stand-in ([])
   ok   missing layout.json: the BUILD.md layout (BUILD.md fallback)
   ok   missing glbs are reported as bindings that did not resolve (nothing guessed) ([])
   ok   stand-ins keep the actions working (Mugs poured tonight: 1. Red wine, cinnamon, clove and orange. Careful, it's hot.)
   ok   stand-ins keep the writing surfaces (the chalkboard is still read in 3D) 
 · screenshot ../review/round-9/engineer/missing_models_standins.jpg
-· ready in 12.3 s
+· ready in 7.8 s
   ok   ?perf shows the frame-time meter with its Tour button 
-  ok   the triangle count stays finite on every frame (troika text before its first sync) ({"bad":0,"tris":304529,"frames":7})
+  ok   the triangle count stays finite on every frame (troika text before its first sync) ({"bad":0,"tris":302199,"frames":7})
   ok   two missing glbs: just those two are stand-ins ([{"id":"bierstand","place":"bier","kind":"section","source":"standin","file":null},{"id":"riesenrad","place":"ferris","kind":"landmark","sou)
 · recorded stems on the full market
-· ready in 18.2 s
+· ready in 12.9 s
   ok   play starts at once (mix)
   ok   the mix bridges the wait for the stems (mix)
   ok   the stems take over from the mix (stems)
-  ok   stem levels reach the stage ({"sax":0,"piano":0.13734881454833617,"bass":0.22018414656519564,"drums":0.0610119967198306})
+  ok   stem levels reach the stage ({"sax":0.017899672625440625,"piano":0.022097555756777798,"bass":0.02613652931229177,"drums":0.06808676623867037})
   ok   last pass: the stems play on into the out head instead of looping ({"pos":221.35,"pass":3,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
   ok   earlier passes: the loop goes round again ({"pos":46.8,"pass":2,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
   ok   pass 2 plays the second tenor chorus (alternate stems) ({"pos":121.46,"pass":2,"alt":true,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
   ok   pass 3 is back on the main chorus 
   ok   the band stops (full) 
 
-291/291 checks passed
+277/279 checks passed
 No console errors.
+EXIT 1

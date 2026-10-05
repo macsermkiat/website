@@ -60,6 +60,7 @@ export function createSchmuck(ctx) {
     town ||= createTownWindows({ scene, market });
     wave ||= createLightWave({ getLights: () => ctx.lights?.() || [], getBloom: () => ctx.bloom?.() || null, motion });
     wave.patchBulbs(market.bulbMaterials);
+    wave.patchGround(scene); // the light runs over the cobbles too
     const stopView = () => { const g = ctx.guide?.(); return g ? g.stopView() : { pos: camera.position.clone(), target: ctx.rig.controls.target.clone() }; };
     const dom = ctx.dom;
     S = {
@@ -160,6 +161,8 @@ export function createSchmuck(ctx) {
       waveGainAt: (d) => wave?.gainAt(d) ?? 1,
       /** For tests: the bulbs' gain (the shader's curve) at a distance from the wave's origin, now. */
       waveBulbGainAt: (d) => wave?.bulbGainAt(d) ?? 1,
+      /** For tests: the ground's wash (added warm light) at a distance from the wave's origin, now. */
+      waveWashAt: (d) => wave?.washAt(d) ?? 0,
       shopEnd: () => end(),
     },
     retract() {
