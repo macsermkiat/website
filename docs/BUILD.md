@@ -84,6 +84,13 @@ The Bücherstand (Reading) holds Mac's 55 Audible books, grouped into the six ca
 - Engineer: clicking a book opens a reading view that shows `content/books/<slug>.md` (summary, key ideas) with a close button and keyboard access, and the plain HTML version lists the same summaries.
 - Budget: the Bücherstand with all its props may use 80k triangles and 4 MB.
 
+## Ornament shop, deco goods and book cabinets (ADR 0004)
+
+- Ornament shop (carpenter builds the hut, vendor the goods): `stall_schmuck.glb` (+ lite) replaces `deco_schmuck.glb` for the `deco-schmuck` place. It has the usual slots, two `light_` empties, `cam_view`/`cam_target`, hanging rails as `slot_rail_<n>` empties, `slot_tree` for the display tree and `slot_cabinet` for a glass case. Vendor goods are `prop_schmuck_<group>.glb`, each ornament an `act_orn_<kind>_<n>` node pivoted at its hanging point (baubles: `act_orn_bauble_<n>`, pickle: `act_orn_pickle`, Herrnhut star: `act_orn_herrnhut` with an emissive `bulb_warm` inner, nutcracker jaw: `act_orn_nutcracker_jaw`, smoker: `act_orn_smoker` with `fx_smoke_<n>` empty at its mouth, Schwibbogen: `act_orn_schwibbogen` with `act_orn_candle_<n>` flames, display tree hooks: `hook_tree_<n>` empties). Every ornament has an `items.json` entry with `name`, `label` and `action`. Budget: 40k triangles and 2 MB with goods.
+- Deco goods (vendor): each deco stall's props fill its counter, both shelves, a hanging rail or eave hooks and one crate or basket at `slot_front`, with at least five `act_<stall>_<item>` nodes listed in `items.json` with `name`, `label` and `action`. Steam and flame points are `fx_steam_<n>` / `fx_flame_<n>` empties. The deco budget (20k, 1 MB) now includes its goods.
+- Book cabinets (carpenter and vendor): six glazed cabinets replace the racks and carts. Each has its sign, `slot_cat_<key>`, `cam_cat_<key>`/`_target` and a door or glass front that is an `act_cab_<key>` node. Inside are angled face-out boards for up to five covers per row, sized for the category's count (write the boards to `blender/stalls/buecher_sections.json`). Books stay `act_book_<nn>` nodes with a designed front cover (title and author legible at the `cam_cat` view, category colour and pattern) and a spine. No publisher cover art.
+- People (organizer): about 80 people in `crowd.json` for the full market, with the first 40 entries a good lite crowd. One vendor at every deco stall and the ornament shop (`slot_vendor`), customers at deco counters, and walkers and groups on every lane and at the square's edges.
+
 ## Lighting approach
 
 - Materials are baked from Blender procedurals to base colour, roughness and normal maps. Also bake **ambient occlusion** into the glTF occlusion texture. No lighting goes into base colour.
@@ -102,7 +109,8 @@ The Bücherstand (Reading) holds Mac's 55 Audible books, grouped into the six ca
 | Asset | Triangles | File |
 |---|---|---|
 | Section stall with its props | 60k | 3 MB |
-| Deco stall | 20k | 1 MB (shares the kit's textures where possible) |
+| Deco stall with its goods | 20k | 1 MB (shares the kit's textures where possible) |
+| Ornament shop with its goods | 40k | 2 MB |
 | Ferris wheel / carousel | 80k each | 3 MB each |
 | Bandstand with instruments (band players count as person variants, not against this) | 50k | 2 MB |
 | Square ground, lamps, string-light poles | 40k | 3 MB |
