@@ -15,13 +15,13 @@ books: []
 
 I read physics, philosophy and books about the brain.
 
-The shelves hold books from my Audible library, sorted by subject. Each title links to a short summary of the book. <!-- check -->
+The shelves hold books from my Audible library, sorted by subject. Each title links to a short summary of the book.
 
-These five are on the front shelf. <!-- check --> [[Mac: the prototype's five example picks. Confirm they are yours, or swap them. Gödel, Escher, Bach, the Feynman Lectures and Being You are not on your Audible shelf. Until you do, a production build leaves this line and the list off the page.]]
-- *The Order of Time* · Carlo Rovelli
-- *Gödel, Escher, Bach* · Douglas Hofstadter
-- *The Feynman Lectures on Physics* · Richard Feynman
-- *Being You* · Anil Seth
+These five are on the front shelf.
+- *Poor Charlie's Almanack* · Charles T. Munger
+- *Einstein* · Walter Isaacson
+- *Surely You're Joking. Mr.Feynman!* · Richard Feynman
+- *Man's Search for Meaning* · Viktor E. Frankl
 - *The Book of Why* · Judea Pearl
 
-On the counter, the one I'm reading now: [[Mac: title · author]]
+On the counter, the one I'm reading now: *The Laws of Human Nature* · Robert Greene
