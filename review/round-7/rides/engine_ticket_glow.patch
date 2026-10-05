@@ -1,0 +1,21 @@
+--- a/site/src/world/surfaces.js	2026-10-04 23:32:26.189469343 +0000
++++ b/site/src/world/surfaces.js	2026-10-05 00:07:29.720103118 +0000
+@@ -422,9 +422,15 @@
+     let m = copies.get(o.material);
+     if (!m) {
+       m = o.material.clone();
+-      m.emissive.set(0xfff0d8);
+-      m.emissiveMap = m.map || null;
+-      m.emissiveIntensity = 0.04;
++      // a print that already glows in its own colours (the ride builder's Karussell ticket, round 7) keeps
++      // that glow and brightens a little; plain paper gets the faint warm read glow
++      const baked = o.material.emissiveMap && o.material.emissive.getHex() !== 0 ? o.material.emissiveIntensity : 0;
++      if (baked > 0) m.emissiveIntensity = baked * 1.25;
++      else {
++        m.emissive.set(0xfff0d8);
++        m.emissiveMap = m.map || null;
++        m.emissiveIntensity = 0.04;
++      }
+       m.userData.readGlow = true;
+       if (m.vertexColors) tintGlow(m);
+       copies.set(o.material, m);

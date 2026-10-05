@@ -21,36 +21,49 @@ from rcommon import Part, rod, state
 from nmlib import boards
 
 
+# the Karussell ticket's printed card (round 7): a faint glow in its own colours keeps the cream
+# and orange warm under the browser's blue night light, where the booth's gooseneck lamp is only
+# an emissive bulb
+TICKET_EMIT = 0.18
+
+
 def _register():
     import art
     rc.IMAGE_MATS["write_card"] = (art.paper_plain(), 0.85)
+    rc.IMAGE_MATS["ticket_card"] = (art.ticket_card(), 0.8, TICKET_EMIT)
+    rc.IMAGE_MATS["ticket_write_card"] = (art.ticket_write(), 0.8, TICKET_EMIT)
+    rc.IMAGE_MATS["ticket_stub_card"] = (art.ticket_stub(), 0.8, TICKET_EMIT)
 
 
 _register()
 
 
-def surface(name, F, w, h, z=0.0, fill=0.78, lift=0.04, side=0.0, parent=None, cam_dist=None, margin=0.0):
+def surface(name, F, w, h, z=0.0, fill=0.78, lift=0.04, side=0.0, parent=None, cam_dist=None, margin=0.0,
+            card="write_card", paper="write_card"):
     """write_<name> (card) at F's origin plus cam_read_<name> and its target. Returns
     (write object, camera point, target point) in world coordinates.
 
     margin (m): the writing area is the sheet less this all round (round 6 pass 2: in the browser
     the engine's words ran to the very edge of the ticket and the sheet music). The whole w x h
     sheet is then a plain card (`card_<name>`, same paper) at z, with the smaller write_ quad
-    0.6 mm above it; the reading camera still frames the whole sheet."""
+    0.6 mm above it; the reading camera still frames the whole sheet.
+
+    card / paper: the image materials of the backing sheet and of the writing area (round 7: the
+    ticket's card is printed, with its plain middle matching `paper` exactly)."""
     backing = None
     if margin > 0.0:
         ex, ey, ez = boards.frame_axes(F)
         o = F @ Vector((0, 0, z))
         ux, uy = ex.normalized() * (w / 2), ey.normalized() * (h / 2)
-        backing = rc.picture(f"card_{name}", "write_card", [o - ux - uy, o + ux - uy, o + ux + uy, o - ux + uy])
+        backing = rc.picture(f"card_{name}", card, [o - ux - uy, o + ux - uy, o + ux + uy, o - ux + uy])
         ob = boards.write_surface(name, F, w - 2 * margin, h - 2 * margin, z=z + 0.0006, surface="card")
     else:
         ob = boards.write_surface(name, F, w, h, z=z, surface="card")
     # a plain paper texture instead of the flat paper_card colour: gltf-transform's prune drops the
     # UVs of a mesh whose material has no texture, and the engine needs them
     ob.data.materials.clear()
-    ob.data.materials.append(rc.mats.get("write_card"))
-    ob["nm_mat"] = "write_card"
+    ob.data.materials.append(rc.mats.get(paper))
+    ob["nm_mat"] = paper
     ca = ob.data.color_attributes.new("Col", 'FLOAT_COLOR', 'CORNER')
     ca.data.foreach_set("color", [1.0, 1.0, 1.0, 1.0] * len(ob.data.loops))
     t = F @ Vector((0, 0, z))

@@ -268,7 +268,7 @@ def _harness(lite):
 # carving (muscles, creases, mane locks, the saddle's welt and flaps), and each coat is painted on
 # the dense sculpt and baked to a base-colour map, so eyes, nostrils, blaze, socks and dapples stay
 # crisp however few vertices the master has. Full 1,300 triangles (was 2,000), lite 560 (was 1,050).
-FULL_TRIS, LITE_TRIS = 1300, 560
+FULL_TRIS, LITE_TRIS = 1600, 560   # round 7: full back up to 1,600 (judges: neck and hind-leg corners from the ride seat)
 NRM_PX = {False: 1024, True: 512}
 COL_PX = {False: 512, True: 256}
 BAKE_EXT = {False: 0.03, True: 0.04}

@@ -363,3 +363,48 @@ def lantern(iron, glass, top, size=0.1, yaw=0.0):
     iron.cyl(body_c + Vector((0, 0, -s * 0.64)), s * 0.62, s * 0.7, s * 0.08, seg=4, rot=(0, 0, yaw + math.pi / 4))
     glass.box(body_c, (s * 0.9, s * 0.9, s * 1.2), rot=(0, 0, yaw), bevel=0)
     return body_c
+
+
+# ------------------------------------------------------------------ a small card on an easel
+def easel_card(name, F, w, h, frame, back, clip=None, base_z=None, rail=0.022, depth=0.016,
+               leg_angle=24.0, surface="card", tint="walnut"):
+    """A small framed card standing on a table-top easel (round 7, the Bücherstand reading card).
+
+    The writing area `write_<name>` (w x h, `surface` "card" = `paper_card`, or "slate") lies at
+    F's origin inside a thin wooden frame (`frame`, wood Part: four rails with a little
+    irregularity, a backing board in `back`). A ledge runs along the foot of the frame, a back
+    leg props it on the surface at height `base_z` (default: where the frame's foot is), and an
+    optional brass bulldog clip (`clip`, a metal Part) holds the card at the top. Build F with
+    face_frame(..., lean=...) so the card leans back. Returns {"write", "outer": (W, H), "F"}."""
+    R = state.rng
+    W, H = w + 2 * rail, h + 2 * rail
+    fz = depth / 2 - 0.004
+    for sgn in (1, -1):
+        local_box(frame, F, R.uniform(-0.002, 0.002), sgn * (h / 2 + rail / 2), fz,
+                  W + R.uniform(-0.003, 0.004), rail, depth, grain=0, var=0.1, bevel=0.003, tint=tint)
+        local_box(frame, F, sgn * (w / 2 + rail / 2), 0, fz, rail * R.uniform(0.94, 1.0), h,
+                  depth * 0.94, grain=1, var=0.1, bevel=0.003, tint=tint)
+    local_box(back, F, 0, 0, -0.006, W - 0.006, H - 0.006, 0.008, grain=1, tint="dark", var=0.05, bevel=0)
+    write = write_surface(name, F, w, h, z=0.0015, surface=surface)
+    # ledge along the foot (the card's bottom rail rests on it) and two small front feet
+    local_box(frame, F, 0, -H / 2 + 0.006, depth + 0.006, W * 1.04, 0.014, 0.022, grain=0, var=0.08,
+              bevel=0.002, tint=tint)
+    ex, ey, ez = frame_axes(F)
+    foot0 = at(F, 0, -H / 2, 0)
+    bz = foot0.z if base_z is None else base_z
+    # back leg: from behind the top rail down to the surface behind the card
+    top = at(F, 0, H / 2 - 0.03, -0.012)
+    bdir = Vector((-ez.x, -ez.y, 0))
+    bdir = bdir.normalized() if bdir.length > 1e-6 else Vector((0, 1, 0))
+    foot = Vector((top.x, top.y, bz + 0.004)) + bdir * ((top.z - bz) * math.tan(math.radians(leg_angle)))
+    frame.slab(top, foot, 0.022, 0.012, up=tuple(ex), tint=tint, var=0.1)
+    # a short hinge block where the leg meets the frame
+    local_box(frame, F, 0, H / 2 - 0.03, -0.016, 0.034, 0.02, 0.01, grain=0, tint="dark", bevel=0)
+    if clip is not None:
+        ct = at(F, 0, h / 2 + rail * 0.4, depth * 0.5)
+        local_box(clip, F, 0, h / 2 + rail * 0.45, depth + 0.003, 0.038, 0.022, 0.005, var=0.05, bevel=0.0015)
+        local_box(clip, F, 0, h / 2 + rail * 0.45 + 0.012, depth + 0.006, 0.036, 0.005, 0.008, var=0.05, bevel=0)
+        for sx in (-1, 1):     # the two wire handles
+            clip.tube([ct + ex * sx * 0.012 + ez * 0.012, ct + ex * sx * 0.012 + ey * 0.026 + ez * 0.02],
+                      0.0018, tseg=4)
+    return {"write": write, "outer": (W, H), "F": F}

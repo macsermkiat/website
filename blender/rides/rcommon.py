@@ -110,7 +110,9 @@ IMAGE_MATS = {}
 _mats_get = mats.get
 
 
-def image_material(key, png, rough=0.8):
+def image_material(key, png, rough=0.8, emit=0.0):
+    """emit > 0: the picture also glows faintly in its own colours (glTF emissiveTexture), for a
+    print lit by a lamp the browser has no real light for (the Karussell ticket, round 7)."""
     m, nt, bsdf, L = mats._node_mat(key)
     tex = nt.nodes.new("ShaderNodeTexImage")
     img = bpy.data.images.get(key) or bpy.data.images.load(png)
@@ -122,6 +124,9 @@ def image_material(key, png, rough=0.8):
     mats._vcol_multiply(nt, L, tex.outputs["Color"], bsdf)
     bsdf.inputs["Roughness"].default_value = rough
     bsdf.inputs["Metallic"].default_value = 0.0
+    if emit > 0.0:
+        L.new(tex.outputs["Color"], bsdf.inputs["Emission Color"])
+        bsdf.inputs["Emission Strength"].default_value = emit
     return m
 
 

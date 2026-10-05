@@ -91,7 +91,7 @@ def buecher_required():
 # round 6 (docs/adr/0003): the writing surfaces each section stall carries
 # (write_<name> mesh, cam_read_<name> and cam_read_<name>_target empties)
 WRITE_REQUIRED = {"stall_gluehwein": ["about"], "stall_bier": ["projects_board"],
-                  "stall_bratwurst": ["writing_menu"]}
+                  "stall_bratwurst": ["writing_menu"], "stall_buecher": ["reading_card"]}
 
 
 def write_required(base):

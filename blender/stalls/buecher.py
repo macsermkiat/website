@@ -22,7 +22,7 @@ import buecher_sections as BS  # noqa: E402
 import pipeline  # noqa: E402
 from hut import COUNTER_TOP, Hut, grime as hut_grime  # noqa: E402
 from nmlib import carpentry as cp  # noqa: E402
-from nmlib import export, render, state  # noqa: E402
+from nmlib import boards, export, render, state  # noqa: E402
 from nmlib.geo import Part  # noqa: E402
 
 NAME = "stall_buecher"
@@ -504,7 +504,27 @@ def build(lite):
               lights=[(0, 0.15, 2.4), (0, yF - 0.85, 2.3)], cam_dist=4.2, cam_h=1.75)
     export.empty("slot_cabinet_l", cab_l)
     export.empty("slot_cabinet_r", cab_r)
+    reading_card(h)
     return h.finish()
+
+
+# round 7: the Reading section's intro card (BUILD.md write_ / cam_read_). A cream card clipped
+# into a small walnut frame on a table-top easel at the front-right corner of the counter, in
+# the strip the vendor's counter books leave free (x 0.64-0.95, the front 0.25 m).
+CARD_W, CARD_H = 0.26, 0.19                         # writing area (write_reading_card)
+CARD_POS = (0.79, -1.32)                            # on the counter, clear of the props
+CARD_YAW = -0.18                                    # turned a little toward the middle
+CARD_LEAN = math.radians(14)
+
+
+def reading_card(h):
+    rail = 0.022
+    Hh = CARD_H + 2 * rail
+    cz = COUNTER_TOP + (Hh / 2) * math.cos(CARD_LEAN) + 0.002
+    F = boards.face_frame((CARD_POS[0], CARD_POS[1], cz), yaw=CARD_YAW, lean=CARD_LEAN)
+    boards.easel_card("reading_card", F, CARD_W, CARD_H, frame=h.frame, back=h.wood,
+                      clip=h.extra_brass, base_z=COUNTER_TOP, rail=rail)
+    boards.read_camera("reading_card", F, CARD_W, CARD_H, lift=0.03)
 
 
 def section_standins(secs):

@@ -593,7 +593,7 @@ def build_booth(lite):
     brass.cyl(arm[-1] + Vector((0, 0, -0.022)), 0.05, 0.018, 0.05, seg=8 if lite else 12, caps=False)
     rc.bulb(bulbs, arm[-1] + Vector((0, 0, -0.045)), 0.022)
     paper.cyl(P(0.33, -hd + 0.16, ws + 0.06), 0.055, 0.055, 0.06, seg=10 if lite else 16, rot=(0, math.pi / 2, 0),
-              tint=(1.05, 0.62, 0.45))
+              tint=(1.0, 0.40, 0.14))
     paper.cyl(P(0.33, -hd + 0.16, ws + 0.06), 0.02, 0.02, 0.062, seg=6, rot=(0, math.pi / 2, 0), tint=(0.5, 0.4, 0.3))
     brass.sphere(P(-0.42, -hd - 0.10, ws + 0.035), 0.035, seg=8 if lite else 12, rings=4 if lite else 6,
                  scale=(1, 1, 0.75))
@@ -604,18 +604,24 @@ def build_booth(lite):
     ty = -hd + 0.07 + (TICKET_H / 2) * math.sin(TICKET_LEAN)
     F = (Mb @ Matrix.Translation((0.03, ty, tz))) @ Euler((-TICKET_LEAN, 0, 0)).to_matrix().to_4x4() @ \
         Euler((math.pi / 2, 0, 0)).to_matrix().to_4x4()
-    rwrite.local_box(paper, F, 0, 0, -0.0012, TICKET_W + 0.004, TICKET_H + 0.004, 0.0016, tint=(0.95, 0.90, 0.80))
+    # round 7: the card's edge is cream, the stub's deep ticket orange (rides_ticket_stub.patch); the
+    # printed faces are pictures on top (card_contact, ticket_stub)
+    rwrite.local_box(paper, F, 0, 0, -0.0012, TICKET_W + 0.004, TICKET_H + 0.004, 0.0016, tint=(1.12, 1.04, 0.86))
     rwrite.local_box(paper, F, -TICKET_W / 2 - 0.035, 0, -0.0012, 0.066, TICKET_H + 0.004, 0.0016,
-                     tint=(1.05, 0.62, 0.45))                                    # the stub, in ticket orange
+                     tint=(1.0, 0.40, 0.14))                                      # the stub, in ticket orange
+    sx0, sx1, sy = -TICKET_W / 2 - 0.067, -TICKET_W / 2 - 0.003, TICKET_H / 2 + 0.001
+    rc.picture("ticket_stub", "ticket_stub_card", [F @ Vector((sx0, -sy, 0.0002)), F @ Vector((sx1, -sy, 0.0002)),
+                                                  F @ Vector((sx1, sy, 0.0002)), F @ Vector((sx0, sy, 0.0002))])
     if not lite:
         for k in range(9):                                                      # perforation
             yy = -TICKET_H / 2 + TICKET_H * (k + 0.5) / 9
             rwrite.local_box(wood, F, -TICKET_W / 2 - 0.002, yy, 0.0002, 0.003, 0.008, 0.001, tint="dark")
     rest = Mb @ Matrix.Translation((0.03, -hd + 0.07 + 0.058 * math.tan(TICKET_LEAN) + 0.012, ws + 0.07))
     wood.mbox(rest @ Euler((-TICKET_LEAN, 0, 0)).to_matrix().to_4x4(), (0.16, 0.02, 0.12), grain=1, tint="dark")
-    wood.mbox(Mb @ Matrix.Translation((0.03, -hd + 0.06, ws + 0.012)), (TICKET_W + 0.1, 0.02, 0.02), grain=0)  # lip
+    wood.mbox(Mb @ Matrix.Translation((0.03, -hd + 0.06, ws + 0.006)), (TICKET_W + 0.1, 0.02, 0.012), grain=0)  # lip (round 7: lower, clear of the printed border)
     objs = rc.finish_all([paint, wood, gilt, canvas, bulbs, paper, brass, snow])
-    rwrite.surface("contact", F, TICKET_W, TICKET_H, z=0.0002, fill=0.78, lift=0.0, margin=0.018)
+    rwrite.surface("contact", F, TICKET_W, TICKET_H, z=0.0002, fill=0.78, lift=0.0, margin=0.018,
+                   card="ticket_card", paper="ticket_write_card")
     return objs
 
 

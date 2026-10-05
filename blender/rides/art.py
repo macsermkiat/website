@@ -322,6 +322,135 @@ def paper_plain():
     return _save(Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)), "rides_paper")
 
 
+# ------------------------------------------------------------------ the Karussell ticket (round 7)
+TICKET_CREAM = (244, 222, 174)
+TICKET_RED = (158, 40, 28)
+TICKET_INK = (62, 36, 22)
+TICKET_ORANGE = (230, 108, 34)
+
+
+def _paper_grain(img, seed, amount=0.035, edge=True):
+    """Faint fibres and cloudiness over a flat print (numpy, in place on a copy)."""
+    import numpy as np
+    from scipy.ndimage import gaussian_filter
+    a = np.asarray(img, np.float32)
+    H, W = a.shape[:2]
+    rnd = np.random.default_rng(seed)
+    cloud = gaussian_filter(rnd.normal(0, 1, (H, W)), 18)
+    cloud /= np.abs(cloud).max() + 1e-6
+    fib = gaussian_filter(rnd.normal(0, 1, (H, W)), (0.7, 3.0))
+    fib /= np.abs(fib).max() + 1e-6
+    a = a * (1 + amount * cloud[..., None] + 0.6 * amount * fib[..., None])
+    # edges a touch darker, as a handled card
+    yy, xx = np.mgrid[0:H, 0:W]
+    e = np.minimum(np.minimum(xx, W - 1 - xx), np.minimum(yy, H - 1 - yy)).astype(np.float32)
+    if edge:
+        a *= (1 - 0.06 * np.exp(-e / 6.0))[..., None]
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
+
+
+def carousel_mark(d, cx, cy, s, ink, detail=True):
+    """A little printed carousel: a pennant, a scalloped striped canopy, poles with horses, a
+    platform. Centred on (cx, cy), about s px wide."""
+    h = s * 0.5
+    top = cy - s * 0.52
+    # pennant on the finial
+    d.line([(cx, top - s * 0.16), (cx, top)], fill=ink, width=max(1, int(s * 0.025)))
+    d.polygon([(cx, top - s * 0.16), (cx + s * 0.13, top - s * 0.12), (cx, top - s * 0.08)], fill=ink)
+    # canopy: a shallow cone, striped
+    eave = cy - s * 0.18
+    d.polygon([(cx, top), (cx + h, eave), (cx - h, eave)], fill=ink)
+    if detail:
+        n = 6
+        for k in range(1, n, 2):
+            x0, x1 = cx - h + 2 * h * k / n, cx - h + 2 * h * (k + 1) / n
+            d.polygon([(cx, top + s * 0.05), (x1 - s * 0.015, eave - s * 0.015), (x0 + s * 0.015, eave - s * 0.015)],
+                      fill=TICKET_CREAM if ink != TICKET_CREAM else TICKET_ORANGE)
+    # scalloped valance
+    sc = 7
+    for k in range(sc):
+        x0 = cx - h + 2 * h * k / sc
+        d.pieslice([x0, eave - s * 0.05, x0 + 2 * h / sc, eave + s * 0.09], 0, 180, fill=ink)
+    # poles and horses
+    base = cy + s * 0.34
+    for k, fx in enumerate((-0.32, 0.0, 0.32)):
+        x = cx + fx * s
+        d.line([(x, eave + s * 0.05), (x, base)], fill=ink, width=max(1, int(s * 0.022)))
+        hy = cy + s * (0.08 if k != 1 else 0.14)
+        if detail:
+            w = s * 0.11
+            # body, neck and head, legs: a rocking-horse silhouette
+            d.ellipse([x - w, hy - w * 0.38, x + w, hy + w * 0.38], fill=ink)
+            d.polygon([(x + w * 0.55, hy - w * 0.2), (x + w * 0.95, hy - w * 1.05), (x + w * 1.35, hy - w * 0.85),
+                       (x + w * 1.0, hy - w * 0.55), (x + w * 0.9, hy)], fill=ink)
+            lw = max(1, int(s * 0.02))
+            d.line([(x - w * 0.7, hy), (x - w * 1.25, hy + w * 0.75)], fill=ink, width=lw)
+            d.line([(x + w * 0.6, hy), (x + w * 1.15, hy + w * 0.75)], fill=ink, width=lw)
+            d.line([(x - w * 0.95, hy - w * 0.1), (x - w * 1.35, hy + w * 0.35)], fill=ink, width=lw)
+        else:
+            d.ellipse([x - s * 0.06, hy - s * 0.03, x + s * 0.06, hy + s * 0.03], fill=ink)
+    # platform
+    d.ellipse([cx - h * 1.05, base - s * 0.04, cx + h * 1.05, base + s * 0.08], fill=ink)
+
+
+def ticket_card(W=1024, H=648, margin_px=61):
+    """The Karussell ticket's card (card_contact): warm cream card, a printed red double border,
+    small carousel marks in the corners and a line of small print top and bottom, all inside the
+    margin band; the middle stays plain for the engine's words (write_contact sits over it)."""
+    img = Image.new("RGB", (W, H), TICKET_CREAM)
+    d = ImageDraw.Draw(img)
+    r = TICKET_RED
+    d.rectangle([7, 7, W - 8, H - 8], outline=r, width=7)
+    d.rectangle([19, 19, W - 20, H - 20], outline=r, width=2)
+    m = margin_px - 6
+    d.rectangle([m, m, W - 1 - m, H - 1 - m], outline=r, width=2)
+    # corner marks in little boxes
+    cs = m - 19
+    for (x0, y0) in ((19, 19), (W - 20 - cs, 19), (19, H - 20 - cs), (W - 20 - cs, H - 20 - cs)):
+        d.rectangle([x0, y0, x0 + cs, y0 + cs], fill=r)
+        carousel_mark(d, x0 + cs / 2, y0 + cs / 2 + 1, cs * 0.82, TICKET_CREAM, detail=False)
+    f = _font("alegreya_sc", 24)
+    line = "Karussell  \u00b7  Fahrkarte  \u00b7  Nachtmarkt"
+    _centered(d, 22, line, f, r, W)
+    lw = d.textlength(line, font=f)
+    for sx in (-1, 1):                                  # a printer's diamond each side
+        x, y = W / 2 + sx * (lw / 2 + 22), 36
+        d.polygon([(x - 8, y), (x, y - 6), (x + 8, y), (x, y + 6)], fill=r)
+    f2 = _font("fell_italic", 22)
+    _centered(d, H - 51, "Nr. 0427  \u00b7  Einmal rund  \u00b7  gilt f\u00fcr eine Fahrt", f2, TICKET_INK, W)
+    # fine dotted rule inside the inner border
+    for x in range(m + 10, W - m - 10, 9):
+        d.point([(x, m + 5), (x, H - 1 - m - 5)], fill=r)
+    return _save(_paper_grain(img, 71), "ticket_card")
+
+
+def ticket_write(W=128, H=80):
+    """The writing area of the ticket (write_contact): the same cream, plain."""
+    img = Image.new("RGB", (W, H), TICKET_CREAM)
+    return _save(_paper_grain(img, 72, 0.025, edge=False), "ticket_write")
+
+
+def ticket_stub(W=176, H=512):
+    """The perforated stub (deep ticket orange): a carousel mark and FAHRKARTE printed up its length."""
+    img = Image.new("RGB", (W, H), TICKET_ORANGE)
+    d = ImageDraw.Draw(img)
+    ink = TICKET_INK
+    d.rectangle([6, 6, W - 7, H - 7], outline=ink, width=3)
+    d.rectangle([13, 13, W - 14, H - 14], outline=ink, width=1)
+    carousel_mark(d, W / 2, 112, W * 0.72, ink)
+    # vertical words: draw sideways then rotate
+    txt = Image.new("RGBA", (300, 60), (0, 0, 0, 0))
+    td = ImageDraw.Draw(txt)
+    f = _font("alegreya_sc", 40)
+    tw = td.textlength("Fahrkarte", font=f)
+    td.text(((300 - tw) / 2, 4), "Fahrkarte", font=f, fill=ink)
+    txt = txt.rotate(90, expand=True)
+    img.paste(txt, (int(W / 2 - 30), 196), txt)
+    f2 = _font("alegreya_sc", 26)
+    _centered(d, H - 56, "0427", f2, ink, W)
+    return _save(_paper_grain(img, 73), "ticket_stub")
+
+
 def _save(img, name):
     os.makedirs(ART_DIR, exist_ok=True)
     p = os.path.join(ART_DIR, name + ".png")

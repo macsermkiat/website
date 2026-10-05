@@ -341,13 +341,39 @@ export function writeNodes(root) {
 }
 
 /**
+ * UVs for a flat write_ mesh that arrives without any (the optimizer prunes a texture-less material's UVs, as on the
+ * carpenter's Bücherstand reading card): u along the plane's level edge, v down from the edge nearest +Y. Kept in
+ * WRITE_UV so the geometry itself is not changed.
+ */
+function planarUV(g) {
+  const pos = g.attributes.position, nrm = g.attributes.normal;
+  if (!pos || pos.count < 3) return null;
+  const n = new THREE.Vector3();
+  if (nrm) for (let i = 0; i < nrm.count; i++) n.x += nrm.getX(i), n.y += nrm.getY(i), n.z += nrm.getZ(i);
+  else n.crossVectors(new THREE.Vector3().fromBufferAttribute(pos, 1).sub(new THREE.Vector3().fromBufferAttribute(pos, 0)), new THREE.Vector3().fromBufferAttribute(pos, 2).sub(new THREE.Vector3().fromBufferAttribute(pos, 0)));
+  if (n.lengthSq() < 1e-12) return null;
+  n.normalize();
+  const up = Math.abs(n.y) > 0.95 ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 1, 0);
+  const U = new THREE.Vector3().crossVectors(up, n).normalize(), V = new THREE.Vector3().crossVectors(n, U).normalize();
+  const p = new THREE.Vector3(), us = [], vs = [];
+  for (let i = 0; i < pos.count; i++) { p.fromBufferAttribute(pos, i); us.push(p.dot(U)); vs.push(p.dot(V)); }
+  const u0 = Math.min(...us), du = Math.max(...us) - u0, v0 = Math.min(...vs), dv = Math.max(...vs) - v0;
+  if (du < 1e-6 || dv < 1e-6) return null;
+  const arr = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) { arr[i * 2] = (us[i] - u0) / du; arr[i * 2 + 1] = 1 - (vs[i] - v0) / dv; }
+  const attr = new THREE.BufferAttribute(arr, 2);
+  WRITE_UV.set(g, attr);
+  return attr;
+}
+
+/**
  * The writing area of a model's write_ mesh: the plane its UVs span (least squares over its vertices:
  * position = O + u U + v V), with +V up the text. Returns { area, w, h } or null.
  */
 export function areaFromWriteMesh(node, body = null) {
   const mesh = node.isMesh ? node : node.children.find((c) => c.isMesh);
   const g = mesh?.geometry;
-  const pos = g?.attributes.position, uv = (g && WRITE_UV.get(g)) || g?.attributes.uv;
+  const pos = g?.attributes.position, uv = (g && WRITE_UV.get(g)) || g?.attributes.uv || (g && planarUV(g));
   if (!pos || !uv || pos.count < 3) return null;
   // normal equations for [O U V] from rows [1 u v]
   const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], B = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
@@ -422,9 +448,15 @@ function readGlow(node, extra = []) {
     let m = copies.get(o.material);
     if (!m) {
       m = o.material.clone();
-      m.emissive.set(0xfff0d8);
-      m.emissiveMap = m.map || null;
-      m.emissiveIntensity = 0.04;
+      // a print that already glows in its own colours (the ride builder's Karussell ticket, round 7) keeps
+      // that glow and brightens a little; plain paper gets the faint warm read glow
+      const baked = o.material.emissiveMap && o.material.emissive.getHex() !== 0 ? o.material.emissiveIntensity : 0;
+      if (baked > 0) m.emissiveIntensity = baked * 1.25;
+      else {
+        m.emissive.set(0xfff0d8);
+        m.emissiveMap = m.map || null;
+        m.emissiveIntensity = 0.04;
+      }
       m.userData.readGlow = true;
       if (m.vertexColors) tintGlow(m);
       copies.set(o.material, m);

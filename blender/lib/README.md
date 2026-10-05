@@ -145,6 +145,12 @@ The engine draws each section's text on a blank surface in the stall (docs/adr/0
   `cam_read_<name>_target` on the area's centre, on the face normal at the distance where the
   writing fills `fill` of a 16:9 frame at the site's 42 degree vertical field of view
   (`READ_FOV_V`). 0.76 keeps the board's frame, tray and crest in the picture.
+- `easel_card(name, F, w, h, frame, back, clip=None, base_z=None, rail=0.022, depth=0.016,
+  leg_angle=24, surface="card", tint="walnut")` (round 7) → a small framed card on a table-top easel round
+  `write_<name>` (`paper_card` by default): four thin wood rails, a backing board, a ledge along
+  the foot, a back leg down to the surface at `base_z`, and an optional brass bulldog clip
+  (`clip`, a metal Part). Build F with `face_frame(..., lean=...)` so it leans back. Returns
+  `{"write", "outer": (W, H), "F"}`.
 - `chain(iron, a, b, link=0.035)`: a hanging chain of oval links (lite: a thin rod).
 - `barrel(staves, hoops, center, height=0.92, r_end=0.27, r_belly=0.32, ...)`: a whole standing
   barrel of separate staves with iron hoops and a boarded head (lite: fewer staves and rings).
@@ -156,6 +162,7 @@ The section stalls' boards (round 6):
 | `stall_gluehwein` | `write_about` | 1.10 x 0.80 m | red-and-gold framed board on chains from a cross beam behind the counter, right of the vendor | 1.37 m, from just in front of the counter |
 | `stall_bratwurst` | `write_writing_menu` | 0.92 x 0.70 m | soot-dark board on its own stand (posts, cross feet, braces, "Speisekarte" header plank), front-left corner | 1.20 m |
 | `stall_bier` | `write_projects_board` | 0.92 x 0.70 m | blue-and-white framed board on a barrel, "Frisch vom Fass" crest, front-left corner | 1.20 m |
+| `stall_buecher` (round 7) | `write_reading_card` | 0.26 x 0.19 m, `paper_card` | cream card clipped in a walnut frame on an easel, front-right corner of the counter (`easel_card`) | 0.33 m |
 
 ### `render`
 - `night_scene()`: night world, moon, sky fill and trodden-snow ground. It is render-only and goes in the Env collection.

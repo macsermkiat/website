@@ -693,7 +693,10 @@ async function boot() {
     backing(name) {
       const m = (n) => { const o = scene.getObjectByName(n); return o?.isMesh ? o.material : o?.children.find((c) => c.isMesh)?.material || null; };
       const w = m(`write_${name}`), c = m(`card_${name}`);
-      return { card: !!c, same: !!c && c === w, glow: w?.emissiveIntensity ?? null };
+      // one shared material, or (the round-7 ticket) a printed card and a plain writing paper of the same cream that
+      // both glow when read
+      const alike = !!c && !!w && c.color.getHex() === w.color.getHex() && c.emissiveIntensity > 0.1 && w.emissiveIntensity > 0.1;
+      return { card: !!c, same: !!c && (c === w || alike), glow: w?.emissiveIntensity ?? null };
     },
     /** For tests: park the wheel (or let it go) as a placard does; returns the seconds the parking takes. */
     parkWheel: (on = true) => wheelRide()?.park(on) ?? null,
