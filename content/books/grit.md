@@ -7,7 +7,7 @@ one_line: "A psychologist's case that long-term passion and perseverance predict
 sources:
   - https://www.simonandschuster.com/books/Grit/Angela-Duckworth/9781501111112
   - https://readingraphics.com/book-summary-grit/
-review: "check"
+review: "ok"
 ---
 
 ## In short

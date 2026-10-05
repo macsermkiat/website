@@ -14,7 +14,7 @@ sources:
   - https://hbr.org/podcast/2025/09/how-to-lead-with-courage-in-chaotic-times
   - https://whitneyzim.medium.com/the-science-of-strategic-courage-a-conversation-with-professor-ranjay-gulati-27cf99be3048
   - https://www.secondcity.com/network/ranjay-gulati-the-science-of-courage
-review: "check"
+review: "ok"
 ---
 
 ## In short

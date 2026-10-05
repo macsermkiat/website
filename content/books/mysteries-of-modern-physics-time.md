@@ -10,7 +10,7 @@ sources:
   - https://www.audible.com/pd/Mysteries-of-Modern-Physics-Time-Audiobook/B00DDXP9YI
   - https://www-users.york.ac.uk/~ss44/books/pages/c/SeanMCarroll.htm
   - https://www.goodreads.com/en/book/show/17465888
-review: "check"
+review: "ok"
 ---
 
 ## In short

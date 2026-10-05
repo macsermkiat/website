@@ -9,7 +9,7 @@ sources:
   - https://nextbigideaclub.com/magazine/quit-power-knowing-walk-away-bookbite/36452/
   - https://bobbypowers.com/review-quit/
   - https://thedarktrumpet.com/media/attachments/2025-08-03-QuitSummary.pdf
-review: "check"
+review: "ok"
 ---
 
 ## In short

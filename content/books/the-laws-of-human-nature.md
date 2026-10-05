@@ -8,7 +8,7 @@ sources:
   - https://readingraphics.com/book-summary-the-laws-of-human-nature/
   - https://www.supersummary.com/the-laws-of-human-nature/summary/
   - https://www.audible.com/blog/summary-the-laws-of-human-nature-by-robert-greene
-review: "check"
+review: "ok"
 ---
 
 ## In short

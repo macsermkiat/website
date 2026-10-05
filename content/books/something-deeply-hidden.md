@@ -12,7 +12,7 @@ sources:
   - https://openlettersreview.com/posts/something-deeply-hidden-by-sean-carroll
   - https://bookandfilmglobe.com/nonfiction/book-review-something-deeply-hidden/
   - https://scientificinquirer.com/2019/08/30/something-deeply-hidden-review/
-review: "check"
+review: "ok"
 ---
 
 ## In short

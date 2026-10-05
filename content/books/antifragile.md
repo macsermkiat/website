@@ -8,7 +8,7 @@ sources:
   - https://en.wikipedia.org/wiki/Antifragile_(book)
   - https://www.supersummary.com/antifragile/summary/
   - https://grahammann.net/book-notes/antifragile-nassim-nicholas-taleb
-review: "check"
+review: "ok"
 ---
 
 ## In short

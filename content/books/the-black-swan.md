@@ -7,7 +7,7 @@ one_line: "Taleb's book about rare, unpredictable events with enormous consequen
 sources:
   - https://en.wikipedia.org/wiki/The_Black_Swan:_The_Impact_of_the_Highly_Improbable
   - https://www.supersummary.com/the-black-swan/summary/
-review: "check"
+review: "ok"
 ---
 
 ## In short

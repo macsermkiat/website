@@ -8,7 +8,7 @@ sources:
   - https://www.penguinrandomhouse.com/books/563882/calling-bullshit-by-carl-t-bergstrom-and-jevin-d-west/
   - https://www.tosummarise.com/book-summary-calling-bullshit-by-bergstrom-and-west/
   - https://www.forbes.com/sites/grrlscientist/2020/08/28/calling-bullsht-by-carl-bergstrom--jevin-west---review/
-review: "check"
+review: "ok"
 ---
 
 ## In short

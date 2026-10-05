@@ -11,7 +11,7 @@ sources:
   - https://github.com/jbarroso/clean-code
   - https://www.informit.com/store/clean-code-a-handbook-of-agile-software-craftsmanship-9780135398579
   - https://github.com/johnousterhout/aposd-vs-clean-code
-review: "check"
+review: "ok"
 ---
 
 ## In short

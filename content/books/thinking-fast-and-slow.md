@@ -8,7 +8,7 @@ sources:
   - https://en.wikipedia.org/wiki/Thinking,_Fast_and_Slow
   - https://selections.rockefeller.edu/book-review-thinking-fast-and-slow-by-daniel-kahneman-farrar-straus-and-giroux/
   - https://www.nobelprize.org/prizes/economic-sciences/2002/kahneman/facts/
-review: "check"
+review: "ok"
 ---
 
 ## In short

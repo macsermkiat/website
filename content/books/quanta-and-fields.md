@@ -10,7 +10,7 @@ sources:
   - https://www.kirkusreviews.com/book-reviews/sean-carroll/quanta-and-fields/
   - https://www.preposterousuniverse.com/podcast/2024/05/13/275-solo-quantum-fields-particles-forces-and-symmetries/
   - https://www.shortform.com/summary/quanta-and-fields-summary-sean-carroll
-review: "check"
+review: "ok"
 ---
 
 ## In short

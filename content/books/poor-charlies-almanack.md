@@ -10,7 +10,7 @@ sources:
   - https://catdir.loc.gov/catdir/toc/ecip056/2005000483.html
   - https://rpc.cfainstitute.org/blogs/enterprising-investor/2023/book-review-poor-charlies-almanack
   - https://grahammann.net/book-notes/poor-charlies-almanack-charles-munger
-review: "check"
+review: "ok"
 ---
 
 ## In short

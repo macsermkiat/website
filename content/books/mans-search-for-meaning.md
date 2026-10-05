@@ -8,7 +8,7 @@ sources:
   - https://www.beacon.org/Assets/ClientPages/MansSearchForMeaningtg.aspx
   - https://www.ebsco.com/research-starters/literature-and-writing/mans-search-meaning-viktor-emil-frankl
   - https://readingraphics.com/book-summary-mans-search-for-meaning/
-review: "check"
+review: "ok"
 ---
 
 ## In short

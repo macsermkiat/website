@@ -8,7 +8,7 @@ sources:
   - https://www.supersummary.com/think-again/summary/
   - https://www.sparknotes.com/lit/think-again/section3/
   - https://9oelm.github.io/2022-12-30-full-summary-and-reflection-on-Think-again-by-adam-grant/
-review: "check"
+review: "ok"
 ---
 
 ## In short

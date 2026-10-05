@@ -11,7 +11,7 @@ sources:
   - https://www.publishersweekly.com/9780593186589
   - https://scientificinquirer.com/2022/11/18/in-the-biggest-ideas-in-the-universe-sean-carroll-reveals-the-beauty-behind-physics-equations/
   - https://riapacheco.substack.com/p/the-biggest-ideas-in-the-universe
-review: "check"
+review: "ok"
 ---
 
 ## In short

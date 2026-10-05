@@ -8,7 +8,7 @@ sources:
   - https://en.wikipedia.org/wiki/Chaos:_Making_a_New_Science
   - https://www.goodreads.com/author_blog_posts/3234588-chaos-making-a-new-science?tab=book
   - https://cdn.bookey.app/files/pdf/book/en/chaos.pdf
-review: "check"
+review: "ok"
 ---
 
 ## In short

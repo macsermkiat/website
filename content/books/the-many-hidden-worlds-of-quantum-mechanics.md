@@ -9,7 +9,7 @@ sources:
   - https://preposterousuniverse.com/blog/2023/11/27/new-course-the-many-hidden-worlds-of-quantum-mechanics/
   - https://www.audible.com/pd/The-Many-Hidden-Worlds-of-Quantum-Mechanics-Audiobook/B0CN3Z1KZM
   - https://www.goodreads.com/book/show/204994789-the-many-hidden-worlds-of-quantum-mechanics
-review: "check"
+review: "ok"
 ---
 
 ## In short

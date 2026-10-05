@@ -10,7 +10,7 @@ sources:
   - https://www.bookbrowse.com/bb_briefs/detail/index.cfm/ezine_preview_number/24361/infinite-powers
   - https://www.goodreads.com/book/show/40796176-infinite-powers
   - https://cdn.bookey.app/files/pdf/book/en/infinite-powers.pdf
-review: "check"
+review: "ok"
 ---
 
 ## In short

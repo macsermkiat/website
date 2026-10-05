@@ -11,7 +11,7 @@ sources:
   - https://www.bookey.app/book/ultralearning
   - https://artofmemory.com/blog/ultralearning/
   - https://medium.com/@zach_75251/ultralearning-ch-1-notes-3ca47930ecb6
-review: "check"
+review: "ok"
 ---
 
 ## In short

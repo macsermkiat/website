@@ -8,7 +8,7 @@ sources:
   - https://en.wikipedia.org/wiki/The_Book_of_Why
   - https://www.ams.org/journals/notices/201907/rnoti-p1093.pdf
   - https://booksummaryclub.com/summary-of-the-book-of-why-by-judea-pearl-and-dana-mackenzie/
-review: "check"
+review: "ok"
 ---
 
 ## In short

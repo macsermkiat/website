@@ -8,7 +8,7 @@ sources:
   - https://algorithmstoliveby.com/
   - https://www.tosummarise.com/book-summary-algorithms-to-live-by-by-brian-christian-and-tom-griffiths/
   - https://grahammann.net/book-notes/algorithms-to-live-by-brian-christian
-review: "check"
+review: "ok"
 ---
 
 ## In short

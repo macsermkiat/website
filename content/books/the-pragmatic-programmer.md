@@ -11,7 +11,7 @@ sources:
   - https://www.ahalbert.com/technology/2023/12/19/the_pragmatic_programmer.html
   - https://github.com/HugoMatilla/The-Pragmatic-Programmer
   - https://sgeb.io/bookshelf/the-pragmatic-programmer/
-review: "check"
+review: "ok"
 ---
 
 ## In short

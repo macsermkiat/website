@@ -9,7 +9,7 @@ sources:
   - https://www.supersummary.com/the-courage-to-be-disliked/summary/
   - https://readingraphics.com/book-summary-the-courage-to-be-disliked/
   - https://grahammann.net/book-notes/the-courage-to-be-disliked-kishimi-koga
-review: "check"
+review: "ok"
 ---
 
 ## In short

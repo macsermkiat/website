@@ -11,7 +11,7 @@ sources:
   - https://phys.org/news/2023-05-stephen-hawking-collaborator-physicist-theory.html
   - https://historynewsnetwork.org/article/185282
   - https://www.publishersweekly.com/9780593128442
-review: "check"
+review: "ok"
 ---
 
 ## In short

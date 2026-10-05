@@ -10,7 +10,7 @@ sources:
   - https://www.kirkusreviews.com/book-reviews/kenneth-cukier/framers/
   - https://www.blinkist.com/en/books/framers-en
   - https://sobrief.com/books/framers
-review: "check"
+review: "ok"
 ---
 
 ## In short

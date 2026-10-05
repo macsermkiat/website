@@ -10,7 +10,7 @@ sources:
   - https://grahammann.net/book-notes/deep-work-cal-newport
   - https://ursummary.com/deep-work-summary-by-chapter-cal-newport/
   - https://www.supersummary.com/deep-work/summary/
-review: "check"
+review: "ok"
 ---
 
 ## In short

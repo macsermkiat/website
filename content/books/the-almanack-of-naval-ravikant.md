@@ -11,7 +11,7 @@ sources:
   - https://grahammann.net/book-notes/almanack-of-naval-ravikant-eric-jorgenson
   - https://www.sloww.co/almanack-naval-ravikant/
   - https://auresnotes.com/summary-the-almanack-of-naval-ravikant/
-review: "check"
+review: "ok"
 ---
 
 ## In short

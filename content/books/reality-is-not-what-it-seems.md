@@ -10,7 +10,7 @@ sources:
   - https://popsciencebooks.blogspot.com/2016/12/reality-is-not-what-it-seems-carlo.html
   - https://www.goodreads.com/book/show/29767627-reality-is-not-what-it-seems
   - https://cdn.bookey.app/files/pdf/book/en/reality-is-not-what-it-seems.pdf
-review: "check"
+review: "ok"
 ---
 
 ## In short

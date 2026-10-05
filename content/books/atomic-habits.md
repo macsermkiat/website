@@ -9,7 +9,7 @@ sources:
   - https://atomichabitssummary.com/atomic-habits-chapters-list
   - https://ursummary.com/atomic-habits-summary/
   - https://catalog.mydpl.org/cgi-bin/koha/opac-detail.pl?biblionumber=93670
-review: "check"
+review: "ok"
 ---
 
 ## In short

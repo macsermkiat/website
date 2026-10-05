@@ -9,7 +9,7 @@ sources:
   - https://taylorpearson.me/bookreview/misbehavior-markets-summary-quotes/
   - https://users.math.yale.edu/users/mandelbrot/web_pdfs/getabstract.pdf
   - https://books.google.com/books/about/The_Misbehavior_of_Markets.html?id=GMKeUqufPQ0C
-review: "check"
+review: "ok"
 ---
 
 ## In short

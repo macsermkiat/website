@@ -12,7 +12,7 @@ sources:
   - https://sobrief.com/books/the-courage-to-be-happy
   - https://welived.org/2024/05/03/courage-to-be-disliked-and-to-be-happy/
   - https://www.anuradhasridharan.com/2023/05/book-review-courage-to-be-happy-ichiro-kishimi.html
-review: "check"
+review: "ok"
 ---
 
 ## In short

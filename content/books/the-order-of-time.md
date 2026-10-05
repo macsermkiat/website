@@ -11,7 +11,7 @@ sources:
   - https://booksandnotes.substack.com/p/book-review-the-order-of-time-carlo
   - https://rhapsodyinbooks.wordpress.com/2018/07/30/review-of-the-order-of-time-by-carlo-rovelli/
   - https://eightyfour.substack.com/p/rovelli-the-order-of-time-summary
-review: "check"
+review: "ok"
 ---
 
 ## In short
