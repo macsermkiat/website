@@ -44,3 +44,18 @@ Mac (2026-10-05): "There's no need to fully render object in side stores, becaus
 - First-load size must stay near 8 MB (full) and 6 MB (lite); the extra people and goods stream with their stalls.
 - The ornament shop and the cabinets need new node rules (below, and in BUILD.md).
 - If Mac picks another bookshelf design, the carpenter, vendor and engineer redo that part.
+
+## Revision: ornament shop sparkle and fewer, bigger interactions
+
+Mac (2026-10-05): "Ornament shop should have more sparkle decoration and goods. No need to be interactive in everything, but the one that interactive must be wow. not slop."
+
+Dressing (sparkle in three tiers, with dark wood left between clusters):
+- Hero: an antique foxed mirror on the upper back wall that doubles the baubles, and a slowly turning Erzgebirge candle pyramid on the counter.
+- Medium: mercury-glass and high-gloss baubles in silver, gold, copper and teal in several sizes; two or three gold and silver Lametta swags with a view-dependent glint shader; glass icicles and pine cones; Rauschgoldengel gold-foil angels; glass bead garlands; bulb strings inside the canopy with one warm light near the ceiling; a big lit star on the roof ridge.
+- Subtle: snow globes, spun-glass birds, two more lit Herrnhut stars at different heights.
+- The nutcracker, smoker (smoking on its own), pyramid and the rest are decoration, not clicks.
+
+Interactions (recommended set, pending Mac; three only, each a moment):
+1. Hero: the Schwibbogen wakes the town. Its candles light one by one from the outside in; with each flame more windows in the old town turn warm, a low chord builds, and the last flame sends a slow wave of light across the market before it settles.
+2. Glass harmonica: the baubles on the front rail are tuned to the ballad's melody. Brushing across them (drag or tap in order) plays it with long glassy decays; after a pause the next bauble glows faintly so visitors find the tune.
+3. Reflection dive: tapping the big mercury-glass bauble moves the camera in until the curved, live reflection of the lit market fills the view, then crossfades into the market seen from inside the glass, hushed like a snow globe, and back out.
