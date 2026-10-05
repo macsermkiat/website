@@ -1,31 +1,50 @@
 {
- "version": 1,
- "about": "Bücherstand category sections (owner: carpenter; built by blender/stalls/buecher.py from blender/stalls/buecher_sections.py, so this file matches stall_buecher.glb). One section per key in content/books/categories.json. The vendor parents prop_books_<key> to slot_cat_<key>.",
- "frame": "Positions are the stall's Blender frame (metres, Z up, origin on the ground at the footprint centre, front toward -Y; three.js: x = x, y = z, z = -y). Each section's frame is its slot empty's frame: +X along the boards from the visitor's left to right, -Y toward the visitor (spines face -Y), +Z up. slot_rotation_z_deg is that frame's rotation about Blender Z.",
- "slot": "slot_cat_<key> sits at the LEFT end of the section's LOWEST board, on its top surface, at its front edge. Books stand on +Z from there, run along +X for board width and reach back (+Y) at most board depth.",
- "boards": "offset is each board's [x, y, z] in the slot frame (same left end, front edge and top surface convention). clear_height is the free height above a board's top surface (null = open above). The cart's upper tier is stepped back (+Y) behind the lower tier's books; its clear_height is a sightline limit (taller books would hide the glazed cabinets behind), not a physical one. The cart signs are name boards on the carts' front aprons, below the lower tier.",
- "cam": "cam_cat_<key> (cam_position) is an optional close-up camera for the section, looking at cam_cat_<key>_target (cam_target_position): the centre of its boards and sign. Both are empties in stall_buecher.glb and stall_buecher.lite.glb; the camera empty is also rotated to look at its target.",
- "mean_spine": 0.042,
+ "version": 2,
+ "about": "Bücherstand category cabinets (round 8, docs/adr/0004; owner: carpenter; built by blender/stalls/buecher.py from blender/stalls/buecher_sections.py, so this file matches stall_buecher.glb). One glazed cabinet per key in content/books/categories.json, with angled face-out boards for up to five covers per row. The vendor parents prop_books_<key> to slot_cat_<key>.",
+ "frame": "Positions are the stall's Blender frame (metres, Z up, origin on the ground at the footprint centre, front toward -Y; three.js: x = x, y = z, z = -y). Each cabinet's frame is its slot empty's frame: +X along the boards from the visitor's left to right, -Y toward the visitor (covers face -Y), +Z up. slot_rotation_z_deg is that frame's rotation about Blender Z.",
+ "slot": "slot_cat_<key> sits at the LEFT end of the cabinet's LOWEST face-out board, on the ledge's top surface, at its front edge (just behind the lip). Covers stand on a ledge, foot within ledge_depth of the slot's y, and lean back lean_deg against the backboard; cover_slots_x are the cover centres along +X. Boards are stacked board_spacing apart (offset = [x, y, z] of each board's slot point). Above the top board, spine_board is a flat shelf for books at rest, as spines.",
+ "door": "act_cab_<key> is the cabinet's glazed door (frame + glass as child meshes), with its origin on the hinge line (hinge_side edge, bottom corner, on the door's front face). The engine swings it open by open_deg before the covers come forward.",
+ "cam": "cam_cat_<key> (cam_position) stands on the cabinet's normal and looks at cam_cat_<key>_target (cam_target_position), the centre of the covers area; at the site's 42 degree vertical field of view the covers area fills cam_fill of a 16:9 frame. Both are empties in stall_buecher.glb and stall_buecher.lite.glb; the camera empty is rotated to look at its target.",
+ "cam_fill": 0.86,
  "sections": [
   {
-   "key": "physics",
-   "label_de": "Physik & Kosmos",
-   "label_en": "Physics and the Universe",
-   "books": 10,
+   "key": "lives",
+   "label_de": "Lebensgeschichten",
+   "label_en": "Lives in Science and Industry",
+   "books": 6,
    "unit": "wing_l",
-   "kind": "side rack (left wing, bay 1 of 2 from the visitor's left)",
-   "slot": "slot_cat_physics",
+   "kind": "glazed cabinet in the left wing (outer)",
+   "rows": 2,
+   "covers_per_row": 3,
+   "capacity": 6,
+   "cabinet": {
+    "width": 0.574,
+    "depth": 0.32,
+    "height": 1.9,
+    "origin": [
+     -3.3149,
+     -2.4222,
+     0
+    ],
+    "rotation_z_deg": 40.0,
+    "glass_bottom": 1.025,
+    "glass_top": 1.86
+   },
+   "slot": "slot_cat_lives",
    "slot_position": [
-    -2.601,
-    -2.1832,
-    0.42
+    -3.3286,
+    -2.3593,
+    1.095
    ],
-   "slot_rotation_z_deg": 50.0,
+   "slot_rotation_z_deg": 40.0,
+   "cover_max": {
+    "width": 0.145,
+    "height": 0.215,
+    "thickness": 0.035
+   },
    "board_count": 2,
-   "board_width": 0.56,
-   "board_depth": 0.26,
-   "board_thickness": 0.025,
-   "board_spacing": 0.38,
+   "board_width": 0.514,
+   "board_spacing": 0.265,
    "boards": [
     {
      "index": 0,
@@ -34,48 +53,86 @@
       0.0,
       0.0
      ],
-     "width": 0.56,
-     "depth": 0.26,
-     "clear_height": 0.355
+     "width": 0.514,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415
+     ],
+     "clear_height": 0.235
     },
     {
      "index": 1,
      "offset": [
       0.0,
       0.0,
-      0.38
+      0.265
      ],
-     "width": 0.56,
-     "depth": 0.26,
-     "clear_height": 0.37
+     "width": 0.514,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415
+     ],
+     "clear_height": 0.2
     }
    ],
-   "capacity_at_mean_spine": 26,
-   "shelf_length_needed": 0.42,
+   "spine_board": {
+    "offset": [
+     0.0,
+     -0.012,
+     0.525
+    ],
+    "width": 0.514,
+    "depth": 0.235,
+    "clear_height": 0.23
+   },
+   "door": {
+    "node": "act_cab_lives",
+    "hinge_position": [
+     -3.2772,
+     -2.4206,
+     1.025
+    ],
+    "hinge_side": "left",
+    "open_deg": -170.0,
+    "width": 0.514,
+    "height": 0.835,
+    "opens": "the glazed door swings outward (toward the visitor) about its hinge edge, the node's origin (on the door's front face): rotate the node about its local vertical axis by open_deg (Blender Z and three.js Y take the same sign; negative for a left hinge). Fully open it folds flat beside the cabinet, out of the cam_cat view"
+   },
    "sign": {
-    "node": "sign_cat_physics",
-    "text": "Physik & Kosmos",
+    "node": "sign_cat_lives",
+    "text": "Lebensgeschichten",
     "center": [
-     -2.4095,
-     -1.9783,
-     1.335
+     -3.1079,
+     -2.2224,
+     2.08
     ],
     "size": [
-     0.59,
-     0.24
+     0.544,
+     0.26
     ]
    },
-   "cam": "cam_cat_physics",
+   "cam": "cam_cat_lives",
    "cam_position": [
-    -1.1571,
-    -3.0293,
-    1.45
+    -2.6896,
+    -2.7211,
+    1.3513
    ],
-   "cam_target": "cam_cat_physics_target",
+   "cam_target": "cam_cat_lives_target",
    "cam_target_position": [
-    -2.4976,
-    -1.9044,
-    0.86
+    -3.1497,
+    -2.1727,
+    1.3313
+   ],
+   "cam_distance": 0.716,
+   "covers_area": [
+    0.474,
+    0.473
    ]
   },
   {
@@ -84,19 +141,38 @@
    "label_en": "Mind and Body",
    "books": 9,
    "unit": "wing_l",
-   "kind": "side rack (left wing, bay 2 of 2 from the visitor's left)",
+   "kind": "glazed cabinet in the left wing (inner)",
+   "rows": 2,
+   "covers_per_row": 5,
+   "capacity": 10,
+   "cabinet": {
+    "width": 0.89,
+    "depth": 0.32,
+    "height": 1.9,
+    "origin": [
+     -2.8561,
+     -2.0372,
+     0
+    ],
+    "rotation_z_deg": 40.0,
+    "glass_bottom": 1.025,
+    "glass_top": 1.86
+   },
    "slot": "slot_cat_mind",
    "slot_position": [
-    -2.2153,
-    -1.7236,
-    0.42
+    -2.8697,
+    -1.9743,
+    1.095
    ],
-   "slot_rotation_z_deg": 50.0,
+   "slot_rotation_z_deg": 40.0,
+   "cover_max": {
+    "width": 0.145,
+    "height": 0.215,
+    "thickness": 0.035
+   },
    "board_count": 2,
-   "board_width": 0.54,
-   "board_depth": 0.26,
-   "board_thickness": 0.025,
-   "board_spacing": 0.38,
+   "board_width": 0.83,
+   "board_spacing": 0.265,
    "boards": [
     {
      "index": 0,
@@ -105,69 +181,130 @@
       0.0,
       0.0
      ],
-     "width": 0.54,
-     "depth": 0.26,
-     "clear_height": 0.355
+     "width": 0.83,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415,
+      0.573,
+      0.731
+     ],
+     "clear_height": 0.235
     },
     {
      "index": 1,
      "offset": [
       0.0,
       0.0,
-      0.38
+      0.265
      ],
-     "width": 0.54,
-     "depth": 0.26,
-     "clear_height": 0.37
+     "width": 0.83,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415,
+      0.573,
+      0.731
+     ],
+     "clear_height": 0.2
     }
    ],
-   "capacity_at_mean_spine": 25,
-   "shelf_length_needed": 0.378,
+   "spine_board": {
+    "offset": [
+     0.0,
+     -0.012,
+     0.525
+    ],
+    "width": 0.83,
+    "depth": 0.235,
+    "clear_height": 0.23
+   },
+   "door": {
+    "node": "act_cab_mind",
+    "hinge_position": [
+     -2.8183,
+     -2.0356,
+     1.025
+    ],
+    "hinge_side": "left",
+    "open_deg": -170.0,
+    "width": 0.83,
+    "height": 0.835,
+    "opens": "the glazed door swings outward (toward the visitor) about its hinge edge, the node's origin (on the door's front face): rotate the node about its local vertical axis by open_deg (Blender Z and three.js Y take the same sign; negative for a left hinge). Fully open it folds flat beside the cabinet, out of the cam_cat view"
+   },
    "sign": {
     "node": "sign_cat_mind",
     "text": "Geist & Körper",
     "center": [
-     -2.0303,
-     -1.5264,
-     1.335
+     -2.5281,
+     -1.7359,
+     2.08
     ],
     "size": [
-     0.57,
-     0.24
+     0.86,
+     0.26
     ]
    },
    "cam": "cam_cat_mind",
    "cam_position": [
-    -1.8145,
-    -3.1759,
-    1.55
+    -2.1097,
+    -2.2345,
+    1.3513
    ],
    "cam_target": "cam_cat_mind_target",
    "cam_target_position": [
-    -2.1184,
-    -1.4525,
-    0.86
+    -2.5698,
+    -1.6861,
+    1.3313
+   ],
+   "cam_distance": 0.716,
+   "covers_area": [
+    0.79,
+    0.473
    ]
   },
   {
-   "key": "lives",
-   "label_de": "Lebensgeschichten",
-   "label_en": "Lives in Science and Industry",
-   "books": 6,
-   "unit": "cart_l",
-   "kind": "book cart (left of the counter)",
-   "slot": "slot_cat_lives",
+   "key": "physics",
+   "label_de": "Physik & Kosmos",
+   "label_en": "Physics and the Universe",
+   "books": 10,
+   "unit": "hut_l",
+   "kind": "glazed cabinet in the hut front, left of the counter",
+   "rows": 2,
+   "covers_per_row": 5,
+   "capacity": 10,
+   "cabinet": {
+    "width": 0.89,
+    "depth": 0.32,
+    "height": 1.9,
+    "origin": [
+     -2.0,
+     -1.52,
+     0
+    ],
+    "rotation_z_deg": 0.0,
+    "glass_bottom": 1.025,
+    "glass_top": 1.86
+   },
+   "slot": "slot_cat_physics",
    "slot_position": [
-    -1.66,
-    -2.26,
-    0.62
+    -1.97,
+    -1.463,
+    1.095
    ],
    "slot_rotation_z_deg": 0.0,
+   "cover_max": {
+    "width": 0.145,
+    "height": 0.215,
+    "thickness": 0.035
+   },
    "board_count": 2,
-   "board_width": 0.52,
-   "board_depth": 0.24,
-   "board_thickness": 0.025,
-   "board_spacing": 0.3,
+   "board_width": 0.83,
+   "board_spacing": 0.265,
    "boards": [
     {
      "index": 0,
@@ -176,119 +313,90 @@
       0.0,
       0.0
      ],
-     "width": 0.52,
-     "depth": 0.24,
-     "clear_height": null
+     "width": 0.83,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415,
+      0.573,
+      0.731
+     ],
+     "clear_height": 0.235
     },
     {
      "index": 1,
      "offset": [
       0.0,
-      0.25,
-      0.3
+      0.0,
+      0.265
      ],
-     "width": 0.52,
-     "depth": 0.24,
-     "clear_height": 0.39
+     "width": 0.83,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415,
+      0.573,
+      0.731
+     ],
+     "clear_height": 0.2
     }
    ],
-   "capacity_at_mean_spine": 24,
-   "shelf_length_needed": 0.252,
+   "spine_board": {
+    "offset": [
+     0.0,
+     -0.012,
+     0.525
+    ],
+    "width": 0.83,
+    "depth": 0.235,
+    "clear_height": 0.23
+   },
+   "door": {
+    "node": "act_cab_physics",
+    "hinge_position": [
+     -1.14,
+     -1.543,
+     1.025
+    ],
+    "hinge_side": "right",
+    "open_deg": 170.0,
+    "width": 0.83,
+    "height": 0.835,
+    "opens": "the glazed door swings outward (toward the visitor) about its hinge edge, the node's origin (on the door's front face): rotate the node about its local vertical axis by open_deg (Blender Z and three.js Y take the same sign; negative for a left hinge). Fully open it folds flat beside the cabinet, out of the cam_cat view"
+   },
    "sign": {
-    "node": "sign_cat_lives",
-    "text": "Lebensgeschichten",
+    "node": "sign_cat_physics",
+    "text": "Physik & Kosmos",
     "center": [
-     -1.4,
-     -2.292,
-     0.47
+     -1.555,
+     -1.5,
+     2.08
     ],
     "size": [
-     0.7,
-     0.24
+     0.86,
+     0.26
     ]
    },
-   "cam": "cam_cat_lives",
+   "cam": "cam_cat_physics",
    "cam_position": [
-    -1.4,
-    -3.92,
-    1.45
+    -1.555,
+    -2.1509,
+    1.3513
    ],
-   "cam_target": "cam_cat_lives_target",
+   "cam_target": "cam_cat_physics_target",
    "cam_target_position": [
-    -1.4,
-    -2.17,
-    0.86
-   ]
-  },
-  {
-   "key": "decisions",
-   "label_de": "Risiko & Entscheidungen",
-   "label_en": "Risk, Decisions and Markets",
-   "books": 11,
-   "unit": "cart_r",
-   "kind": "book cart (right of the counter)",
-   "slot": "slot_cat_decisions",
-   "slot_position": [
-    1.1,
-    -2.26,
-    0.62
+    -1.555,
+    -1.435,
+    1.3313
    ],
-   "slot_rotation_z_deg": 0.0,
-   "board_count": 2,
-   "board_width": 0.6,
-   "board_depth": 0.24,
-   "board_thickness": 0.025,
-   "board_spacing": 0.3,
-   "boards": [
-    {
-     "index": 0,
-     "offset": [
-      0.0,
-      0.0,
-      0.0
-     ],
-     "width": 0.6,
-     "depth": 0.24,
-     "clear_height": null
-    },
-    {
-     "index": 1,
-     "offset": [
-      0.0,
-      0.25,
-      0.3
-     ],
-     "width": 0.6,
-     "depth": 0.24,
-     "clear_height": 0.39
-    }
-   ],
-   "capacity_at_mean_spine": 28,
-   "shelf_length_needed": 0.462,
-   "sign": {
-    "node": "sign_cat_decisions",
-    "text": "Risiko & Entscheidungen",
-    "center": [
-     1.4,
-     -2.292,
-     0.47
-    ],
-    "size": [
-     0.78,
-     0.24
-    ]
-   },
-   "cam": "cam_cat_decisions",
-   "cam_position": [
-    1.4,
-    -3.92,
-    1.45
-   ],
-   "cam_target": "cam_cat_decisions_target",
-   "cam_target_position": [
-    1.4,
-    -2.17,
-    0.86
+   "cam_distance": 0.716,
+   "covers_area": [
+    0.79,
+    0.473
    ]
   },
   {
@@ -296,20 +404,39 @@
    "label_de": "Menschen & Gespräche",
    "label_en": "People and Conversation",
    "books": 14,
-   "unit": "wing_r",
-   "kind": "side rack (right wing, bay 1 of 2 from the visitor's left)",
+   "unit": "hut_r",
+   "kind": "glazed cabinet in the hut front, right of the counter",
+   "rows": 3,
+   "covers_per_row": 5,
+   "capacity": 15,
+   "cabinet": {
+    "width": 0.89,
+    "depth": 0.32,
+    "height": 1.9,
+    "origin": [
+     1.11,
+     -1.52,
+     0
+    ],
+    "rotation_z_deg": 0.0,
+    "glass_bottom": 0.76,
+    "glass_top": 1.86
+   },
    "slot": "slot_cat_people",
    "slot_position": [
-    1.8682,
-    -1.3099,
-    0.42
+    1.14,
+    -1.463,
+    0.83
    ],
-   "slot_rotation_z_deg": -50.0,
-   "board_count": 2,
-   "board_width": 0.65,
-   "board_depth": 0.26,
-   "board_thickness": 0.025,
-   "board_spacing": 0.38,
+   "slot_rotation_z_deg": 0.0,
+   "cover_max": {
+    "width": 0.145,
+    "height": 0.215,
+    "thickness": 0.035
+   },
+   "board_count": 3,
+   "board_width": 0.83,
+   "board_spacing": 0.265,
    "boards": [
     {
      "index": 0,
@@ -318,48 +445,257 @@
       0.0,
       0.0
      ],
-     "width": 0.65,
-     "depth": 0.26,
-     "clear_height": 0.355
+     "width": 0.83,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415,
+      0.573,
+      0.731
+     ],
+     "clear_height": 0.235
     },
     {
      "index": 1,
      "offset": [
       0.0,
       0.0,
-      0.38
+      0.265
      ],
-     "width": 0.65,
-     "depth": 0.26,
-     "clear_height": 0.37
+     "width": 0.83,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415,
+      0.573,
+      0.731
+     ],
+     "clear_height": 0.235
+    },
+    {
+     "index": 2,
+     "offset": [
+      0.0,
+      0.0,
+      0.53
+     ],
+     "width": 0.83,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415,
+      0.573,
+      0.731
+     ],
+     "clear_height": 0.2
     }
    ],
-   "capacity_at_mean_spine": 30,
-   "shelf_length_needed": 0.588,
+   "spine_board": {
+    "offset": [
+     0.0,
+     -0.012,
+     0.79
+    ],
+    "width": 0.83,
+    "depth": 0.235,
+    "clear_height": 0.23
+   },
+   "door": {
+    "node": "act_cab_people",
+    "hinge_position": [
+     1.14,
+     -1.543,
+     0.76
+    ],
+    "hinge_side": "left",
+    "open_deg": -170.0,
+    "width": 0.83,
+    "height": 1.1,
+    "opens": "the glazed door swings outward (toward the visitor) about its hinge edge, the node's origin (on the door's front face): rotate the node about its local vertical axis by open_deg (Blender Z and three.js Y take the same sign; negative for a left hinge). Fully open it folds flat beside the cabinet, out of the cam_cat view"
+   },
    "sign": {
     "node": "sign_cat_people",
     "text": "Menschen & Gespräche",
     "center": [
-     2.0657,
-     -1.5685,
-     1.335
+     1.555,
+     -1.5,
+     2.08
     ],
     "size": [
-     0.68,
-     0.24
+     0.86,
+     0.26
     ]
    },
    "cam": "cam_cat_people",
    "cam_position": [
-    1.8499,
-    -3.218,
-    1.55
+    1.555,
+    -2.5523,
+    1.2188
    ],
    "cam_target": "cam_cat_people_target",
    "cam_target_position": [
-    2.1537,
-    -1.4946,
-    0.86
+    1.555,
+    -1.435,
+    1.1988
+   ],
+   "cam_distance": 1.117,
+   "covers_area": [
+    0.79,
+    0.738
+   ]
+  },
+  {
+   "key": "decisions",
+   "label_de": "Risiko & Entscheidungen",
+   "label_en": "Risk, Decisions and Markets",
+   "books": 11,
+   "unit": "wing_r",
+   "kind": "glazed cabinet in the right wing (inner)",
+   "rows": 3,
+   "covers_per_row": 4,
+   "capacity": 12,
+   "cabinet": {
+    "width": 0.732,
+    "depth": 0.32,
+    "height": 1.9,
+    "origin": [
+     2.1743,
+     -1.4651,
+     0
+    ],
+    "rotation_z_deg": -40.0,
+    "glass_bottom": 0.76,
+    "glass_top": 1.86
+   },
+   "slot": "slot_cat_decisions",
+   "slot_position": [
+    2.2339,
+    -1.4408,
+    0.83
+   ],
+   "slot_rotation_z_deg": -40.0,
+   "cover_max": {
+    "width": 0.145,
+    "height": 0.215,
+    "thickness": 0.035
+   },
+   "board_count": 3,
+   "board_width": 0.672,
+   "board_spacing": 0.265,
+   "boards": [
+    {
+     "index": 0,
+     "offset": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "width": 0.672,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415,
+      0.573
+     ],
+     "clear_height": 0.235
+    },
+    {
+     "index": 1,
+     "offset": [
+      0.0,
+      0.0,
+      0.265
+     ],
+     "width": 0.672,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415,
+      0.573
+     ],
+     "clear_height": 0.235
+    },
+    {
+     "index": 2,
+     "offset": [
+      0.0,
+      0.0,
+      0.53
+     ],
+     "width": 0.672,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415,
+      0.573
+     ],
+     "clear_height": 0.2
+    }
+   ],
+   "spine_board": {
+    "offset": [
+     0.0,
+     -0.012,
+     0.79
+    ],
+    "width": 0.672,
+    "depth": 0.235,
+    "clear_height": 0.23
+   },
+   "door": {
+    "node": "act_cab_decisions",
+    "hinge_position": [
+     2.6973,
+     -1.934,
+     0.76
+    ],
+    "hinge_side": "right",
+    "open_deg": 170.0,
+    "width": 0.672,
+    "height": 1.1,
+    "opens": "the glazed door swings outward (toward the visitor) about its hinge edge, the node's origin (on the door's front face): rotate the node about its local vertical axis by open_deg (Blender Z and three.js Y take the same sign; negative for a left hinge). Fully open it folds flat beside the cabinet, out of the cam_cat view"
+   },
+   "sign": {
+    "node": "sign_cat_decisions",
+    "text": "Risiko & Entscheidungen",
+    "center": [
+     2.4675,
+     -1.6851,
+     2.08
+    ],
+    "size": [
+     0.702,
+     0.26
+    ]
+   },
+   "cam": "cam_cat_decisions",
+   "cam_position": [
+    1.7911,
+    -2.4912,
+    1.2188
+   ],
+   "cam_target": "cam_cat_decisions_target",
+   "cam_target_position": [
+    2.5093,
+    -1.6353,
+    1.1988
+   ],
+   "cam_distance": 1.117,
+   "covers_area": [
+    0.632,
+    0.738
    ]
   },
   {
@@ -368,19 +704,38 @@
    "label_en": "Craft, Habits and Work",
    "books": 5,
    "unit": "wing_r",
-   "kind": "side rack (right wing, bay 2 of 2 from the visitor's left)",
+   "kind": "glazed cabinet in the right wing (outer)",
+   "rows": 1,
+   "covers_per_row": 5,
+   "capacity": 5,
+   "cabinet": {
+    "width": 0.89,
+    "depth": 0.32,
+    "height": 1.9,
+    "origin": [
+     2.7542,
+     -1.9517,
+     0
+    ],
+    "rotation_z_deg": -40.0,
+    "glass_bottom": 1.29,
+    "glass_top": 1.86
+   },
    "slot": "slot_cat_craft",
    "slot_position": [
-    2.3118,
-    -1.8385,
-    0.42
+    2.8138,
+    -1.9273,
+    1.36
    ],
-   "slot_rotation_z_deg": -50.0,
-   "board_count": 2,
-   "board_width": 0.45,
-   "board_depth": 0.26,
-   "board_thickness": 0.025,
-   "board_spacing": 0.38,
+   "slot_rotation_z_deg": -40.0,
+   "cover_max": {
+    "width": 0.145,
+    "height": 0.215,
+    "thickness": 0.035
+   },
+   "board_count": 1,
+   "board_width": 0.83,
+   "board_spacing": 0.265,
    "boards": [
     {
      "index": 0,
@@ -389,69 +744,90 @@
       0.0,
       0.0
      ],
-     "width": 0.45,
-     "depth": 0.26,
-     "clear_height": 0.355
-    },
-    {
-     "index": 1,
-     "offset": [
-      0.0,
-      0.0,
-      0.38
+     "width": 0.83,
+     "ledge_depth": 0.075,
+     "lean_deg": 15.0,
+     "cover_slots_x": [
+      0.099,
+      0.257,
+      0.415,
+      0.573,
+      0.731
      ],
-     "width": 0.45,
-     "depth": 0.26,
-     "clear_height": 0.37
+     "clear_height": 0.2
     }
    ],
-   "capacity_at_mean_spine": 21,
-   "shelf_length_needed": 0.21,
+   "spine_board": {
+    "offset": [
+     0.0,
+     -0.012,
+     0.26
+    ],
+    "width": 0.83,
+    "depth": 0.235,
+    "clear_height": 0.23
+   },
+   "door": {
+    "node": "act_cab_craft",
+    "hinge_position": [
+     3.3982,
+     -2.5221,
+     1.29
+    ],
+    "hinge_side": "right",
+    "open_deg": 170.0,
+    "width": 0.83,
+    "height": 0.57,
+    "opens": "the glazed door swings outward (toward the visitor) about its hinge edge, the node's origin (on the door's front face): rotate the node about its local vertical axis by open_deg (Blender Z and three.js Y take the same sign; negative for a left hinge). Fully open it folds flat beside the cabinet, out of the cam_cat view"
+   },
    "sign": {
     "node": "sign_cat_craft",
     "text": "Handwerk & Gewohnheit",
     "center": [
-     2.4449,
-     -2.0205,
-     1.335
+     3.1079,
+     -2.2224,
+     2.08
     ],
     "size": [
-     0.48,
-     0.24
+     0.86,
+     0.26
     ]
    },
    "cam": "cam_cat_craft",
    "cam_position": [
-    1.1924,
-    -3.0714,
-    1.45
+    2.7171,
+    -2.6882,
+    1.4838
    ],
    "cam_target": "cam_cat_craft_target",
    "cam_target_position": [
-    2.533,
-    -1.9466,
-    0.86
+    3.1497,
+    -2.1727,
+    1.4638
+   ],
+   "cam_distance": 0.673,
+   "covers_area": [
+    0.79,
+    0.208
    ]
   }
  ],
  "units": {
   "wing_l": {
-   "length": 1.22,
-   "depth": 0.32,
-   "phi_deg": 50.0
+   "origin": [
+    -3.3149,
+    -2.4222
+   ],
+   "rotation_z_deg": 40.0,
+   "length": 1.489
   },
   "wing_r": {
-   "length": 1.22,
-   "depth": 0.32,
-   "phi_deg": 50.0
-  },
-  "cart_l": {
-   "width": 0.6,
-   "front_y": -2.28
-  },
-  "cart_r": {
-   "width": 0.68,
-   "front_y": -2.28
+   "origin": [
+    2.1743,
+    -1.4651
+   ],
+   "rotation_z_deg": -40.0,
+   "length": 1.647
   }
  }
 }

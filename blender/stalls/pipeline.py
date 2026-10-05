@@ -55,6 +55,20 @@ def vendor_props(pairs, rotate=False):
     return bool(got)
 
 
+def vendor_sets(asset, rotate=True):
+    """Round 8: import every vendor set that props.json places on `asset` (e.g. "stall_schmuck.glb")
+    at its slot, for the Cycles preview. Returns True when at least one set was imported."""
+    path = os.path.join(state.MODELS_DIR, "props.json")
+    if not os.path.exists(path):
+        return False
+    with open(path) as f:
+        sets = json.load(f).get("sets", [])
+    pairs = [(s["set"], s["slot"]) for s in sets if s.get("asset") == asset and s.get("slot")]
+    import bpy
+    pairs = [(n, sl) for (n, sl) in pairs if sl in bpy.data.objects]
+    return vendor_props(pairs, rotate=rotate) if pairs else False
+
+
 def is_hidden_for_ao(o):
     return o.name.startswith(("snow_", "bulbs_"))
 

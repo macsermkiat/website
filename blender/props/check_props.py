@@ -23,10 +23,16 @@ FAIL (exit 1):
 - full / lite bounds parity: every act_ node's subtree (the node and everything under it) has the same
   world bounding box in the lite glb as in the full glb within 1 cm, and every named mesh node within 2 cm
   (so a lite simplification that changes the shape, e.g. a foam head growing into a column, fails)
+- round 8 (ADR 0004): every deco stall (counter, shelves, front) <= 20k with its goods and at least five act_
+  nodes per stall; the ornament shop (stall_schmuck.glb) <= 40k triangles and 2 MB with its goods, and it carries
+  >= 12 act_orn_bauble_<n>, act_orn_pickle, the pine cone, bird, mushroom, icicle, straw/wooden stars, angels,
+  act_orn_herrnhut with a bulb_warm core, act_orn_nutcracker_jaw, act_orn_smoker with fx_smoke_<n>, the
+  Schwibbogen with act_orn_candle_<n> and hook_tree_<n> empties; every deco act_ item has a label and action.
+  Sets with a 'seat' of hang / stand / ground skip the board y-range test (collisions are still tested).
 WARN (listed, exit 0): lite versions above 38 % of the full triangles (target about a third).
 
     python3 blender/props/check_props.py --notes   also rewrites the budget tables in
-                                                   review/round-4/vendor/NOTES.md from the current glbs
+                                                   review/round-8/vendor/NOTES.md from the current glbs
 """
 import json
 import os
@@ -53,6 +59,9 @@ SECTION_SETS = ["prop_gluehwein_counter", "prop_gluehwein_shelf", "prop_gluehwei
 # BUILD.md: the Bücherstand with all its props may use 80k triangles and 4 MB; the other section stalls 60k / 3 MB
 STALL_BUDGET = {"buecherstand": (80000, 4.0)}
 DECO_KEYS = ["lebkuchen", "mandeln", "kerzen", "spielzeug", "schmuck", "kaese", "crepes", "maroni", "puffer"]
+FILL_KEYS = [d for d in DECO_KEYS if d != "schmuck"]
+SCHMUCK_SETS = [f"prop_schmuck_{g}" for g in ("rail_1", "rail_2", "rail_3", "rail_4", "counter", "shelf", "case", "tree")]
+SCHMUCK_TRIS, SCHMUCK_MB = 40000, 2.0
 NO_AO = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade",
          "write_")
 BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|sausage|coaster)_\d+$|^act_grill$"
@@ -62,7 +71,7 @@ BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|
 HEADROOM, SECTION_TRIS, SECTION_MB, DECO_TRIS = 2000, 60000, 3.0, 20000
 LITE_RATIO = 0.38
 ACT_BBOX_TOL, MESH_BBOX_TOL = 0.01, 0.02          # m: full vs lite bounds of act_ subtrees / mesh nodes
-NOTES = os.path.join(REPO, "review", "round-6", "vendor", "NOTES.md")
+NOTES = os.path.join(REPO, "review", "round-8", "vendor", "NOTES.md")
 SEAT = os.path.join(HERE, "seat_check.mjs")
 
 fails, warns = [], []
@@ -141,19 +150,30 @@ def check_ao(name, js):
             return
 
 
-def check_geometry(name, r):
+def check_geometry(name, r, seat="board"):
     size, lo, hi = r.get("size"), r.get("bbox_min"), r.get("bbox_max")
     if not size:
         fail(f"{name}: no bounding box in props_report.json (rebuild)")
         return
-    if size[1] > 0.5 + 1e-3:
+    if seat == "hang":
+        # round 8: ornaments hang under a rail (clip-on birds sit on it)
+        if hi[2] > 0.1:
+            fail(f"{name} reaches {hi[2]:.3f} m above its rail")
+    elif seat in ("stand", "ground"):
+        if lo[2] < -0.002:
+            fail(f"{name} reaches {lo[2]:.3f} m below its slot")
+        if hi[2] > 1.45 + 1e-3:
+            fail(f"{name} is {hi[2]:.3f} m tall (> 1.45)")
+    elif size[1] > 0.5 + 1e-3:
         fail(f"{name} is {size[1]:.3f} m deep (> 0.5)")
     floor = r.get("grill_seat", {}).get("floor_z")
-    if floor is not None and lo[2] < floor - 0.002:
+    if seat != "board":
+        pass
+    elif floor is not None and lo[2] < floor - 0.002:
         fail(f"{name} reaches {lo[2]:.3f} m, below the grill opening's deck at {floor:.3f}")
     elif floor is None and lo[2] < -0.002:
         fail(f"{name} reaches {lo[2]:.3f} m below its slot")
-    if hi[2] > 1.15 + 1e-3:
+    if seat == "board" and hi[2] > 1.15 + 1e-3:
         fail(f"{name} is {hi[2]:.3f} m tall (front opening is 1.15)")
     for node, p in r.get("pivots", {}).items():
         # rest_min_z: lowest point of the node's geometry above its origin, measured along world Z, so an
@@ -317,9 +337,10 @@ def check_bounds_parity(name, js_full, js_lite):
 
 def seat_check(sets):
     """Run seat_check.mjs on every set (full and lite) against its stall at its slot."""
-    jobs = []
+    jobs, seats = [], {}
     for name, e in sets.items():
         for variant in ("model", "lite"):
+            seats[f"{name}|{variant}"] = e.get("seat", "board")
             jobs.append({"set": f"{name}|{variant}", "prop": os.path.join(MODELS, e[variant]),
                          "stall": os.path.join(MODELS, e["asset"]), "slot": e["slot"]})
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
@@ -351,6 +372,8 @@ def seat_check(sets):
         for c in cuts:
             how = "sunk under a stall top by" if c.get("sunk") else "reaching behind a stall face by"
             fail(f"{tag}: {c['node']} cuts into the stall at {c['at']} (slot frame, m), {how} {c['depth'] * 100:.1f} cm")
+        if seats.get(key, "board") != "board":
+            continue                     # hangs from a rail, overhangs a dais or stands on the lane: no board test
         if not sup:
             fail(f"{tag}: no board at the slot height under the set")
         elif bb["min"][1] < sup["y_min"] - 0.005 or bb["max"][1] > sup["y_max"] + 0.005:
@@ -535,6 +558,42 @@ def check_books(items, seen):
     print(f"\nbooks: {len(got)} of {len(want)} titles from categories.json, one act_book_ node each")
 
 
+def check_fill(sets, items, seen):
+    """Round 8 (ADR 0004): deco items carry label and action; the ornament shop has its named pieces."""
+    for n, st in seen.items():
+        it = items.get(n, {})
+        if it.get("kind") == "deco" and not (it.get("label") and it.get("action")):
+            fail(f"items.json: {n} ({st}) lacks label or action")
+    orn = {n for n, st in seen.items() if st in SCHMUCK_SETS}
+    baubles = [n for n in orn if re.match(r"^act_orn_bauble_\d+$", n)]
+    if len(baubles) < 12:
+        fail(f"ornament shop: {len(baubles)} act_orn_bauble_<n> (want at least 12)")
+    for want in ("act_orn_pickle", "act_orn_herrnhut", "act_orn_nutcracker_jaw", "act_orn_smoker",
+                 "act_orn_schwibbogen"):
+        if want not in orn:
+            fail(f"ornament shop: missing {want}")
+    for kind in ("pinecone", "bird", "mushroom", "icicle", "strawstar", "woodstar", "angel", "candle"):
+        if not any(re.match(rf"^act_orn_{kind}_\d+$", n) for n in orn):
+            fail(f"ornament shop: no act_orn_{kind}_<n>")
+    extra = {}
+    for name in SCHMUCK_SETS:
+        if name not in sets:
+            continue
+        js, _ = glb_tools.read_glb(os.path.join(MODELS, sets[name]["model"]))
+        names = glb_tools.node_names(js)
+        extra[name] = names
+        mats = {m.get("name", "") for m in js.get("materials", [])}
+        if name == "prop_schmuck_rail_1" and "bulb_warm" not in mats:
+            fail("act_orn_herrnhut has no bulb_warm material inside")
+    allnames = [n for v in extra.values() for n in v]
+    if not any(n.startswith("fx_smoke_") for n in allnames):
+        fail("ornament shop: act_orn_smoker has no fx_smoke_<n> empty")
+    hooks = [n for n in allnames if re.match(r"^hook_tree_\d+$", n)]
+    if not hooks:
+        fail("ornament shop: the display tree has no hook_tree_<n> empties")
+    print(f"\nornament shop: {len(orn)} act_orn nodes ({len(baubles)} baubles), {len(hooks)} tree hooks")
+
+
 def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite):
     """Replace the generated budget block in NOTES.md (between the check_props markers)."""
     L = ["<!-- check_props:begin (generated by blender/props/check_props.py --notes; do not edit by hand) -->", "",
@@ -553,10 +612,13 @@ def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite
     for st, a, b, tot, room, mb, lt, lmb in section_rows:
         L.append(f"| {st} | {a} | {b} | {tot} / {lt // 1000}k {'OK' if room >= HEADROOM else 'FAIL'} | {room} | "
                  f"{mb:.2f} / {lmb:.0f} |")
-    L += ["", "Deco stalls, stall plus goods against 20k (check_props fails over):", "",
-          "| deco stall | stall tris | goods | total / 20k | room |", "|---|---|---|---|---|"]
-    for d, a, b, tot in deco_rows:
-        L.append(f"| {d} | {a} | {b} | {tot} {'OK' if tot <= DECO_TRIS else 'over'} | {DECO_TRIS - tot} |")
+    L += ["", "Deco stalls, stall plus all its goods sets against 20k (the ornament shop, stall_schmuck.glb, against "
+          "40k and 2 MB; check_props fails over):", "",
+          "| deco stall | stall tris | goods | total / budget | room | clickable | MB with goods |",
+          "|---|---|---|---|---|---|---|"]
+    for d, a, b, tot, lim, n_act, mb in deco_rows:
+        L.append(f"| {d} | {a} | {b} | {tot} / {lim // 1000}k {'OK' if tot <= lim else 'over'} | {lim - tot} | "
+                 f"{n_act} | {mb:.2f} |")
     L += ["", "<!-- check_props:end -->"]
     block = "\n".join(L)
     txt = open(NOTES).read() if os.path.exists(NOTES) else ""
@@ -573,8 +635,9 @@ def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite
 def main():
     with open(os.path.join(MODELS, "props.json")) as f:
         pj = json.load(f)
-    if set(pj) - {"about", "sets", "by_set", "standalone"}:
-        fail(f"props.json has extra top-level keys {sorted(set(pj) - {'about', 'sets', 'by_set', 'standalone'})}")
+    if set(pj) - {"about", "sets", "by_set", "standalone", "retired"}:
+        fail(f"props.json has extra top-level keys {sorted(set(pj) - {'about', 'sets', 'by_set', 'standalone', 'retired'})}")
+    retired = {e["set"] for e in pj.get("retired", [])}
     by = pj.get("by_set", {})
     if {e.get("set") for e in pj.get("sets", [])} != set(by) or any(
             by[e["set"]] != {k: e[k] for k in ("slot", "stall", "model", "lite", "asset")} for e in pj.get("sets", [])):
@@ -589,9 +652,9 @@ def main():
     files = sorted(f[:-4] for f in os.listdir(MODELS) if f.startswith("prop_") and f.endswith(".glb")
                    and not f.endswith(".lite.glb"))
     for f in files:
-        if f not in sets:
+        if f not in sets and f not in retired:
             fail(f"{f}.glb is not in props.json")
-    for n in SECTION_SETS + [f"prop_deco_{d}" for d in DECO_KEYS]:
+    for n in SECTION_SETS + [f"prop_deco_{d}{p}" for d in FILL_KEYS for p in ("", "_shelf", "_front")] + SCHMUCK_SETS:
         if n not in sets:
             fail(f"missing set {n}")
     tex = sum(os.path.getsize(os.path.join(MODELS, t)) for t in os.listdir(MODELS)
@@ -635,7 +698,7 @@ def main():
                     fail(f"items.json has no entry for {n} ({name})")
                 elif items[n].get("kind") == "book" and not (items[n].get("title") and items[n].get("author")):
                     fail(f"items.json: {n} lacks title or author")
-        check_geometry(name, r)
+        check_geometry(name, r, e.get("seat", "board"))
         if ratio > LITE_RATIO:
             warn(f"{name}: lite has {ratio:.0%} of the full triangles (target about a third)")
         per_stall.setdefault(e["stall"], []).append((rf, rl, uris(paths[0])))
@@ -663,17 +726,28 @@ def main():
             fail(f"{stall}: {tot} triangles leaves {lim_t - tot} headroom (< {HEADROOM})")
         if mb > lim_mb:
             fail(f"{stall}: {mb:.2f} MB with the shared textures (> {lim_mb})")
-    print(f"\n{'deco stall':14s} {'stall':>6s} {'goods':>6s} {'total':>6s}")
+    print(f"\n{'deco stall':14s} {'stall':>6s} {'goods':>6s} {'total':>6s} {'acts':>5s}")
     for d in DECO_KEYS:
         sid = "deco-" + ("kartoffelpuffer" if d == "puffer" else d)
-        sr = glb_tools.report(os.path.join(MODELS, f"deco_{d}.glb"))
+        asset = "stall_schmuck.glb" if d == "schmuck" else f"deco_{d}.glb"
+        lim = SCHMUCK_TRIS if d == "schmuck" else DECO_TRIS
+        sr = glb_tools.report(os.path.join(MODELS, asset))
         pt = sum(r[0]["triangles"] for r in per_stall.get(sid, []))
         tot = sr["triangles"] + pt
-        print(f"{d:14s} {sr['triangles']:6d} {pt:6d} {tot:6d}")
-        deco_rows.append((d, sr["triangles"], pt, tot))
-        if tot > DECO_TRIS:
-            fail(f"deco {d}: stall {sr['triangles']} + goods {pt} = {tot} > {DECO_TRIS} "
-                 f"({'the stall alone leaves ' + str(max(0, DECO_TRIS - sr['triangles'])) + ' for goods'})")
+        n_act = sum(1 for n, st in seen.items() if sets[st]["stall"] == sid)
+        used = set().union(*(r[2] for r in per_stall.get(sid, []))) if per_stall.get(sid) else set()
+        mb = (sr["bytes"] + sum(r[0]["bytes"] for r in per_stall.get(sid, []))
+              + sum(os.path.getsize(os.path.join(MODELS, u)) for u in used)) / 1e6
+        print(f"{d:14s} {sr['triangles']:6d} {pt:6d} {tot:6d} {n_act:5d}  {mb:.2f} MB  ({asset}, of {lim // 1000}k)")
+        deco_rows.append((d, sr["triangles"], pt, tot, lim, n_act, mb))
+        if tot > lim:
+            fail(f"deco {d}: stall {sr['triangles']} + goods {pt} = {tot} > {lim} "
+                 f"({'the stall alone leaves ' + str(max(0, lim - sr['triangles'])) + ' for goods'})")
+        if n_act < 5:
+            fail(f"deco {d}: only {n_act} clickable act_ nodes (round 8 wants at least five per stall)")
+        if d == "schmuck" and mb > SCHMUCK_MB:
+            fail(f"ornament shop: {mb:.2f} MB with its goods and their shared textures (> {SCHMUCK_MB})")
+    check_fill(sets, items, seen)
     check_books(items, seen)
     check_writing(sets, items, pj)
     # the beer heads as the browser decodes them (meshopt, quantised node transforms): no tall foam columns

@@ -36,7 +36,7 @@ from nmlib import state  # noqa: E402
 TWO_PI = 2 * math.pi
 ATLAS_DIR = os.path.join(REPO, "blender", "out", "vendor")
 MODELS = os.path.join(REPO, "site", "public", "models")
-REVIEW = os.path.join(REPO, "review", "round-6", "vendor")
+REVIEW = os.path.join(REPO, "review", "round-8", "vendor")
 _REG = None
 LITE = {"on": False}
 # Two random streams. `rng` is the layout stream: where goods stand, their sizes and which book is which.
@@ -69,6 +69,8 @@ def regions():
         _REG = dict(meta["regions"])
         _REG.update(meta["books"]["regions"])      # books_* atlas (spines, covers, pages)
         _REG.update(print_meta()["regions"])         # print_* atlas (round 6: coasters, Marktblatt, back labels)
+        import atlas_market
+        _REG.update(atlas_market.load()["regions"])  # market_* atlas (round 8: shelf goods, baubles, ornaments)
     return _REG
 
 
@@ -562,6 +564,21 @@ def material(key):
         _atlas_nodes(m, atlas="books")
         _MATS[key] = m
         return m
+    if key == "market":
+        m = bpy.data.materials.new("vendor_market")
+        m.use_nodes = True
+        _atlas_nodes(m, atlas="market")
+        _MATS[key] = m
+        return m
+    if key == "market_glaze":
+        # painted glass baubles and glazed figure ornaments: the market atlas under a clear coat
+        m = bpy.data.materials.new("vendor_market_glaze")
+        m.use_nodes = True
+        b = _atlas_nodes(m, atlas="market")
+        b.inputs["Coat Weight"].default_value = 1.0
+        b.inputs["Coat Roughness"].default_value = 0.04
+        _MATS[key] = m
+        return m
     if key == "print":
         m = bpy.data.materials.new("vendor_print")
         m.use_nodes = True
@@ -826,7 +843,7 @@ def tex_uri(lite_mode):
     return lambda name: "prop_tex_" + name + (".lite" if lite_mode else "") + ".webp"
 
 
-SHARED_TEX = ("atlas_", "coal_", "books_", "print_", "write_")   # images shipped once as prop_tex_*.webp for all sets
+SHARED_TEX = ("atlas_", "coal_", "books_", "print_", "write_", "market_")   # images shipped once as prop_tex_*.webp for all sets
 TEX_FULL, TEX_LITE = 2048, 512                # the contract: lite textures are 512 px
 AO_FULL, AO_LITE = 512, 256                   # per-set AO atlas (occlusion texture, TEXCOORD_1)
 

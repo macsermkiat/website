@@ -306,7 +306,8 @@ def stall_scene(ps, stall_glb, extra_lights=()):
     if slot is None:
         raise RuntimeError(f"{stall_glb} has no {ps.slot}")
     origin = slot.matrix_world.translation.copy()
-    ps.objs[ps.name].location = origin
+    # round 8: the slot's rotation too (the Bücherstand's wing cabinets stand at +-40 degrees)
+    ps.objs[ps.name].matrix_world = slot.matrix_world.normalized()
     bpy.context.view_layer.update()
     n = 0
     for o in objs:

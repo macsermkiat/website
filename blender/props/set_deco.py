@@ -14,6 +14,7 @@ import bmesh  # noqa: F401
 from mathutils import Matrix, Vector
 
 import goods as G
+import set_decofill as F
 import vlib
 from set_wurst import lump
 from vlib import C, T, WHITE, drng, jit, rng, seg
@@ -31,7 +32,7 @@ ROD_Z, ROD_Y = 1.08, -0.03
 # jitter come from their own seeded generator (`irng`), never from the shared stream that lite runs
 # differently.
 @contextmanager
-def item(s, name, origin, label, detail, pivot="base", **extra):
+def item(s, name, origin, display, detail, pivot="base", **extra):
     """Build an item in set coordinates inside the `with`; it lands in its own node, origin at `origin`."""
     m = s.node(name, tuple(origin))
     yield m
@@ -39,7 +40,7 @@ def item(s, name, origin, label, detail, pivot="base", **extra):
     m.V[:] = [(x - ox, y - oy, z - oz) for x, y, z in m.V]
     if pivot == "hang":
         pivot = "hang: the ribbon's knot on the rod; the item swings about it"
-    s.item(name, label, "deco", pivot=pivot, detail=detail, **extra)
+    s.item(name, display, "deco", pivot=pivot, detail=detail, **extra)
 
 
 def irng(*key):
@@ -231,7 +232,7 @@ def lebkuchen():
                  ribbon=(C("b0282a"), C("2a6a3a"), C("d8b048"))[j])
     for k, (x, y) in enumerate(((-0.6, -0.2), (0.1, -0.17), (0.62, -0.17), (0.95, -0.21))):
         price_tag(m, T(x, y, 0), (0, 5, 1, 3)[k])
-    s.finish()
+    F.finish_deco(s, "lebkuchen")
     return s
 
 
@@ -322,7 +323,8 @@ def mandeln():
         m.lathe([(0.004, 0.0), (0.034, 0.16)], seg(7, 5), "cone_paper", Mc, jit(WHITE, 0.04), "atlas")
     for k, (x, y) in enumerate(((-0.32, -0.21), (0.66, -0.21), (0.17, -0.225))):
         price_tag(m, T(x, y + 0.012, 0.0 if k != 2 else 0.002), (1, 6, 1)[k])
-    s.finish()
+    F.mandeln_rail(s, F.WIDTH["mandeln"])
+    F.finish_deco(s, "mandeln", free=[("steam", (-0.72, 0.0, 0.25))])
     return s
 
 
@@ -354,6 +356,7 @@ def taper_pair(m, x, drop, col):
 def kerzen():
     s = vlib.PropSet("prop_deco_kerzen", "slot_counter", "deco-kerzen")
     m = s.static
+    fx = {}
     rod(m, -1.05, 1.05)
     for i, x in enumerate((-0.95, -0.85, -0.75, 0.75, 0.85, 0.95) if not vlib.lite() else (-0.9, 0.8)):
         taper_pair(m, x, rng.uniform(0.22, 0.3), C(CANDLE_COLS[i % len(CANDLE_COLS)]))
@@ -393,6 +396,7 @@ def kerzen():
             label = f"{cname[0].upper() + cname[1:]} {what}"
             detail = (f"{label}, {round(h * 100)} cm tall, {round(r * 200)} cm across. {extra}"
                       f"{' Lit, to show the flame.' if lit else ''}")
+            fx[f"act_candle_{n_item}"] = ("flame", (0.0, 0.0, h + 0.012))
             with item(s, f"act_candle_{n_item}", pos, label, detail, colour=cname, lit=lit) as cm:
                 candle(cm, T(*pos), r, h, jit(col, 0.05), lit=lit, kind=kind, n=seg(8, 6))
             n_item += 1
@@ -434,7 +438,7 @@ def kerzen():
                  ribbon=C(("b0282a", "d8b048", "d8b048", "2a5a3a", "b0282a")[k]))
     for k, (x, y) in enumerate(((-0.6, -0.215), (0.2, -0.215), (0.95, 0.02))):
         price_tag(m, T(x, y, 0.0), (2, 2, 3)[k])
-    s.finish()
+    F.finish_deco(s, "kerzen", fx=fx, free=[("flame", (0.85, 0.0, 0.127))])
     return s
 
 
@@ -500,7 +504,8 @@ def pyramid(s, x, y):
         a = TWO_PI * k / 4 + math.pi / 4
         m.cyl(0.006, 0.006, 0.3, 6 if not vlib.lite() else 4, vlib.RW("wood"),
               T(x + 0.09 * math.cos(a), y + 0.09 * math.sin(a), 0.012), C("c89a64"), caps=False)
-        candle(m, T(x + 0.09 * math.cos(a), y + 0.09 * math.sin(a), 0.312), 0.006, 0.035, C("f2ead8"), lit=(k % 2 == 0))
+        candle(m, T(x + 0.09 * math.cos(a), y + 0.09 * math.sin(a), 0.312), 0.006, 0.035, C("f2ead8"), lit=(k % 2 == 0),
+               n=seg(5, 5))
     rot = s.node("rot_pyramid", (x, y, 0.0))
     rot.cyl(0.004, 0.004, 0.42, 6 if not vlib.lite() else 4, "sw_satin", None, C("c89a64"), caps=False)
     for z in (0.012, 0.162):
@@ -533,7 +538,7 @@ def spielzeug():
     # a stepped riser along the back of the left half, with a row of shaving trees on it
     m.box((1.22, 0.1, 0.07), T(-0.4, 0.18, 0.035), vlib.RW("wood"), C("8a5a34"), skip=("nz",))
     for k, x in enumerate((-0.94, -0.78, -0.62, -0.3, -0.14, 0.02)):
-        if vlib.lite() and k != 2:
+        if (vlib.lite() and k != 2) or k in (1, 4):           # round 8: four trees (budget)
             continue
         spanbaum(m, T(x, 0.18, 0.07, rz=k), h=0.1 + (k % 3) * 0.03, col=C(["e8d0a0", "d8e0c0", "e0c8a0"][k % 3]))
     # round 4: the nutcrackers, the train, the spinning tops and the rocking horse are items (all of them in
@@ -554,15 +559,15 @@ def spielzeug():
                   f"A turned wooden spinning top in {['red', 'blue', 'yellow'][k]} lacquer with a cream stripe.") as tm:
             top(tm, T(x, -0.14, 0), C(["b0282a", "2a4a8a", "d8b048"][k]))
     # a tower of painted blocks
-    for k in range(6 if not vlib.lite() else 3):
+    for k in range(5 if not vlib.lite() else 3):
         m.box((0.04, 0.04, 0.04), T(0.25 + (k % 3) * 0.045 - (k // 3) * 0.02, 0.06, 0.02 + (k // 3) * 0.04,
                                     rz=drng.uniform(-0.2, 0.2)), vlib.RW("wood"), C(CANDLE_COLS[k]))
     pyramid(s, 0.55, 0.05)
     # a second little tower of blocks with letters' colours, three plywood stars standing at the front, tags
-    for k in range(4 if not vlib.lite() else 2):
+    for k in range(3 if not vlib.lite() else 2):
         m.box((0.04, 0.04, 0.04), T(0.3 + (k % 2) * 0.045, -0.13, 0.02 + (k // 2) * 0.04, rz=drng.uniform(-0.25, 0.25)),
               vlib.RW("wood"), C(CANDLE_COLS[(k + 3) % len(CANDLE_COLS)]))
-    for k in range(3 if not vlib.lite() else 1):
+    for k in range(2 if not vlib.lite() else 1):
         m.extrude(star_poly(0.05, 0.022, 5), 0.008, T(0.62 + k * 0.1, -0.17, 0.05, rx=math.pi / 2 - 0.1, rz=0.1 * (k - 1)),
                   vlib.RW("wood"), vlib.RW("wood"), C(["d8b078", "b0282a", "c8a070"][k]), back=False)
     for k, (x, y) in enumerate(((-0.93, -0.2), (-0.3, -0.21), (0.13, -0.215))):
@@ -587,11 +592,13 @@ def spielzeug():
     m = m_set
     # wooden stars and hearts cut from plywood, leaning in a small crate at the right end
     G.crate(m, T(0.86, 0.17, 0), 0.2, 0.1, 0.05, C("b48c5c"), slats=1)
-    for k in range(4 if not vlib.lite() else 2):
+    for k in range(3 if not vlib.lite() else 2):
         poly = star_poly(0.04, 0.018, 5) if k % 2 == 0 else heart_poly(0.08, 10)
         m.extrude(poly, 0.006, T(0.8 + k * 0.04, 0.16, 0.05, rx=math.pi / 2 - 0.3, rz=drng.uniform(-0.15, 0.15)),
                   vlib.RW("wood"), vlib.RW("wood"), C(["c8a070", "b0282a", "d8b078", "2a6a3a"][k]), back=not vlib.lite())
-    s.finish()
+    F.spielzeug_rail(s, F.WIDTH["spielzeug"])
+    F.finish_deco(s, "spielzeug", actions={"train": "roll", "top": "spin", "rockinghorse": "rock"},
+                  free=[("flame", (0.55 + 0.09 * math.cos(a), 0.05 + 0.09 * math.sin(a), 0.36)) for a in (math.pi / 4, 5 * math.pi / 4)])
     return s
 
 
@@ -710,7 +717,7 @@ def schmuck():
 def cheese_wheel(m, M, r, h, cut=0.0, rind=C("ffffff"), wax=None, n_lo=10):
     """A wheel; with cut (radians) a wedge is missing at the front showing the paste. n_lo: fewest sides in
     lite (12 for items, so the lite wheel keeps the full one's bounds)."""
-    n = seg(28, n_lo) if n_lo <= 6 else (max(n_lo, int(round(28 * 0.34))) if vlib.lite() else 28)
+    n = seg(18, n_lo) if n_lo <= 6 else (max(n_lo, int(round(28 * 0.34))) if vlib.lite() else 18)   # round 8: 28 -> 18 sides
     arc = TWO_PI - cut
     a0 = -math.pi / 2 + cut / 2
     region = "cheese_rind" if wax is None else "sw_gloss"
@@ -766,7 +773,7 @@ def kaese():
         if k % 2:
             with item(s, f"act_cheese_{7 + k}", (cx, cy, 0.06 - 0.055 * 0.8), "Mini Gouda in red wax",
                       "A round mini Gouda in red wax, about 400 g: a cheese to take home as a present.") as cm:
-                cm.sphere(0.055, seg(14, 8), seg(8, 5), "sw_gloss", T(cx, cy, 0.06), C("a8161d"), scale=(1, 1, 0.8))
+                cm.sphere(0.055, seg(10, 8), seg(6, 5), "sw_gloss", T(cx, cy, 0.06), C("a8161d"), scale=(1, 1, 0.8))
         else:
             with item(s, f"act_cheese_{7 + k}", (cx, cy, 0.015), "Räucherkäse",
                       "A small smoked cheese (Räucherkäse) with a brown, beech-smoked rind.") as cm:
@@ -803,7 +810,8 @@ def kaese():
     m.box((0.07, 0.016, 0.014), Mr @ T(0.105, -0.093, 0.026, rz=-0.5), vlib.RW("wood"), C("3a2414"))
     for k, (x, y) in enumerate(((-0.78, -0.225), (0.18, -0.215), (0.75, -0.2))):
         price_tag(m, T(x, y, 0 if k != 1 else 0.025), (1, 5, 3)[k])
-    s.finish()
+    F.kaese_rail(s, F.WIDTH["kaese"])
+    F.finish_deco(s, "kaese", actions={"act_cheese_0": "cut", "act_kaese_cheese_0": "cut"})
     return s
 
 
@@ -899,7 +907,9 @@ def crepes():
         m.box((0.09, 0.09, 0.004), T(-0.01, 0.18, 0.002 + k * 0.004, rz=0.06 * k), "paper", C("f6f2ea"))
     for k, (x, y) in enumerate(((-0.75, -0.235), (0.35, -0.215), (0.72, -0.225))):
         price_tag(m, T(x, y + 0.012, 0 if k else 0.1), (7, 3, 6)[k])
-    s.finish()
+    F.crepes_rail(s, F.WIDTH["crepes"])
+    F.finish_deco(s, "crepes", fx={f"act_crepe_{k}": ("steam", (0.0, 0.0, 0.03)) for k in range(4)},
+                  free=[("steam", (-0.75, 0.0, 0.13)), ("steam", (-0.28, 0.0, 0.13))])
     return s
 
 
@@ -1009,7 +1019,9 @@ def maroni():
              C("3a3a3a"), "atlas", seed=k * 1.9)
     for k, (x, y) in enumerate(((0.05, -0.215), (0.24, -0.21), (0.98, -0.1))):
         price_tag(m, T(x, y, 0.0), (6, 2, 1)[k])
-    s.finish()
+    F.maroni_rail(s, F.WIDTH["maroni"])
+    F.finish_deco(s, "maroni", fx=dict(s.fx, **{f"act_bag_{k}": ("steam", (0.0, 0.0, 0.18)) for k in range(4)}),
+                  free=[("steam", (-0.7, 0.0, 0.3)), ("flame", (-0.7, -0.17, 0.06))])
     return s
 
 
@@ -1055,7 +1067,7 @@ def puffer():
     m = s.static
     # big flat pan on a gas ring with oil and frying pancakes
     Mp = T(-0.65, 0.0, 0)
-    n = seg(36, 14)
+    n = 20 if not vlib.lite() else 12          # round 8: 36 -> 20 sides (budget; lite unchanged)
     m.lathe([(0.17, 0.0), (0.18, 0.01), (0.18, 0.06), (0.17, 0.07)], n, "iron", Mp, C("5a5a5a"))
     m.lathe([(0.0, 0.07), (0.2, 0.07), (0.235, 0.1), (0.24, 0.105), (0.232, 0.106), (0.2, 0.08), (0.0, 0.08)], n,
             vlib.RW("iron"), Mp, C("3a3a3a"))
@@ -1074,7 +1086,7 @@ def puffer():
         with item(s, f"act_puffer_{k}", at, "Kartoffelpuffer",
                   "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge "
                   "goes crisp. Three with applesauce for 5 €.") as pm:
-            pancake(pm, T(*at, rz=g.uniform(0, 6)), 0.045, rand=g, n=14)
+            pancake(pm, T(*at, rz=g.uniform(0, 6)), 0.045, rand=g, n=12)
     Ma = T(0.28, 0.05, 0)
     m.lathe([(0.0, 0.0), (0.05, 0.0), (0.09, 0.05), (0.095, 0.07), (0.088, 0.07), (0.0, 0.01)], seg(18, 10), "ceramic",
             Ma, C("f4f0e8"), "glaze")
@@ -1083,15 +1095,11 @@ def puffer():
     m.lathe([(0.0, 0.0), (0.1, 0.0), (0.12, 0.14), (0.115, 0.14), (0.0, 0.02)], seg(20, 10), "steel", Mb, WHITE)
     m.disc(0.112, seg(20, 10), "puffer", Mb @ T(0, 0, 0.11), C("f0e0b0"))
     m.tube([(0.0, 0.0, 0.1), (0.05, 0.05, 0.18), (0.1, 0.08, 0.26)], 0.006, 5, "steel", Mb, WHITE)
-    for k in range(10 if not vlib.lite() else 3):
-        m.lathe([(0.0, k * 0.004), (0.1, k * 0.004), (0.115, k * 0.004 + 0.012)], seg(18, 8), "paper",
+    for k in range(4 if not vlib.lite() else 2):
+        m.lathe([(0.0, k * 0.004), (0.1, k * 0.004), (0.115, k * 0.004 + 0.012)], seg(16, 8), "paper",
                 T(0.85, -0.05, 0), C("f6f2ea"))
     # a crate of potatoes at the back left, a bottle of oil, a salt shaker, jars of apple sauce, price tags
-    G.crate(m, T(-1.0, 0.13, 0), 0.2, 0.2, 0.08, C("b48c5c"), slats=2)
-    for k in range(10 if not vlib.lite() else 4):
-        a, rr = drng.uniform(0, TWO_PI), 0.07 * math.sqrt(drng.random())
-        lump(m, T(-1.0 + rr * math.cos(a), 0.13 + rr * math.sin(a), 0.055 + drng.uniform(0, 0.03), rz=drng.uniform(0, 6)),
-             0.028, vlib.R("roll"), jit(C("c8a060"), 0.08), "atlas", subd=1, rough=0.15, squash=0.75, seed=k * 1.3)
+    # round 8: the potato crate moved to the front set (prop_deco_puffer_front)
     m.lathe([(0.0, 0.0), (0.035, 0.0), (0.036, 0.2), (0.02, 0.24), (0.014, 0.27), (0.0, 0.272)], seg(12, 6), "sw_vgloss",
             T(-0.34, 0.16, 0), C("d8c060"), "glass")
     m.lathe([(0.0, 0.0), (0.02, 0.0), (0.02, 0.07), (0.012, 0.085), (0.0, 0.088)], seg(10, 5), "sw_vgloss",
@@ -1099,8 +1107,7 @@ def puffer():
     for k in range(3):
         with item(s, f"act_jar_{2 + k}", (0.2 + k * 0.08, 0.2, 0.0), "Jar of applesauce",
                   "A jar of homemade applesauce (Apfelmus) to take home, 3 €.") as jm:
-            G.jar(jm, T(0.2 + k * 0.08, 0.2, 0), "kraft", C("d8b060"), "sw_wet", h=0.09, r=0.034, lid=C("b0282a"),
-                  n_lo=6)
+            F.jar(jm, T(0.2 + k * 0.08, 0.2, 0), "lb_apfel", C("d8b060"), h=0.09, r=0.034, lid=C("b0282a"))
     # front middle: a served paper plate of three Puffer with a dollop of applesauce, a wooden fork, and a
     # spatula resting beside the pan
     Ms = T(0.52, -0.125, 0)
@@ -1113,7 +1120,7 @@ def puffer():
             a = TWO_PI * k / 3 + 0.4
             g = irng("pf_plate", k)
             pancake(m_p, Ms @ T(0.03 * math.cos(a), 0.03 * math.sin(a), 0.005 + k * 0.004, rz=g.uniform(0, 6),
-                                rx=g.uniform(-0.06, 0.06)), 0.04, rand=g, n=14)
+                                rx=g.uniform(-0.06, 0.06)), 0.04, rand=g, n=12)
         m_p.lathe([(0.0, 0.0), (0.03, 0.0), (0.024, 0.012), (0.0, 0.018)], seg(10, 6), "sw_satin",
                   Ms @ T(-0.035, -0.03, 0.02), C("d8b060"), "liquid")
         m_p.box((0.1, 0.008, 0.002), Ms @ T(0.02, -0.06, 0.016, rz=0.3), vlib.RW("wood"), C("d8b890"))
@@ -1121,7 +1128,9 @@ def puffer():
     m.box((0.14, 0.02, 0.016), T(-0.29, -0.185, 0.008, rz=0.5), vlib.RW("wood"), C("3a2414"))
     for k, (x, y) in enumerate(((-0.1, -0.2), (0.28, -0.12), (0.85, -0.2))):
         price_tag(m, T(x, y, 0.0), (7, 5, 0)[k])
-    s.finish()
+    F.puffer_rail(s, F.WIDTH["puffer"])
+    F.finish_deco(s, "puffer", fx=dict({f"act_puffer_{k}": ("steam", (0.0, 0.0, 0.02)) for k in range(9)},
+                  act_plate_0=("steam", (0.0, 0.0, 0.04))), free=[("steam", (-0.65, 0.0, 0.12))])
     return s
 
 
@@ -1136,9 +1145,11 @@ SETS = {
     "prop_deco_mandeln": _deco("mandeln", mandeln, "Gebrannte Mandeln", 62, "deco-mandeln"),
     "prop_deco_kerzen": _deco("kerzen", kerzen, "Kerzen", 63, "deco-kerzen", HANG_CAM),
     "prop_deco_spielzeug": _deco("spielzeug", spielzeug, "Holzspielzeug", 64, "deco-spielzeug"),
-    "prop_deco_schmuck": _deco("schmuck", schmuck, "Christbaumschmuck", 65, "deco-schmuck", HANG_CAM),
     "prop_deco_kaese": _deco("kaese", kaese, "Käse", 66, "deco-kaese"),
     "prop_deco_crepes": _deco("crepes", crepes, "Crêpes", 67, "deco-crepes"),
     "prop_deco_maroni": _deco("maroni", maroni, "Heiße Maroni", 68, "deco-maroni"),
     "prop_deco_puffer": _deco("puffer", puffer, "Kartoffelpuffer", 69, "deco-kartoffelpuffer"),
 }
+# round 8: prop_deco_schmuck (the old Christbaumschmuck counter) is retired. The ornament shop's goods are the
+# prop_schmuck_<group> sets (set_schmuck.py); its glb stays on disk and props.json lists it under "retired".
+RETIRED = {"prop_deco_schmuck": _deco("schmuck", schmuck, "Christbaumschmuck", 65, "deco-schmuck", HANG_CAM)}

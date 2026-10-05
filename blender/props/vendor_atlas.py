@@ -1057,5 +1057,22 @@ def build(size=SIZE, out=OUT):
     return meta
 
 
+def build_books(size=SIZE, out=OUT):
+    """Round 8: re-render only the Bücherstand atlas (books_*) and its entry in regions.json, leaving the main
+    atlas and every set built on it untouched."""
+    import atlas_books
+    path = os.path.join(out, "regions.json")
+    with open(path) as f:
+        meta = json.load(f)
+    bregions, bused = _render_atlas(atlas_books.books_specs(), size, "books", out, grow=True)
+    meta["books"] = {"size": size, "height": max(size, -(-bused // 256) * 256), "used_rows_px": bused,
+                     "regions": bregions}
+    with open(path, "w") as f:
+        json.dump(meta, f, indent=0)
+    print(f"[atlas] books: {len(bregions)} regions, {bused}px of {size} wide -> {out}")
+    return meta
+
+
 if __name__ == "__main__":
-    build()
+    import sys
+    build_books() if "--books" in sys.argv else build()

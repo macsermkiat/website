@@ -18,8 +18,8 @@ import books_catalog
 import vendor_atlas as va
 from vendor_atlas import Tex, fbm, hexc, mix, shape_mask, smooth, text_mask
 
-SPINE_PX_CM = (27, 20)        # px per cm across the spine (thickness) and along it (height)
-COVER_PX_CM = 10              # px per cm on the front cover
+SPINE_PX_CM = (20, 14)        # px per cm across the spine (thickness) and along it (height); round 8: covers matter more
+COVER_PX_CM = 15              # px per cm on the front cover (round 8: read at the cam_cat close-up)
 N_FILLER = 18                 # untitled filler spines (not clickable, merged into each set's static mesh)
 FILLER_PX = (40, 300)
 SANS = ("oswald", "bebas", "josefin")
@@ -253,33 +253,114 @@ def _motif(name, w, h, cy):
     return np.zeros((h, w))
 
 
+def _lines(f, p, lw):
+    """Anti-aliased lines where the scalar field f crosses multiples of p (lw px wide)."""
+    d = np.mod(f, p)
+    d = np.minimum(d, p - d)
+    return smooth(lw * 0.5 + 0.6, lw * 0.5 - 0.4, d)
+
+
+def _pattern(name, w, h, seed):
+    """Round 8: the category's background pattern over the whole cover, as a mask (0..1)."""
+    yy, xx = np.mgrid[0:h, 0:w].astype(float)
+    rg = np.random.default_rng(seed)
+    u = w / 14.0                                      # about a centimetre
+    if name == "orbits":                              # physics: tilted orbits round a star, and a starfield
+        cx, cy = w * rg.uniform(0.6, 0.9), h * rg.uniform(0.12, 0.3)
+        a = math.radians(rg.uniform(15, 35))
+        dx, dy = xx - cx, yy - cy
+        f = np.hypot(dx * math.cos(a) + dy * math.sin(a), (-dx * math.sin(a) + dy * math.cos(a)) * 2.4)
+        m = _lines(f, 2.4 * u, 1.3) * smooth(w * 1.2, w * 0.2, f)
+        for _ in range(int(w * h / 900)):
+            x, y, r = rg.uniform(0, w), rg.uniform(0, h), rg.uniform(0.6, 1.6)
+            m = np.maximum(m, smooth(r + 0.6, r - 0.4, np.hypot(xx - x, yy - y)))
+        return m
+    if name == "lattice":                             # lives: a fine diamond lattice with dots at the crossings
+        p = 1.5 * u
+        m = np.maximum(_lines(xx + yy, p, 1.0), _lines(xx - yy, p, 1.0))
+        return m * 0.7
+    if name == "ripples":                             # mind: ripples spreading from a corner
+        x0, y0 = w * rg.uniform(-0.2, 0.1), h * rg.uniform(0.9, 1.15)
+        f = np.hypot(xx - x0, yy - y0)
+        return _lines(f, 1.25 * u, 1.2 + 0.6 * np.sin(f / (3 * u)) ** 2)
+    if name == "circles":                             # people: rows of overlapping rings
+        p = 2.0 * u
+        row = np.floor(yy / (p * 0.75))
+        lx = np.mod(xx + (row % 2) * p / 2, p) - p / 2
+        ly = np.mod(yy, p * 0.75) - p * 0.375
+        r = np.hypot(lx, ly)
+        return smooth(1.4, 0.4, np.abs(r - p * 0.42))
+    if name == "branches":                            # decisions: a faint grid and a branching decision tree
+        g = np.maximum(_lines(xx, 1.2 * u, 0.8), _lines(yy, 1.2 * u, 0.8)) * 0.45
+
+        def tree(d, s):
+            def br(x, y, ln, ang, depth):
+                if depth == 0:
+                    return
+                x1, y1 = x + ln * math.sin(ang), y - ln * math.cos(ang)
+                d.line([(x * s, y * s), (x1 * s, y1 * s)], fill=255, width=max(1, int((0.6 + depth * 0.35) * s)))
+                d.ellipse([(x1 - 2.2) * s, (y1 - 2.2) * s, (x1 + 2.2) * s, (y1 + 2.2) * s], fill=255)
+                for sgn in (-1, 1):
+                    br(x1, y1, ln * 0.7, ang + sgn * rg.uniform(0.35, 0.6), depth - 1)
+            br(w * rg.uniform(0.35, 0.65), h * 1.02, h * 0.22, rg.uniform(-0.1, 0.1), 5)
+        return np.maximum(g, shape_mask(w, h, tree))
+    if name == "chevrons":                            # craft: stacked chevrons, like a woven strap
+        p = 1.6 * u
+        f = yy + np.abs(np.mod(xx, p) - p / 2)
+        return _lines(f, p * 0.75, 1.6)
+    return np.zeros((h, w))
+
+
+EMBLEM = {"physics": "orbit", "lives": "burst", "mind": "spiral", "people": "bubble", "decisions": "dag",
+          "craft": "pencil"}
+
+
 def g_cover(b):
-    """Front cover of one of Mac's books: cloth cases get a blind-stamped frame and stamped title and author;
-    jackets and paperbacks a typographic layout with the design's motif in its accent colour."""
+    """Round 8 (ADR 0004): a designed front cover in the category's family: the category colour and pattern,
+    the German category name at the head, the title on a solid panel, a small emblem, the author in capitals.
+    The cabinet's lip hides the bottom few per cent, so nothing sits below 0.9 of the height. Original
+    typography only, no publisher artwork."""
     def f(w, h, seed):
-        cloth = b["binding"] == "cloth"
-        kind = "cloth" if cloth else "paper"
-        t = _cover_base(w, h, seed + 5, b["col"], kind)
-        ink = hexc(b["ink"])
-        gilt = cloth and b["ink"] == "d9b25e"
-        metal, rough = (1.0, 0.35) if gilt else (0.0, 0.55)
+        t = _cover_base(w, h, seed + 5, b["col"], "paper")
+        col, ink, acc, panel = hexc(b["col"]), hexc(b["ink"]), hexc(b["accent"]), hexc(b["panel"])
         fn = b["font"]
         up = fn in SANS
-        wg = 700 if fn in ("josefin", "playfair") else 600
-        rows = []
+        wg = 700 if fn in ("josefin", "playfair", "baskerville") else 600
+        pat = _pattern(b["motif"], w, h, seed + 11)
+        t.paint(pat * 0.16, ink, None)
+        yy, xx = np.mgrid[0:h, 0:w].astype(float)
+        # head band with the category name
+        band = (yy < h * 0.085).astype(float)
+        t.paint(band * 0.9, panel, 0.5)
+        t.paint(((yy > h * 0.085) & (yy < h * 0.085 + 2)).astype(float), acc, 0.4)
+        # the title panel, framed in the accent colour
+        x0, x1, y0, y1 = w * 0.08, w * 0.92, h * 0.15, h * 0.58
+        box = ((xx > x0) & (xx < x1) & (yy > y0) & (yy < y1)).astype(float)
+        t.paint(box * 0.94, panel, 0.5)
+        fr = ((xx > x0 + 4) & (xx < x1 - 4) & (yy > y0 + 4) & (yy < y1 - 4)) & \
+            ~((xx > x0 + 5.5) & (xx < x1 - 5.5) & (yy > y0 + 5.5) & (yy < y1 - 5.5))
+        t.paint(fr.astype(float) * 0.9, acc, 0.4)
+        # emblem under the panel and a rule above the author
+        ew, eh = int(w * 0.5), int(h * 0.13)
+        small = _motif(EMBLEM[b["category"]], ew, int(h * 0.5), h * 0.25)[int(h * 0.25) - eh // 2:][:eh]
+        em = np.zeros((h, w))
+        ey, ex = int(h * 0.665) - eh // 2, (w - ew) // 2
+        em[ey:ey + small.shape[0], ex:ex + ew] = small
+        t.paint(em * 0.95, acc, 0.4)
+        t.paint(((np.abs(yy - h * 0.755) < 1.0) & (np.abs(xx - w / 2) < w * 0.14)).astype(float), acc, 0.4)
+        t.paint(((np.abs(yy - h * 0.9) < 1.0) & (xx > w * 0.08) & (xx < w * 0.92)).astype(float) * 0.8, acc, 0.4)
         title, author = b["title"], b["author"]
-        if cloth:
-            t.height = t.height - _frame(w, h, 10, 1.5) * 0.8          # blind-stamped panel
-            t.paint(_frame(w, h, 14, 1.0) * 0.6, ink, rough, metal, -0.2)
-            rows += _text_block(w, h, title, fn, wg, 20, w * 0.7, h * 0.34, 4)
-            rows += _text_block(w, h, author.upper(), fn, 500, 10, w * 0.7, h * 0.8, 2)
-        else:
-            m = _motif(b["motif"], w, h, h * 0.66)
-            t.paint(m, hexc(b["accent"]), 0.45)
-            rows += _text_block(w, h, title.upper() if up else title, fn, wg, 24, w * 0.8, h * 0.28, 4)
-            rows += _text_block(w, h, author.upper() if up else author, "oswald" if up else fn, 500, 11, w * 0.8,
-                                h * 0.87, 2)
-        t.paint(text_mask(w, h, rows), ink, rough, metal, -0.15 if cloth else 0.0)
+        tink = ink if b["panel"] != "f4ead2" else hexc("1c1a18")
+        rows_t = _text_block(w, h, title.upper() if up else title, fn, wg, h * 0.105, (x1 - x0) * 0.84,
+                             (y0 + y1) / 2, 4, lead=1.08)
+        rows_a = _text_block(w, h, author.upper(), "oswald" if up or fn == "bebas" else fn, 600, h * 0.052,
+                             w * 0.84, h * 0.825, 2, lead=1.1)
+        lab = b["label_de"].upper()
+        rows_l = [(lab, "oswald", min(h * 0.042, va.fit_size(lab, "oswald", h * 0.042, 500, w * 0.86)), 500,
+                   (w / 2, h * 0.044), "mm")]
+        t.paint(text_mask(w, h, rows_t), tink, 0.5, 0.0, 0.05)
+        t.paint(text_mask(w, h, rows_a), ink, 0.5, 0.0, 0.02)
+        t.paint(text_mask(w, h, rows_l), acc, 0.45)
         return t
     return f
 

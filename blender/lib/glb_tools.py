@@ -85,7 +85,14 @@ def buecher_required():
     with open(os.path.join(repo, "content", "books", "categories.json")) as f:
         keys = [c["key"] for c in json.load(f)["categories"]]
     return ([f"slot_cat_{k}" for k in keys] + [f"sign_cat_{k}" for k in keys] + [f"cam_cat_{k}" for k in keys]
-            + [f"cam_cat_{k}_target" for k in keys])
+            + [f"cam_cat_{k}_target" for k in keys] + [f"act_cab_{k}" for k in keys])
+
+
+# round 8 (docs/adr/0004): the ornament shop's extra nodes (slot_rail_<n> checked as a prefix)
+SCHMUCK_REQUIRED = ["slot_tree", "slot_cabinet", "light_0", "light_1"]
+SCHMUCK_PREFIXES = ["slot_rail_"]
+# round 8: every deco stall has a hanging rail and a crate spot for the vendor's goods
+DECO_REQUIRED = ["slot_rail_1", "slot_crate"]
 
 
 # round 6 (docs/adr/0003): the writing surfaces each section stall carries
@@ -107,11 +114,17 @@ def check_stall(path, extra_required=()):
     js, _ = read_glb(path)
     names = node_names(js)
     base = os.path.basename(path)
+    prefixes = list(STALL_PREFIXES)
     if base.startswith("stall_buecher"):
         extra_required = list(extra_required) + buecher_required()
+    if base.startswith("stall_schmuck"):
+        extra_required = list(extra_required) + SCHMUCK_REQUIRED
+        prefixes += SCHMUCK_PREFIXES
+    if base.startswith("deco_"):
+        extra_required = list(extra_required) + DECO_REQUIRED
     extra_required = list(extra_required) + write_required(base)
     missing = [r for r in list(STALL_REQUIRED) + list(extra_required) if r not in names]
-    for p in STALL_PREFIXES:
+    for p in prefixes:
         if not any(n.startswith(p) for n in names):
             missing.append(p + "*")
     mats = [m.get("name") for m in js.get("materials", [])]

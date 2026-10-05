@@ -673,7 +673,7 @@
    "stall": "buecherstand",
    "name": "Elon Musk",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Elon Musk",
    "author": "Walter Isaacson",
    "slug": "elon-musk",
@@ -681,17 +681,19 @@
    "category_de": "Lebensgeschichten",
    "cover_material": "book_cover_10",
    "cover_uv": [
-    0.12231,
-    0.51509,
-    0.20239,
-    0.60067
+    0.19019,
+    0.00126,
+    0.31079,
+    0.10226
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.05,
-    0.242,
-    0.165
+    0.035,
+    0.213,
+    0.145
    ]
   },
   "act_book_11": {
@@ -699,7 +701,7 @@
    "stall": "buecherstand",
    "name": "The Making of the Atomic Bomb",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Making of the Atomic Bomb",
    "author": "Richard Rhodes",
    "slug": "the-making-of-the-atomic-bomb",
@@ -707,17 +709,19 @@
    "category_de": "Lebensgeschichten",
    "cover_material": "book_cover_11",
    "cover_uv": [
-    0.49243,
-    0.71254,
-    0.56763,
-    0.79528
+    0.86548,
+    0.31766,
+    0.97827,
+    0.41532
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.056,
-    0.234,
-    0.155
+    0.035,
+    0.215,
+    0.142
    ]
   },
   "act_book_12": {
@@ -725,7 +729,7 @@
    "stall": "buecherstand",
    "name": "The Meaning of It All",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Meaning of It All",
    "author": "Richard P. Feynman",
    "slug": "the-meaning-of-it-all",
@@ -733,13 +737,15 @@
    "category_de": "Lebensgeschichten",
    "cover_material": "book_cover_12",
    "cover_uv": [
-    0.91772,
-    0.79883,
-    0.9856,
-    0.87305
+    0.46997,
+    0.71024,
+    0.57202,
+    0.79785
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.02,
     0.21,
@@ -751,7 +757,7 @@
    "stall": "buecherstand",
    "name": "Einstein",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Einstein",
    "author": "Walter Isaacson",
    "slug": "einstein",
@@ -759,17 +765,19 @@
    "category_de": "Lebensgeschichten",
    "cover_material": "book_cover_13",
    "cover_uv": [
-    0.61987,
-    0.51509,
-    0.69751,
-    0.59996
+    0.0022,
+    0.1123,
+    0.1189,
+    0.21247
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.046,
-    0.24,
-    0.16
+    0.035,
+    0.215,
+    0.143
    ]
   },
   "act_book_14": {
@@ -777,7 +785,7 @@
    "stall": "buecherstand",
    "name": "Surely You're Joking, Mr. Feynman!",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Surely You're Joking, Mr. Feynman!",
    "author": "Richard P. Feynman",
    "slug": "surely-youre-joking-mr-feynman",
@@ -785,13 +793,15 @@
    "category_de": "Lebensgeschichten",
    "cover_material": "book_cover_14",
    "cover_uv": [
-    0.21899,
-    0.88335,
-    0.28442,
-    0.95508
+    0.89575,
+    0.71024,
+    0.9939,
+    0.79478
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.026,
     0.203,
@@ -803,7 +813,7 @@
    "stall": "buecherstand",
    "name": "What Do You Care What Other People Think?",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "What Do You Care What Other People Think?",
    "author": "Richard P. Feynman and Ralph Leighton",
    "slug": "what-do-you-care-what-other-people-think",
@@ -811,13 +821,15 @@
    "category_de": "Lebensgeschichten",
    "cover_material": "book_cover_15",
    "cover_uv": [
-    0.28882,
-    0.88335,
-    0.35425,
-    0.95508
+    0.0022,
+    0.80287,
+    0.10034,
+    0.88742
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.024,
     0.203,
@@ -1427,7 +1439,7 @@
    "stall": "buecherstand",
    "name": "The Many Hidden Worlds of Quantum Mechanics",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Many Hidden Worlds of Quantum Mechanics",
    "author": "Sean Carroll",
    "slug": "the-many-hidden-worlds-of-quantum-mechanics",
@@ -1435,17 +1447,19 @@
    "category_de": "Physik & Kosmos",
    "cover_material": "book_cover_00",
    "cover_uv": [
-    0.08032,
-    0.79883,
-    0.15405,
-    0.87944
+    0.6936,
+    0.41811,
+    0.80444,
+    0.51325
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.024,
-    0.228,
-    0.152
+    0.023,
+    0.215,
+    0.143
    ]
   },
   "act_book_01": {
@@ -1453,7 +1467,7 @@
    "stall": "buecherstand",
    "name": "The Biggest Ideas in the Universe",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Biggest Ideas in the Universe",
    "author": "Sean Carroll",
    "slug": "the-biggest-ideas-in-the-universe",
@@ -1461,17 +1475,19 @@
    "category_de": "Physik & Kosmos",
    "cover_material": "book_cover_01",
    "cover_uv": [
-    0.20679,
-    0.51509,
-    0.2854,
-    0.59996
+    0.31519,
+    0.00126,
+    0.43335,
+    0.10142
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.028,
-    0.24,
-    0.162
+    0.025,
+    0.215,
+    0.145
    ]
   },
   "act_book_02": {
@@ -1479,7 +1495,7 @@
    "stall": "buecherstand",
    "name": "Quanta and Fields",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Quanta and Fields",
    "author": "Sean Carroll",
    "slug": "quanta-and-fields",
@@ -1487,17 +1503,19 @@
    "category_de": "Physik & Kosmos",
    "cover_material": "book_cover_02",
    "cover_uv": [
-    0.28979,
-    0.51509,
-    0.36841,
-    0.59996
+    0.43774,
+    0.00126,
+    0.55591,
+    0.10142
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.03,
-    0.24,
-    0.162
+    0.027,
+    0.215,
+    0.145
    ]
   },
   "act_book_03": {
@@ -1505,7 +1523,7 @@
    "stall": "buecherstand",
    "name": "Chaos",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Chaos",
    "author": "James Gleick",
    "slug": "chaos",
@@ -1513,17 +1531,19 @@
    "category_de": "Physik & Kosmos",
    "cover_material": "book_cover_03",
    "cover_uv": [
-    0.17407,
-    0.71254,
-    0.24927,
-    0.79563
+    0.39673,
+    0.31766,
+    0.50952,
+    0.4156
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.034,
-    0.235,
-    0.155
+    0.031,
+    0.215,
+    0.142
    ]
   },
   "act_book_04": {
@@ -1531,7 +1551,7 @@
    "stall": "buecherstand",
    "name": "Reality Is Not What It Seems",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Reality Is Not What It Seems",
    "author": "Carlo Rovelli",
    "slug": "reality-is-not-what-it-seems",
@@ -1539,13 +1559,15 @@
    "category_de": "Physik & Kosmos",
    "cover_material": "book_cover_04",
    "cover_uv": [
-    0.35864,
-    0.88335,
-    0.42114,
-    0.9533
+    0.66724,
+    0.80287,
+    0.76147,
+    0.88546
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.022,
     0.198,
@@ -1557,7 +1579,7 @@
    "stall": "buecherstand",
    "name": "On the Origin of Time",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "On the Origin of Time",
    "author": "Thomas Hertog",
    "slug": "on-the-origin-of-time",
@@ -1565,17 +1587,19 @@
    "category_de": "Physik & Kosmos",
    "cover_material": "book_cover_05",
    "cover_uv": [
-    0.45581,
-    0.51509,
-    0.53345,
-    0.59996
+    0.68286,
+    0.00126,
+    0.79956,
+    0.10142
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.03,
-    0.24,
-    0.16
+    0.027,
+    0.215,
+    0.143
    ]
   },
   "act_book_06": {
@@ -1583,7 +1607,7 @@
    "stall": "buecherstand",
    "name": "Mysteries of Modern Physics: Time",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Mysteries of Modern Physics: Time",
    "author": "Sean Carroll",
    "slug": "mysteries-of-modern-physics-time",
@@ -1591,17 +1615,19 @@
    "category_de": "Physik & Kosmos",
    "cover_material": "book_cover_06",
    "cover_uv": [
-    0.15845,
-    0.79883,
-    0.23218,
-    0.87944
+    0.80884,
+    0.41811,
+    0.91968,
+    0.51325
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.022,
-    0.228,
-    0.152
+    0.021,
+    0.215,
+    0.143
    ]
   },
   "act_book_07": {
@@ -1609,7 +1635,7 @@
    "stall": "buecherstand",
    "name": "Something Deeply Hidden",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Something Deeply Hidden",
    "author": "Sean Carroll",
    "slug": "something-deeply-hidden",
@@ -1617,17 +1643,19 @@
    "category_de": "Physik & Kosmos",
    "cover_material": "book_cover_07",
    "cover_uv": [
-    0.53784,
-    0.51509,
-    0.61548,
-    0.59996
+    0.80396,
+    0.00126,
+    0.92065,
+    0.10142
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.032,
-    0.24,
-    0.16
+    0.029,
+    0.215,
+    0.143
    ]
   },
   "act_book_08": {
@@ -1635,7 +1663,7 @@
    "stall": "buecherstand",
    "name": "The Order of Time",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Order of Time",
    "author": "Carlo Rovelli",
    "slug": "the-order-of-time",
@@ -1643,17 +1671,19 @@
    "category_de": "Physik & Kosmos",
    "cover_material": "book_cover_08",
    "cover_uv": [
-    0.54907,
-    0.79883,
-    0.61938,
-    0.87518
+    0.46704,
+    0.61426,
+    0.57251,
+    0.70438
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.024,
-    0.216,
-    0.145
+    0.215,
+    0.144
    ]
   },
   "act_book_09": {
@@ -1661,7 +1691,7 @@
    "stall": "buecherstand",
    "name": "Infinite Powers",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Infinite Powers",
    "author": "Steven Strogatz",
    "slug": "infinite-powers",
@@ -1669,17 +1699,19 @@
    "category_de": "Physik & Kosmos",
    "cover_material": "book_cover_09",
    "cover_uv": [
-    0.3728,
-    0.51509,
-    0.45142,
-    0.59996
+    0.5603,
+    0.00126,
+    0.67847,
+    0.10142
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.034,
-    0.24,
-    0.162
+    0.03,
+    0.215,
+    0.145
    ]
   },
   "act_crepe_0": {
@@ -1971,7 +2003,7 @@
    "colour": "sky-blue",
    "lit": false
   },
-  "act_heart_0": {
+  "act_lebkuchen_heart_0": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Ich liebe Dich”",
@@ -1979,9 +2011,11 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Ich liebe Dich” (I love you), piped in white icing inside a scalloped border, with sugar flowers. About 24 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Ich liebe Dich",
-   "size_cm": 24
+   "size_cm": 24,
+   "label": "Lebkuchenherz „Ich liebe Dich“",
+   "action": "swing"
   },
-  "act_heart_1": {
+  "act_lebkuchen_heart_1": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Frohe Weihnachten”",
@@ -1989,9 +2023,11 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 20 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Frohe Weihnachten",
-   "size_cm": 20
+   "size_cm": 20,
+   "label": "Lebkuchenherz „Frohe Weihnachten“",
+   "action": "swing"
   },
-  "act_heart_10": {
+  "act_lebkuchen_heart_10": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Frohe Weihnachten”",
@@ -1999,9 +2035,11 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 12 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Frohe Weihnachten",
-   "size_cm": 12
+   "size_cm": 12,
+   "label": "Lebkuchenherz „Frohe Weihnachten“",
+   "action": "swing"
   },
-  "act_heart_11": {
+  "act_lebkuchen_heart_11": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Für Dich”",
@@ -2009,9 +2047,11 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Für Dich” (for you), white icing in a pink scalloped border, with sugar roses. About 12 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Für Dich",
-   "size_cm": 12
+   "size_cm": 12,
+   "label": "Lebkuchenherz „Für Dich“",
+   "action": "swing"
   },
-  "act_heart_12": {
+  "act_lebkuchen_heart_12": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Schatz”",
@@ -2019,9 +2059,11 @@
    "pivot": "base",
    "detail": "“Schatz” (sweetheart), white icing in a blue piped border. About 17 cm across. Leaning on the display board, ribbon tucked behind.",
    "icing": "Schatz",
-   "size_cm": 17
+   "size_cm": 17,
+   "label": "Lebkuchenherz „Schatz“",
+   "action": "lift"
   },
-  "act_heart_13": {
+  "act_lebkuchen_heart_13": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Prost!”",
@@ -2029,9 +2071,11 @@
    "pivot": "base",
    "detail": "“Prost!” (cheers!), in yellow icing: a heart for the Glühwein crowd. About 15 cm across. Leaning on the display board, ribbon tucked behind.",
    "icing": "Prost!",
-   "size_cm": 15
+   "size_cm": 15,
+   "label": "Lebkuchenherz „Prost!“",
+   "action": "lift"
   },
-  "act_heart_14": {
+  "act_lebkuchen_heart_14": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Nachtmarkt”",
@@ -2039,9 +2083,11 @@
    "pivot": "base",
    "detail": "“Nachtmarkt” (night market), in white icing in a pink border: a souvenir of the evening. About 17 cm across. Leaning on the display board, ribbon tucked behind.",
    "icing": "Nachtmarkt",
-   "size_cm": 17
+   "size_cm": 17,
+   "label": "Lebkuchenherz „Nachtmarkt“",
+   "action": "lift"
   },
-  "act_heart_15": {
+  "act_lebkuchen_heart_15": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Ich liebe Dich”",
@@ -2049,9 +2095,11 @@
    "pivot": "base",
    "detail": "“Ich liebe Dich” (I love you), piped in white icing inside a scalloped border, with sugar flowers. About 15 cm across. Leaning on the display board, ribbon tucked behind.",
    "icing": "Ich liebe Dich",
-   "size_cm": 15
+   "size_cm": 15,
+   "label": "Lebkuchenherz „Ich liebe Dich“",
+   "action": "lift"
   },
-  "act_heart_16": {
+  "act_lebkuchen_heart_16": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Frohe Weihnachten”",
@@ -2059,9 +2107,11 @@
    "pivot": "base",
    "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 17 cm across. Leaning on the display board, ribbon tucked behind.",
    "icing": "Frohe Weihnachten",
-   "size_cm": 17
+   "size_cm": 17,
+   "label": "Lebkuchenherz „Frohe Weihnachten“",
+   "action": "lift"
   },
-  "act_heart_2": {
+  "act_lebkuchen_heart_2": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Für Dich”",
@@ -2069,9 +2119,11 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Für Dich” (for you), white icing in a pink scalloped border, with sugar roses. About 20 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Für Dich",
-   "size_cm": 20
+   "size_cm": 20,
+   "label": "Lebkuchenherz „Für Dich“",
+   "action": "swing"
   },
-  "act_heart_3": {
+  "act_lebkuchen_heart_3": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Schatz”",
@@ -2079,9 +2131,11 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Schatz” (sweetheart), white icing in a blue piped border. About 15 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Schatz",
-   "size_cm": 15
+   "size_cm": 15,
+   "label": "Lebkuchenherz „Schatz“",
+   "action": "swing"
   },
-  "act_heart_4": {
+  "act_lebkuchen_heart_4": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Prost!”",
@@ -2089,9 +2143,11 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Prost!” (cheers!), in yellow icing: a heart for the Glühwein crowd. About 12 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Prost!",
-   "size_cm": 12
+   "size_cm": 12,
+   "label": "Lebkuchenherz „Prost!“",
+   "action": "swing"
   },
-  "act_heart_5": {
+  "act_lebkuchen_heart_5": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Nachtmarkt”",
@@ -2099,9 +2155,11 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Nachtmarkt” (night market), in white icing in a pink border: a souvenir of the evening. About 15 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Nachtmarkt",
-   "size_cm": 15
+   "size_cm": 15,
+   "label": "Lebkuchenherz „Nachtmarkt“",
+   "action": "swing"
   },
-  "act_heart_6": {
+  "act_lebkuchen_heart_6": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Ich liebe Dich”",
@@ -2109,9 +2167,11 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Ich liebe Dich” (I love you), piped in white icing inside a scalloped border, with sugar flowers. About 15 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Ich liebe Dich",
-   "size_cm": 15
+   "size_cm": 15,
+   "label": "Lebkuchenherz „Ich liebe Dich“",
+   "action": "swing"
   },
-  "act_heart_7": {
+  "act_lebkuchen_heart_7": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Frohe Weihnachten”",
@@ -2119,9 +2179,11 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 17 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Frohe Weihnachten",
-   "size_cm": 17
+   "size_cm": 17,
+   "label": "Lebkuchenherz „Frohe Weihnachten“",
+   "action": "swing"
   },
-  "act_heart_8": {
+  "act_lebkuchen_heart_8": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Für Dich”",
@@ -2129,9 +2191,11 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Für Dich” (for you), white icing in a pink scalloped border, with sugar roses. About 17 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Für Dich",
-   "size_cm": 17
+   "size_cm": 17,
+   "label": "Lebkuchenherz „Für Dich“",
+   "action": "swing"
   },
-  "act_heart_9": {
+  "act_lebkuchen_heart_9": {
    "set": "prop_deco_lebkuchen",
    "stall": "deco-lebkuchen",
    "name": "Lebkuchen heart “Schatz”",
@@ -2139,7 +2203,65 @@
    "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
    "detail": "“Schatz” (sweetheart), white icing in a blue piped border. About 14 cm across. It hangs on a ribbon, to wear around your neck.",
    "icing": "Schatz",
-   "size_cm": 14
+   "size_cm": 14,
+   "label": "Lebkuchenherz „Schatz“",
+   "action": "swing"
+  },
+  "act_lebkuchen_heart_24": {
+   "set": "prop_deco_lebkuchen_front",
+   "stall": "deco-lebkuchen",
+   "name": "Lebkuchenherz „Für Dich“",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A small Lebkuchen heart on a ribbon, “Für Dich” (for you) in white icing, lying in the crate at the front for passers-by. 3 €.",
+   "label": "Lebkuchenherz „Für Dich“",
+   "action": "lift",
+   "icing": "Für Dich",
+   "size_cm": 12
+  },
+  "act_lebkuchen_box_0": {
+   "set": "prop_deco_lebkuchen_shelf",
+   "stall": "deco-lebkuchen",
+   "name": "Elisen-Lebkuchen, 200 g · 7,50 €",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A red and gold carton of Elisen-Lebkuchen, Nuremberg style: soft round gingerbread with almonds and hazelnuts on a wafer, half of them glazed in chocolate.",
+   "label": "Elisen-Lebkuchen, 200 g · 7,50 €",
+   "action": "lift"
+  },
+  "act_lebkuchen_box_1": {
+   "set": "prop_deco_lebkuchen_shelf",
+   "stall": "deco-lebkuchen",
+   "name": "Aachener Printen, 250 g · 6 €",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A blue carton of Aachener Printen: hard, spiced honey gingerbread bars from Aachen, with herbs and rock sugar baked in.",
+   "label": "Aachener Printen, 250 g · 6 €",
+   "action": "lift"
+  },
+  "act_lebkuchen_heart_20": {
+   "set": "prop_deco_lebkuchen_shelf",
+   "stall": "deco-lebkuchen",
+   "name": "Großes Lebkuchenherz",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A big Lebkuchen heart, 26 cm across, piped with a lace border and a greeting: the one to hang by the door at home. 9 €.",
+   "label": "Großes Lebkuchenherz",
+   "action": "lift",
+   "icing": "Frohe Weihnachten",
+   "size_cm": 26
+  },
+  "act_lebkuchen_heart_23": {
+   "set": "prop_deco_lebkuchen_shelf",
+   "stall": "deco-lebkuchen",
+   "name": "Großes Lebkuchenherz",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A big Lebkuchen heart, 26 cm across, piped with a lace border and a greeting: the one to hang by the door at home. 9 €.",
+   "label": "Großes Lebkuchenherz",
+   "action": "lift",
+   "icing": "Ich liebe Dich",
+   "size_cm": 26
   },
   "act_cone_0": {
    "set": "prop_deco_mandeln",
@@ -2374,126 +2496,6 @@
    "kind": "deco",
    "pivot": "base",
    "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
-  },
-  "act_bauble_0": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Deep red glass bauble",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A mouth-blown glass bauble, deep red, mirror-silvered inside, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
-  },
-  "act_bauble_1": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Glass icicle",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A blown-glass icicle, clear and tapering to a fine point, with a gold cap."
-  },
-  "act_bauble_10": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Midnight blue glass bauble",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A mouth-blown glass bauble, midnight blue, mirror-silvered inside, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
-  },
-  "act_bauble_11": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Straw star",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A straw star (Strohstern) of two crossed layers of split straw, bound with thread: the oldest tree ornament on the stall."
-  },
-  "act_bauble_12": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Deep red glass bauble",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A mouth-blown Lauscha glass bauble, deep red, lying on the counter where a customer put it down. 5 €."
-  },
-  "act_bauble_13": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Gold glass bauble",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A mouth-blown Lauscha glass bauble, gold, lying on the counter where a customer put it down. 5 €."
-  },
-  "act_bauble_14": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Midnight blue glass bauble",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A mouth-blown Lauscha glass bauble, midnight blue, lying on the counter where a customer put it down. 5 €."
-  },
-  "act_bauble_2": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Midnight blue glass bauble",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A mouth-blown glass bauble, midnight blue, satin matt, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
-  },
-  "act_bauble_3": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Straw star",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A straw star (Strohstern) of two crossed layers of split straw, bound with thread: the oldest tree ornament on the stall."
-  },
-  "act_bauble_4": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Fir green glass bauble",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A mouth-blown glass bauble, fir green, mirror-silvered inside, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
-  },
-  "act_bauble_5": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Glass icicle",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A blown-glass icicle, clear and tapering to a fine point, with a gold cap."
-  },
-  "act_bauble_6": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Silver glass bauble",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A mouth-blown glass bauble, silver, mirror-silvered inside, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
-  },
-  "act_bauble_7": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Straw star",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A straw star (Strohstern) of two crossed layers of split straw, bound with thread: the oldest tree ornament on the stall."
-  },
-  "act_bauble_8": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Deep red glass bauble",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A mouth-blown glass bauble, deep red, satin matt, with a gold cap: made in Lauscha in Thuringia, where glass baubles were first blown. 5 €."
-  },
-  "act_bauble_9": {
-   "set": "prop_deco_schmuck",
-   "stall": "deco-schmuck",
-   "name": "Glass icicle",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "A blown-glass icicle, clear and tapering to a fine point, with a gold cap."
   },
   "act_nutcracker_0": {
    "set": "prop_deco_spielzeug",
@@ -3080,6 +3082,353 @@
    "name": "Clean wine glass",
    "kind": "wineglass",
    "pivot": "base"
+  },
+  "act_orn_candle_0": {
+   "set": "prop_schmuck_counter",
+   "stall": "deco-schmuck",
+   "name": "Schwibbogen candle 1",
+   "kind": "deco",
+   "pivot": "the wick: the flame's foot",
+   "label": "Kerze 1 am Schwibbogen",
+   "action": "light",
+   "order": 0,
+   "detail": "One of the seven candles on the Schwibbogen; they light one after another."
+  },
+  "act_orn_candle_1": {
+   "set": "prop_schmuck_counter",
+   "stall": "deco-schmuck",
+   "name": "Schwibbogen candle 2",
+   "kind": "deco",
+   "pivot": "the wick: the flame's foot",
+   "label": "Kerze 2 am Schwibbogen",
+   "action": "light",
+   "order": 1,
+   "detail": "One of the seven candles on the Schwibbogen; they light one after another."
+  },
+  "act_orn_candle_2": {
+   "set": "prop_schmuck_counter",
+   "stall": "deco-schmuck",
+   "name": "Schwibbogen candle 3",
+   "kind": "deco",
+   "pivot": "the wick: the flame's foot",
+   "label": "Kerze 3 am Schwibbogen",
+   "action": "light",
+   "order": 2,
+   "detail": "One of the seven candles on the Schwibbogen; they light one after another."
+  },
+  "act_orn_candle_3": {
+   "set": "prop_schmuck_counter",
+   "stall": "deco-schmuck",
+   "name": "Schwibbogen candle 4",
+   "kind": "deco",
+   "pivot": "the wick: the flame's foot",
+   "label": "Kerze 4 am Schwibbogen",
+   "action": "light",
+   "order": 3,
+   "detail": "One of the seven candles on the Schwibbogen; they light one after another."
+  },
+  "act_orn_candle_4": {
+   "set": "prop_schmuck_counter",
+   "stall": "deco-schmuck",
+   "name": "Schwibbogen candle 5",
+   "kind": "deco",
+   "pivot": "the wick: the flame's foot",
+   "label": "Kerze 5 am Schwibbogen",
+   "action": "light",
+   "order": 4,
+   "detail": "One of the seven candles on the Schwibbogen; they light one after another."
+  },
+  "act_orn_candle_5": {
+   "set": "prop_schmuck_counter",
+   "stall": "deco-schmuck",
+   "name": "Schwibbogen candle 6",
+   "kind": "deco",
+   "pivot": "the wick: the flame's foot",
+   "label": "Kerze 6 am Schwibbogen",
+   "action": "light",
+   "order": 5,
+   "detail": "One of the seven candles on the Schwibbogen; they light one after another."
+  },
+  "act_orn_candle_6": {
+   "set": "prop_schmuck_counter",
+   "stall": "deco-schmuck",
+   "name": "Schwibbogen candle 7",
+   "kind": "deco",
+   "pivot": "the wick: the flame's foot",
+   "label": "Kerze 7 am Schwibbogen",
+   "action": "light",
+   "order": 6,
+   "detail": "One of the seven candles on the Schwibbogen; they light one after another."
+  },
+  "act_orn_nutcracker": {
+   "set": "prop_schmuck_counter",
+   "stall": "deco-schmuck",
+   "name": "Nutcracker",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A king nutcracker from the Erzgebirge, 39 cm, turned and painted: lift the lever at his back and his jaw opens for a walnut.",
+   "label": "Nussknacker, König · 39 €",
+   "action": "jaw",
+   "jaw": "act_orn_nutcracker_jaw"
+  },
+  "act_orn_nutcracker_jaw": {
+   "set": "prop_schmuck_counter",
+   "stall": "deco-schmuck",
+   "name": "Nutcracker's jaw",
+   "kind": "deco",
+   "pivot": "the jaw's hinge; rotate about local X (negative opens, about 0.5 rad)",
+   "label": "Unterkiefer des Nussknackers",
+   "action": "jaw",
+   "detail": "The nutcracker's lower jaw and white beard."
+  },
+  "act_orn_schwibbogen": {
+   "set": "prop_schmuck_counter",
+   "stall": "deco-schmuck",
+   "name": "Schwibbogen",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A Schwibbogen, the candle arch of the Erzgebirge mining towns, with firs, a church and two miners cut in fretwork: its seven candles light one by one.",
+   "label": "Schwibbogen · 45 €",
+   "action": "candles",
+   "candles": [
+    "act_orn_candle_0",
+    "act_orn_candle_1",
+    "act_orn_candle_2",
+    "act_orn_candle_3",
+    "act_orn_candle_4",
+    "act_orn_candle_5",
+    "act_orn_candle_6"
+   ]
+  },
+  "act_orn_smoker": {
+   "set": "prop_schmuck_counter",
+   "stall": "deco-schmuck",
+   "name": "Räuchermännchen",
+   "kind": "deco",
+   "pivot": "base",
+   "detail": "A Räuchermännchen, the Erzgebirge incense smoker: lift off his top half, light a little cone of incense inside, and fir-scented smoke curls out of his mouth.",
+   "label": "Räuchermännchen · 32 €",
+   "action": "smoke",
+   "fx": "fx_smoke_1"
+  },
+  "act_orn_bauble_0": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, deep red",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, glossy deep red with a band of painted stars, 6 cm across. Tap it and it rings a soft C5. 5 to 9 €.",
+   "label": "Glaskugel, deep red · 6 cm",
+   "action": "ring",
+   "note": "C5",
+   "hangable": true,
+   "region": "bauble_0"
+  },
+  "act_orn_bauble_1": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, gold",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, mirror-silvered gold with painted dots, 8 cm across. Tap it and it rings a soft D5. 5 to 9 €.",
+   "label": "Glaskugel, gold · 8 cm",
+   "action": "ring",
+   "note": "D5",
+   "hangable": true,
+   "region": "bauble_1"
+  },
+  "act_orn_bauble_10": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, rose",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, satin matt rose with a gold lattice, 9 cm across. Tap it and it rings a soft F6. 5 to 9 €.",
+   "label": "Glaskugel, rose · 9 cm",
+   "action": "ring",
+   "note": "F6",
+   "hangable": true,
+   "region": "bauble_10"
+  },
+  "act_orn_bauble_11": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, teal",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, glossy teal with a band of painted stars, 7 cm across. Tap it and it rings a soft G6. 5 to 9 €.",
+   "label": "Glaskugel, teal · 7 cm",
+   "action": "ring",
+   "note": "G6",
+   "hangable": true,
+   "region": "bauble_11"
+  },
+  "act_orn_bauble_12": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, gold",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, mirror-silvered gold with a hammered mirror finish, 6 cm across. Tap it and it rings a soft A6. 5 to 9 €.",
+   "label": "Glaskugel, gold · 6 cm",
+   "action": "ring",
+   "note": "A6",
+   "hangable": true,
+   "region": "bauble_12"
+  },
+  "act_orn_bauble_13": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, white",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, satin matt white with little red hearts, 8 cm across. Tap it and it rings a soft B6. 5 to 9 €.",
+   "label": "Glaskugel, white · 8 cm",
+   "action": "ring",
+   "note": "B6",
+   "hangable": true,
+   "region": "bauble_13"
+  },
+  "act_orn_bauble_14": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, night blue",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, glossy night blue with a gold comet, 9 cm across. Tap it and it rings a soft C7. 5 to 9 €.",
+   "label": "Glaskugel, night blue · 9 cm",
+   "action": "ring",
+   "note": "C7",
+   "hangable": true,
+   "region": "bauble_14"
+  },
+  "act_orn_bauble_15": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, deep red",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, satin matt deep red with a frosted glitter band, 7 cm across. Tap it and it rings a soft D7. 5 to 9 €.",
+   "label": "Glaskugel, deep red · 7 cm",
+   "action": "ring",
+   "note": "D7",
+   "hangable": true,
+   "region": "bauble_15"
+  },
+  "act_orn_bauble_2": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, midnight blue",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, glossy midnight blue with white snowflakes, 9 cm across. Tap it and it rings a soft E5. 5 to 9 €.",
+   "label": "Glaskugel, midnight blue · 9 cm",
+   "action": "ring",
+   "note": "E5",
+   "hangable": true,
+   "region": "bauble_2"
+  },
+  "act_orn_bauble_3": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, snow white",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, satin matt snow white with gold stripes, 7 cm across. Tap it and it rings a soft F5. 5 to 9 €.",
+   "label": "Glaskugel, snow white · 7 cm",
+   "action": "ring",
+   "note": "F5",
+   "hangable": true,
+   "region": "bauble_3"
+  },
+  "act_orn_bauble_4": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, fir green",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, glossy fir green with a white swirl, 6 cm across. Tap it and it rings a soft G5. 5 to 9 €.",
+   "label": "Glaskugel, fir green · 6 cm",
+   "action": "ring",
+   "note": "G5",
+   "hangable": true,
+   "region": "bauble_4"
+  },
+  "act_orn_bauble_5": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, plum",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, glossy plum with a gold lattice, 8 cm across. Tap it and it rings a soft A5. 5 to 9 €.",
+   "label": "Glaskugel, plum · 8 cm",
+   "action": "ring",
+   "note": "A5",
+   "hangable": true,
+   "region": "bauble_5"
+  },
+  "act_orn_bauble_6": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, silver",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, mirror-silvered silver with a hammered mirror finish, 9 cm across. Tap it and it rings a soft B5. 5 to 9 €.",
+   "label": "Glaskugel, silver · 9 cm",
+   "action": "ring",
+   "note": "B5",
+   "hangable": true,
+   "region": "bauble_6"
+  },
+  "act_orn_bauble_7": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, amber",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, glossy amber with a white zigzag, 7 cm across. Tap it and it rings a soft C6. 5 to 9 €.",
+   "label": "Glaskugel, amber · 7 cm",
+   "action": "ring",
+   "note": "C6",
+   "hangable": true,
+   "region": "bauble_7"
+  },
+  "act_orn_bauble_8": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, red",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, satin matt red with “Frohe Weihnachten” in white script, 6 cm across. Tap it and it rings a soft D6. 5 to 9 €.",
+   "label": "Glaskugel, red · 6 cm",
+   "action": "ring",
+   "note": "D6",
+   "hangable": true,
+   "region": "bauble_8"
+  },
+  "act_orn_bauble_9": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, ice blue",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A mouth-blown Lauscha glass bauble, satin matt ice blue with a winter forest band, 8 cm across. Tap it and it rings a soft E6. 5 to 9 €.",
+   "label": "Glaskugel, ice blue · 8 cm",
+   "action": "ring",
+   "note": "E6",
+   "hangable": true,
+   "region": "bauble_9"
+  },
+  "act_orn_herrnhut": {
+   "set": "prop_schmuck_rail_1",
+   "stall": "deco-schmuck",
+   "name": "Herrnhut star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A paper Herrnhut star with 26 points, folded by hand in Herrnhut in Saxony since the 1850s: it lights from inside. Click it and it glows.",
+   "label": "Herrnhuter Stern · 29 €",
+   "action": "light",
+   "lit_material": "bulb_warm"
   },
   "act_grill": {
    "set": "prop_wurst_counter",

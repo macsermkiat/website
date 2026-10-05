@@ -21,7 +21,7 @@ from mathutils import Euler, Matrix, Vector  # noqa: E402
 import pipeline  # noqa: E402
 from hut import COUNTER_TOP, Hut  # noqa: E402
 from nmlib import carpentry as cp  # noqa: E402
-from nmlib import mats, render, state  # noqa: E402
+from nmlib import export, mats, render, state  # noqa: E402
 
 # key: sign text, width, walls, trim colour, valance, sign style, roof, extras
 VARIANTS = {
@@ -64,6 +64,51 @@ SEEDS = {k: 100 + i * 7 for i, k in enumerate(VARIANTS)}
 
 
 lamp_spots = []   # sign-lamp positions of the last build, for the preview's spot lights
+SHINGLE = (0.33, 0.22)   # round 8: larger shingles (was 0.29 x 0.20), triangles freed for the goods
+RAIL_Z = 2.02            # hanging rail (slot_rail_1): centre line height, below the 2.2 m opening header
+RAIL_DY = -0.13          # ... and its offset in front of the hut front (yF)
+CRATE_TOP = 0.34         # crate bench top (slot_crate)
+CRATE_SIZE = (0.62, 0.42)
+SLOTS = {}               # per-variant rail/crate data of the last builds (written to deco_slots.json)
+SLOTS_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "deco_slots.json")
+
+
+def rail_and_crate(h, key, v, lite):
+    """Round 8 (ADR 0004): a turned wooden hanging rail across the front opening on two forged
+    brackets screwed to the header (slot_rail_1 at its left end, +X along it), and a low slatted
+    bench at the front-left corner for the vendor's crate or basket (slot_crate on its top)."""
+    W, yF = h.W, h.yF
+    L = W - (0.95 if v.get("awning") else 0.6)        # clear of the awning stays
+    y = yF + RAIL_DY
+    x0, x1 = -L / 2, L / 2
+    h.frame.cyl((0, y, RAIL_Z), 0.019, 0.019, L + 0.1, seg=6 if lite else 10, rot=(0, math.pi / 2, 0),
+                tint="honey", caps=True)
+    for x in (x0 + 0.06, x1 - 0.06):                  # brackets: plate on the header, arm, drop
+        h.iron.box((x, yF - 0.055, 2.27), (0.035, 0.008, 0.1), bevel=0)
+        h.iron.slab((x, yF - 0.06, 2.25), (x, y, 2.25), 0.014, 0.01, up=(0, 0, 1), bevel=0)
+        h.iron.slab((x, y, 2.255), (x, y, RAIL_Z + 0.02), 0.012, 0.012, up=(0, 1, 0), bevel=0)
+        if not lite:
+            h.iron.torus((x, y, RAIL_Z), 0.024, 0.005, seg=10, tseg=4, rot=(0, math.pi / 2, 0))
+    for x in (x0 - 0.05, x1 + 0.05):                  # turned end knobs
+        h.frame.sphere((x + (0.012 if x > 0 else -0.012), y, RAIL_Z), 0.026, seg=8 if not lite else 6,
+                       rings=5 if not lite else 3, tint="honey")
+    export.empty("slot_rail_1", (x0, y, RAIL_Z))
+    # crate bench: three slats on two board trestles with a stretcher
+    bw, bd = CRATE_SIZE
+    cx, cy = -W / 2 + 0.2 + bw / 2, yF - h.counter_over - 0.05 - bd / 2
+    for i in range(3):
+        h.frame.box((cx + state.rng.uniform(-0.01, 0.01), cy - bd / 2 + (i + 0.5) * bd / 3, CRATE_TOP - 0.012),
+                    (bw, bd / 3 - 0.012, 0.024), tint="grey", grain=0)
+    for dx in (-bw / 2 + 0.07, bw / 2 - 0.07):
+        h.frame.box((cx + dx, cy, (CRATE_TOP - 0.024) / 2), (0.028, bd - 0.04, CRATE_TOP - 0.024), tint="grey",
+                    grain=2)
+    h.frame.box((cx, cy + bd / 2 - 0.06, 0.12), (bw - 0.18, 0.022, 0.07), tint="grey", grain=0)
+    export.empty("slot_crate", (cx, cy, CRATE_TOP))
+    SLOTS[key] = {
+        "slot_rail_1": {"position": [round(x0, 4), round(y, 4), RAIL_Z], "length": round(L, 3),
+                        "rail_radius": 0.019, "clear_drop": round(RAIL_Z - COUNTER_TOP - 0.45, 3)},
+        "slot_crate": {"position": [round(cx, 4), round(cy, 4), CRATE_TOP], "top_size": [bw, bd]},
+    }
 
 
 def build_variant(key, lite):
@@ -73,17 +118,19 @@ def build_variant(key, lite):
     h = Hut(f"deco_{key}", W=W, D=D, eave=EAVE, ridge=RIDGE, ridge_axis='x', ov_eave=0.32, ov_gable=0.2,
             wall=v["wall"], wall_tint=v["wall_tint"], frame_tint="walnut" if v["wall_tint"] != "walnut" else "dark",
             roof=v["roof"], roof_tint=v["roof_tint"], inner_tint="pine", counter_tint="oak",
-            counter_depth=0.5, counter_over=0.2, shelves=(1.4, 1.8), bulb_spacing=0.22,
-            wall_band=v.get("wall_band"), plank_w=0.15, plank_bevel=0.0, shingle_size=(0.29, 0.2),
-            bulb_detail=(6, 4))
+            counter_depth=0.5, counter_over=0.2, shelves=(1.4, 1.8), bulb_spacing=0.24,
+            wall_band=v.get("wall_band"), plank_w=0.15, plank_bevel=0.0, shingle_size=SHINGLE,
+            bulb_detail=(5, 3))   # round 8: 5x3 bulbs (were 6x4), they read as glowing points
     yF = h.yF
     P = h.paint
+    if v["roof"] == "boards":
+        h.roofp.default_bevel = 0.0     # round 8: square-edged roof boards and battens (-2k triangles)
     trim, accent = v["trim"], v["accent"]
-    h.build_carcass()
-    h.build_counter(brackets=3, grid=0.28)
+    h.build_carcass(floor=False)            # round 8: the floor hides behind the counter
+    h.build_counter(brackets=3, grid=0.4)
     h.build_shelves()
     h.build_roof(fascia_band=trim, barge_band=trim)
-    h.build_snow()
+    h.build_snow(nx=None if lite else 14)
     # painted front posts, rails and counter lip in the trim colour
     for x in h.front_posts:
         P.box((x, yF - 0.008, (COUNTER_TOP + 2.2) / 2), (0.115, 0.018, 2.2 - COUNTER_TOP), band=trim, grain=2)
@@ -115,7 +162,7 @@ def build_variant(key, lite):
                         up=(1, 0, 0))
         tip = hinge + d * L
         cp.bulb_string(h.bulbs, h.wire, [(-(W - 0.3) / 2, tip.y, tip.z - 0.02), (0, tip.y, tip.z - 0.02),
-                                         ((W - 0.3) / 2, tip.y, tip.z - 0.02)], sag=0.03, spacing=0.22, seg=6, rings=4)
+                                         ((W - 0.3) / 2, tip.y, tip.z - 0.02)], sag=0.03, spacing=0.24, seg=5, rings=3)
     # small stove pipe for the hot-food stalls
     if v.get("stove"):
         x, y = W / 2 - 0.55, 0.35
@@ -130,6 +177,7 @@ def build_variant(key, lite):
     # sign: big, high-contrast letters so the word reads from the lane
     shape, board_band, text_band = v["board"]
     fnt = state.font(v["font"])
+    P.flat_text = True      # round 8: painted letters (one face each), so the goods fit the 20k budget
     if v["sign"] == "crest":
         ys = -0.35
         z_roof = RIDGE - abs(ys) * math.tan(h.pitch) + 0.05
@@ -169,10 +217,33 @@ def build_variant(key, lite):
         y = sl.point(0, 0).y - 0.02
         for xa, xb in ((sl.a0 + 0.05, -sw / 2 - 0.05), (sw / 2 + 0.05, sl.a1 - 0.05)):
             cp.bulb_string(h.bulbs, h.wire, [(xa, y, e.z), ((xa + xb) / 2, y, e.z), (xb, y, e.z)], sag=0.04,
-                           spacing=0.22, seg=6, rings=4)
+                           spacing=0.24, seg=5, rings=3)
+    P.flat_text = False
     h.interior_bulbs(xs=(-0.6, 0.6), z=2.3)
+    rail_and_crate(h, key, v, lite)
     h.markers(sign_pos=tuple(sign_c + Vector((0, -0.05, 0))), lights=[(0, -0.2, 2.3)], cam_dist=3.2, cam_h=1.7)
     return h.finish()
+
+
+def write_slots():
+    """blender/stalls/deco_slots.json: the rail and crate spot of every variant (stall frame:
+    Blender metres, Z up, front -Y; three.js x = x, y = z, z = -y). Merges with the file on disk so
+    --only builds keep the other variants."""
+    import json
+    doc = {"about": "Deco stall rail and crate spots (carpenter, blender/stalls/deco.py). slot_rail_1 sits at the "
+                    "rail's LEFT end (visitor's view) on its centre line; the rail runs along +X for length metres. "
+                    "Goods hang below it; clear_drop is the height free above a 0.45 m tall counter display. "
+                    "slot_crate is the top of a low slatted bench at the front-left corner, for one crate or basket.",
+           "frame": "Stall frame: Blender metres, Z up, front toward -Y (three.js: x = x, y = z, z = -y).",
+           "variants": {}}
+    if os.path.exists(SLOTS_JSON):
+        with open(SLOTS_JSON) as f:
+            doc["variants"] = json.load(f).get("variants", {})
+    doc["variants"].update(SLOTS)
+    doc["variants"] = {k: doc["variants"][k] for k in VARIANTS if k in doc["variants"]}
+    with open(SLOTS_JSON, "w") as f:
+        json.dump(doc, f, indent=1, ensure_ascii=False)
+        f.write("\n")
 
 
 def main():
@@ -217,6 +288,7 @@ def main():
     import json
     with open(os.path.join(state.OUT_DIR, "deco_report.json"), "w") as f:
         json.dump(reports, f, indent=1)
+    write_slots()
     for k, r in reports.items():
         print(f"[deco] {k}: {r['bytes'] / 1e6:.2f} MB, {r['triangles']} tris")
 

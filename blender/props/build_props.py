@@ -13,7 +13,7 @@ Outputs
     blender/out/props_report.json      triangles, bytes, bounding boxes, pivots, items per set
     blender/out/vendor/renders/*.png   the preview PNGs (deco frames as prop_deco_<key>.png; never the shared
                                        blender/out/renders/, where the carpenter's deco.py writes deco_<key>.png)
-    review/round-6/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
+    review/round-8/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
                                        and the deco contact sheet (built only from the vendor's own frames)
 """
 import argparse
@@ -31,12 +31,15 @@ import set_bier  # noqa: E402
 import set_bookopen  # noqa: E402
 import set_books  # noqa: E402
 import set_deco  # noqa: E402
+import set_decofill  # noqa: E402
+import set_schmuck  # noqa: E402
 import set_gluehwein  # noqa: E402
 import set_wurst  # noqa: E402
 
-MODULES = [set_gluehwein, set_bier, set_wurst, set_books, set_deco, set_bookopen]
+MODULES = [set_gluehwein, set_bier, set_wurst, set_books, set_deco, set_decofill, set_schmuck, set_bookopen]
 STALL_ASSET = {"gluehwein": "stall_gluehwein.glb", "bratwurst": "stall_bratwurst.glb",
-               "bierstand": "stall_bier.glb", "buecherstand": "stall_buecher.glb"}
+               "bierstand": "stall_bier.glb", "buecherstand": "stall_buecher.glb",
+               "deco-schmuck": "stall_schmuck.glb"}   # round 8: the ornament shop replaces deco_schmuck (ADR 0004)
 REPORT = os.path.join(vlib.state.OUT_DIR, "props_report.json")
 # wide-shot camera elevation (radians) per preview stage: over the counter; level under the shelf above
 WIDE_ELEV = {"counter": 0.42, "shelf": 0.1, "shelf2": 0.22, "section": 0.12}
@@ -77,6 +80,10 @@ def build_variant(name, d, lite, ao):
 def render_previews(name, d, ps, a, res):
     """Section sets: a wide shot and a close-up. Deco sets: one framed shot (also the contact-sheet tile).
     A set with "in_stall" is also shot standing in the carpenter's shipped stall glb ("stall" shots)."""
+    if d.get("fill"):
+        # round 8: shelf, front, rail and ornament-shop sets are previewed standing in their stall
+        # (blender/props/render_stalls.py), not one by one on a plain counter
+        return None
     if d.get("section"):
         if {"wide", "hero"} & set(a.shots.split(",")):
             top = vstage.preview_scene(ps, d["kind"], d.get("width", 3.0), section=d.get("section_boards"))
@@ -124,7 +131,7 @@ def guard_paths():
     repo = os.path.realpath(vlib.REPO or "")
     if not repo or repo == "/" or not os.path.isfile(os.path.join(repo, "docs", "BUILD.md")):
         raise SystemExit(f"[props] refusing to run: repo root {repo!r} is not the website repo")
-    owned = {"review": (vlib.REVIEW, "review/round-6/vendor"), "models": (vlib.MODELS, "site/public/models"),
+    owned = {"review": (vlib.REVIEW, "review/round-8/vendor"), "models": (vlib.MODELS, "site/public/models"),
              "report": (os.path.dirname(REPORT), "blender/out"), "renders": (vstage.RENDERS, "blender/out/vendor/renders"),
              "atlas": (vlib.ATLAS_DIR, "blender/out/vendor")}
     for key, (path, rel) in owned.items():
@@ -214,7 +221,7 @@ def deco_contact_sheet(sets):
         print(f"[props] contact sheet not rebuilt, frames missing: {[os.path.basename(p) for p in missing]}")
         return
     out = os.path.join(vlib.REVIEW, "deco_goods_contact_sheet.jpg")
-    render.contact_sheet(frames, out, cols=3, tile=(416, 234), title="Deco stall goods (vendor, round 6)")
+    render.contact_sheet(frames, out, cols=3, tile=(416, 234), title="Deco stall goods (vendor, round 8)")
     print(f"[props] wrote {out}")
 
 
@@ -250,14 +257,33 @@ def write_props_json(sets):
             continue
         stall = d["stall"]
         key = stall.replace("deco-", "").replace("kartoffelpuffer", "puffer")
-        lst.append({"set": name, "stall": stall, "slot": d["slot"], "model": f"{name}.glb",
-                    "lite": f"{name}.lite.glb", "asset": STALL_ASSET.get(stall, f"deco_{key}.glb")})
+        e = {"set": name, "stall": stall, "slot": d["slot"], "model": f"{name}.glb",
+             "lite": f"{name}.lite.glb", "asset": STALL_ASSET.get(stall, f"deco_{key}.glb")}
+        if d.get("seat", "board") != "board":
+            # round 8: how the set meets its stall: "hang" from a rail, "stand" on a dais it overhangs (the
+            # tree), "ground" in front of the hut; the default "board" sets stand on a counter or shelf
+            e["seat"] = d["seat"]
+        lst.append(e)
+    retired = []
+    for name, d in getattr(set_deco, "RETIRED", {}).items():
+        if os.path.exists(os.path.join(vlib.MODELS, f"{name}.glb")):
+            retired.append({"set": name, "stall": d["stall"], "slot": d["slot"], "model": f"{name}.glb",
+                            "lite": f"{name}.lite.glb", "asset": "deco_schmuck.glb",
+                            "why": "round 8: the old Christbaumschmuck counter goods, superseded by the ornament "
+                                   "shop's prop_schmuck_* sets (ADR 0004). Not placed; kept on disk for reference."})
     out = {"about": "Vendor prop sets. Each glb's root node is the set origin: parent it to the named slot_ empty "
                     "of the stall (layout.json id in 'stall', stall file in 'asset'). 'sets' is the list the engine "
                     "reads; 'by_set' is the same data keyed by set name ({set: {slot, stall, model, lite, asset}}). "
-                    "'standalone' lists vendor models that are not placed at a slot (book_open.glb).",
+                    "'standalone' lists vendor models that are not placed at a slot (book_open.glb). "
+                    "Round 8: a deco stall has up to three sets (prop_deco_<key> at slot_counter, _shelf at "
+                    "slot_shelf_1 holding both shelves, _front at slot_front). The ornament shop's prop_schmuck_* "
+                    "sets stand at stall_schmuck.glb's slots (rails, counter, shelf tiers, glass case, tree dais). "
+                    "'seat' (when present) says how a set meets its stall: hang (from a rail), stand (on a dais it "
+                    "overhangs), ground (in front of the hut); otherwise it stands on a counter or shelf board. "
+                    "'retired' lists sets that are no longer placed.",
            "sets": lst,
            "standalone": alone,
+           "retired": retired,
            "by_set": {e["set"]: {k: e[k] for k in ("slot", "stall", "model", "lite", "asset")} for e in lst}}
     path = os.path.join(vlib.MODELS, "props.json")
     with open(path, "w") as f:

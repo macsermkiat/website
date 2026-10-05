@@ -124,6 +124,25 @@ D = {
     "ultralearning": ("jacket", (2.6, 24.0, 16.0), "e8eef2", "1a2a4a", "oswald", "e2583a", "arrow"),
 }
 
+# Round 8 (ADR 0004): every cover is designed in-house on its category's colour and pattern, so a cabinet
+# reads as one family. cols: three shades the books of the category take in turn; ink: title and author;
+# panel: the solid title panel; accent: rules, emblem and pattern highlights; font: the category's typeface;
+# pattern: the background pattern (atlas_books._pattern).
+CAT_STYLE = {
+    "physics": dict(cols=("14233f", "1b2f52", "0f1a30"), ink="f2e8d0", panel="0b1426", accent="e0a43a",
+                    font="josefin", pattern="orbits"),
+    "lives": dict(cols=("6a1c22", "7a2a20", "561820"), ink="f4ead2", panel="3e0f14", accent="d9b25e",
+                  font="playfair", pattern="lattice"),
+    "mind": dict(cols=("1e5a5e", "245e52", "19484f"), ink="f4efe4", panel="10363a", accent="f0a07a",
+                 font="garamond", pattern="ripples"),
+    "people": dict(cols=("d89a2a", "e0a83a", "c88a24"), ink="1c1a18", panel="f4ead2", accent="8a2a1a",
+                   font="oswald", pattern="circles"),
+    "decisions": dict(cols=("1f4a32", "26553a", "183c2a"), ink="f2ead8", panel="0f2a1c", accent="e8b84a",
+                      font="baskerville", pattern="branches"),
+    "craft": dict(cols=("a8482a", "b4562e", "963e24"), ink="f6efe0", panel="2a2522", accent="e8c070",
+                  font="bebas", pattern="chevrons"),
+}
+
 LIGHT_COLS = {"e8e1d0", "f1ece0", "f2efe6", "f4f2ee", "f3efe6", "f4f1ea", "e9f0f2", "f2ede2", "f3eee4", "f2f0ea",
               "f4f2ec", "f0d8c8", "dfe8ee", "e8eef2", "e2b23a", "f2c230", "e8a33a", "f0b43a"}
 
@@ -155,12 +174,17 @@ def load():
             if slug not in D:
                 raise KeyError(f"books_catalog: no design for {slug!r} (new book in categories.json?)")
             binding, (t, h, d), col, ink, fnt, acc, motif = D[slug]
-            out.append((nn, dict(title=b["title"], author=b["author"], slug=slug, category=c["key"],
+            # round 8: the category's design replaces the per-book colours; cloth cases get printed jackets
+            st = CAT_STYLE[c["key"]]
+            i_cat = c["books"].index(b)
+            col, ink, fnt, acc, motif = st["cols"][i_cat % 3], st["ink"], st["font"], st["accent"], st["pattern"]
+            binding = "jacket" if binding == "cloth" else binding
+            out.append((nn, dict(panel=st["panel"], i_cat=i_cat,title=b["title"], author=b["author"], slug=slug, category=c["key"],
                                  label_de=c["label_de"], label_en=c["label_en"],
                                  spine_title=SPINE_TITLE.get(slug, b["title"]),
                                  spine_author=SPINE_AUTHOR.get(slug, short_author(b["author"])),
                                  binding=binding, dims=(t / 100, h / 100, d / 100), col=col, ink=ink, font=fnt,
-                                 accent=acc, motif=motif, light=col in LIGHT_COLS)))
+                                 accent=acc, motif=motif, light=col in LIGHT_COLS or col == "d89a2a" or col == "e0a83a" or col == "c88a24")))
             nn += 1
     missing = set(D) - {b["slug"] for _, b in out}
     if missing:

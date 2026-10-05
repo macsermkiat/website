@@ -391,49 +391,71 @@ def shelf_set(name, slot, seed_k):
     return s
 
 
+def cover_scale(b, cmax):
+    """Round 8: a face-out copy keeps its proportions but is scaled down (never up) to the cabinet's largest
+    cover (cover_max in buecher_sections.json); its thickness is capped at the ledge's limit."""
+    t, h, d = b["dims"]
+    k = min(1.0, cmax["width"] / d, cmax["height"] / h)
+    return min(t * k, cmax["thickness"]), h * k, d * k
+
+
+def add_face_out(s, nn, b, loc, lean, cmax):
+    """Mac's book nn as act_book_<nn>, face-out on a cabinet's angled board: the front cover toward the visitor
+    (-Y), the spine on the left (-X), leaning back `lean` rad against the backboard. The node's origin is the
+    middle of the book's foot where it rests on the ledge (the back edge of the foot: leaning back, the book
+    stands on that edge and its front edge lifts by thickness x sin(lean)); the node is rotated about X."""
+    name = f"act_book_{nn:02d}"
+    k = books_catalog.key(nn)
+    w, h, d = cover_scale(b, cmax)
+    node = s.node(name, loc, rot=(-lean, 0, 0))
+    M = T(-d / 2, -w / 2, 0) @ Matrix.Rotation(-math.pi / 2, 4, 'Z')
+    book(node, w, h, d, "spine_" + k, "cover_" + k, "paper" if b["binding"] == "paper" else "hard",
+         f"book:{nn:02d}", M, C("efe6d0"))
+    s.item(name, b["title"], "book", title=b["title"], author=b["author"], slug=b["slug"], category=b["category"],
+           category_de=b["label_de"], cover_material=f"book_cover_{nn:02d}", cover_uv=cover_uv_gltf("cover_" + k),
+           cover_texture="prop_tex_books_color.webp", where="cabinet", face_out=True,
+           lean_deg=round(math.degrees(lean), 2), size_m=[round(w, 3), round(h, 3), round(d, 3)],
+           pivot="the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X")
+    return w
+
+
 def section_set(key):
-    """prop_books_<key>: Mac's books of one category on the section's boards (buecher_sections.json). The
-    titled books are split over the boards (the upper board, nearer eye level, gets the larger half), each
-    group stands together a little off-centre between untitled filler books, with a gap and a bookend for the
-    'room' the section was sized for. Raises if the titles do not fit."""
+    """prop_books_<key> (round 8, ADR 0004): Mac's books of one category face-out in the category's glazed
+    cabinet (buecher_sections.json): one act_book_<nn> per title at the board's cover_slots_x, filled from the
+    top board down (eye level first), so any empty place is at the bottom right. The spine board above carries
+    a short row of untitled filler spines between bookends (scenery, static). Raises if the titles do not fit."""
     sec = sections()[key]
     books = [(nn, b) for nn, b in catalog() if b["category"] == key]
-    s = vlib.PropSet(f"prop_books_{key}", sec["slot"], "buecherstand",
-                     footprint=(max(bd["width"] for bd in sec["boards"]), max(bd["depth"] for bd in sec["boards"])))
+    boards = sorted(sec["boards"], key=lambda bd: -bd["index"])
+    places = [(bd, x) for bd in boards for x in bd["cover_slots_x"]]
+    if len(books) > len(places):
+        raise RuntimeError(f"{key}: {len(books)} titles but the cabinet takes {len(places)}")
+    W = max(bd["offset"][0] + bd["width"] for bd in sec["boards"])
+    s = vlib.PropSet(f"prop_books_{key}", sec["slot"], "buecherstand", footprint=(W, sec["spine_board"]["depth"]))
     m = s.static
-    boards = sorted(sec["boards"], key=lambda bd: bd["index"])
-    n = len(books)
-    nb = len(boards)
-    # split: the upper board gets ceil(n / 2), the lower the rest (more boards: spread evenly from the top)
-    counts = [n // nb] * nb
-    for i in range(n - sum(counts)):
-        counts[nb - 1 - i] += 1
-    it = iter(books)
-    k = 5 + 3 * len(key)
-    for bd, cnt in zip(boards, counts):
+    cmax = sec["cover_max"]
+    for (nn, b), (bd, x) in zip(books, places):
         ox, oy, oz = bd["offset"]
-        W, depth, clear = bd["width"], bd["depth"], bd.get("clear_height")
-        group = [next(it) for _ in range(cnt)]
-        x0, x1 = ox + 0.012, ox + W - 0.012
-        need = sum(book_dims(b, clear, depth)[0] + 0.0025 for _, b in group)
-        if need > x1 - x0:
-            raise RuntimeError(f"{key}: board {bd['index']} is {W:.2f} m but its {cnt} titles need {need:.2f} m")
-        room = (x1 - x0) - need
-        # filler before the titles, the titles, filler after, leaving about a fifth of the room free at the
-        # right end for a bookend (books bought, room to restock)
-        free = max(0.0, min(0.12, room * 0.22))
-        left_fill = (room - free) * rng.uniform(0.35, 0.55)
-        y0 = oy + SPINE_SET
-        x, k = filler_run(m, x0, x0 + left_fill, y0, oz, clear, depth, k)
-        for nn, b in group:
-            w = book_dims(b, clear, depth)[0]
-            add_real_book(s, nn, b, (x + w / 2, y0 + rng.uniform(0.0, 0.004), oz), clear=clear, depth=depth)
-            x += w + rng.uniform(0.0012, 0.0035)
-        x, k = filler_run(m, x, x1 - free, y0, oz, clear, depth, k)
-        if x1 - x > 0.03:
-            bookend(m, T(x + 0.003, y0, oz), side=-1)
+        lean = math.radians(bd["lean_deg"])
+        # the foot's back edge 3 mm in front of the backboard's foot (ledge_depth behind the lip), so the cover
+        # leans parallel to the backboard without touching it
+        add_face_out(s, nn, b, (ox + x + rng.uniform(-0.002, 0.002), oy + bd["ledge_depth"] - 0.004, oz), lean, cmax)
+    # the spine board: untitled stock at rest, a bookend at each end of the row, the right part left free
+    sb = sec["spine_board"]
+    ox, oy, oz = sb["offset"]
+    k = 7 + 5 * len(key)
+    x0 = ox + 0.03
+    x1 = ox + sb["width"] * rng.uniform(0.55, 0.7)
+    bookend(m, T(x0 - 0.004, oy + SPINE_SET + 0.012, oz), side=1)
+    x, k = filler_run(m, x0, x1, oy + SPINE_SET + 0.012, oz, min(sb["clear_height"], 0.22), min(sb["depth"], 0.2), k)
+    bookend(m, T(x + 0.003, oy + SPINE_SET + 0.012, oz), side=-1)
     s.finish()
     return s
+
+
+def _slot_frame(sec):
+    """The slot's frame in the stall: (position, rotation about Z in rad)."""
+    return Vector(sec["slot_position"]), math.radians(sec["slot_rotation_z_deg"])
 
 
 def _section_def(key, seed):
@@ -441,13 +463,15 @@ def _section_def(key, seed):
     W = max(bd["offset"][0] + bd["width"] for bd in sec["boards"])
     top = max(bd["offset"][2] for bd in sec["boards"])
     zc = top / 2 + 0.12
-    ymax = max(bd["offset"][1] for bd in sec["boards"])
+    # the engine's close-up, cam_cat_<key> -> its target, as offsets from the slot in stall axes (shot_at); the
+    # 42 degree vertical field of view of the site is a 26.4 mm lens on a 36 mm wide 16:9 sensor
+    pos, _ = _slot_frame(sec)
+    cam_cat = (tuple(Vector(sec["cam_position"]) - pos), tuple(Vector(sec["cam_target_position"]) - pos), 26.4)
     return dict(fn=lambda: section_set(key), slot=sec["slot"], stall="buecherstand", kind="section", section=True,
-                seed=seed, width=W + 0.4, section_boards=(sec["boards"], sec["slot_position"][2]),
-                cam=((W / 2, -1.25 - ymax, zc + 0.12), (W / 2, ymax / 2, zc), 32), cam_fixed=True,
-                # close-up of the top board, square on (the carts' upper tier is stepped back by ymax, so the
-                # camera follows it there and backs off for the wider cart boards)
-                hero=((W * 0.5, ymax - max(0.62, 1.1 * W), top + 0.14), (W * 0.5, ymax, top + 0.11), 40),
+                seed=seed, width=W + 0.4, section_boards=None,
+                cam=((W / 2, -1.0, zc + 0.1), (W / 2, 0.05, zc), 32), cam_fixed=True,
+                hero=((W * 0.5, -0.75, top + 0.16), (W * 0.5, 0.05, top + 0.1), 40),
+                in_stall="stall_buecher.glb", stall_cams={"cam_cat": cam_cat},
                 label=f"{sec['label_de']} ({sec['books']} books)")
 
 

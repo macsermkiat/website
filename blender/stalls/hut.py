@@ -126,7 +126,9 @@ class Hut:
         return p
 
     # -------------------------------------------------------------- carcass
-    def build_carcass(self, front_lower=True, front_upper=True, sides=True, back=True, lower_top=None):
+    def build_carcass(self, front_lower=True, front_upper=True, sides=True, back=True, lower_top=None,
+                      floor=True):
+        """floor=False leaves out the floor boards (deco stalls: hidden behind the counter)."""
         W, D = self.W, self.D
         x0, x1, yF, yB = self.x0, self.x1, self.yF, self.yB
         fr, wt = self.frame_tint, self.wall_tint
@@ -135,7 +137,10 @@ class Hut:
             self.frame.box((0, y, 0.05), (W + 0.02, 0.1, 0.1), tint="dark")
         for x in (x0 + 0.05, x1 - 0.05):
             self.frame.box((x, 0, 0.05), (0.1, D - 0.2, 0.1), tint="dark")
-        cp.floor_boards(self.wood, x0 + 0.1, x1 - 0.1, yF + 0.1, yB - 0.1, 0.13, tint="dark")
+        if floor:
+            cp.floor_boards(self.wood, x0 + 0.1, x1 - 0.1, yF + 0.1, yB - 0.1, 0.13, tint="dark")
+        else:   # one dark board stands in for the floor (no daylight under the counter)
+            self.wood.box((0, 0, 0.124), (W - 0.2, D - 0.2, 0.012), tint="dark", var=0.0, bevel=0, drop=("-z",))
         # corner posts and front posts
         for x in (x0 + 0.05, x1 - 0.05):
             self.frame.box((x, yB - 0.05, self.eave / 2), (0.1, 0.1, self.eave), tint=fr, segs=3)

@@ -1,17 +1,19 @@
-"""Bücherstand category sections: one source for the geometry (no bpy needed).
+"""Bücherstand category cabinets: one source for the geometry (no bpy needed).
 
-The six categories in content/books/categories.json each get a labelled section on the
-Bücherstand: two angled side racks ("wings", two bays each) that stand at the front corners and
-two book carts in front of the glazed cabinets. buecher.py builds the boards, signs and the
-slot_cat_<key> empties from this module, and `python3 blender/stalls/buecher_sections.py`
-writes blender/stalls/buecher_sections.json for the vendor, so the model and the json can not
-drift apart.
+Round 8 (docs/adr/0004): the six categories in content/books/categories.json each get a glazed
+cabinet with angled face-out boards. Two cabinets stand inside the hut's front, flanking the
+counter; the other four stand in two short wings (two cabinets each) splayed out from the hut's
+front corners under small shingled canopies. Each cabinet is sized for its category: up to five
+covers per row, rows = ceil(books / 5), covers per row = ceil(books / rows) (people, 14 books:
+three rows of five). buecher.py builds the cabinets, signs, doors and empties from this module,
+and `python3 blender/stalls/buecher_sections.py` writes blender/stalls/buecher_sections.json for
+the vendor, so the model and the json can not drift apart.
 
 Coordinates are the stall's own Blender frame: metres, Z up, origin on the ground at the hut's
-footprint centre, front (visitor side) toward -Y. Each section has its own frame, which is the
-frame of its slot_cat_<key> empty: +X runs along the boards from the visitor's left to right,
--Y points at the visitor (spines face -Y), +Z is up. The empty sits at the LEFT end of the
-LOWEST board, on the board's top surface, at its front edge.
+footprint centre, front (visitor side) toward -Y. Each cabinet has its own frame, which is the
+frame of its slot_cat_<key> empty: +X runs along the boards from the visitor's left to right, -Y
+points at the visitor (covers face -Y), +Z is up. The empty sits at the LEFT end of the LOWEST
+face-out board, on the ledge's top surface, at the ledge's front edge (just behind its lip).
 """
 import json
 import math
@@ -22,51 +24,56 @@ REPO = os.path.dirname(os.path.dirname(HERE))
 CATEGORIES = os.path.join(REPO, "content", "books", "categories.json")
 OUT_JSON = os.path.join(HERE, "buecher_sections.json")
 
-MEAN_SPINE = 0.042        # mean book thickness used for the capacity figures (the vendor's books: 2-6 cm)
-BOARD_T = 0.025           # board thickness
-BOARD_D = 0.26            # usable board depth (the vendor's books are up to 0.22 deep)
-UPRIGHT = 0.04            # rack uprights / dividers
+HUT_W, HUT_D = 4.2, 2.5
+Y_FRONT = -HUT_D / 2
 
-# ---- side racks ("wings"): two bays each, standing at the hut's front corners, splayed 50 degrees
-WING_PHI = math.radians(50.0)     # angle between a wing's back line and the hut front (X axis)
-WING_DEPTH = 0.32                 # carcass depth, front face to the back of the back boards
-WING_ROOT = (2.08, -1.08)         # back corner of each wing's inner end (x mirrored for the left wing)
-WING_BOARDS = (0.42, 0.80)        # board top surfaces (z), lowest first
-WING_TOP = 1.17                   # underside of the rack's top cap
-BOARD_SET = 0.01                  # boards' front edge sits 1 cm behind the uprights' front
+# ---- covers and face-out boards
+PER_ROW_MAX = 5
+COVER_W, COVER_H, COVER_T = 0.145, 0.215, 0.035   # largest cover the boards take (w, h, thickness)
+PITCH_X = 0.158                                   # cover centre spacing along a board
+ROW_PITCH = 0.265                                 # vertical spacing of the face-out boards
+TOP_ROW_Z = 1.36                                  # ledge top of the highest face-out board
+LEAN_DEG = 15.0                                   # covers lean back against the backboard
+LEDGE_D = 0.075                                   # ledge depth: lip inner face to backboard foot
+LIP_H = 0.022                                     # lip height above the ledge top
+SIDE_MARGIN = 0.02                                # board end to the first cover's edge
+# ---- cabinet carcass
+CAB_SIDE = 0.03                                   # side board thickness
+CAB_DEPTH = 0.32                                  # outer depth, front face to back
+CAB_TOP = 1.90                                    # top of the carcass (under the cornice)
+GLASS_TOP = 1.86                                  # top of the glazed opening
+SPINE_Z = 1.62                                    # spine board top (books at rest stand here as spines)
+LEDGE_Y = 0.045                                   # lip front, behind the front face (door + rebate)
+SIGN_H = 0.26                                     # crest sign on the cornice
+SIGN_Z = 1.95                                     # sign bottom
+GAP = 0.025                                       # between cabinets in a wing
+# ---- wings
+WING_PHI = math.radians(40.0)                     # angle between a wing's front line and the hut front
+WING_ROOT = (2.38, Y_FRONT + 0.03)                # back corner of each wing's inner end (x mirrored left)
+# ---- hut cabinets: front face protrudes in front of the hut front, outer side by the corner post
+HUT_CAB_FRONT = Y_FRONT - 0.27
+HUT_CAB_X = HUT_W / 2 - 0.1                        # outer side
+# ---- close-up cameras: cam_cat_<key> on the cabinet's normal, framing its covers in 16:9
+FOV_V = math.radians(42.0)
+ASPECT = 16 / 9
+CAM_FILL = 0.86
 
-# ---- carts: two stepped tiers, front tier low, back tier high and further back
-CART_FRONT_Y = -2.28              # front face of both carts (stall frame)
-CART_X = 1.40                     # cart centre at x = -1.40 (left) and +1.40 (right)
-CART_TIERS = ((0.62, 0.02), (0.92, 0.27))   # (board top z, board front edge y from the cart front)
-CART_SIGN_Z = 1.31                # back tier's height limit: taller books would hide the cabinet glass
-CART_SIGN = (0.47, 0.24, 0.10)
-# ---- close-up cameras (round 4): cam_cat_<key> stands CAM_DIST in front of the section's centre
-# (along the section frame's -Y) at eye height CAM_Z and looks at cam_cat_<key>_target, the centre of
-# the boards plus the sign. 1.75 m frames a ~0.8 m wide section in a portrait (9:16) view at 45 deg
-# vertical FOV and the whole section with its sign in a 16:9 one.
-CAM_DIST = 1.75
-CAM_Z = 1.45
-CAM_TARGET_Z = 0.86
-# The inner rack bays stand behind the carts as seen along their own normal, so their cameras swing
-# CAM_SWING toward the lane (about the target) and stand a little higher: the sightline then passes
-# outside the cart's outer end.
-CAM_SWING = math.radians(40.0)
-CAM_Z_INNER = 1.55    # cart name board on the front apron: centre z, height, overhang past the cart
-# (round 3: the cart signs moved from rods above the back tier to the front apron, because from a
-# 3/4 view a rod sign on the right cart covered the right rack's "Menschen & Gespräche" sign)
+# Door hinge side per cabinet: each door opens 170 degrees and folds flat beside its cabinet, over a
+# free side (open lane, the counter front or the neighbouring cabinet's door), so an open door never
+# stands in its cabinet's cam_cat view and never cuts into another cabinet.
+HINGE = {"lives": "left", "mind": "left", "physics": "right", "people": "left", "decisions": "right",
+         "craft": "right"}
+DOOR_OPEN_DEG = 170.0
+DOOR_T = 0.022                                    # door frame thickness (in front of the carcass)
 
-# Section plan, visitor's left to right: left wing (two bays), left cart, right cart, right wing.
-# Bay / board widths are sized from the book count (0.34 m + 2.2 cm a book, rounded) and leave
-# about two to four times the shelf length the titled books need.
+# visitor's left to right: left wing (outer, inner), hut left, hut right, right wing (inner, outer)
 PLAN = [
-    # key,        unit,     bay index, board width
-    ("physics",   "wing_l", 0, 0.56),
-    ("mind",      "wing_l", 1, 0.54),
-    ("lives",     "cart_l", 0, 0.52),
-    ("decisions", "cart_r", 0, 0.60),
-    ("people",    "wing_r", 0, 0.65),
-    ("craft",     "wing_r", 1, 0.45),
+    ("lives", "wing_l", 0),
+    ("mind", "wing_l", 1),
+    ("physics", "hut_l", 0),
+    ("people", "hut_r", 0),
+    ("decisions", "wing_r", 0),
+    ("craft", "wing_r", 1),
 ]
 
 
@@ -75,44 +82,32 @@ def categories():
         return {c["key"]: c for c in json.load(f)["categories"]}
 
 
-def wing_bays(unit):
-    return [(k, w) for (k, u, i, w) in sorted(PLAN, key=lambda t: t[2]) if u == unit]
+def layout(n):
+    """(rows, covers per row) for n books: rows = ceil(n / 5), per row = ceil(n / rows)."""
+    rows = max(1, math.ceil(n / PER_ROW_MAX))
+    return rows, math.ceil(n / rows)
 
 
-def wing_length(unit):
-    bays = wing_bays(unit)
-    return UPRIGHT * (len(bays) + 1) + sum(w for _, w in bays)
+def board_width(per_row):
+    return per_row * PITCH_X + 2 * SIDE_MARGIN
+
+
+def cab_width(per_row):
+    return board_width(per_row) + 2 * CAB_SIDE
+
+
+def row_z(rows):
+    """Ledge tops, lowest first."""
+    return [round(TOP_ROW_Z - ROW_PITCH * (rows - 1 - i), 4) for i in range(rows)]
+
+
+def glass_bottom(rows):
+    """Bottom of the glazed opening (= top of the base cupboard)."""
+    return round(row_z(rows)[0] - 0.07, 4)
 
 
 def rot2(a, x, y):
     return (x * math.cos(a) - y * math.sin(a), x * math.sin(a) + y * math.cos(a))
-
-
-def wing_frame(unit):
-    """(origin xy, rotation about Z) of a wing's frame: origin at the front face, left end
-    (as the visitor sees it), on the ground; +X along the wing, -Y toward the visitor."""
-    L = wing_length(unit)
-    if unit == "wing_l":
-        a = WING_PHI                     # +X runs from the outer end toward the hut
-        rx, ry = -WING_ROOT[0], WING_ROOT[1]
-        dx, dy = rot2(a, L, WING_DEPTH)  # the root is the back corner at the right (inner) end
-    else:
-        a = -WING_PHI                    # +X runs from the hut outward
-        rx, ry = WING_ROOT
-        dx, dy = rot2(a, 0.0, WING_DEPTH)
-    return (rx - dx, ry - dy), a
-
-
-def cart_width(unit):
-    w = [w for (k, u, i, w) in PLAN if u == unit][0]
-    return w + 2 * UPRIGHT
-
-
-def cart_frame(unit):
-    """Origin at the cart body's front-left corner on the ground; no rotation (faces -Y)."""
-    W = cart_width(unit)
-    cx = -CART_X if unit == "cart_l" else CART_X
-    return (cx - W / 2, CART_FRONT_Y), 0.0
 
 
 def to_stall(origin, a, x, y, z):
@@ -120,80 +115,136 @@ def to_stall(origin, a, x, y, z):
     return [round(origin[0] + px, 4), round(origin[1] + py, 4), round(z, 4)]
 
 
-def sections():
-    """Every section with its boards in its own (slot) frame and the slot in the stall frame."""
+def cabinet_frames():
+    """{key: (origin xy, rotation about Z, width)}: origin at the cabinet's front-left corner on
+    the ground (visitor's view), +X along its width, +Y into it."""
     cats = categories()
-    out = []
-    for key, unit, idx, bw in PLAN:
-        c = cats[key]
-        if unit.startswith("wing"):
-            origin, a = wing_frame(unit)
-            x0 = UPRIGHT
-            for k, w in wing_bays(unit):
-                if k == key:
-                    break
-                x0 += w + UPRIGHT
-            slot_local = (x0, BOARD_SET, WING_BOARDS[0])
-            tops = list(WING_BOARDS) + [WING_TOP]
-            boards = []
-            for i, z in enumerate(WING_BOARDS):
-                boards.append({"index": i, "offset": [0.0, 0.0, round(z - WING_BOARDS[0], 4)],
-                               "width": bw, "depth": BOARD_D,
-                               "clear_height": round(tops[i + 1] - BOARD_T * (i + 1 < len(WING_BOARDS)) - z, 4)})
-            sign_local = (x0 + bw / 2, -0.005, WING_TOP + 0.03 + 0.135)
-            sign_size = (bw + 0.03, 0.24)
-            kind = "side rack (%s wing, bay %d of 2 from the visitor's left)" % (
-                "left" if unit == "wing_l" else "right", idx + 1)
+    widths = {k: cab_width(layout(len(cats[k]["books"]))[1]) for k, _, _ in PLAN}
+    out = {}
+    for unit in ("wing_l", "wing_r"):
+        keys = [k for (k, u, i) in sorted(PLAN, key=lambda t: t[2]) if u == unit]
+        L = sum(widths[k] for k in keys) + GAP * (len(keys) - 1)
+        if unit == "wing_l":
+            a = WING_PHI                                  # +X runs from the outer end toward the hut
+            rx, ry = -WING_ROOT[0], WING_ROOT[1]          # root = back corner at the inner (right) end
+            dx, dy = rot2(a, L, CAB_DEPTH)
         else:
-            origin, a = cart_frame(unit)
-            W = cart_width(unit)
-            x0 = UPRIGHT
-            (z0, y0), (z1, y1) = CART_TIERS
-            slot_local = (x0, y0, z0)
-            boards = [
-                {"index": 0, "offset": [0.0, 0.0, 0.0], "width": bw, "depth": round(y1 - y0 - 0.01, 4),
-                 "clear_height": None},
-                {"index": 1, "offset": [0.0, round(y1 - y0, 4), round(z1 - z0, 4)], "width": bw,
-                 "depth": round(y1 - y0 - 0.01, 4), "clear_height": round(CART_SIGN_Z - z1, 4)},
-            ]
-            sign_local = (W / 2, -0.012, CART_SIGN[0])
-            sign_size = (W + CART_SIGN[2], CART_SIGN[1])
-            kind = "book cart (%s of the counter)" % ("left" if unit == "cart_l" else "right")
-        cx = x0 + bw / 2
-        cam_target_local = (cx, BOARD_SET + 0.1, CAM_TARGET_Z)
-        inner = (unit == "wing_l" and idx == 1) or (unit == "wing_r" and idx == 0)
-        swing = (-CAM_SWING if unit == "wing_l" else CAM_SWING) if inner else 0.0
-        ox, oy = rot2(swing, 0.0, -CAM_DIST)
-        cam_local = (cx + ox, cam_target_local[1] + oy, CAM_Z_INNER if inner else CAM_Z)
+            a = -WING_PHI                                 # +X runs from the hut outward
+            rx, ry = WING_ROOT
+            dx, dy = rot2(a, 0.0, CAB_DEPTH)
+        ox, oy = rx - dx, ry - dy                         # wing origin: front-left corner
+        x = 0.0
+        for k in keys:
+            px, py = rot2(a, x, 0.0)
+            out[k] = ((ox + px, oy + py), a, widths[k])
+            x += widths[k] + GAP
+    for k, u, _ in PLAN:
+        if u == "hut_l":
+            out[k] = ((-HUT_CAB_X, HUT_CAB_FRONT), 0.0, widths[k])
+        elif u == "hut_r":
+            out[k] = ((HUT_CAB_X - widths[k], HUT_CAB_FRONT), 0.0, widths[k])
+    return out
+
+
+def wing_units():
+    """{unit: (origin, rotation, length)} of the two wings (front-left corner of the wing)."""
+    fr = cabinet_frames()
+    out = {}
+    for unit in ("wing_l", "wing_r"):
+        keys = [k for (k, u, i) in sorted(PLAN, key=lambda t: t[2]) if u == unit]
+        o, a, _ = fr[keys[0]]
+        L = sum(fr[k][2] for k in keys) + GAP * (len(keys) - 1)
+        out[unit] = (o, a, L)
+    return out
+
+
+def cam_distance(w, h):
+    """Distance at which a w x h area fills CAM_FILL of a 16:9 frame at the 42 degree vertical FOV."""
+    t = math.tan(FOV_V / 2)
+    return max(h / (2 * t * CAM_FILL), w / (2 * t * ASPECT * CAM_FILL))
+
+
+def sections():
+    """Every cabinet with its boards in its own (slot) frame and the slot in the stall frame."""
+    cats = categories()
+    frames = cabinet_frames()
+    out = []
+    for key, unit, idx in PLAN:
+        c = cats[key]
         n = len(c["books"])
-        length = sum(b["width"] for b in boards)
+        rows, per = layout(n)
+        origin, a, cw = frames[key]
+        bw = board_width(per)
+        zs = row_z(rows)
+        slot_local = (CAB_SIDE, LEDGE_Y + 0.012, zs[0])          # behind the lip (12 mm thick)
+        boards = []
+        for i, z in enumerate(zs):
+            cnt = per                                             # every board takes a full row
+            boards.append({
+                "index": i,
+                "offset": [0.0, 0.0, round(z - zs[0], 4)],
+                "width": round(bw, 4),
+                "ledge_depth": LEDGE_D,
+                "lean_deg": LEAN_DEG,
+                "cover_slots_x": [round(SIDE_MARGIN + PITCH_X * (j + 0.5), 4) for j in range(cnt)],
+                "clear_height": round((zs[i + 1] if i + 1 < rows else SPINE_Z - 0.03) - z - 0.03, 4),
+            })
+        spine = {"offset": [0.0, -0.012, round(SPINE_Z - zs[0], 4)], "width": round(bw, 4),
+                 "depth": round(CAB_DEPTH - LEDGE_Y - 0.04, 4), "clear_height": round(GLASS_TOP - SPINE_Z - 0.01, 4)}
+        # covers region (for the camera): all rows, cover tops included
+        rw = per * PITCH_X
+        top = zs[-1] + COVER_H * math.cos(math.radians(LEAN_DEG))
+        rh = top - zs[0]
+        tgt_local = (CAB_SIDE + bw / 2, LEDGE_Y + 0.04, zs[0] + rh / 2)
+        d = cam_distance(rw, rh)
+        cam_local = (tgt_local[0], tgt_local[1] - d, tgt_local[2] + 0.02)
+        door_h = GLASS_TOP - glass_bottom(rows)
+        side = HINGE[key]
+        hinge_local = (CAB_SIDE if side == "left" else cw - CAB_SIDE, -DOOR_T - 0.001, glass_bottom(rows))
+        open_deg = -DOOR_OPEN_DEG if side == "left" else DOOR_OPEN_DEG
+        sign_local = (cw / 2, 0.02, SIGN_Z + SIGN_H / 2)
         out.append({
             "key": key,
             "label_de": c["label_de"],
             "label_en": c["label_en"],
             "books": n,
             "unit": unit,
-            "kind": kind,
+            "kind": {"hut_l": "glazed cabinet in the hut front, left of the counter",
+                     "hut_r": "glazed cabinet in the hut front, right of the counter",
+                     "wing_l": "glazed cabinet in the left wing (%s)" % ("outer", "inner")[idx],
+                     "wing_r": "glazed cabinet in the right wing (%s)" % ("inner", "outer")[idx]}[unit],
+            "rows": rows,
+            "covers_per_row": per,
+            "capacity": rows * per,
+            "cabinet": {"width": round(cw, 4), "depth": CAB_DEPTH, "height": CAB_TOP,
+                        "origin": to_stall(origin, a, 0, 0, 0), "rotation_z_deg": round(math.degrees(a), 3),
+                        "glass_bottom": glass_bottom(rows), "glass_top": GLASS_TOP},
             "slot": "slot_cat_" + key,
             "slot_position": to_stall(origin, a, *slot_local),
             "slot_rotation_z_deg": round(math.degrees(a), 3),
-            "board_count": len(boards),
-            "board_width": bw,
-            "board_depth": boards[0]["depth"],
-            "board_thickness": BOARD_T,
-            "board_spacing": round(boards[1]["offset"][2] - boards[0]["offset"][2], 4),
+            "cover_max": {"width": COVER_W, "height": COVER_H, "thickness": COVER_T},
+            "board_count": rows,
+            "board_width": round(bw, 4),
+            "board_spacing": ROW_PITCH,
             "boards": boards,
-            "capacity_at_mean_spine": int(length / MEAN_SPINE),
-            "shelf_length_needed": round(n * MEAN_SPINE, 3),
+            "spine_board": spine,
+            "door": {"node": "act_cab_" + key, "hinge_position": to_stall(origin, a, *hinge_local),
+                     "hinge_side": side, "open_deg": open_deg,
+                     "width": round(bw, 4), "height": round(door_h, 4),
+                     "opens": "the glazed door swings outward (toward the visitor) about its hinge edge, the node's "
+                              "origin (on the door's front face): rotate the node about its local vertical axis by "
+                              "open_deg (Blender Z and three.js Y take the same sign; negative for a left hinge). Fully "
+                              "open it folds flat beside the cabinet, out of the cam_cat view"},
             "sign": {"node": "sign_cat_" + key, "text": c["label_de"],
-                     "center": to_stall(origin, a, *sign_local),
-                     "size": [round(sign_size[0], 3), sign_size[1]]},
+                     "center": to_stall(origin, a, *sign_local), "size": [round(cw - 0.03, 3), SIGN_H]},
             "cam": "cam_cat_" + key,
             "cam_position": to_stall(origin, a, *cam_local),
             "cam_target": "cam_cat_%s_target" % key,
-            "cam_target_position": to_stall(origin, a, *cam_target_local),
-            "_local": {"origin": origin, "rot": a, "slot": slot_local, "sign": sign_local,
-                       "sign_size": sign_size},
+            "cam_target_position": to_stall(origin, a, *tgt_local),
+            "cam_distance": round(d, 3),
+            "covers_area": [round(rw, 3), round(rh, 3)],
+            "_local": {"origin": origin, "rot": a, "width": cw, "slot": slot_local, "sign": sign_local,
+                       "rows": zs, "hinge": hinge_local, "per": per, "open_deg": open_deg},
         })
     return out
 
@@ -202,36 +253,32 @@ def build_doc():
     """The json document, built in memory from the plan (no file access except categories.json)."""
     secs = sections()
     doc = {
-        "version": 1,
-        "about": ("Bücherstand category sections (owner: carpenter; built by blender/stalls/buecher.py from "
-                  "blender/stalls/buecher_sections.py, so this file matches stall_buecher.glb). One section per "
-                  "key in content/books/categories.json. The vendor parents prop_books_<key> to slot_cat_<key>."),
+        "version": 2,
+        "about": ("Bücherstand category cabinets (round 8, docs/adr/0004; owner: carpenter; built by "
+                  "blender/stalls/buecher.py from blender/stalls/buecher_sections.py, so this file matches "
+                  "stall_buecher.glb). One glazed cabinet per key in content/books/categories.json, with angled "
+                  "face-out boards for up to five covers per row. The vendor parents prop_books_<key> to "
+                  "slot_cat_<key>."),
         "frame": ("Positions are the stall's Blender frame (metres, Z up, origin on the ground at the footprint "
-                  "centre, front toward -Y; three.js: x = x, y = z, z = -y). Each section's frame is its slot "
+                  "centre, front toward -Y; three.js: x = x, y = z, z = -y). Each cabinet's frame is its slot "
                   "empty's frame: +X along the boards from the visitor's left to right, -Y toward the visitor "
-                  "(spines face -Y), +Z up. slot_rotation_z_deg is that frame's rotation about Blender Z."),
-        "slot": ("slot_cat_<key> sits at the LEFT end of the section's LOWEST board, on its top surface, at its "
-                 "front edge. Books stand on +Z from there, run along +X for board width and reach back "
-                 "(+Y) at most board depth."),
-        "boards": ("offset is each board's [x, y, z] in the slot frame (same left end, front edge and top surface "
-                   "convention). clear_height is the free height above a board's top surface (null = open above). "
-                   "The cart's upper tier is stepped back (+Y) behind the lower tier's books; its clear_height is a "
-                   "sightline limit (taller books would hide the glazed cabinets behind), not a physical one. "
-                   "The cart signs are name boards on the carts' front aprons, below the lower tier."),
-        "cam": ("cam_cat_<key> (cam_position) is an optional close-up camera for the section, looking at "
-                "cam_cat_<key>_target (cam_target_position): the centre of its boards and sign. Both are empties "
-                "in stall_buecher.glb and stall_buecher.lite.glb; the camera empty is also rotated to look at "
-                "its target."),
-        "mean_spine": MEAN_SPINE,
+                  "(covers face -Y), +Z up. slot_rotation_z_deg is that frame's rotation about Blender Z."),
+        "slot": ("slot_cat_<key> sits at the LEFT end of the cabinet's LOWEST face-out board, on the ledge's top "
+                 "surface, at its front edge (just behind the lip). Covers stand on a ledge, foot within "
+                 "ledge_depth of the slot's y, and lean back lean_deg against the backboard; cover_slots_x are the "
+                 "cover centres along +X. Boards are stacked board_spacing apart (offset = [x, y, z] of each board's "
+                 "slot point). Above the top board, spine_board is a flat shelf for books at rest, as spines."),
+        "door": ("act_cab_<key> is the cabinet's glazed door (frame + glass as child meshes), with its origin on "
+                 "the hinge line (hinge_side edge, bottom corner, on the door's front face). The engine swings it "
+                 "open by open_deg before the covers come forward."),
+        "cam": ("cam_cat_<key> (cam_position) stands on the cabinet's normal and looks at cam_cat_<key>_target "
+                "(cam_target_position), the centre of the covers area; at the site's 42 degree vertical field of "
+                "view the covers area fills cam_fill of a 16:9 frame. Both are empties in stall_buecher.glb and "
+                "stall_buecher.lite.glb; the camera empty is rotated to look at its target."),
+        "cam_fill": CAM_FILL,
         "sections": [{k: v for k, v in s.items() if not k.startswith("_")} for s in secs],
-        "units": {
-            "wing_l": {"length": round(wing_length("wing_l"), 3), "depth": WING_DEPTH,
-                       "phi_deg": math.degrees(WING_PHI)},
-            "wing_r": {"length": round(wing_length("wing_r"), 3), "depth": WING_DEPTH,
-                       "phi_deg": math.degrees(WING_PHI)},
-            "cart_l": {"width": round(cart_width("cart_l"), 3), "front_y": CART_FRONT_Y},
-            "cart_r": {"width": round(cart_width("cart_r"), 3), "front_y": CART_FRONT_Y},
-        },
+        "units": {u: {"origin": [round(o[0], 4), round(o[1], 4)], "rotation_z_deg": round(math.degrees(a), 3),
+                      "length": round(L, 4)} for u, (o, a, L) in wing_units().items()},
     }
     return doc
 
@@ -245,8 +292,8 @@ def write_json(path=OUT_JSON):
 
 
 def check_glb(path, json_path=OUT_JSON, tol=0.002):
-    """Compare every slot_cat_<key> node in a glb with buecher_sections.json (position and
-    rotation about the vertical axis). Returns a list of problems (empty = matches)."""
+    """Compare every slot_cat_<key>, cam_cat_<key>(_target) and act_cab_<key> node in a glb with
+    buecher_sections.json. Returns a list of problems (empty = matches)."""
     import sys
     sys.path.insert(0, os.path.join(REPO, "blender", "lib"))
     import glb_tools
@@ -274,8 +321,6 @@ def check_glb(path, json_path=OUT_JSON, tol=0.002):
             bad.append(f"{s['slot']}: position off by {d:.4f} m, rotation {yaw:.2f} vs {s['slot_rotation_z_deg']}")
         print(f"  {s['slot']:22s} {status}  pos {[round(bx, 4), round(by, 4), round(bz, 4)]}  rotZ {yaw:.2f}")
         for nk, pk in (("cam", "cam_position"), ("cam_target", "cam_target_position")):
-            if nk not in s:
-                continue
             m = nodes.get(s[nk])
             if m is None:
                 bad.append(f"{s[nk]} missing")
@@ -285,6 +330,17 @@ def check_glb(path, json_path=OUT_JSON, tol=0.002):
             if d > tol:
                 bad.append(f"{s[nk]}: position off by {d:.4f} m")
             print(f"  {s[nk]:28s} {'ok' if d <= tol else 'MISMATCH'}")
+        door = nodes.get(s["door"]["node"])
+        if door is None:
+            bad.append(f"{s['door']['node']} missing")
+        else:
+            tx, ty, tz = door.get("translation", [0, 0, 0])
+            hp = s["door"]["hinge_position"]
+            d = max(abs(tx - hp[0]), abs(-tz - hp[1]), abs(ty - hp[2]))
+            kids = door.get("children", [])
+            if d > tol or not kids:
+                bad.append(f"{s['door']['node']}: hinge off by {d:.4f} m or no child meshes")
+            print(f"  {s['door']['node']:28s} {'ok' if d <= tol and kids else 'MISMATCH'}  ({len(kids)} child meshes)")
     return bad
 
 
@@ -317,6 +373,7 @@ if __name__ == "__main__":
         sys.exit(1 if problems else 0)
     d = write_json()
     for s in d["sections"]:
-        print(f"{s['key']:10s} {s['label_de']:26s} {s['books']:3d} books  {s['board_count']} x {s['board_width']:.2f} m"
-              f"  cap {s['capacity_at_mean_spine']:3d}  slot {s['slot_position']} rotZ {s['slot_rotation_z_deg']}")
+        print(f"{s['key']:10s} {s['label_de']:26s} {s['books']:3d} books  {s['rows']} x {s['covers_per_row']}"
+              f"  cabinet {s['cabinet']['width']:.3f} m  slot {s['slot_position']} rotZ {s['slot_rotation_z_deg']}"
+              f"  cam {s['cam_distance']:.2f} m")
     print("wrote", OUT_JSON)
