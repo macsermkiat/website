@@ -35,12 +35,12 @@ wines:
   act_bottle_17: "Kinderpunsch, with no alcohol. Fruit juice, orange and cinnamon, warm and sweet."
 ---
 
-I'm Mac, a physician at Chulalongkorn University in Bangkok who builds software for clinical research. <!-- check --> Most of it helps researchers plan studies, learn methods and check practice against guidelines.
+I'm Mac, a physician at Chulalongkorn University in Bangkok who builds software for clinical research. Most of it helps researchers plan studies, modeling ML and AI both in research and fix problem in clinical and non-clinical.
 
-[[Mac: one or two lines on your department and what your day job involves. Leave this out if you'd rather not say.]]
 
-On the Myers-Briggs I come out as an INTJ. <!-- check --> Outside work I mostly listen to jazz and read, and the bandstand and the bookshop say more about both.
 
-The questions I like best are about causes: what made something happen, and how you could ever tell. <!-- check --> [[Mac: confirm this line. Until you do, a production build leaves it out.]]
+Outside work I mostly listen to jazz and read, and the bandstand and the bookshop say more about both.
 
-I like beer and wine, and I like Christmas markets, so this website is one. Each stall opens a part of it.
+The questions I like best are about causality: what made something happen, and how you could ever tell. 
+
+I like drinks!, and I like Christmas markets, so this website is one. Each stall opens a part of it.
