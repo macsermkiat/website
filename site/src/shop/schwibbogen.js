@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { createChord } from '../audio/glass.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
-const EYE = 0.035; // the eye above the candle tips, behind the arch
+const EYE = 0.085; // the eye above the candle tips, behind the arch (all seven flames stay in the lower third)
 const GAP = 0.72; // seconds between flames
 const OUT_GAP = 0.22;
 
@@ -69,6 +69,7 @@ export function createSchwibbogen({ place, arch, candles, town, wave, rig, camer
   const seq = C.slice().sort((a, b) => a.order - b.order || a.i - b.i); // outside in
   let phase = 'off', t = 0, nextFlame = 0, litOrder = [];
   let wake = 0, wakeWant = 0;
+  let hush = 0, hushWant = 0; // the town's lit rooms go quiet while it waits for the candles
   let cam = null; // { phase: 'in'|'hold'|'out', t, from, path }
   let waved = false;
 
@@ -85,13 +86,17 @@ export function createSchwibbogen({ place, arch, candles, town, wave, rig, camer
     // round the arch on the side away from the shop's middle (the vendor stands there)
     const side = X.dot(new THREE.Vector3().subVectors(A, place.holder.position)) < 0 ? -1 : 1;
     const look = A.clone().addScaledVector(UP, h * 0.55);
-    const out = A.clone().addScaledVector(F, 14).addScaledVector(UP, h + EYE + 1.0);
-    return { A, F, X, side, h, look, out };
+    const out = A.clone().addScaledVector(F, 14).addScaledVector(UP, h + EYE + 0.45);
+    // far enough behind the arch that its whole width fits the frame (a narrow screen steps back and widens a little)
+    const tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect;
+    const back = THREE.MathUtils.clamp(0.34 / Math.max(0.2, tanH), 0.72, 1.05);
+    const fov = camera.aspect < 1 ? Math.max(camera.fov, 62) : camera.fov;
+    return { A, F, X, side, h, look, out, back, fov, fov0: camera.fov };
   }
   /** The camera on its way round the arch: u 0 (in front) .. 1 (behind, looking out over the candles). */
   function orbit(G, u) {
     const th = Math.PI * easeInOut(u);
-    const rho = THREE.MathUtils.lerp(0.95, 0.5, u);
+    const rho = THREE.MathUtils.lerp(0.95, G.back, u);
     // behind the arch the eye sits just above the candle tips: the flames stand along the lower third, the market
     // and the town fill the rest
     const lift = THREE.MathUtils.lerp(0.62, G.h + EYE, u) + Math.sin(th) * 0.14;
@@ -99,20 +104,30 @@ export function createSchwibbogen({ place, arch, candles, town, wave, rig, camer
     return pos;
   }
   function holdPose(G, k) {
-    // behind the arch, a touch to its outer side; through the wave the camera rises a little to see further
-    const pos = orbit(G, 1).addScaledVector(UP, 0.12 * k).addScaledVector(G.F, -0.1 * k);
-    const target = G.out.clone().addScaledVector(UP, 0.35 * k);
-    return { pos, target };
+    // behind the arch; through the wave the camera draws back a little and lifts its eyes to the market and the
+    // town, while the seven flames stay along the bottom of the frame
+    const pos = orbit(G, 1).addScaledVector(UP, 0.05 * k).addScaledVector(G.F, -0.16 * k);
+    const target = G.out.clone().addScaledVector(UP, 0.4 * k);
+    return { pos, target, fov: G.fov };
   }
 
   const _t = new THREE.Vector3();
+  /** The pose, with the lens easing to the view's (wider on a narrow screen) and back. */
   function poseFn(dt) {
+    const p = pose(dt);
+    if (p && !p.fov && cam) {
+      const G = cam.G;
+      p.fov = cam.phase === 'in' ? THREE.MathUtils.lerp(G.fov0, G.fov, smooth(cam.t / 3.2)) : cam.phase === 'out' ? THREE.MathUtils.lerp(G.fov, G.fov0, smooth(cam.t / 2.9)) : G.fov;
+    }
+    return p;
+  }
+  function pose(dt) {
     if (!cam) return null;
     cam.t += dt;
     const G = cam.G;
     if (cam.phase === 'in') {
-      // glide from the stop to the front of the arch (1.2 s), round it (2.4 s), then lift the eyes to the market (1 s)
-      const T1 = 1.2, T2 = 2.4, T3 = 1.0;
+      // glide from the stop to the front of the arch (1.2 s), round it (2 s), then lift the eyes to the market (1 s)
+      const T1 = 1.2, T2 = 2.0, T3 = 1.0;
       const t1 = cam.t;
       if (t1 < T1) {
         const k = easeInOut(t1 / T1);
@@ -182,14 +197,15 @@ export function createSchwibbogen({ place, arch, candles, town, wave, rig, camer
     town.check();
     for (const c of C) { c.lit = false; c.want = 0; }
     phase = 'waking'; t = 0; litOrder = []; waved = false;
-    nextFlame = motion.reduced ? 0.2 : 2.9; // the first flame as the camera comes round behind the arch
+    hushWant = 1;
+    nextFlame = motion.reduced ? 0.2 : 4.3; // the first flame once the camera stands behind the arch, the town still dark
     startCamera();
     announce?.('The Schwibbogen: its seven candles light one by one, and the old town wakes.');
   }
 
   function sleep() {
     phase = 'sleeping'; t = 0;
-    wakeWant = 0;
+    wakeWant = 0; hushWant = 0;
     chord.release(3.5);
     wave.fade();
     sfx('puff');
@@ -230,6 +246,9 @@ export function createSchwibbogen({ place, arch, candles, town, wave, rig, camer
       const rate = phase === 'sleeping' ? 0.35 : motion.reduced ? 2.5 : 0.9;
       wake += THREE.MathUtils.clamp(wakeWant - wake, -rate * dt, rate * dt);
       town.wake = wake;
+      // as the camera comes round the arch the town goes quiet; when the candles go out its rooms come back as usual
+      hush += THREE.MathUtils.clamp(hushWant - hush, -(motion.reduced ? 1.5 : 0.3) * dt, (motion.reduced ? 3 : 0.55) * dt);
+      town.hush = hush;
       // the flames: a flare as they catch, then a soft flicker; out with a small shrink
       for (const c of C) {
         const was = c.k;

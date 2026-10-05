@@ -1,0 +1,35 @@
+· the ornament shop's three moments at their peaks (full market, 1280 px): screenshots
+· ready in 12.6 s
+· settled (63 s)
+· at the shop, streamed (64 s)
+  ok   full market: the shop streams in at full detail at its stop ("full")
+· screenshot ../review/round-9/engineer/shop_stop.jpg
+· shop_stop.jpg (172 s)
+  ok   full market: the mirror reflection is 640 px wide and drawn every frame at the shop ({"mirrors":1,"mirrorRenders":1,"mirrorSize":[640,324],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":9.011,"smoke":0.22})
+· screenshot ../review/round-9/engineer/schwib_1_town_dark.jpg
+· schwib_1_town_dark.jpg (204 s)
+· screenshot ../review/round-9/engineer/schwib_2_town_waking.jpg
+· schwib_2_town_waking.jpg (232 s)
+· screenshot ../review/round-9/engineer/schwib_3_light_wave.jpg
+· schwib_3_light_wave.jpg (260 s)
+· screenshot ../review/round-9/engineer/schwib_4_settled.jpg
+· schwib_4_settled.jpg (289 s)
+  ok   full market: the screenshots catch each beat (town dark over unlit candles, waking, the wave's bloom at its height, settled) ([{"name":"schwib_1_town_dark.jpg","burning":0,"windows":0,"bloom":1,"cam":"hold"},{"name":"schwib_2_town_waking.jpg","burning":4,"windows":3)
+  ok   full market: the Schwibbogen sequence ran (seven flames, windows warm, the wave) ({"phase":"lit","lit":["act_orn_candle_0","act_orn_candle_6","act_orn_candle_1","act_orn_candle_5","act_orn_candle_2","act_orn_candle_4","act)
+· screenshot ../review/round-9/engineer/harmonica_mid_phrase.jpg
+· harmonica_mid_phrase.jpg (334 s)
+  ok   full market: a bauble glows mid-phrase on the harmonica (the camera leaned in to the row) ([0.011,0.018,0.09,0.505,0.615,0,0,0,0,0,0,0])
+· screenshot ../review/round-9/engineer/dive_1_approach.jpg
+· dive_1_approach.jpg (419 s)
+· screenshot ../review/round-9/engineer/dive_2_reflection.jpg
+· dive_2_reflection.jpg (454 s)
+· screenshot ../review/round-9/engineer/dive_3_into_glass.jpg
+· dive_3_into_glass.jpg (509 s)
+· screenshot ../review/round-9/engineer/dive_4_inside.jpg
+· dive_4_inside.jpg (530 s)
+  ok   full market: the dive reaches the inside of the glass (512 px cube) ({"phase":"inside","env":{"size":512,"captures":1},"glass":"engine_mirrorball_glass","pass":{"enabled":true,"mix":1,"warp":1,"veil":0,"captur)
+  ok   full market: the dive comes back out 
+
+7/7 checks passed
+No console errors.
+EXIT 0

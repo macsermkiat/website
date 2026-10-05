@@ -1,0 +1,54 @@
+· the ornament shop (round 9): a stroll stop with three moments and nothing else to click (lite market, 960 px)
+· ready in 8.5 s
+  ok   the ornament shop is a stop on the stroll, between the Bücherstand and the Karussell (glueh,band,bier,books,schmuck,carousel,ferris,wurst)
+  ok   the signpost has an arm for it, in the market (act_sign_schmuck) and on screen 
+  ok   the signpost arm walks to the ornament shop ({"stop":"schmuck","arrived":true,"here":"Christbaumschmuck"})
+  ok   the shop is the vendor's stall_schmuck.glb, not a deco stall ([{"id":"deco-schmuck","place":"schmuck","kind":"section","source":"lite","file":"stall_schmuck.lite.glb","deferred":true}])
+  ok   small screen: the shop's stop bar starts folded and keeps off the stall (under 15 % of the view) ({"folded":true,"fold":true,"h":50,"vh":640,"expanded":"false"})
+  ok   "Things to do" opens the bar: exactly the three moments (candles, harmonica, dive) (candles,harmonica,dive)
+  ok   "Things to do" folds the bar away again 
+  ok   the round-8 ornament interactions are gone (only the harmonica, the mirror ball and the Schwibbogen answer a click) ({"api":[],"odd":[],"n":21})
+  ok   the nutcracker and the smoker are decoration (in the shop, not items) ({"nutcracker":false,"smoker":false,"act_orn_pickle":null,"act_orn_herrnhut":null,"act_orn_nutcracker":null,"act_orn_smoker":null})
+  ok   the harmonica's twelve baubles are tuned to the opening of the ballad (D Bb A G A C Eb D F# G F Ab) (["D5","Bb5","A5","G5","A5","C6","Eb6","D6","F#5","G5","F5","Ab5"])
+  ok   a mouse brush across the row rings the baubles left to right (the tune) ({"order":[0,1,2,3,4,5,6,7,8,9,10,11],"onCanvas":"CANVAS"})
+  ok   brushing does not turn the head (the row claims the pointer from the look-around) (0)
+  ok   each bauble glows on its note and swings on its ribbon ({"glow":[0.625,0.549,0.548,0.545,0.544,0.547,0.542,0.544,0.542,0.544,0.549,0.543],"swing":[0.1013,0.0804,0.08,0.0793,0.079,0.0799,0.0785,0.0)
+  ok   velocity follows the brush: a fast stroke rings louder than a slow one ({"slow":0.32,"fast":0.81,"n":12})
+  ok   tapping the baubles in order plays the phrase, and after a pause the next bauble glows faintly ({"log":[0,1,2,3,4],"expect":5,"hint":5})
+  ok   touch: a finger drag across the row plays it and leaves the look-around alone ({"log":[2,3,4,5,6,7,8,9],"yaw":0})
+  ok   played through, the row answers (a ripple of light, and a word about the ballad) (The glass harmonica: you played the opening of Lanterns After Closing, the ballad the band plays at the bandstand.)
+  ok   "Play the glass harmonica": the camera leans in until the row fills the view ({"busy":"harmonica","mode":"drive","phase":"hold","moment":"harmonica","span":0.84})
+  ok   ... it plays the phrase in its own rhythm, and eases back to the stop ({"log":["0:auto","1:auto","2:auto","3:auto","4:auto","5:auto","6:auto","7:auto","8:auto","9:auto","10:auto","11:auto"],"lean":{"busy":"harmo)
+  ok   Schwibbogen: the candles light one by one (000000000000000001112233344455566677777777777777777777777777777777777777777777777777777777777777)
+  ok   Schwibbogen: from the outside in (the vendor's order) (act_orn_candle_0,act_orn_candle_6,act_orn_candle_1,act_orn_candle_5,act_orn_candle_2,act_orn_candle_4,act_orn_candle_3)
+  ok   Schwibbogen: with each flame a share of the town's dark windows turns warm, until most are lit ({"windows":{"meshes":1,"candidates":384,"lit":356,"quiet":488,"hush":1,"wake":1.06},"half":286})
+  ok   Schwibbogen: a low warm chord builds, one voice per flame ([0,0,0,1,3,5,7,7,7,7,7,7,7,7,7,7])
+  ok   Schwibbogen: after the last flame a wave of light runs across the market (bulbs flare in turn, the bloom swells and settles) ({"firstWave":38,"lastLight":34,"crest":2.78,"bloomPeak":1.937,"end":1.09})
+  ok   Schwibbogen: the camera stands behind the arch looking out over the candles, the bar steps aside ({"cam":{"mode":"drive","moving":false,"progress":null,"look":{"yaw":0,"pitch":0,"zoom":1},"pos":[23.1,1.527,10.165],"target":[8.255,2.327,9.)
+  ok   Escape steps back round the arch to the stop; the candles keep burning ({"busy":null,"mode":"stop","stop":"schmuck","burning":7,"moment":null})
+  ok   a click on the arch again lets it fade back (candles out, the town back as it was, the glow gone) ({"phase":"off","burning":0,"wake":0,"hush":0,"chord":0,"settle":0,"label":"Light the Schwibbogen"})
+  ok   dive: a cube camera renders the market into the ball once at the tap (256 px on the lite market), with a clear coat's Fresnel ({"env":{"size":256,"captures":1},"glass":"engine_mirrorball_glass"})
+  ok   dive: the camera eases in until the reflection fills the view (within 2 ball radii of its centre) ({"seen":["approach","gaze","into","inside"],"close":0.15})
+  ok   dive: it crossfades into the market seen from inside the glass (the warped, hushed pass; the ball itself hidden) ({"inside":{"phase":"inside","env":{"size":256,"captures":1},"glass":"engine_mirrorball_glass","pass":{"enabled":true,"mix":1,"warp":1,"veil")
+  ok   dive: Escape eases back out to the stop (pass off, ball back, the camera's near plane and lens restored) ({"seen":["outof","back",null],"d":{"phase":null,"env":{"size":256,"captures":1},"glass":"engine_mirrorball_glass","pass":{"enabled":false,"m)
+  ok   dive: a tap ends it too ({"before":"inside","after":null,"mode":"stop"})
+  ok   sparkle: the foxed mirror gets a reflection (mirror_0, rendered while the visitor is near) ({"mirrors":1,"mirrorRenders":2,"mirrorSize":[256,130],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":9.956,"smoke":0.22})
+  ok   sparkle: the tinsel swags carry the glint shader ({"mirrors":1,"mirrorRenders":2,"mirrorSize":[256,130],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":9.956,"smoke":0.22})
+  ok   sparkle: the candle pyramid turns slowly about its upright axis, its flames flicker ({"p0":{"axis":"y","angle":-38.11},"p1":{"axis":"y","angle":-38.526},"f0":12.073,"f1":9.956})
+  ok   sparkle: the Räuchermännchen smokes on his own (fx_smoke_1) ({"mirrors":1,"mirrorRenders":2,"mirrorSize":[256,130],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":9.956,"smoke":0.22})
+· screenshot ../review/round-9/engineer/stop_schmuck.jpg
+  ok   a click in 3D on a harmonica bauble rings that bauble once ([{"i":6,"note":"Eb6","v":0.5,"source":"brush","t":124.45}])
+· the ornament shop's three moments at their peaks (full market, 1280 px): screenshots
+· ready in 11.9 s
+· settled (60 s)
+· at the shop, streamed (61 s)
+  ok   full market: the shop streams in at full detail at its stop ("full")
+· screenshot ../review/round-9/engineer/shop_stop.jpg
+· shop_stop.jpg (165 s)
+  ok   full market: the mirror reflection is 640 px wide and drawn every frame at the shop ({"mirrors":1,"mirrorRenders":1,"mirrorSize":[640,324],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":9.491,"smoke":0.22})
+· screenshot ../review/round-9/engineer/schwib_1_town_dark.jpg
+· schwib_1_town_dark.jpg (195 s)
+· screenshot ../review/round-9/engineer/schwib_2_town_waking.jpg
+· schwib_2_town_waking.jpg (223 s)
+· screenshot ../review/round-9/engineer/schwib_3_light_wave.jpg
+· schwib_3_light_wave.jpg (251 s)

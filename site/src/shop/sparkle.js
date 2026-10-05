@@ -8,7 +8,67 @@
 //   fx_smoke_<n>                       the Räuchermännchen smokes on his own: a thin, slow curl from his mouth
 // (rot_pyramid turns with the market's spinners: engine/conventions.js reads its {"axis": "y"} extra.)
 import * as THREE from 'three';
-import { createEmitter } from '../actions/effects.js';
+
+// ---------- the smoker's smoke: one thin curl, not a column of puffs ----------
+let wispTex = null;
+/** A soft, ragged wisp of smoke (several faint offset blobs, so no sprite reads as a disc). */
+function wispTexture() {
+  if (wispTex) return wispTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  let seed = 11;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 9; i++) {
+    const x = 32 + (rnd() - 0.5) * 22, y = 32 + (rnd() - 0.5) * 22, r = 9 + rnd() * 14;
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, `rgba(255,255,255,${0.16 + rnd() * 0.12})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  }
+  wispTex = new THREE.CanvasTexture(c);
+  wispTex.colorSpace = THREE.SRGBColorSpace;
+  return wispTex;
+}
+/** Incense smoke rising from the Räuchermännchen's mouth: a thread that curls, slows, widens and thins out. */
+function createWisp(scene, at, { lite }) {
+  const N = lite ? 16 : 30, LIFE = 6.5, RISE = 0.6;
+  let seed = 3;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const parts = [];
+  for (let i = 0; i < N; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: wispTexture(), color: 0xd8d2c8, transparent: true, depthWrite: false, opacity: 0 }));
+    sp.name = 'engine_smoke_wisp';
+    sp.renderOrder = 2;
+    scene.add(sp);
+    parts.push({ sp, t: i / N, a: rnd(), b: rnd(), spin: (rnd() - 0.5) * 0.8 });
+  }
+  let T = 0;
+  const w = {
+    base: 0.22,
+    update(dt, still) {
+      if (!still) T += dt;
+      for (const p of parts) {
+        if (!still) { p.t += dt / LIFE; if (p.t >= 1) { p.t -= 1; p.a = rnd(); p.b = rnd(); } }
+        const t = p.t;
+        // the thread: a slow sideways curl that grows with height, and a breath of air leaning it one way
+        const curl = 0.004 + 0.05 * t * t;
+        const ph = T * 0.55 + t * 9 + p.a * 0.8;
+        const x = Math.sin(ph) * curl + 0.07 * t * t + (p.a - 0.5) * 0.02 * t;
+        const z = Math.cos(ph * 0.8) * curl * 0.7 + (p.b - 0.5) * 0.02 * t;
+        p.sp.position.set(at.x + x, at.y + RISE * t * (1 - 0.3 * t), at.z + z);
+        const sc = 0.012 + 0.13 * Math.pow(t, 1.3);
+        p.sp.scale.set(sc, sc * (1.25 - 0.3 * t), 1);
+        p.sp.material.rotation += dt * p.spin;
+        // dense at the mouth, then thinning as it spreads
+        const fade = Math.min(1, t / 0.06) * Math.pow(1 - t, 1.8);
+        p.sp.material.opacity = w.base * 0.75 * fade * (0.6 + 0.4 * p.b);
+        p.sp.visible = p.sp.material.opacity > 0.003;
+      }
+    },
+    dispose() { for (const p of parts) { p.sp.removeFromParent(); p.sp.material.dispose(); } },
+  };
+  return w;
+}
 
 const near = (o, re, up = 2) => { for (let x = o, k = 0; x && k <= up; x = x.parent, k++) if (re.test(x.name || '')) return true; return false; };
 
@@ -208,8 +268,7 @@ vec3 glintHash( vec3 p ) { p = fract( p * vec3( 443.897, 441.423, 437.195 ) ); p
     place.root.traverse((o) => { if (!fx && /^fx_smoke_/i.test(o.name || '')) fx = o; });
     if (fx && !smoke) {
       smokeAt = fx.getWorldPosition(new THREE.Vector3());
-      smoke = createEmitter(scene, smokeAt, { color: 0xd9d3c8, n: 8, rise: 0.42, spread: 0.035, scale: 0.075, opacity: 0.22 });
-      smoke.sprites = true;
+      smoke = createWisp(scene, smokeAt, { lite });
     }
   }
   scan();

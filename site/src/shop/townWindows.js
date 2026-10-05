@@ -7,11 +7,13 @@
 import * as THREE from 'three';
 
 const DARK = new Set([10, 12, 14]);
+const LIT = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8]); // rooms lit by default: they go quiet while the town waits, and wake with the rest
+const QUIET = 0.2; // a lit room's glow while it waits for the wake front
 const SHARE = 0.78; // not every dark room lights: some neighbours are out tonight
 const FEATHER = 0.05;
 
 export function createTownWindows({ scene, market }) {
-  const uniforms = { uWake: { value: 0 }, uWakeGain: { value: 1 } };
+  const uniforms = { uWake: { value: 0 }, uWakeGain: { value: 1 }, uHush: { value: 0 } };
   const patched = new WeakSet();
   let meshes = [];
   let candidates = 0;
@@ -38,7 +40,7 @@ export function createTownWindows({ scene, market }) {
       const a = vi(f, 0), b = vi(f, 1), c = vi(f, 2);
       const u = (uv.getX(a) + uv.getX(b) + uv.getX(c)) / 3, v = (uv.getY(a) + uv.getY(b) + uv.getY(c)) / 3;
       const cell = Math.floor(THREE.MathUtils.clamp(v, 0, 0.9999) * 4) * 4 + Math.floor(THREE.MathUtils.clamp(u, 0, 0.9999) * 4);
-      if (!DARK.has(cell)) continue;
+      if (!DARK.has(cell) && !LIT.has(cell)) continue;
       cellOf[a] = cellOf[b] = cellOf[c] = cell;
       parent[find(b)] = find(a); parent[find(c)] = find(a);
     }
@@ -48,7 +50,7 @@ export function createTownWindows({ scene, market }) {
       if (cellOf[i] < 0) continue;
       const r = find(i);
       p.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
-      const s = sums.get(r) || { x: 0, z: 0, k: 0 };
+      const s = sums.get(r) || { x: 0, z: 0, k: 0, lit: LIT.has(cellOf[i]) };
       s.x += p.x; s.z += p.z; s.k++;
       sums.set(r, s);
     }
@@ -57,24 +59,30 @@ export function createTownWindows({ scene, market }) {
     let seed = 7;
     const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     for (const s of sums.values()) {
+      if (s.lit) {
+        // a room lit by default: a negative rank, so the shader knows to quieten it until the front passes
+        s.rank = -THREE.MathUtils.clamp(0.02 + 0.9 * (s.d - dMin) / Math.max(1, dMax - dMin) + (rnd() - 0.5) * 0.12, 0.02, 0.97);
+        s.du = 0;
+        continue;
+      }
       const lit = rnd() < SHARE;
       s.rank = lit ? THREE.MathUtils.clamp(0.02 + 0.9 * (s.d - dMin) / Math.max(1, dMax - dMin) + (rnd() - 0.5) * 0.12, 0.02, 0.97) : 0;
       // the lit room this window shows: the same atlas column or the next one, two rows up (cells 2/3, 4/5, 6/7)
       s.du = rnd() < 0.5 ? 0 : 0.25;
     }
     const wake = new Float32Array(n), off = new Float32Array(n * 2);
-    let count = 0;
+    let count = 0, quiet = 0;
     for (let i = 0; i < n; i++) {
       if (cellOf[i] < 0) continue;
       const s = sums.get(find(i));
       wake[i] = s.rank;
       off[i * 2] = s.du;
-      off[i * 2 + 1] = -0.5; // glTF UVs run top-down: dark rows 2-3 to lit rows 0-1
+      off[i * 2 + 1] = s.lit ? 0 : -0.5; // glTF UVs run top-down: dark rows 2-3 to lit rows 0-1
     }
-    for (const s of sums.values()) if (s.rank > 0) count++;
+    for (const s of sums.values()) { if (s.rank > 0) count++; else if (s.rank < 0) quiet++; }
     g.setAttribute('aWake', new THREE.BufferAttribute(wake, 1));
     g.setAttribute('aWakeOff', new THREE.BufferAttribute(off, 2));
-    g.userData.wake = { count };
+    g.userData.wake = { count, quiet };
     return count;
   }
 
@@ -89,13 +97,17 @@ export function createTownWindows({ scene, market }) {
         .replace('#include <common>', '#include <common>\nattribute float aWake;\nattribute vec2 aWakeOff;\nvarying float vWake;\nvarying vec2 vWakeOff;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWake = aWake;\nvWakeOff = aWakeOff;');
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', '#include <common>\nuniform float uWake;\nuniform float uWakeGain;\nvarying float vWake;\nvarying vec2 vWakeOff;')
+        .replace('#include <common>', '#include <common>\nuniform float uWake;\nuniform float uWakeGain;\nuniform float uHush;\nvarying float vWake;\nvarying vec2 vWakeOff;')
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 #ifdef USE_EMISSIVEMAP
   if ( vWake > 0.0 ) {
     float wk = clamp( ( uWake - vWake ) / ${FEATHER.toFixed(3)}, 0.0, 1.0 ) * uWakeGain;
     vec3 room = emissive * texture2D( emissiveMap, vEmissiveMapUv + vWakeOff ).rgb * ( 0.8 + 0.4 * fract( vWake * 97.31 ) );
     totalEmissiveRadiance = mix( totalEmissiveRadiance, room, wk );
+  } else if ( vWake < 0.0 ) {
+    // lit by default: quiet while the town waits (uHush), back to full once the wake front has passed
+    float passed = clamp( ( uWake + vWake ) / ${FEATHER.toFixed(3)}, 0.0, 1.0 );
+    totalEmissiveRadiance *= mix( 1.0, ${QUIET.toFixed(2)}, uHush * ( 1.0 - passed ) );
   }
 #endif`);
     };
@@ -130,6 +142,9 @@ export function createTownWindows({ scene, market }) {
     refresh,
     /** Where the wake front is (0 all dark .. 1 every chosen window lit). */
     set wake(v) { uniforms.uWake.value = v; },
+    /** How quiet the town's lit rooms are while they wait for the wake (0 as usual .. 1 nearly dark). */
+    set hush(v) { uniforms.uHush.value = v; },
+    get hush() { return uniforms.uHush.value; },
     get wake() { return uniforms.uWake.value; },
     /** How many windows wait to wake, and how many are lit now (tests). */
     stats() {
@@ -142,7 +157,8 @@ export function createTownWindows({ scene, market }) {
         const seen = new Set();
         for (let i = 0; i < a.count; i++) { const r = a.array[i]; if (r > 0 && !seen.has(r)) { seen.add(r); if (w - r >= FEATHER) lit++; } }
       }
-      return { meshes: meshes.length, candidates, lit, wake: +w.toFixed(3) };
+      const quiet = meshes.reduce((a, m) => a + (m.geometry.userData.wake?.quiet || 0), 0);
+      return { meshes: meshes.length, candidates, lit, quiet, hush: +uniforms.uHush.value.toFixed(3), wake: +w.toFixed(3) };
     },
     /** Make sure the town is dressed (a streamed town swaps its geometry for the full one). */
     check() { if (meshes.some((m) => !m.geometry.userData.wake) || !meshes.length) refresh(); },

@@ -20,7 +20,7 @@ export const PHRASE = ['D5', 'Bb5', 'A5', 'G5', 'A5', 'C6', 'Eb6', 'D6', 'F#5', 
 const ONSETS = [0, 1, 3.5, 6, 6.5, 7, 8, 9.5, 10, 11, 13, 13.5];
 const TEMPO = 72;
 const IDLE_HINT = 3.2; // seconds left alone before the next note glows
-const GLOW = new THREE.Color(1.0, 0.78, 0.5);
+const GLOW = new THREE.Color(1.0, 0.6, 0.26); // a warm candle amber, so a ringing bauble reads as lit from inside
 
 let haloTex = null;
 function halo() {
@@ -29,11 +29,40 @@ function halo() {
   c.width = c.height = 64;
   const g = c.getContext('2d');
   const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gr.addColorStop(0, 'rgba(255,236,200,0.9)'); gr.addColorStop(0.25, 'rgba(255,200,130,0.45)'); gr.addColorStop(1, 'rgba(255,150,60,0)');
+  gr.addColorStop(0, 'rgba(255,226,170,0.95)'); gr.addColorStop(0.22, 'rgba(255,176,90,0.5)'); gr.addColorStop(0.55, 'rgba(255,130,40,0.14)'); gr.addColorStop(1, 'rgba(255,110,30,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
   haloTex = new THREE.CanvasTexture(c);
   haloTex.colorSpace = THREE.SRGBColorSpace;
   return haloTex;
+}
+
+/**
+ * The clear-glass shells (vendor_glass, an opaque white in the file) made see-through: the body lets the inner
+ * mercury bauble and the glow show, while the reflections stay at full strength and thicken toward the rim
+ * (premultiplied blending: the diffuse scaled by a Fresnel alpha, the specular and the glow added whole).
+ */
+function clearGlass(m) {
+  m.transparent = true;
+  m.depthWrite = false;
+  m.blending = THREE.CustomBlending;
+  m.blendSrc = THREE.OneFactor;
+  m.blendDst = THREE.OneMinusSrcAlphaFactor;
+  m.blendSrcAlpha = THREE.OneFactor;
+  m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
+  m.envMapIntensity = Math.max(m.envMapIntensity ?? 1, 1.6);
+  const prev = m.onBeforeCompile;
+  m.onBeforeCompile = (shader, r) => {
+    prev?.call(m, shader, r);
+    shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `
+  {
+    float nv = clamp( abs( dot( geometryNormal, geometryViewDir ) ), 0.0, 1.0 );
+    float fa = mix( 0.1, 0.78, pow( 1.0 - nv, 2.5 ) );
+    gl_FragColor = vec4( totalDiffuse * fa + totalSpecular + totalEmissiveRadiance, fa );
+  }`);
+  };
+  const key = m.customProgramCacheKey?.bind(m);
+  m.customProgramCacheKey = () => `${key ? key() : ''}|clearglass`;
+  m.needsUpdate = true;
 }
 
 export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPlay, say, onBusy, place = null, stopView = null, onDrive = null }) {
@@ -63,6 +92,7 @@ export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPl
         if (!c.emissive) c.emissive = new THREE.Color(0);
         c.emissive.copy(GLOW);
         c.emissiveIntensity = 0;
+        if (!/mercury/i.test(m.name || '')) clearGlass(c);
         mats.push(c);
         return c;
       };
@@ -81,7 +111,7 @@ export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPl
     sp.userData.itemFx = true;
     sp.position.copy(local);
     const ws = node.getWorldScale(new THREE.Vector3()).x || 1;
-    sp.scale.setScalar((gs.radius * 4.2) / ws);
+    sp.scale.setScalar((gs.radius * 5.4) / ws);
     sp.visible = false;
     node.add(sp);
     const q0 = node.quaternion.clone();
@@ -317,9 +347,9 @@ export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPl
         let rip = 0;
         if (ripple >= 0) { const x = ripple * 6 - B.i; rip = x > 0 && x < 3 ? Math.sin((x / 3) * Math.PI) * 0.5 : 0; }
         const g = Math.min(1.4, B.glow + B.hint + rip);
-        for (const m of B.mats) m.emissiveIntensity = g * 2.8;
+        for (const m of B.mats) m.emissiveIntensity = g * 4.2;
         B.sp.visible = g > 0.01;
-        B.sp.material.opacity = Math.min(1, g * 1.05);
+        B.sp.material.opacity = Math.min(1, g * 1.25);
         // swing: a damped pendulum on each axis
         if (!still && !motion.reduced) {
           B.va += (-w * w * B.a - 2 * z * w * B.va) * dt; B.a += B.va * dt;

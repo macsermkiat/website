@@ -162,7 +162,7 @@ try {
     const report = await page.evaluate(() => window.__market.report);
     const fullAtReady = await bytesAtReady(page);
     log(`full: ${(fullAtReady / 1e6).toFixed(2)} MB downloaded when the market opens`);
-    check('full: the first load is smaller than round 4 (19.70 MB)', fullAtReady < 19.7e6, `${(fullAtReady / 1e6).toFixed(2)} MB`);
+    check('full: the first load stays near 8 MB (round 9: under 9 MB; the deco stalls are their lite files, the rest streams in at the stops)', fullAtReady < 9e6, `${(fullAtReady / 1e6).toFixed(2)} MB`);
     check('full market chosen with ?quality=full', report.quality.lite === false);
     // it stays until the deferred part (town, rides, deco stalls) is in, at most four seconds of the page's own clock
     check('the still fades out once the market is drawn', await page.waitForFunction(() => document.getElementById('still').classList.contains('done'), null, { timeout: 120000 }).then(() => true, () => false));
@@ -709,8 +709,8 @@ try {
     await page.keyboard.press('Escape');
     const back = await page.evaluate(() => { const m = window.__market; for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.25) m.advance(0.25); m.advance(0.5); return { busy: m.handlers.schmuck().busy, mode: m.cam().mode, stop: m.stop, burning: m.handlers.schmuck().schwibbogen.burning, moment: document.documentElement.dataset.moment || null }; });
     check('Escape steps back round the arch to the stop; the candles keep burning', !back.busy && back.mode === 'stop' && back.stop === 'schmuck' && back.burning === 7 && !back.moment, JSON.stringify(back));
-    const out = await page.evaluate(() => { const m = window.__market; m.clickItem('act_orn_schwibbogen'); for (let t = 0; t < 10; t += 0.5) m.advance(0.5); const s = m.handlers.schmuck().schwibbogen; return { phase: s.phase, burning: s.burning, wake: s.wake, chord: s.chord, settle: s.wave.settle, label: document.querySelector('#stopActs [data-action="candles"]')?.textContent }; });
-    check('a click on the arch again lets it fade back (candles out, the town asleep, the glow gone)', out.phase === 'off' && out.burning === 0 && out.wake === 0 && out.chord === 0 && out.settle < 0.05 && /Light the Schwibbogen/.test(out.label || ''), JSON.stringify(out));
+    const out = await page.evaluate(() => { const m = window.__market; m.clickItem('act_orn_schwibbogen'); for (let t = 0; t < 10; t += 0.5) m.advance(0.5); const s = m.handlers.schmuck().schwibbogen; return { phase: s.phase, burning: s.burning, wake: s.wake, hush: s.windows.hush, chord: s.chord, settle: s.wave.settle, label: document.querySelector('#stopActs [data-action="candles"]')?.textContent }; });
+    check('a click on the arch again lets it fade back (candles out, the town back as it was, the glow gone)', out.phase === 'off' && out.burning === 0 && out.wake === 0 && out.hush < 0.01 && out.chord === 0 && out.settle < 0.05 && /Light the Schwibbogen/.test(out.label || ''), JSON.stringify(out));
     // ---- the reflection dive ----
     const dv = await page.evaluate(() => {
       const m = window.__market;
@@ -772,16 +772,24 @@ try {
     log('the ornament shop\'s three moments at their peaks (full market, 1280 px): screenshots');
     const { ctx, page } = await openPage(`${BASE}?quality=full&snow=0`, { viewport: { width: 1280, height: 720 } });
     await waitReady(page);
+    // software GL draws the full market at several seconds a frame: hold the live loop for the whole section and
+    // draw only the frames the screenshots need (each snapshot renders one), so the waits below are not starved
+    const t0m = Date.now();
+    const lap = (what) => log(`${what} (${((Date.now() - t0m) / 1000).toFixed(0)} s)`);
+    await page.evaluate(() => window.__market.freeze(true));
     await page.evaluate(() => window.__market.settled());
+    lap('settled');
     await page.evaluate(() => window.__market.walkTo('schmuck'));
-    await page.evaluate(() => { const m = window.__market; m.freeze(true); for (let i = 0; i < 80 && !m.arrived; i++) m.advance(0.5); m.advance(0.5); m.freeze(false); });
-    const full = await page.waitForFunction(() => window.__market.streaming().state['deco-schmuck'] === 'full', null, { timeout: LONG }).then(() => true, () => false);
+    await page.evaluate(() => { const m = window.__market; for (let i = 0; i < 80 && !m.arrived; i++) m.advance(0.5); m.advance(0.5); });
+    const full = await page.waitForFunction(() => window.__market.streaming().state['deco-schmuck'] === 'full', null, { timeout: LONG, polling: 500 }).then(() => true, () => false);
+    lap('at the shop, streamed');
     check('full market: the shop streams in at full detail at its stop', full, JSON.stringify(await page.evaluate(() => window.__market.streaming().state['deco-schmuck'])));
     await page.evaluate(() => { window.__market.freeze(true); window.__market.advance(1); });
     const snapTo = async (name) => {
       const d = await page.evaluate(() => window.__market.snapshot('image/jpeg', 0.88));
       writeFileSync(path.join(OUT, name), Buffer.from(d.split(',')[1], 'base64'));
       log('screenshot', path.relative(process.cwd(), path.join(OUT, name)));
+      lap(name);
     };
     const S = () => page.evaluate(() => window.__market.handlers.schmuck());
     await snapTo('shop_stop.jpg');
@@ -789,9 +797,17 @@ try {
     check('full market: the mirror reflection is 640 px wide and drawn every frame at the shop', spF.mirrorSize?.[0] === 640 && spF.mirrorRenders > 0, JSON.stringify(spF));
     // the Schwibbogen: first flames, the town half awake, the wave at its height
     await page.evaluate(() => window.__market.act('schmuck', 'candles'));
-    const times = [[3.4, 'schwib_1_first_flames.jpg'], [5.6, 'schwib_2_town_waking.jpg'], [9.8, 'schwib_3_light_wave.jpg'], [15, 'schwib_4_settled.jpg']];
+    // the view over the arch with the town still dark, four flames and the town waking, the wave of light at its
+    // height (the bulbs flaring as it passes, the bloom swelled), and the market settled in its lasting glow
+    const times = [[4.25, 'schwib_1_town_dark.jpg'], [6.8, 'schwib_2_town_waking.jpg'], [12.0, 'schwib_3_light_wave.jpg'], [18, 'schwib_4_settled.jpg']];
     let at = 0;
-    for (const [t, name] of times) { await page.evaluate((d) => window.__market.advance(d), t - at); at = t; await snapTo(name); }
+    const peaks = [];
+    for (const [t, name] of times) {
+      await page.evaluate((d) => window.__market.advance(d), t - at); at = t; await snapTo(name);
+      const x = (await S()).schwibbogen;
+      peaks.push({ name, burning: x.burning, windows: x.windows.lit, hush: x.windows.hush, quiet: x.windows.quiet, bloom: x.wave.bloom, cam: x.cam });
+    }
+    check('full market: the screenshots catch each beat (the town gone quiet over unlit candles, waking, the wave\'s bloom at its height, settled)', peaks[0].burning === 0 && peaks[0].windows === 0 && peaks[0].hush > 0.9 && peaks[0].quiet > 100 && peaks[0].cam === 'hold' && peaks[1].windows > 0 && peaks[1].burning >= 3 && peaks[2].windows > peaks[1].windows && peaks[2].bloom > 1.5 && peaks[3].bloom < peaks[2].bloom, JSON.stringify(peaks));
     const swF = (await S()).schwibbogen;
     check('full market: the Schwibbogen sequence ran (seven flames, windows warm, the wave)', swF.burning === 7 && swF.windows.lit > 0.9 * swF.windows.candidates && swF.wave.settle > 0.1, JSON.stringify(swF));
     await page.evaluate(() => { const m = window.__market; m.handlers.shopEnd(); for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.25) m.advance(0.25); m.advance(1); });

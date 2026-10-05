@@ -28,9 +28,14 @@ float hash12( vec2 p ) { vec3 p3 = fract( vec3( p.xyx ) * 0.1031 ); p3 += dot( p
 vec3 warped( vec2 uv ) {
   vec2 p = ( uv - 0.5 ) * vec2( uAspect, 1.0 );
   float r2 = dot( p, p );
+  float R = length( vec2( uAspect, 1.0 ) * 0.5 );
+  float r = length( p ) / R;
   // barrel: the middle swells, the edges crowd in (the live view is drawn wider than it shows)
-  float k = 0.24 * uWarp;
-  vec2 q = p / ( 1.0 + k * r2 ) * ( 1.0 - 0.06 * uWarp );
+  float k = 0.34 * uWarp;
+  vec2 q = p / ( 1.0 + k * r2 ) * ( 1.0 - 0.05 * uWarp );
+  // toward the rim the mercury bends the view back on itself: a thin band of the market, mirrored inward
+  float band = smoothstep( 0.78, 0.98, r ) * uWarp;
+  q = mix( q, q * ( 1.0 - 0.55 * band ) , band );
   // the glass splits the colours a hair at the edge
   float ca = 0.0022 * uWarp * r2;
   vec2 s = q / vec2( uAspect, 1.0 ) + 0.5;
@@ -41,45 +46,72 @@ vec3 warped( vec2 uv ) {
   c.b = texture2D( tDiffuse, s - d ).b;
   // hushed: a little less colour and contrast, a warm silver cast
   float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
-  c = mix( c, vec3( l ), 0.22 * uWarp );
-  c = mix( c, c * vec3( 1.04, 0.98, 0.9 ) + 0.012, uWarp );
-  c *= 1.0 - 0.1 * uWarp;
-  // the inside of the glass: dark toward the rim, with a thin bright ring of mercury
-  float r = length( p ) / length( vec2( uAspect, 1.0 ) * 0.5 );
-  float vig = smoothstep( 1.08, 0.45, r );
-  float rim = smoothstep( 0.86, 0.95, r ) * smoothstep( 1.06, 0.95, r );
-  c = c * mix( 1.0, vig, uWarp ) + vec3( 1.0, 0.9, 0.75 ) * rim * 0.07 * uWarp;
-  // the snow globe's drift: silvered flakes, three layers, falling and turning slowly
+  c = mix( c, vec3( l ), 0.2 * uWarp );
+  c = mix( c, c * vec3( 1.05, 0.98, 0.88 ) + vec3( 0.010, 0.009, 0.007 ), uWarp );
+  c *= 1.0 - 0.08 * uWarp;
+  // the inside of the glass: darker toward the rim, the mirrored band silvered, a thin bright ring of mercury
+  float vig = smoothstep( 1.12, 0.5, r );
+  float rim = smoothstep( 0.9, 0.965, r ) * smoothstep( 1.04, 0.965, r );
+  c = c * mix( 1.0, vig, uWarp );
+  c = mix( c, c * vec3( 0.95, 0.92, 0.86 ) * 1.25, band * 0.6 );
+  c += vec3( 1.0, 0.88, 0.7 ) * rim * 0.05 * uWarp;
+  // the window of the ball's own highlight, seen from inside: a soft curved streak high on the left
+  vec2 hp = p - vec2( -0.42 * uAspect, 0.33 );
+  float hd = length( hp * vec2( 1.0, 1.7 ) ) - 0.16;
+  float hl = exp( -hd * hd * 900.0 ) * smoothstep( 0.15, -0.1, hp.x + hp.y * 0.4 );
+  c += vec3( 1.0, 0.95, 0.88 ) * hl * 0.035 * uWarp;
+  // the snow globe's drift: silver glitter in four layers, the near ones large, soft and faint, the far ones fine
+  // and sharp; each fleck turns as it sinks, so it flashes now and then
   vec3 fl = vec3( 0.0 );
-  for ( int i = 0; i < 3; i++ ) {
+  for ( int i = 0; i < 4; i++ ) {
     float fi = float( i );
-    float sc = 7.0 + fi * 5.0;
+    float sc = 5.0 + fi * 6.5;
     vec2 g = vec2( uv.x * uAspect, uv.y ) * sc;
-    g += vec2( sin( uTime * 0.21 + fi * 1.7 ) * 0.6, uTime * ( 0.22 + 0.09 * fi ) );
-    g.x += sin( g.y * 0.7 + uTime * 0.3 + fi ) * 0.35;
+    g += vec2( sin( uTime * 0.17 + fi * 1.7 ) * ( 0.8 - fi * 0.12 ), uTime * ( 0.16 + 0.07 * fi ) );
+    g.x += sin( g.y * 0.6 + uTime * 0.27 + fi * 2.1 ) * 0.4;
     vec2 cell = floor( g );
     vec2 f = fract( g ) - 0.5;
     float h = hash12( cell + fi * 17.0 );
-    if ( h > 0.62 ) {
+    if ( h > 0.7 - fi * 0.05 ) {
       vec2 o = vec2( hash12( cell * 1.3 + 3.1 ), hash12( cell * 2.1 + 7.7 ) ) - 0.5;
-      float sz = 0.05 + 0.07 * hash12( cell + 9.2 );
-      float tw = 0.6 + 0.4 * sin( uTime * ( 1.5 + h * 3.0 ) + h * 30.0 );
-      fl += vec3( 1.0, 0.95, 0.86 ) * smoothstep( sz, 0.0, length( f - o * 0.7 ) ) * tw * ( 0.55 - fi * 0.12 );
+      float near = 1.0 - fi / 3.0;
+      float sz = mix( 0.03, 0.075, hash12( cell + 9.2 ) ) * mix( 0.6, 1.5, near );
+      float soft = mix( 0.15, 0.85, near );
+      float dd = length( f - o * 0.7 );
+      float disc = 1.0 - smoothstep( sz * ( 1.0 - soft ), sz, dd );
+      float turn = sin( uTime * ( 0.9 + h * 2.6 ) + h * 40.0 );
+      float flash = 0.35 + 0.65 * pow( max( turn, 0.0 ), 6.0 );
+      fl += mix( vec3( 0.86, 0.9, 1.0 ), vec3( 1.0, 0.86, 0.62 ), hash12( cell + 5.5 ) ) * disc * flash * mix( 0.9, 0.3, near );
     }
   }
-  c += fl * 0.5 * uFlakes * uWarp;
+  c += fl * 0.32 * uFlakes * uWarp;
   return c;
 }
 
 void main() {
-  vec3 live = warped( vUv );
-  vec2 pz = ( vUv - 0.5 ) / uPrevZoom + 0.5;
+  vec2 p = ( vUv - 0.5 ) * vec2( uAspect, 1.0 );
+  float r = length( p ) / length( vec2( uAspect, 1.0 ) * 0.5 );
+  // through the glass: the inside opens from the middle of the reflection outward, an iris of mercury whose edge
+  // bends the picture like the lip of a lens as it sweeps past
+  float front = uMix * 1.45;
+  float busy = step( 0.001, uMix ) * step( uMix, 0.999 );
+  float ed = ( r - front + 0.05 ) * 9.0;
+  float lip = exp( -ed * ed ) * busy;
+  vec2 dir = normalize( p + 1e-5 ) / vec2( uAspect, 1.0 );
+  vec2 uvL = vUv - dir * lip * 0.035 * sign( ed );
+  vec3 live = warped( uvL );
+  vec2 pz = ( uvL - 0.5 ) / uPrevZoom + 0.5;
   vec3 held = texture2D( tPrev, pz ).rgb;
-  vec3 c = mix( held, live, uMix );
-  // the sheen of the glass as the view passes through it
-  c += vec3( 1.0, 0.92, 0.8 ) * 0.18 * sin( 3.14159 * clamp( uMix, 0.0, 1.0 ) ) * step( 0.001, uMix ) * step( uMix, 0.999 );
-  // the glass passing in front of the eye on the way out
-  c = mix( c, vec3( 0.9, 0.82, 0.68 ), uVeil );
+  float open = 1.0 - smoothstep( front - 0.12, front, r );
+  open = uMix >= 0.999 ? 1.0 : open * step( 0.001, uMix );
+  vec3 c = mix( held, live, open );
+  // the silvered edge itself: a thin bright line, warm on the outside, cool on the inside
+  float e1 = ( r - front + 0.06 ) * 60.0, e2 = ( r - front + 0.075 ) * 60.0;
+  c += ( vec3( 1.0, 0.86, 0.62 ) * exp( -e1 * e1 ) + vec3( 0.7, 0.8, 1.0 ) * exp( -e2 * e2 ) * 0.6 ) * 0.09 * busy;
+  // the glass passing in front of the eye on the way out: a silvered veil closing in from the rim
+  float veil = uVeil * smoothstep( 1.2 * ( 1.0 - uVeil ) - 0.2, 1.2 * ( 1.0 - uVeil ) + 0.1, r + 0.25 * uVeil );
+  float lum = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
+  c = mix( c, vec3( 0.55, 0.5, 0.42 ) * ( 0.5 + lum ), clamp( veil, 0.0, 1.0 ) * 0.9 );
   gl_FragColor = vec4( c, 1.0 );
 }`;
 
