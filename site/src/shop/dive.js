@@ -128,7 +128,7 @@ export function createDive({ place, ball, scene, camera, renderer, composer, rig
         pass.uniforms.uVeil.value = k < 0.5 ? easeInOut(k * 2) : 1 - easeInOut((k - 0.5) * 2);
         if (k >= 0.5 && !S.cut) { S.cut = true; pass.uniforms.uWarp.value = 0; node.visible = true; setHush(0, 1.2); }
       }
-      if (S.t >= T.outof) go('back');
+      if (S.t >= T.outof) { go('back'); if (!S) return null; } // reduced motion: 'back' is a cut, and the dive is over
       return S.cut ? { pos: P.dive, target: P.C, fov: GAZE_FOV } : insidePose(P, T.into + T.inside + S.t);
     }
     if (S.phase === 'back') {

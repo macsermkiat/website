@@ -13,7 +13,7 @@ Outputs
     blender/out/props_report.json      triangles, bytes, bounding boxes, pivots, items per set
     blender/out/vendor/renders/*.png   the preview PNGs (deco frames as prop_deco_<key>.png; never the shared
                                        blender/out/renders/, where the carpenter's deco.py writes deco_<key>.png)
-    review/round-9/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
+    review/round-10/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
                                        (the deco contact sheet is render_stalls.py --sheet's)
 """
 import argparse
@@ -136,7 +136,7 @@ def guard_paths():
     repo = os.path.realpath(vlib.REPO or "")
     if not repo or repo == "/" or not os.path.isfile(os.path.join(repo, "docs", "BUILD.md")):
         raise SystemExit(f"[props] refusing to run: repo root {repo!r} is not the website repo")
-    owned = {"review": (vlib.REVIEW, "review/round-9/vendor"), "models": (vlib.MODELS, "site/public/models"),
+    owned = {"review": (vlib.REVIEW, "review/round-10/vendor"), "models": (vlib.MODELS, "site/public/models"),
              "report": (os.path.dirname(REPORT), "blender/out"), "renders": (vstage.RENDERS, "blender/out/vendor/renders"),
              "atlas": (vlib.ATLAS_DIR, "blender/out/vendor")}
     for key, (path, rel) in owned.items():
@@ -303,8 +303,11 @@ def write_items_json(sets, reports):
             items[node] = {"set": name, "stall": sets[name]["stall"], **data}
     out = {"about": "Display names for the vendor's act_ nodes (node names are unique across all prop sets; the "
                     "full and the lite glb of a set carry the same act_ nodes at the same places). 'pivot' says "
-                    "where the node's origin is: 'base' is the point the item rests on (sausages too: their "
-                    "'turn_axis' gives the long axis's height above the base, for turning them on the grate). Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV "
+                    "where the node's origin is: 'base' is the point the item rests on. 'action' says what a click does; "
+                    "round 10, the Bratwurst plate (ADR 0004 revision): 'plate' puts a fresh copy of the item on act_plate "
+                    "at the next free plate_spot_<n> (its 'spots', at most 'max_items'), 'sauce' squeezes a squiggle of "
+                    "'colour' from the bottle's 'fx' empty over the plate, 'dust' shakes curry powder ('colour') from "
+                    "the shaker's 'fx' empty, 'clear' empties the plate ('clear_note'). Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV "
                     "rect [u_min, v_min, u_max, v_max] in glTF texture space (origin top-left, as three.js samples glTF "
                     "textures) in prop_tex_books_color.webp.",
            "items": dict(sorted(items.items(), key=lambda kv: (kv[1]["set"], kv[0])))}

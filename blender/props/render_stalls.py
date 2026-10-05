@@ -6,8 +6,8 @@
 Reads site/public/models/props.json, imports the stall glb (deco_<key>.glb) and every set listed for that
 stall (full glbs, decoded), parents each set's root at its slot empty, lights the stall's light_ empties as
 warm point lights with a soft fill from the lane, and renders from in front of the stall. Frames go to
-blender/out/vendor/renders/stall_<key>[_<cam>].png and review/round-9/vendor/stall_<key>[_<cam>].jpg.
---sheet builds review/round-9/vendor/deco_goods_contact_sheet.jpg from the eight deco frames (view cam).
+blender/out/vendor/renders/stall_<key>[_<cam>].png and review/round-10/vendor/stall_<key>[_<cam>].jpg.
+--sheet builds review/round-10/vendor/deco_goods_contact_sheet.jpg from the eight deco frames (view cam).
 Render only: nothing in site/public/models changes.
 """
 import json
@@ -45,6 +45,24 @@ CAMS_SCHMUCK = {
 }
 
 
+SECTION = ("bierstand", "bratwurst", "gluehwein", "buecherstand")
+# round 10: close-ups inside the section stalls (stall frame, Blender axes; the counter front is at y -1.17..-1.35)
+CAMS_SECTION = {
+    "bratwurst": {"close": ((0.62, -2.3, 1.6), (0.64, -1.27, 1.1), 31),
+                  "board": ((0.75, -2.05, 1.36), (0.78, -1.28, 1.08), 38)},
+    "bierstand": {"shelf": ((-0.3, -2.2, 1.8), (-0.1, 1.1, 1.62), 26),
+                  "shelf_l": ((-0.45, -1.3, 1.62), (-0.7, 1.1, 1.56), 34),
+                  "shelf_r": ((1.05, -0.75, 1.72), (1.45, 1.1, 1.6), 34)},
+}
+ENGINE_FOV_LENS = 26.4      # the engine's 42 degree vertical field of view at 16:9 (36 mm sensor width)
+
+
+def cam_view_of(objs):
+    """The stall's own cam_view / cam_target empties (what the engine frames when a visitor enters)."""
+    get = lambda n: next((tuple(o.matrix_world.translation) for o in objs if o.name.split(".")[0] == n), None)
+    return get("cam_view"), get("cam_target")
+
+
 def args():
     a = sys.argv[1:]
     keys = [k for k in (a[0].split(",") if a and not a[0].startswith("--") else [])]
@@ -53,18 +71,23 @@ def args():
         get("--cam", "view"), "--sheet" in a, "--lite" in a
 
 
+STAGED = {}
+
+
 def stage(key, lite=False):
     state.reset(1)
     render.night_scene(ground_size=30)
     with open(os.path.join(MODELS, "props.json")) as f:
         pj = json.load(f)
-    stall_id = "deco-" + ("kartoffelpuffer" if key == "puffer" else key)
+    # round 10: the section stalls too (bierstand, bratwurst, gluehwein, buecherstand), by their layout id
+    stall_id = key if key in SECTION else "deco-" + ("kartoffelpuffer" if key == "puffer" else key)
     sets = [e for e in pj["sets"] if e["stall"] == stall_id]
     asset = sets[0]["asset"] if sets else f"deco_{key}.glb"
     if lite:
         asset = asset.replace(".glb", ".lite.glb")
     objs = render.import_glb(os.path.join(MODELS, asset), at=(0, 0, 0))
     bpy.context.view_layer.update()
+    STAGED["objs"] = objs
     slots = {o.name.split(".")[0]: o for o in objs if o.name.startswith("slot_")}
     for e in sets:
         slot = slots.get(e["slot"])
@@ -82,7 +105,8 @@ def stage(key, lite=False):
         if o.name.startswith("light_"):
             # round 9 pass 2, the ornament shop: the carpenter's own preview lighting for stall_schmuck (small
             # 150 W points at the light_ markers, sharp highlights on the glass; blender/stalls/schmuck.py)
-            render.add_light(f"env_{o.name}", 'POINT', tuple(o.matrix_world.translation), 150 if schmuck else 55,
+            render.add_light(f"env_{o.name}", 'POINT', tuple(o.matrix_world.translation),
+                             150 if schmuck else 70 if key in SECTION else 55,
                              (1.0, 0.72, 0.45), size=0.06 if schmuck else 0.25)
             n += 1
     # a warm fill from the lane (the market's string lights and lamps), and a low one on the front crate
@@ -122,8 +146,24 @@ def main():
     os.makedirs(RENDERS, exist_ok=True)
     for key in keys:
         stage(key, lite)
-        loc, tgt, lens = (CAMS_SCHMUCK if key == "schmuck" else CAMS)[cam]
+        if key == "bratwurst":
+            # the coal bed's own glow plus a small ember light just over it (as build_props' grill shots)
+            sg = next((o for o in STAGED["objs"] if o.name.split(".")[0] == "slot_grill"), None)
+            if sg:
+                render.add_light("env_ember", 'POINT', tuple(sg.matrix_world.translation + Vector((0, 0, 0.2))), 6,
+                                 (1.0, 0.36, 0.08), size=0.15)
+        if cam == "cam_view":
+            loc, tgt = cam_view_of(STAGED["objs"])
+            lens = ENGINE_FOV_LENS
+        elif key in CAMS_SECTION:
+            loc, tgt, lens = CAMS_SECTION[key][cam]
+        else:
+            loc, tgt, lens = (CAMS_SCHMUCK if key == "schmuck" else CAMS)[cam]
         render.camera(loc, tgt, lens=lens, dof=None)
+        if key in SECTION:
+            import vstage
+            vstage.beer_preview()           # preview-only beer / glass treatment, as build_props' shots
+            vstage.glass_no_shadow()
         tag = ("" if cam == "view" else f"_{cam}") + ("_lite" if lite else "")
         png = os.path.join(RENDERS, f"stall_{key}{tag}.png")
         render.render(png, samples=samples, res=res, jpeg=os.path.join(REVIEW, f"stall_{key}{tag}.jpg"), jpeg_width=1280)

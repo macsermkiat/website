@@ -375,7 +375,13 @@ try {
         const b = await page.evaluate((n) => window.__market.backing(n), backingName);
         if (b.card) check(`${id}: the sheet's card_ backing brightens with its write_ quad (no lighter inset)`, b.same && b.glow > 0.1, JSON.stringify(b));
       }
-      if (id === 'bier.vomfass') check('the projects board carries clickable links (GitHub)', r.copy.links.some((h) => /github\.com/.test(h)), r.copy.links.join(' '));
+      if (id === 'bier.vomfass') {
+        // the links Mac keeps in content/projects.md (round 9: ProtoCol and a YouTube playlist; GitHub was taken out)
+        let want = [];
+        try { want = [...readFileSync(path.resolve('../content/projects.md'), 'utf8').matchAll(/\]\((https?:[^)\s]+)\)/g)].map((m) => m[1].replace(/\/$/, '')); } catch { /* no content: any link will do */ }
+        const have = r.copy.links.map((h) => h.replace(/\/$/, ''));
+        check('the projects board carries the clickable links in content/projects.md', want.length ? want.every((u) => have.includes(u)) : have.length > 0, JSON.stringify({ want, have }));
+      }
       if (r.reading.views > 1 && id !== 'bier.coaster_0') {
         const t0 = r.text;
         await page.keyboard.press('ArrowRight');

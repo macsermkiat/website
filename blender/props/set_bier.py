@@ -17,6 +17,7 @@ import math
 
 from mathutils import Matrix
 
+import beer_bottles as BB
 import content_projects
 import goods as G
 import vlib
@@ -101,7 +102,7 @@ def pretzel(m, M, s=1.0, col=WHITE, seed=0):
     b0, b1 = vs[bi[0]], vs[bi[-1]]
     vmap = lambda v: (0.3 * v / b0 if v < b0 else 0.3 + 0.4 * (v - b0) / (b1 - b0) if v <= b1
                       else 0.7 + 0.3 * (v - b1) / (1 - b1))
-    n = seg(8, 6)
+    n = seg(6, 6)                      # round 10: 7 sides round the rope (8 before); pass 2: 6
     up = Vector((0, 0, 1))
     frames = []
     for i, p in enumerate(pts):
@@ -135,7 +136,7 @@ def pretzel(m, M, s=1.0, col=WHITE, seed=0):
     r_ = random.Random(77 + seed)
     k = 0
     tries = 0
-    while k < 24 and tries < 300:
+    while k < 11 and tries < 300:          # round 10: 16 crystals (24 before), pass 2: 11, for the bottle shelves
         tries += 1
         i = r_.randrange(1, len(pts) - 1)
         if belly[i] < 0.2 and r_.random() < 0.6:
@@ -205,7 +206,7 @@ def counter():
             m.disc(0.054, seg(12, 8), "coaster", T(x, y, 0.0015, rz=drng.uniform(0, 6) if not lite() else 0.0), WHITE,
                    "atlas")
             if not lite():
-                m.lathe([(0.054, 0.0), (0.054, 0.004)], 12, "paper", T(x, y, 0), C("e8e2d6"))
+                m.lathe([(0.054, 0.0), (0.054, 0.004)], 8, "paper", T(x, y, 0), C("e8e2d6"))   # pass 2: 8 (12)
     # round 6: the Bierdeckel at the counter's left front, one per project in content/projects.md (one per ###
     # heading, read at build time) laid out side by side for the visitor to pick up, and the spares in a small
     # stack behind them. Each is act_coaster_<n> with write_coaster_<n>_front / _back (vprint.coaster).
@@ -252,15 +253,16 @@ def coaster_row(n, x0=-1.13, x1=-0.75):
 
 
 def stein(m, M, col=C("7a6a58"), lid=C("b0b0b0")):
-    """Stoneware Bierkrug with a pewter lid and thumb lift."""
-    n = seg(10, 6)
-    m.lathe([(0.0, 0.0), (0.045, 0.0), (0.048, 0.01), (0.046, 0.03), (0.047, 0.15), (0.045, 0.17),
-             (0.0, 0.17)], n, "bisque", M, col, "glaze")
+    """Stoneware Bierkrug with a pewter lid and thumb lift (round 10: 8 facets, for the bottle shelves' headroom)."""
+    n = seg(8, 6)
+    # (round 10 pass 2: no bottom disc on the shelf, no top disc under the lid, the cobalt band a raised lathe
+    # band instead of a torus: about 60 triangles less per stein, for the bottles' back rows)
+    m.lathe([(0.045, 0.0), (0.048, 0.01), (0.046, 0.03), (0.047, 0.15), (0.045, 0.17)], n, "bisque", M, col, "glaze")
     if not lite():
-        m.torus(0.0475, 0.003, n, 3, "ceramic", M @ T(0, 0, 0.145), C("2a4a8a"), "glaze")
+        m.lathe([(0.0478, 0.141), (0.0482, 0.149)], n, "ceramic", M, C("2a4a8a"), "glaze")
     m.lathe([(0.049, 0.168), (0.05, 0.176), (0.035, 0.19), (0.0, 0.205)], n, "steel", M, lid)
     pts = [(0.045, 0, 0.14), (0.075, 0, 0.13), (0.08, 0, 0.08), (0.07, 0, 0.04), (0.046, 0, 0.035)]
-    m.tube(pts, 0.009, seg(6, 4), "bisque", M, col, "glaze")
+    m.tube(pts, 0.009, 4, "bisque", M, col, "glaze")
     m.box((0.02, 0.012, 0.02), M @ T(0.058, 0, 0.19), "steel", lid)
 
 
@@ -280,6 +282,48 @@ def bottle_crate(m, M):
             m.lathe([(0.0318, 0.1), (0.0318, 0.14)], n, "coaster", Mb, WHITE, "atlas", v_by="z")
 
 
+def bottle_row(m, x0, y, kinds, step=0.066, z=0.0, neck=True, back=False):
+    """A row of decorative bottles from x0 to the right: kinds = [(kind, brewery, glass), ...]. Each stands a
+    little off the line and turned a touch (layout stream rng, the same in full and lite)."""
+    for i, (kind, brewery, glass) in enumerate(kinds):
+        dx, dy, rz = rng.uniform(-0.004, 0.004), rng.uniform(-0.006, 0.006), rng.uniform(-0.18, 0.18)
+        BB.bottle(m, T(x0 + i * step + dx, y + dy, z, rz=rz), kind, brewery, glass, neck_label=neck, back=back)
+
+
+def back_row(m, x0, y, kinds, step=0.07, h=0.045):
+    """Round 10 pass 2 (judges: "Mac asked for 'more'"): a second row of bottles behind a front row, standing on
+    a low wooden riser so their shoulders, caps and label tops show over the front row."""
+    w = step * (len(kinds) - 1) + 0.075
+    h = BB.riser(m, T(x0 + step * (len(kinds) - 1) / 2, y, 0), w, h=h)
+    bottle_row(m, x0, y, kinds, step=step, z=h, back=True)
+
+
+def back_bottles(m):
+    """Shelf 1 (round 10): brown Helles in front of green Pils at the left end; a crate of Kellerbier right of
+    the cask; three stoneware Steinkrüge and three Weißbier longnecks at the right end."""
+    bottle_row(m, -1.86, -0.045, [("euro", "nachtmarkt", "brown")] * 7)
+    # round 10 pass 2: the green Pils behind them stand on a riser (3 cm: the shelf above is close), six now (four before)
+    back_row(m, -1.84, 0.058, [("euro", "tannenhof", "green")] * 6, step=0.075, h=0.03)
+    BB.crate(m, T(1.13, 0.02, 0, rz=0.02), 4, 2, "euro", "eichwald", "brown", brand="eichwald")
+    bottle_row(m, 1.45, -0.04, [("stein", "eichwald", None)] * 3, step=0.085)
+    bottle_row(m, 1.75, -0.045, [("longneck", "sternwirt", "amber")] * 3, step=0.068)
+    # round 10 pass 2: a back row of Klosterbräu Dunkel in dark green behind the Steinkrüge and longnecks
+    back_row(m, 1.46, 0.058, [("euro", "kloster", "dark_green")] * 6, step=0.077, h=0.03)
+
+
+def shelf_bottles(m):
+    """Shelf 2 (round 10): a row of swing-top Bügelflaschen at the left end (Märzen and Klosterbräu Dunkel), a
+    crate of green Pils and a row of Klosterbräu Dunkel at the right end."""
+    kinds = ([("buegel", "laterne", "brown"), ("buegel", "kloster", "dark_green")] * 4)[:7]
+    bottle_row(m, -1.84, -0.045, kinds, step=0.075)
+    # round 10 pass 2: Sternwirt Weißbier longnecks on a riser behind the swing-tops
+    back_row(m, -1.82, 0.058, [("longneck", "sternwirt", "amber")] * 6, step=0.078)
+    BB.crate(m, T(1.27, 0.02, 0, rz=-0.02), 4, 2, "euro", "tannenhof", "green", brand="tannenhof")
+    bottle_row(m, 1.6, -0.045, [("euro", "kloster", "brown")] * 4, step=0.07)
+    # round 10 pass 2: Laternen-Bräu Märzen behind them
+    back_row(m, 1.6, 0.058, [("euro", "laterne", "brown")] * 4, step=0.07)
+
+
 def back():
     s = vlib.PropSet("prop_bier_back", "slot_shelf_1", "bierstand", footprint=(2.4, 0.28))
     m = s.static
@@ -297,7 +341,10 @@ def back():
             for sx in (-1, 1):
                 m.box((0.03, 0.034, 0.04), T(x + sx * 0.088, ry, rail_z + rail_h + 0.012, ry=sx * 0.7), vlib.RW("wood"),
                       C("6a4a30"))
-        G.barrel(m, T(x, cy, lift, rz=-math.pi / 2), L=L, r_end=r_end, r_belly=r_belly, staves=10)
+        # round 10: 14 single-faceted staves, 4 rings along, flat hoops (about half the triangles of round 9's
+        # casks, for the bottle rows; the same silhouette from the lane)
+        G.barrel(m, T(x, cy, lift, rz=-math.pi / 2), L=L, r_end=r_end, r_belly=r_belly, staves=14, across=1, rings=4,
+                 flat_hoops=True, rear_head=False)   # round 10 pass 2: the rear head faces the wall
     # chalkboard price board standing against the back wall, left of the middle brace (x -0.015..0.015)
     bw, bh = 0.5, 0.34
     Mb = T(-0.31, 0.085, 0.0, rx=-0.08) @ T(0, 0, bh / 2 + 0.004)
@@ -310,10 +357,12 @@ def back():
     # a row of stoneware steins with pewter lids, and a crate of swing-top bottles
     for k, (x, col) in enumerate(((0.16, C("8a7a64")), (0.28, C("6a5a48")), (0.4, C("9a8a70")))):
         stein(m, T(x, 0.0 + (k % 2) * 0.04, 0, rz=2.4 - k * 0.5), col)
-    bottle_crate(m, T(1.02, 0.02, 0))
+    # round 10 (Mac: "more beer bottle decorated on shelf"): rows of decorative bottles at both ends of the shelf
+    # and a crate where round 9's six swing-tops stood, with bare wood between the groups
+    back_bottles(m)
     # a stack of beer coasters beside the chalkboard
-    for k in range(4 if not lite() else 1):
-        m.disc(0.054, 12, "coaster", T(-0.5 + 0.0, -0.06, 0.006 * (k + 1), rz=drng.uniform(0, 6)), WHITE, "atlas")
+    for k in range(1):                   # round 10: only the top coaster is seen over the stack's edge band
+        m.disc(0.054, 12, "coaster", T(-0.5 + 0.0, -0.06, 0.024, rz=drng.uniform(0, 6)), WHITE, "atlas")
     m.lathe([(0.054, 0.0), (0.054, 0.024)], 12, "paper", T(-0.5, -0.06, 0), C("e8e2d6"))
     s.finish()
     return s
@@ -350,6 +399,7 @@ def shelf():
     for k in range(2):
         m.box((0.26, 0.18, 0.03), T(0.82, 0.02, 0.015 + k * 0.03, rz=0.05 - k * 0.1), "towel", WHITE,
               faces={"pz": "towel", "ny": "towel"}, skip=("nz",))
+    shelf_bottles(m)
     s.finish()
     return s
 

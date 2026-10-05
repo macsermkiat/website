@@ -392,7 +392,9 @@ def build(out=OUT):
     with open(os.path.join(out, "print_regions.json"), "w") as f:
         json.dump(meta, f, indent=0)
     print(f"[atlas_print] {len(regions)} regions, {used} px of {SIZE} wide (atlas {height} px tall) -> {out}")
-    return meta
+    # round 10: the small labels (beer bottles, sauces, curry shaker) go in the free rows under these regions
+    import atlas_labels
+    return atlas_labels.patch(out)
 
 
 if __name__ == "__main__":

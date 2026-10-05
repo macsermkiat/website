@@ -34,7 +34,7 @@ FAIL (exit 1):
 WARN (listed, exit 0): lite versions above 38 % of the full triangles (target about a third).
 
     python3 blender/props/check_props.py --notes   also rewrites the budget tables in
-                                                   review/round-9/vendor/NOTES.md from the current glbs
+                                                   review/round-10/vendor/NOTES.md from the current glbs
 """
 import json
 import os
@@ -72,13 +72,21 @@ DECO_MB = 1.0
 NO_AO = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade",
          "write_", "vendor_mercury", "vendor_gloss", "tinsel", "vendor_foil")
 BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|sausage|coaster)_\d+$|^act_grill$"
-                        r"|^act_writing_paper$")
+                        r"|^act_writing_paper$|^act_wurst_[a-z]+$|^act_roll$|^act_sauce_[a-z]+$|^act_shaker_curry$"
+                        r"|^act_plate$")
+# round 10 (ADR 0004 revision "Bratwurst plate"): the only act_ nodes the Bratwurst stall keeps
+WURST_ACTS = {"act_grill", "act_grill_swing", "act_smoke", "act_writing_paper", "act_wurst_thueringer",
+              "act_wurst_nuernberger", "act_wurst_krakauer", "act_wurst_curry", "act_roll", "act_sauce_senf",
+              "act_sauce_ketchup", "act_sauce_curry", "act_shaker_curry", "act_plate"}
+WURST_PLATE = WURST_ACTS - {"act_grill", "act_grill_swing", "act_smoke", "act_writing_paper"}
+# round 10 (Mac: decorative beer bottles, not clickable): the act_ nodes the Bierstand's back shelves may carry
+BIER_SHELF_ACTS = {"prop_bier_back": set(), "prop_bier_shelf": {f"act_glass_{i}" for i in range(10, 19)}}
 # round 6 pass 2 (judges): back to 2k of headroom under each section stall's 60k, after trimming the props
 # (round 6 pass 1 had dropped it to 500 when the carpenter's stalls grew by about 1.7k each)
 HEADROOM, SECTION_TRIS, SECTION_MB, DECO_TRIS = 2000, 60000, 3.0, 20000
 LITE_RATIO = 0.38
 ACT_BBOX_TOL, MESH_BBOX_TOL = 0.01, 0.02          # m: full vs lite bounds of act_ subtrees / mesh nodes
-NOTES = os.path.join(REPO, "review", "round-9", "vendor", "NOTES.md")
+NOTES = os.path.join(REPO, "review", "round-10", "vendor", "NOTES.md")
 SEAT = os.path.join(HERE, "seat_check.mjs")
 
 fails, warns = [], []
@@ -126,17 +134,30 @@ def check_nodes(name, js, nodes):
         "prop_gluehwein_wine": lambda: 8 <= len(acts(nodes, "act_bottle_")) <= 12 and acts(nodes, "act_wineglass_"),
         "prop_bier_counter": lambda: all(f"act_tap_{i}" in nodes for i in range(3)) and acts(nodes, "act_glass_")
         and all(par.get(f"foam_{g.rsplit('_', 1)[1]}") == g for g in acts(nodes, "act_glass_")),
-        "prop_wurst_counter": lambda: "act_grill" in nodes and "act_grill_swing" in nodes
-        and acts(nodes, "act_sausage_") and acts(nodes, "act_roll_"),
+        "prop_wurst_counter": lambda: WURST_ACTS <= set(nodes),
     }
     for c in BOOK_CATS:
         need[f"prop_books_{c['key']}"] = (lambda c=c: len(acts(nodes, "act_book_")) == len(c["books"]))
     if name in need and not need[name]():
         fail(f"{name}: required act_ nodes missing")
-    if name == "prop_wurst_counter":
-        on_grate = [n for n in acts(nodes, "act_sausage_") if par.get(n) == "act_grill_swing"]
-        if len(on_grate) < 8:
-            fail(f"{name}: only {len(on_grate)} sausages are children of act_grill_swing")
+    base = name.split(" (")[0]
+    if base == "prop_wurst_counter":
+        extra = sorted(n for n in nodes if is_act(n) and n not in WURST_ACTS)
+        if extra:
+            fail(f"{name}: act_ nodes beyond the plate set and the grill: {extra[:8]}")
+        if par.get("sausages_grill") != "act_grill_swing":
+            fail(f"{name}: the grate's merged sausages (sausages_grill) do not ride act_grill_swing")
+        for k in ("senf", "ketchup", "curry"):
+            if par.get(f"fx_sauce_{k}") != f"act_sauce_{k}":
+                fail(f"{name}: fx_sauce_{k} is not a child of act_sauce_{k}")
+        for i in range(4):
+            if par.get(f"plate_spot_{i}") != "act_plate":
+                fail(f"{name}: plate_spot_{i} is not a child of act_plate")
+    if base in BIER_SHELF_ACTS:
+        got = {n for n in nodes if is_act(n)}
+        if got != BIER_SHELF_ACTS[base]:
+            fail(f"{name}: act_ nodes {sorted(got ^ BIER_SHELF_ACTS[base])[:6]} differ from round 9's (the bottles "
+                 f"are scenery)")
     mats = set(m.get("name") for m in js.get("materials", []))
     extras = {nd.get("name"): nd.get("extras") or {} for nd in js.get("nodes", [])}
     for b in acts(nodes, "act_book_"):
@@ -596,6 +617,23 @@ def check_books(items, seen):
     print(f"\nbooks: {len(got)} of {len(want)} titles from categories.json, one act_book_ node each")
 
 
+def check_wurst_items(items):
+    """Round 10: items.json carries name, label and action for each plate-set node, and nothing stale."""
+    wurst = {k: it for k, it in items.items() if it.get("stall") == "bratwurst"}
+    stale = sorted(k for k in wurst if re.match(r"^act_(sausage|roll|served)_\d+$", k))
+    if stale:
+        fail(f"items.json: stale Bratwurst entries {stale[:8]}")
+    for n in sorted(WURST_PLATE):
+        it = wurst.get(n)
+        if not it or not (it.get("name") and it.get("label") and it.get("action")):
+            fail(f"items.json: {n} missing or lacks name / label / action")
+    bier = sorted(k for k, it in items.items() if it.get("set") in BIER_SHELF_ACTS and k not in BIER_SHELF_ACTS[it["set"]])
+    if bier:
+        fail(f"items.json: new Bierstand shelf entries {bier[:6]} (the bottles are scenery)")
+    print(f"\nBratwurst plate: {len(WURST_PLATE)} clickable nodes with name, label and action; no act_sausage_ / "
+          f"act_roll_ entries")
+
+
 def check_fill(sets, items, seen):
     """Round 9 (ADR 0004 revision): the ornament shop has exactly its three interactive groups."""
     for n, st in seen.items():
@@ -820,6 +858,7 @@ def main():
         if d == "schmuck" and mb > SCHMUCK_MB:
             fail(f"ornament shop: {mb:.2f} MB with its goods and their shared textures (> {SCHMUCK_MB})")
     check_fill(sets, items, seen)
+    check_wurst_items(items)
     check_books(items, seen)
     check_writing(sets, items, pj)
     # the beer heads as the browser decodes them (meshopt, quantised node transforms): no tall foam columns

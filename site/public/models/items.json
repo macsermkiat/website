@@ -1,5 +1,5 @@
 {
- "about": "Display names for the vendor's act_ nodes (node names are unique across all prop sets; the full and the lite glb of a set carry the same act_ nodes at the same places). 'pivot' says where the node's origin is: 'base' is the point the item rests on (sausages too: their 'turn_axis' gives the long axis's height above the base, for turning them on the grate). Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV rect [u_min, v_min, u_max, v_max] in glTF texture space (origin top-left, as three.js samples glTF textures) in prop_tex_books_color.webp.",
+ "about": "Display names for the vendor's act_ nodes (node names are unique across all prop sets; the full and the lite glb of a set carry the same act_ nodes at the same places). 'pivot' says where the node's origin is: 'base' is the point the item rests on. 'action' says what a click does; round 10, the Bratwurst plate (ADR 0004 revision): 'plate' puts a fresh copy of the item on act_plate at the next free plate_spot_<n> (its 'spots', at most 'max_items'), 'sauce' squeezes a squiggle of 'colour' from the bottle's 'fx' empty over the plate, 'dust' shakes curry powder ('colour') from the shaker's 'fx' empty, 'clear' empties the plate ('clear_note'). Books also carry title, author, their cover material (book_cover_<n>) and the cover's UV rect [u_min, v_min, u_max, v_max] in glTF texture space (origin top-left, as three.js samples glTF textures) in prop_tex_books_color.webp.",
  "items": {
   "act_page_turn": {
    "set": "book_open",
@@ -2593,443 +2593,85 @@
    "kind": "grill",
    "pivot": "act_grill: on the deck of the stall's grill opening, under the fire bowl's centre (the grill's base); act_grill_swing: the hook the grate hangs from"
   },
-  "act_roll_0": {
+  "act_plate": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
+   "name": "Paper plate",
+   "kind": "plate",
+   "pivot": "base",
+   "label": "Pappteller",
+   "action": "clear",
+   "spots": [
+    "plate_spot_0",
+    "plate_spot_1",
+    "plate_spot_2",
+    "plate_spot_3"
+   ],
+   "max_items": 4,
+   "clear_note": "Guten Appetit",
+   "detail": "Pick sausages, a roll and sauces for the plate; tap it to clear."
+  },
+  "act_roll": {
+   "set": "prop_wurst_counter",
+   "stall": "bratwurst",
+   "name": "Brötchen (crusty bread roll)",
    "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_1": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_10": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_11": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_12": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_13": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_14": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_15": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_2": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_3": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_4": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_5": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_6": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_7": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_8": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_roll_9": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Brötchen (bread roll)",
-   "kind": "roll",
-   "pivot": "base"
-  },
-  "act_sausage_0": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst on the grill",
-   "kind": "sausage",
    "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
+   "label": "Brötchen",
+   "action": "plate",
+   "wurst": "roll",
+   "detail": "A crusty white roll, split for a Bratwurst."
   },
-  "act_sausage_1": {
+  "act_sauce_curry": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
-   "name": "Bratwurst on the grill",
-   "kind": "sausage",
+   "name": "Currysauce",
+   "kind": "sauce",
    "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
+   "label": "Currysauce",
+   "action": "sauce",
+   "sauce": "curry",
+   "colour": "#b4400e",
+   "fx": "fx_sauce_curry",
+   "detail": "A squeeze bottle of Currysauce: tap it to put some on the plate."
   },
-  "act_sausage_10": {
+  "act_sauce_ketchup": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
-   "name": "Bratwurst keeping warm",
-   "kind": "sausage",
+   "name": "Ketchup",
+   "kind": "sauce",
    "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
+   "label": "Ketchup",
+   "action": "sauce",
+   "sauce": "ketchup",
+   "colour": "#a8140e",
+   "fx": "fx_sauce_ketchup",
+   "detail": "A squeeze bottle of Ketchup: tap it to put some on the plate."
   },
-  "act_sausage_11": {
+  "act_sauce_senf": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
-   "name": "Bratwurst keeping warm",
-   "kind": "sausage",
+   "name": "Senf (mustard)",
+   "kind": "sauce",
    "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
+   "label": "Senf",
+   "action": "sauce",
+   "sauce": "senf",
+   "colour": "#d6a21c",
+   "fx": "fx_sauce_senf",
+   "detail": "A squeeze bottle of Senf: tap it to put some on the plate."
   },
-  "act_sausage_12": {
+  "act_shaker_curry": {
    "set": "prop_wurst_counter",
    "stall": "bratwurst",
-   "name": "Bratwurst keeping warm",
-   "kind": "sausage",
+   "name": "Curry powder",
+   "kind": "spice",
    "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_13": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst keeping warm",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_14": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst keeping warm",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_15": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst keeping warm",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_16": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Raw Bratwurst, ready for the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": true,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_17": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Raw Bratwurst, ready for the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": true,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_18": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Raw Bratwurst, ready for the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": true,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_19": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Raw Bratwurst, ready for the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": true,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_2": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst on the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_20": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Raw Bratwurst, ready for the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": true,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_21": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Raw Bratwurst, ready for the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": true,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_22": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Raw Bratwurst, ready for the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": true,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_23": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Raw Bratwurst, ready for the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": true,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_3": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst on the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_4": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst on the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_5": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst on the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_6": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst on the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_7": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst on the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_8": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst on the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_sausage_9": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst on the grill",
-   "kind": "sausage",
-   "pivot": "base",
-   "raw": false,
-   "turn_axis": {
-    "offset_blender_z": 0.0125,
-    "offset_threejs_y": 0.0125,
-    "axis": "node X"
-   }
-  },
-  "act_served_0": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Bratwurst im Brötchen with mustard",
-   "kind": "served",
-   "pivot": "base"
-  },
-  "act_served_1": {
-   "set": "prop_wurst_counter",
-   "stall": "bratwurst",
-   "name": "Currywurst with curry powder and a wooden fork",
-   "kind": "served",
-   "pivot": "base"
+   "label": "Currypulver",
+   "action": "dust",
+   "colour": "#c8781a",
+   "fx": "fx_shaker_curry",
+   "detail": "A tin of curry powder: tap it to dust the plate."
   },
   "act_smoke": {
    "set": "prop_wurst_counter",
@@ -3052,6 +2694,51 @@
     21.0
    ],
    "detail": "Greaseproof market paper printed with the Nachtmarkt-Blatt masthead; the Bratwurst is wrapped in it."
+  },
+  "act_wurst_curry": {
+   "set": "prop_wurst_counter",
+   "stall": "bratwurst",
+   "name": "Currywurst, sliced",
+   "kind": "wurst",
+   "pivot": "base",
+   "label": "Currywurst",
+   "action": "plate",
+   "wurst": "curry",
+   "detail": "Sliced Bratwurst under curry ketchup and a dusting of curry powder, with a wooden fork."
+  },
+  "act_wurst_krakauer": {
+   "set": "prop_wurst_counter",
+   "stall": "bratwurst",
+   "name": "Krakauer, smoked",
+   "kind": "wurst",
+   "pivot": "base",
+   "label": "Krakauer",
+   "action": "plate",
+   "wurst": "krakauer",
+   "detail": "Thick, coarse and smoked, reddish brown."
+  },
+  "act_wurst_nuernberger": {
+   "set": "prop_wurst_counter",
+   "stall": "bratwurst",
+   "name": "Drei Nürnberger Rostbratwürstchen",
+   "kind": "wurst",
+   "pivot": "base",
+   "label": "3 Nürnberger",
+   "action": "plate",
+   "wurst": "nuernberger",
+   "count": 3,
+   "detail": "Three finger-sized sausages from Nuremberg, grilled crisp."
+  },
+  "act_wurst_thueringer": {
+   "set": "prop_wurst_counter",
+   "stall": "bratwurst",
+   "name": "Thüringer Rostbratwurst",
+   "kind": "wurst",
+   "pivot": "base",
+   "label": "Thüringer",
+   "action": "plate",
+   "wurst": "thueringer",
+   "detail": "Long, thin and browned over the charcoal, with the grate's marks."
   }
  }
 }

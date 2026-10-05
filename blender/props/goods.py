@@ -523,15 +523,19 @@ def beer_fill(m, foam_m, M, glass, level, beer_col=C("d98a1a"), region_foam="foa
 
 
 # ------------------------------------------------------------------ barrels
-def barrel(m, M, L=0.36, r_end=0.12, r_belly=0.14, staves=16, lying=True, hoop_col=C("3a3c40"), tap=True):
+def barrel(m, M, L=0.36, r_end=0.12, r_belly=0.14, staves=16, lying=True, hoop_col=C("3a3c40"), tap=True,
+           across=2, rings=6, flat_hoops=False, rear_head=True):
     """Small oak cask lying along local X (origin at the bottom of the belly). Separate oak staves with a
     hairline gap, each bent across its width (two facets) so the silhouette stays round; forged iron hoops
     (dark, slightly specular metal) with a raised edge; a branded front head (+X end) and a brass tap low
-    on that head, clear of the brand."""
+    on that head, clear of the brand.
+    Round 10 (Bierstand headroom for the bottle shelves): across / rings set each stave's facets across and
+    the rings along it, flat_hoops makes each hoop one band instead of a raised profile.
+    Round 10 pass 2: rear_head=False leaves out the rear head and its chime (a cask on a rack against a wall)."""
     M = M or Matrix()
     n = seg(staves, 8)
-    across = 2 if not lite() else 1
-    k = seg(6, 4)
+    across = across if not lite() else 1
+    k = seg(rings, 4)
     prof = []
     for i in range(k + 1):
         t = i / k
@@ -551,11 +555,15 @@ def barrel(m, M, L=0.36, r_end=0.12, r_belly=0.14, staves=16, lying=True, hoop_c
         t = (z + L / 2) / L
         r = r_end + (r_belly - r_end) * math.sin(math.pi * t) + 0.0022
         hp = [(r - 0.0022, z - 0.011), (r + 0.0008, z - 0.002), (r - 0.0022, z + 0.011)]
+        if flat_hoops:
+            hp = [(r - 0.0004, z - 0.011), (r - 0.0004, z + 0.011)]
         # blackened forged iron: a cool charcoal with a satin sheen (a metallic finish only mirrors the warm
         # wood around it and reads as another brown band)
         m.lathe(hp, hn, "sw_metal_rough", Mb, hoop_col, "atlas")
     for z in (-L / 2 + 0.012, L / 2 - 0.012):
         front = z > 0
+        if not front and not rear_head:
+            continue
         m.disc(r_end - 0.004, hn, "barrel_head" if front else "wood_end", Mb @ T(0, 0, z, rx=0 if front else math.pi,
                rz=math.pi / 2), C("c4b0a0") if front else C("a08060"), "atlas")
         # stave ends protrude a little beyond the heads (the chime)
@@ -569,16 +577,21 @@ def barrel(m, M, L=0.36, r_end=0.12, r_belly=0.14, staves=16, lying=True, hoop_c
 
 
 # ------------------------------------------------------------------ sausages and bread
-def sausage(m, M, L=0.2, r=0.013, bend=0.02, dark=False, seed=0.0, raw=False, cut=False):
+def sausage(m, M, L=0.2, r=0.013, bend=0.02, dark=False, seed=0.0, raw=False, cut=False, col=None, k=None, ring=None,
+            region=None, mat="atlas"):
     """Bratwurst along local X centred on the origin, gently curved in XY, slightly irregular in
     girth. Its skin region runs once around (u) and once along (v), see atlas_goods.g_sausage.
     raw=True: an uncooked one, raw-pork pink-beige satin skin, no browning or grate marks.
     cut=True: a short Currywurst slice, a straight drum with flat cut faces (round 6 pass 2: the slices
-    were whole 12-segment sausages squeezed to 2.4 cm, 256 triangles each; now 36)."""
+    were whole 12-segment sausages squeezed to 2.4 cm, 256 triangles each; now 36).
+    Round 10: col tints the skin (the Krakauer's smoked red), k / ring set the rings along and the sides round
+    (the merged scenery sausages on the grate and in the trays use 8 x 8; the clickable ones on the board more).
+    Round 10 pass 2: region / mat give a sausage its own skin (the Krakauer's smoked casing, pr_smoked_casing on
+    the print atlas)."""
     from mathutils import noise
     M = M or Matrix()
-    k = 1 if cut else seg(12, 5)
-    ring_n = seg(10, 5)
+    k = 1 if cut else seg(k or 12, 5)
+    ring_n = seg(ring or 10, 5)
     rings = []
     for i in range(k + 1):
         t = i / k
@@ -593,14 +606,15 @@ def sausage(m, M, L=0.2, r=0.013, bend=0.02, dark=False, seed=0.0, raw=False, cu
         # raw pork pink-beige, greyed (round 2: #dcc4b0 read as white Weißwurst; round 3: #c99c8e as a hot dog)
         m.loft(rings, "sw_satin", M, jit(C("c89d90"), 0.035), "atlas", cap0=True, cap1=True)
         return
-    m.loft(rings, "sausage_dark" if dark else "sausage", M, jit(WHITE, 0.05), "atlas", cap0=True, cap1=True)
+    m.loft(rings, region or ("sausage_dark" if dark else "sausage"), M, jit(col or WHITE, 0.05), mat, cap0=True,
+           cap1=True)
 
 
-def roll(m, M, L=0.12, W=0.07, H=0.045):
+def roll(m, M, L=0.12, W=0.07, H=0.045, n_side=12, n_rings=4):
     """Brötchen: a squashed ellipsoid, top planar-mapped to the roll texture. Round 6 pass 2: four rings
     from the foot to the crown (was six, 156 -> 108 triangles; the outline from above keeps its 12 sides)."""
     M = M or Matrix()
-    n, rings = seg(12, 8), seg(4, 3)
+    n, rings = seg(n_side, 8), seg(n_rings, 3)
     verts, faces, uvs = [], [], []
     reg = vlib.R("roll")
     prof = []

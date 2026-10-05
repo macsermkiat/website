@@ -3,21 +3,22 @@
 prop_wurst_counter -> slot_counter of stall_bratwurst
   act_grill        three-legged fire bowl with glowing coals (material coal_glow) and the gallows post;
                    origin at the grill's base, on the carpenter's slot_grill under the hood (read from the
-                   stall glb at build time by grill_probe.mjs). The engine's grill flare pulses every mesh
-                   under this node, so its iron uses grill_iron (a whisper of emission keeps the flare off it).
-  act_grill_swing  the round grate on three chains, pivot at the hook (the engine swings it gently)
-  act_sausage_0..9 Bratwürste on the grate, children of act_grill_swing so they ride the swing.
-  act_sausage_10..15  done ones keeping warm in a steel tray on the counter right of the grill.
-                   Every sausage has its origin at its base (where it rests), long axis along X; the axis
-                   the engine should turn it about is SAUSAGE_R above that (items.json "turn_axis").
-  act_roll_0..15   Brötchen in the basket and the paper bag, origin at the base of each roll
-  act_served_0/1   a Bratwurst im Brötchen and a Currywurst on paper trays
+                   stall glb at build time by grill_probe.mjs).
+  act_grill_swing  the round grate on three chains, pivot at the hook (the engine swings it gently); its child
+                   sausages_grill is the merged scenery of ten Bratwürste on the grate (round 10: no act_ names)
   act_smoke        where smoke should rise
-  Charcoal sack and ash bucket, a tray of raw sausages, mustard and ketchup pots, fork cup, paper trays,
-  squeeze bottles, napkins, tip jar, bread board and a chalk price sign.
+  act_writing_paper + write_writing_paper   the Marktblatt pad (the Writing section, unchanged)
+  Round 10 (Mac, 2026-10-05; ADR 0004 revision "Bratwurst plate"): the rows of clickable sausages and rolls are
+  merged scenery now (warming tray, raw tray, roll basket). Clickable, on a two-step board at the counter front:
+  act_wurst_thueringer, act_wurst_nuernberger (a trio), act_wurst_krakauer, act_wurst_curry (sliced, on a paper
+  tray), act_roll; right of the board three squeeze bottles act_sauce_senf / _ketchup / _curry, each with
+  fx_sauce_<key> at its nozzle tip, and the curry shaker act_shaker_curry (fx_shaker_curry at its lid); left of
+  the board the empty paper plate act_plate with plate_spot_0..3 on its floor. Every one has its origin at its
+  base and an items.json entry with name, label and action (plate, sauce, dust, clear).
+  Scenery: charcoal sack and ash bucket, mustard and ketchup pots, fork cup, paper trays, napkins, tip jar,
+  bread board and a chalk price sign.
 
-The serving goods keep their design spacing and start right of the grill and the warming tray (squeezed if
-the counter is shorter). check_props runs seat_check.mjs, which fails if any triangle cuts into the stall.
+check_props runs seat_check.mjs, which fails if any triangle cuts into the stall.
 """
 import math
 import os
@@ -282,31 +283,6 @@ def mustard_pot(m, M, col=C("8a9aa8"), fill=C("c8961a"), label=None):
     m.disc(0.043, n, "sw_wet", M @ T(0, 0, 0.09), fill, "liquid")
 
 
-def served(s, i, x, y, rz, curry=False):
-    """A Bratwurst im Brötchen with a stripe of mustard, or a Currywurst in slices with sauce, curry powder
-    and a wooden fork, in a paper tray: act_served_<i> (base pivot)."""
-    node = s.node(f"act_served_{i}", (x, y, 0), rot=(0, 0, rz))
-    G.paper_tray(node, None, 0.22, 0.1, 0.03)
-    if not curry:
-        G.roll(node, T(0, 0, 0.004), L=0.13, W=0.07, H=0.04)
-        G.sausage(node, T(0, -0.004, 0.036), L=0.21, r=0.0125, bend=0.01, dark=False, seed=9.0)
-        pts = [(-0.08 + k * 0.016, -0.004 + 0.004 * math.sin(k * 1.7), 0.05) for k in range(11)]
-        node.tube(pts, 0.004, 5, "sw_wet", None, C("d8a01a"), "liquid")
-        s.item(f"act_served_{i}", "Bratwurst im Brötchen with mustard", "served")
-        return
-    for k in range(7):
-        # slices lying at a slant, overlapping, under a pool of curry ketchup
-        G.sausage(node, T(-0.075 + k * 0.025, 0.0, 0.012, ry=0.35, rz=math.pi / 2), L=0.016, r=0.0125, bend=0.0,
-                  dark=k % 3 == 0, seed=30 + k, cut=True)
-    node.lathe([(0.0, 0.02), (0.075, 0.018), (0.085, 0.012), (0.0, 0.028)], seg(14, 6), "sw_wet",
-               Matrix.Diagonal((1.2, 0.42, 1.0, 1.0)), C("8a1a0c"), "liquid")
-    for k in range(9 if not vlib.lite() else 3):
-        node.box((0.004, 0.004, 0.002), T(drng.uniform(-0.07, 0.07), drng.uniform(-0.025, 0.025), 0.029,
-                                          rz=drng.uniform(0, 3)), "sw_matte", C("c8781a"))
-    node.box((0.075, 0.009, 0.002), T(0.04, 0.022, 0.034, ry=-0.1, rz=0.5), vlib.RW("wood"), C("d8b890"))
-    s.item(f"act_served_{i}", "Currywurst with curry powder and a wooden fork", "served")
-
-
 def charcoal_sack(m, M):
     """A paper sack of charcoal, rolled down at the top, lumps showing."""
     n = seg(12, 6)
@@ -317,13 +293,6 @@ def charcoal_sack(m, M):
         a = TWO_PI * k / 6
         lump(m, M @ T(0.055 * math.cos(a), 0.03 * math.sin(a), 0.245, rz=k), 0.02, vlib.R("coal"),
              C("3a3a3a"), "atlas", subd=1, seed=k * 2.1)
-
-
-def squeeze_bottle(m, M, col, cap):
-    n = seg(12, 6)
-    m.lathe([(0.0, 0.0), (0.03, 0.0), (0.032, 0.01), (0.031, 0.15), (0.024, 0.17), (0.0, 0.172)], n, "sw_gloss", M,
-            col, "glaze")
-    m.lathe([(0.02, 0.168), (0.02, 0.19), (0.006, 0.215), (0.0, 0.22)], n, "sw_satin", M, cap)
 
 
 def chalk_sign(m, M):
@@ -373,17 +342,139 @@ def marktblatt(s, x0, x1, y=-0.128):
 
 DESIGN_X0, DESIGN_X1 = -0.13, 1.87      # the counter the layout was drawn for (round 1 stall, slot frame)
 SAUSAGE_R = 0.0125
+SCENERY_K, SCENERY_RING = 8, 8          # round 10: the merged scenery sausages (12 x 10 when they were clickable)
 
 
-def sausage_node(s, name, loc, label, parent=None, L=0.14, bend=0.008, dark=False, seed=0.0, rz=0.0, raw=False):
-    """One Bratwurst, act_sausage_<n>: its origin is at its base (the middle of its underside, where it
-    rests), long axis along the node's X. The engine turns a sausage about its long axis, which is
-    SAUSAGE_R above the origin (items.json: turn_axis)."""
-    node = s.node(name, loc, parent=parent, rot=(0, 0, rz) if rz else None)
-    G.sausage(node, T(0, 0, SAUSAGE_R), L=L, r=SAUSAGE_R, bend=bend, dark=dark, seed=seed, raw=raw)
-    s.item(name, label, "sausage", raw=raw, turn_axis={"offset_blender_z": SAUSAGE_R, "offset_threejs_y": SAUSAGE_R,
-                                              "axis": "node X"})
-    return node
+def scenery_sausage(m, M, L=0.14, bend=0.008, dark=False, seed=0.0, raw=False):
+    """Round 10: a Bratwurst merged into scenery (no act_ node): lying along M's X, M at its base."""
+    G.sausage(m, M @ T(0, 0, SAUSAGE_R), L=L, r=SAUSAGE_R, bend=bend, dark=dark, seed=seed, raw=raw,
+              k=SCENERY_K, ring=SCENERY_RING)
+
+
+# ------------------------------------------------------------------ round 10: the plate board
+# Mac (2026-10-05): "too much interaction in sausages ... just few different kind is enough. But if it's able to
+# mix on plate and put on sauce must be nice." One of each kind on a two-step board at the counter front, three
+# squeeze bottles, a curry shaker and an empty paper plate (docs/adr/0004 revision, BUILD.md "Bratwurst plate").
+BOARD_X, BOARD_W = 0.66, 0.62
+FRONT_Y, BACK_Y = -0.205, -0.093       # the two steps' middle lines (the counter front is at y -0.3)
+FRONT_Z, BACK_Z = 0.022, 0.062           # their tops
+SAUCES = {   # key: (display name, label, bottle colour, cap colour, sauce colour for the engine's squiggle)
+    "senf": ("Senf (mustard)", "Senf", "d8a81a", "c83020", "#d6a21c"),
+    "ketchup": ("Ketchup", "Ketchup", "b0141a", "f0ece2", "#a8140e"),
+    "curry": ("Currysauce", "Currysauce", "c4561a", "2a1a12", "#b4400e"),
+}
+PLATE_R = 0.115
+PLATE_SPOTS = [(-0.042, 0.036), (0.042, 0.036), (-0.042, -0.036), (0.042, -0.036)]
+
+
+def plate_board(m):
+    """A two-step serving board (Auslage): the low front step on the counter, the back step raised on two
+    battens, so the back row shows over the front one from the lane."""
+    wood = C("9a6c46")
+    G.board(m, T(BOARD_X, FRONT_Y, 0), BOARD_W, 0.11, FRONT_Z, wood)
+    for sx in (-1, 1):
+        m.box((0.03, 0.1, BACK_Z - 0.022), T(BOARD_X + sx * (BOARD_W / 2 - 0.04), BACK_Y, (BACK_Z - 0.022) / 2),
+              vlib.RW("wood"), C("8a6240"), skip=("nz",))
+    G.board(m, T(BOARD_X, BACK_Y, BACK_Z - 0.022), BOARD_W, 0.12, 0.022, wood)
+
+
+def wurst_items(s):
+    """The four clickable kinds and the Brötchen, each its own node with its origin at its base on the board."""
+    hi = dict(k=14, ring=12)
+    # back step: a long Thüringer, browned with grill marks, and a thick, reddish smoked Krakauer
+    n = s.node("act_wurst_thueringer", (BOARD_X - 0.14, BACK_Y, BACK_Z), rot=(0, 0, 0.04))
+    G.sausage(n, T(0, 0, 0.014), L=0.22, r=0.014, bend=0.012, dark=True, seed=3.1, **hi)
+    s.item("act_wurst_thueringer", "Thüringer Rostbratwurst", "wurst", label="Thüringer", action="plate",
+           wurst="thueringer", detail="Long, thin and browned over the charcoal, with the grate's marks.")
+    n = s.node("act_wurst_krakauer", (BOARD_X + 0.16, BACK_Y, BACK_Z), rot=(0, 0, -0.05))
+    G.sausage(n, T(0, 0, 0.02), L=0.17, r=0.02, bend=0.03, dark=False, seed=5.3, k=14, ring=14,
+             region="pr_smoked_casing", mat="print")   # round 10 pass 2: its own smoked casing
+    s.item("act_wurst_krakauer", "Krakauer, smoked", "wurst", label="Krakauer", action="plate", wurst="krakauer",
+           detail="Thick, coarse and smoked, reddish brown.")
+    # front step: three small Nürnberger, a sliced Currywurst on a paper tray and a crusty Brötchen
+    n = s.node("act_wurst_nuernberger", (BOARD_X - 0.22, FRONT_Y, FRONT_Z))
+    for k, (dx, dy, a) in enumerate(((0.004, -0.02, 0.06), (-0.003, 0.0, -0.04), (0.005, 0.02, 0.09))):
+        G.sausage(n, T(dx, dy, 0.0095, rz=a), L=0.085, r=0.0095, bend=0.004, dark=k == 1, seed=11 + k, k=8, ring=10)
+    s.item("act_wurst_nuernberger", "Drei Nürnberger Rostbratwürstchen", "wurst", label="3 Nürnberger", action="plate",
+           wurst="nuernberger", count=3, detail="Three finger-sized sausages from Nuremberg, grilled crisp.")
+    n = s.node("act_wurst_curry", (BOARD_X + 0.0, FRONT_Y, FRONT_Z), rot=(0, 0, 0.03))
+    G.paper_tray(n, None, 0.15, 0.075, 0.026)
+    for k in range(6):
+        G.sausage(n, T(-0.052 + k * 0.021, 0.0, 0.012, ry=0.35, rz=math.pi / 2), L=0.016, r=0.0125, bend=0.0,
+                  dark=k % 3 == 0, seed=30 + k, cut=True)
+    # curry ketchup pooled between the slices (their tops stay above it) and drizzled over
+    n.lathe([(0.0, 0.012), (0.056, 0.011), (0.062, 0.008), (0.0, 0.0205)], seg(14, 6), "sw_wet",
+            Matrix.Diagonal((1.05, 0.46, 1.0, 1.0)), C("8a1a0c"), "liquid")
+    n.tube([(-0.055 + k * 0.011, 0.006 * math.sin(k * 1.9), 0.0245 + 0.001 * (k % 2)) for k in range(11)], 0.0028,
+           5, "sw_wet", None, C("7a1408"), "liquid")
+    for k in range(9 if not vlib.lite() else 3):
+        n.box((0.004, 0.004, 0.002), T(drng.uniform(-0.05, 0.05), drng.uniform(-0.016, 0.016), 0.027,
+                                       rz=drng.uniform(0, 3)), "sw_matte", C("c8781a"))
+    n.box((0.06, 0.008, 0.002), T(0.035, 0.018, 0.031, ry=-0.1, rz=0.5), vlib.RW("wood"), C("d8b890"))
+    s.item("act_wurst_curry", "Currywurst, sliced", "wurst", label="Currywurst", action="plate", wurst="curry",
+           detail="Sliced Bratwurst under curry ketchup and a dusting of curry powder, with a wooden fork.")
+    n = s.node("act_roll", (BOARD_X + 0.21, FRONT_Y, FRONT_Z), rot=(0, 0, 0.12))
+    G.roll(n, None, L=0.11, W=0.07, H=0.042, n_side=14, n_rings=5)
+    s.item("act_roll", "Brötchen (crusty bread roll)", "roll", label="Brötchen", action="plate", wurst="roll",
+           detail="A crusty white roll, split for a Bratwurst.")
+
+
+def sauce_bottle(s, key, x, y, rz=0.0):
+    """A soft squeeze bottle standing on its base (act_sauce_<key>), label to the lane, a screw cap and a
+    pointed nozzle; fx_sauce_<key> sits at the nozzle's tip (it moves with the bottle when the engine tips it)."""
+    name, label, body, cap, sauce = SAUCES[key]
+    node = s.node(f"act_sauce_{key}", (x, y, 0), rot=(0, 0, rz))
+    n = seg(14, 7)
+    node.lathe([(0.0, 0.0), (0.027, 0.0), (0.0305, 0.008), (0.0305, 0.135), (0.0285, 0.15), (0.0215, 0.16)], n,
+               "sw_gloss", None, C(body), "glaze")
+    # the label round the front
+    la = TWO_PI * 0.42
+    node.lathe([(0.0313, 0.035), (0.0313, 0.11)], seg(5, 3), f"pr_sauce_{key}", None, WHITE, "print", v_by="z",
+               arc=la, u0=-math.pi / 2 - la / 2)
+    # screw cap with a ribbed skirt and the nozzle
+    node.lathe([(0.0225, 0.157), (0.0228, 0.178), (0.012, 0.183)], n, "sw_satin", None, C(cap))
+    node.lathe([(0.009, 0.183), (0.0035, 0.21), (0.0018, 0.216), (0.0, 0.2165)], seg(10, 6), "sw_satin", None, C(cap))
+    s.empty(f"fx_sauce_{key}", (0, 0, 0.2165), parent=f"act_sauce_{key}")
+    s.item(f"act_sauce_{key}", name, "sauce", label=label, action="sauce", sauce=key, colour=sauce,
+           fx=f"fx_sauce_{key}", detail=f"A squeeze bottle of {name.split(' (')[0]}: tap it to put some on the plate.")
+
+
+def curry_shaker(s, x, y):
+    """A tin curry shaker with a printed label and a pierced domed lid (act_shaker_curry); fx_shaker_curry at the
+    lid's top, where the powder comes out."""
+    node = s.node("act_shaker_curry", (x, y, 0), rot=(0, 0, -0.1))
+    n = seg(14, 7)
+    node.lathe([(0.0, 0.0), (0.021, 0.0), (0.022, 0.004), (0.022, 0.08)], n, "steel", None, C("d8d8d8"))
+    la = TWO_PI * 0.5
+    node.lathe([(0.0225, 0.012), (0.0225, 0.07)], seg(6, 3), "pr_shaker_curry", None, WHITE, "print", v_by="z",
+               arc=la, u0=-math.pi / 2 - la / 2)
+    node.lathe([(0.0228, 0.078), (0.0228, 0.088), (0.018, 0.097), (0.006, 0.1), (0.0, 0.1)], n, "steel", None,
+               C("c8c8c8"))
+    if not vlib.lite():
+        for k in range(7):                      # the holes in the lid
+            a = TWO_PI * k / 7
+            node.disc(0.0016, 5, "sw_matte", T(0.007 * math.cos(a), 0.007 * math.sin(a), 0.1003), C("2a2018"))
+    s.empty("fx_shaker_curry", (0, 0, 0.1), parent="act_shaker_curry")
+    s.item("act_shaker_curry", "Curry powder", "spice", label="Currypulver", action="dust", colour="#c8781a",
+           fx="fx_shaker_curry", detail="A tin of curry powder: tap it to dust the plate.")
+
+
+def paper_plate(s, x, y):
+    """An empty white paper plate (act_plate, origin at the middle of its underside) with plate_spot_0..3 on its
+    floor where the chosen items land (a 2 x 2 grid, items lying along X)."""
+    node = s.node("act_plate", (x, y, 0))
+    n = seg(28, 12)
+    # lathe faces point down for a profile running outwards, up for one running inwards
+    top = [(PLATE_R, 0.016), (0.1, 0.012), (0.075, 0.0016), (0.0005, 0.0016)]
+    bot = [(0.0005, 0.0003), (0.075, 0.0003), (0.1, 0.0107), (PLATE_R, 0.0147)]
+    node.lathe(top, n, "paper", None, C("f6f4ee"), "atlas")
+    node.lathe(bot, n, "paper", None, C("e8e4da"), "atlas")
+    node.torus(PLATE_R - 0.0008, 0.0012, n, 3, "paper", T(0, 0, 0.0155), C("f2efe6"))
+    for i, (px, py) in enumerate(PLATE_SPOTS):
+        s.empty(f"plate_spot_{i}", (px, py, 0.0016), parent="act_plate")
+    s.item("act_plate", "Paper plate", "plate", label="Pappteller", action="clear",
+           spots=[f"plate_spot_{i}" for i in range(len(PLATE_SPOTS))], max_items=len(PLATE_SPOTS),
+           clear_note="Guten Appetit", detail="Pick sausages, a roll and sauces for the plate; tap it to clear.")
 
 
 def counter():
@@ -398,26 +489,25 @@ def counter():
 
     def X(x):
         return start + (x - DESIGN_X0) * k_
-    # sausages on the grate: five rows of two, children of the swinging grate so they ride it
+    # round 10: the sausages on the grate are scenery, one merged mesh riding the swinging grate (sausages_grill,
+    # a child of act_grill_swing): five rows of two, as full as before
+    grate = s.node("sausages_grill", (0, 0, 0), parent="act_grill_swing")
     i = 0
     for row, y in enumerate((-0.14, -0.07, 0.0, 0.07, 0.14)):
         for x in (-0.075, 0.075):
             L = rng.uniform(0.13, 0.145) if abs(y) < 0.1 else rng.uniform(0.125, 0.132)
             dx, dy, rz = rng.uniform(-0.01, 0.01), rng.uniform(-0.008, 0.008), rng.uniform(-0.12, 0.12)
-            sausage_node(s, f"act_sausage_{i}", (x + dx, y + dy, gz + 0.003), "Bratwurst on the grill",
-                         parent="act_grill_swing", L=L, bend=rng.uniform(0.004, 0.012), dark=i % 3 != 2,
-                         seed=i * 1.7, rz=rz)
+            scenery_sausage(grate, T(x + dx, y + dy, gz + 0.003, rz=rz), L=L, bend=rng.uniform(0.004, 0.012),
+                            dark=i % 3 != 2, seed=i * 1.7)
             i += 1
-    # done ones keeping warm in a steel tray on the counter, right beside the grill under the hood
+    # done ones keeping warm in a steel tray on the counter, right beside the grill under the hood (scenery)
     tx, ty = gx + BOWL_R + 0.17, 0.06
     m.lathe([(0.0, 0.0), (0.125, 0.0), (0.13, 0.034), (0.123, 0.034), (0.117, 0.004), (0.0, 0.004)], seg(18, 6),
             "steel", T(tx, ty, 0) @ Matrix.Diagonal((1.0, 0.62, 1.0, 1.0)), WHITE)
-    # the tray is long in x, so the sausages lie along x side by side (five rows), the sixth on top
     for k in range(6):
         y, z = (ty - 0.052 + k * 0.026, 0.004) if k < 5 else (ty - 0.013, 0.004 + 2 * SAUSAGE_R - 0.004)
-        sausage_node(s, f"act_sausage_{10 + k}", (tx + rng.uniform(-0.006, 0.006), y, z),
-                     "Bratwurst keeping warm", L=0.132, bend=0.005, dark=True, seed=20 + k,
-                     rz=rng.uniform(-0.06, 0.06))
+        scenery_sausage(m, T(tx + rng.uniform(-0.006, 0.006), y, z, rz=rng.uniform(-0.06, 0.06)), L=0.132, bend=0.005,
+                        dark=True, seed=20 + k)
     # grill tongs lying in front of the tray
     for dy in (-0.006, 0.006):
         m.box((0.3, 0.012, 0.003), T(tx + 0.02, -0.17 + dy * 1.4, 0.0015, rz=0.2 + dy * 2), "steel", WHITE)
@@ -429,31 +519,25 @@ def counter():
         m.disc(0.078, seg(14, 6), "sw_matte", T(gx - 0.4, -0.13, 0.11), C("8a847c"), "atlas")
         m.torus(0.08, 0.003, seg(12, 6), 3, "steel", T(gx - 0.4, -0.13, 0.168, rx=math.pi / 2),
                 C("7a7a7a"), arc=math.pi, a0=0.0)  # handle up over the top
-    bx, by = X(0.4), 0.03
-    # between the warming tray and the rolls: a steel tray of raw Bratwurst waiting for the grill, set back so
-    # the tongs keep the front
+    bx, by = X(0.4), 0.075
+    # between the warming tray and the rolls: a steel tray of raw Bratwurst waiting for the grill (scenery)
     rx0, rx1 = tx + 0.14, bx - 0.18
     if rx1 - rx0 > 0.3:
         rxm = (rx0 + rx1) / 2
         Mt = T(rxm, 0.09, 0, rz=-0.04)
         m.lathe([(0.0, 0.0), (0.13, 0.0), (0.138, 0.04), (0.132, 0.04), (0.125, 0.004), (0.0, 0.004)], seg(16, 6),
                 "steel", Mt @ Matrix.Diagonal((1.0, 0.64, 1.0, 1.0)), C("d0d0d0"))
-        # lying along the tray's long side: five side by side, three more on top. Round 3: each raw one is its
-        # own clickable act_sausage_16..23 (base pivot, like the grilled ones), in full and lite alike
-        # (own seeded generator: drng advances differently in full and lite, which moved these in lite)
         import random
         rraw = random.Random(4242)
         for k in range(8):
             y, z = (-0.052 + k * 0.026, 0.004) if k < 5 else (-0.039 + (k - 5) * 0.026, 0.004 + 2 * SAUSAGE_R - 0.004)
             dx, jr = rraw.uniform(-0.008, 0.008), rraw.uniform(-0.06, 0.06)
-            drng.random(), drng.random()     # keep drng's stream for the goods after the tray as before
-            sausage_node(s, f"act_sausage_{16 + k}", tuple(Mt @ Vector((dx, y, z))), "Raw Bratwurst, ready for the grill",
-                         L=0.13, bend=0.005, seed=40 + k, rz=-0.04 + jr, raw=True)
-    # round 6: a stack of printed market paper (Marktblatt) in front of the raw tray, between the tongs and the
-    # rolls; the top sheet is act_writing_paper with its writing face write_writing_paper (the engine prints the
-    # chosen piece on it) and cam_read_writing_paper over it
-    marktblatt(s, tx + 0.17, bx - 0.175)
-    # basket of rolls, stacked two deep, each roll its own node
+            scenery_sausage(m, Mt @ T(dx, y, z, rz=jr), L=0.13, bend=0.005, seed=40 + k, raw=True)
+    # the Marktblatt pad in front of the raw tray (act_writing_paper with write_writing_paper, unchanged)
+    marktblatt(s, tx + 0.17, X(0.4) - 0.175)
+    # round 10: the paper plate at the counter front between the Marktblatt and the board
+    paper_plate(s, X(0.4) - 0.04, -0.148)
+    # basket of rolls (scenery), set back behind the plate, stacked two deep
     G.crate(m, T(bx, by, 0), 0.34, 0.26, 0.07, C("b48c5c"), slats=2)
     m.box((0.3, 0.22, 0.004), T(bx, by, 0.014), "towel", WHITE, faces={"pz": "towel"}, skip=("nz",))
     for k in range(14):
@@ -463,44 +547,40 @@ def counter():
             row, col = divmod(j, 3)
         loc = (bx - 0.105 + col * 0.07 + (0.035 if layer else 0.0) + rng.uniform(-0.008, 0.008),
                by - 0.035 + row * 0.07 + rng.uniform(-0.008, 0.008), 0.016 + 0.028 * layer)
-        node = s.node(f"act_roll_{k}", loc, rot=(0, 0, math.pi / 2 + rng.uniform(-0.3, 0.3)))
-        G.roll(node, None, L=0.105, W=0.068, H=0.03)
-        s.item(f"act_roll_{k}", "Brötchen (bread roll)", "roll")
-    # a paper bag of more rolls lying behind the basket, two peeking out
-    Mb = T(bx + 0.02, 0.175, 0, rz=0.06)
-    m.box((0.26, 0.12, 0.05), Mb @ T(0, 0, 0.025), vlib.RW("kraft"), C("d8b890"), skip=("nz",))
-    for k in range(2):
-        node = s.node(f"act_roll_{14 + k}", (bx - 0.14 - k * 0.075, 0.18 - 0.01 * k, 0),
-                      rot=(0, 0, 0.1 + rng.uniform(-0.2, 0.2)))
-        G.roll(node, None, L=0.1, W=0.066, H=0.03)
-        s.item(f"act_roll_{14 + k}", "Brötchen (bread roll)", "roll")
-    # mustard (salt-glazed stoneware) and ketchup pots with wooden spatulas
+        G.roll(m, T(*loc, rz=math.pi / 2 + rng.uniform(-0.3, 0.3)), L=0.105, W=0.068, H=0.03)
+    # round 10: the two-step board with one of each kind, at the counter front where the camera sees it
+    plate_board(m)
+    wurst_items(s)
+    # mustard (salt-glazed stoneware) and ketchup pots with wooden spatulas, behind the board
     mustard_pot(m, T(X(0.7), 0.13, 0), C("8a9aa8"), C("c8961a"))
     mustard_pot(m, T(X(0.82), 0.14, 0), C("f0ece2"), C("8a0e0a"))
     for x, a in ((X(0.7), 0.3), (X(0.82), -0.4)):
         m.box((0.012, 0.004, 0.16), T(x + 0.02, 0.13, 0.1, rx=0.3, rz=a), vlib.RW("wood"), C("c8a070"))
     # a tin cup of wooden forks
+    fy = 0.035
     m.lathe([(0.0, 0.0), (0.035, 0.0), (0.036, 0.1), (0.033, 0.1), (0.032, 0.006), (0.0, 0.006)], seg(12, 6), "steel",
-            T(X(0.72), -0.02, 0), C("c8c8c8"))
+            T(X(0.72), fy, 0), C("c8c8c8"))
     for k in range(9 if not vlib.lite() else 3):
         a = TWO_PI * k / 9
-        m.box((0.006, 0.002, 0.09), T(X(0.72) + 0.015 * math.cos(a), -0.02 + 0.015 * math.sin(a), 0.08,
+        m.box((0.006, 0.002, 0.09), T(X(0.72) + 0.015 * math.cos(a), fy + 0.015 * math.sin(a), 0.08,
                                       rx=0.15 * math.sin(a), ry=-0.15 * math.cos(a)), vlib.RW("wood"), C("d8b890"))
-    # stack of nested paper trays, and two served portions in front
+    # stack of nested paper trays behind the board
     for k in range(6 if not vlib.lite() else 2):
         G.paper_tray(m, T(X(1.12), 0.12, k * 0.0055, rz=drng.uniform(-0.05, 0.05)), 0.22, 0.1, 0.03)
-    served(s, 0, X(0.95), -0.14, 0.25)
-    served(s, 1, X(1.2), -0.12, -0.15, curry=True)
-    # squeeze bottles, a napkin dispenser, a tip jar and the price sign
-    squeeze_bottle(m, T(X(1.4), -0.12, 0), C("d8a820"), C("c83020"))
-    squeeze_bottle(m, T(X(1.47), -0.09, 0), C("a8161a"), C("f0ece2"))
+    # round 10: the three squeeze bottles and the curry shaker right of the board, at the front
+    sx0 = BOARD_X + BOARD_W / 2 + 0.07
+    for k, key in enumerate(("senf", "ketchup", "curry")):
+        sauce_bottle(s, key, sx0 + k * 0.078, -0.19 + (0.018 if k == 1 else 0.0), rz=rng.uniform(-0.15, 0.15))
+    curry_shaker(s, sx0 + 3 * 0.078 - 0.005, -0.2)
+    # a napkin dispenser, a tip jar and the price sign
     m.box((0.1, 0.07, 0.11), T(X(1.4), 0.11, 0.055), "steel", WHITE, skip=("nz",))
     m.box((0.09, 0.06, 0.012), T(X(1.4), 0.11, 0.116), "paper", C("f6f4ee"), skip=("nz",))
+    tjx = sx0 + 3 * 0.078 + 0.09
     m.lathe([(0.0, 0.0), (0.04, 0.0), (0.042, 0.004), (0.042, 0.1), (0.045, 0.108), (0.038, 0.11)], seg(12, 6),
-            "sw_vgloss", T(X(1.56), -0.1, 0), C("dfe8e4"), "glass")
+            "sw_vgloss", T(tjx, -0.08, 0), C("dfe8e4"), "glass")
     for k in range(5 if not vlib.lite() else 2):
-        m.cyl(0.011, 0.011, 0.002, 10, "brass" if k % 2 else "sw_metal", T(X(1.56) + drng.uniform(-0.02, 0.02),
-              -0.1 + drng.uniform(-0.02, 0.02), 0.004 + k * 0.0022, rx=drng.uniform(-0.2, 0.2)), C("d8c8a8"))
+        m.cyl(0.011, 0.011, 0.002, 10, "brass" if k % 2 else "sw_metal", T(tjx + drng.uniform(-0.02, 0.02),
+              -0.08 + drng.uniform(-0.02, 0.02), 0.004 + k * 0.0022, rx=drng.uniform(-0.2, 0.2)), C("d8c8a8"))
     # a bread board with a knife and two split rolls, then the price sign at the end
     G.board(m, T(X(1.74), 0.08, 0, rz=0.06), 0.3, 0.18, 0.02, C("c49a6c"))
     m.box((0.2, 0.022, 0.0015), T(X(1.72), 0.02, 0.021, rz=0.1), "steel", WHITE)
