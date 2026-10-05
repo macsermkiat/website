@@ -31,8 +31,3 @@ Each player sits in their own place, so the sound follows where you stand. Walk 
 
 I listen to a lot of jazz, and ballads most of all.
 
-What I'm listening to at the moment:
-
-- [[Mac: record · artist]]
-- [[Mac: record · artist]]
-- [[Mac: record · artist]]
