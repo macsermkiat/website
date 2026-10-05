@@ -97,7 +97,7 @@ export function graft(lite, full) {
  * A record is a placed layout entry { entry, root, source, streamed } (market.placed; a place's is place.record).
  */
 export function createStreamer({ market, lite, warn, after, manager }) {
-  const state = {}; // layout id -> 'lite' | 'loading' | 'full' | 'failed'
+  const state = {}; // layout id -> 'lite' | 'loading' | 'full' | 'failed' | 'scenery' (a deco stall: its lite file, for good)
   const report = [];
   const pending = {};
 
@@ -149,7 +149,7 @@ export function createStreamer({ market, lite, warn, after, manager }) {
     return pending[id];
   }
 
-  for (const rec of market.placed) state[rec.entry.id] = rec.streamed ? 'lite' : 'full';
+  for (const rec of market.placed) state[rec.entry.id] = rec.streamed ? 'lite' : rec.entry.liteOnly ? 'scenery' : 'full';
   const recOf = (placeId) => market.places[placeId]?.record || null;
   return {
     upgradeRecord,
@@ -160,6 +160,6 @@ export function createStreamer({ market, lite, warn, after, manager }) {
     stateOf: (placeId) => state[recOf(placeId)?.entry.id] || null,
     state: () => ({ ...state }),
     report: () => report.slice(),
-    track(records) { for (const rec of records) if (!(rec.entry.id in state)) state[rec.entry.id] = rec.streamed ? 'lite' : 'full'; },
+    track(records) { for (const rec of records) if (!(rec.entry.id in state)) state[rec.entry.id] = rec.streamed ? 'lite' : rec.entry.liteOnly ? 'scenery' : 'full'; },
   };
 }

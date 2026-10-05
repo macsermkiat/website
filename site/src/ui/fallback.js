@@ -22,6 +22,7 @@ export function showPlainFallback(reason) {
   lead.appendChild(link);
   box.appendChild(lead);
   for (const id of ORDER) {
+    if (SECTIONS[id]?.play) continue; // the ornament shop holds no words
     const s = SECTIONS[id];
     if (!s) continue;
     const sec = document.createElement('section');

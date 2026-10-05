@@ -1,7 +1,7 @@
 // Reads site/src/layout.json (owned by the architect) and turns it into a list of placements.
 // Anything the file leaves out, or the whole file when it is missing, comes from the BUILD.md layout.
 import inventory from 'virtual:market-inventory';
-import { PLACE_ORDER, SECTION_STALLS, placeFor } from './places.js';
+import { PLACE_ORDER, SECTION_STALLS, PLAY_PLACES, placeFor } from './places.js';
 
 // Vite resolves this at build time; an empty object when layout.json does not exist yet.
 const layoutFiles = import.meta.glob('./layout.json', { eager: true, import: 'default' });
@@ -31,7 +31,8 @@ export const FALLBACK_LAYOUT = [
   { id: 'deco-mandeln', kind: 'deco', label: 'Gebrannte Mandeln', position: [-21, 0, 3.5], rotation: Math.PI / 2, asset: 'deco_mandeln.glb' },
   { id: 'deco-kerzen', kind: 'deco', label: 'Kerzen', position: [-21, 0, 10], rotation: Math.PI / 2, asset: 'deco_kerzen.glb' },
   { id: 'deco-spielzeug', kind: 'deco', label: 'Holzspielzeug', position: [21, 0, -3], rotation: -Math.PI / 2, asset: 'deco_spielzeug.glb' },
-  { id: 'deco-schmuck', kind: 'deco', label: 'Christbaumschmuck', position: [21, 0, 3.5], rotation: -Math.PI / 2, asset: 'deco_schmuck.glb' },
+  // round 8 (ADR 0004): the Christbaumschmuck hut is the ornament shop, an interactive stop
+  { id: 'deco-schmuck', kind: 'section', place: 'schmuck', label: 'Christbaumschmuck', position: [21, 0, 3.5], rotation: -Math.PI / 2, asset: 'stall_schmuck.glb' },
   { id: 'deco-kaese', kind: 'deco', label: 'Käse', position: [21, 0, 10], rotation: -Math.PI / 2, asset: 'deco_kaese.glb' },
   { id: 'deco-crepes', kind: 'deco', label: 'Crêpes', position: [-9.5, 0, -21], rotation: 0, asset: 'deco_crepes.glb' },
   { id: 'deco-maroni', kind: 'deco', label: 'Heiße Maroni', position: [-3.5, 0, -21.5], rotation: 0, asset: 'deco_maroni.glb' },
@@ -124,7 +125,8 @@ const KINDS = ['section', 'landmark', 'deco', 'tree', 'ground', 'town', 'church'
 function inferKind(entry, parentKey) {
   const k = String(entry.kind || entry.type || entry.category || entry.role || '').toLowerCase();
   const probe = (s) => KIND_WORDS.find(([, re]) => re.test(s))?.[0];
-  if (entry.place) return ['glueh', 'bier', 'wurst', 'books'].includes(entry.place) ? 'section' : 'landmark';
+  // the ornament shop is a stall like the section stalls (streamed, two light_ markers, lit as a stall)
+  if (entry.place) return [...SECTION_STALLS, ...PLAY_PLACES].includes(entry.place) ? 'section' : 'landmark';
   if (KINDS.includes(k)) return k;
   // "scenery" and other broad kinds: tell square, town and tree apart by id and file name
   return probe(entry.id || '') || probe(entry.model || '') || probe(k) || probe(parentKey || '') || 'other';
@@ -219,8 +221,11 @@ export function resolveLayout() {
     if (e.lite && !modelExists(e.lite)) { if (e.model) bad(e, `lite asset ${e.lite} is not in site/public/models; the lite market loads ${e.model}.`); e.lite = null; }
     if (!e.lite) e.lite = liteVariant(e.model);
     if (!e.label && fb) e.label = fb.label;
-    if (e.place && !SECTION_STALLS.includes(e.place) && e.kind === 'section') e.kind = 'landmark';
+    if (e.place && !SECTION_STALLS.includes(e.place) && !PLAY_PLACES.includes(e.place) && e.kind === 'section') e.kind = 'landmark';
     if (!e.place && (e.kind === 'section' || e.kind === 'landmark')) e.kind = 'deco';
+    // ADR 0004 (Mac, 2026-10-05): the deco stalls are scenery and never stream beyond their light file, on both
+    // markets (layout.json marks them "stream": "lite"; a deco entry without the mark is treated the same)
+    e.liteOnly = !e.place && (e.kind === 'deco' || e.raw?.stream === 'lite');
   }
   // interactive places first so they load first
   const rank = (e) => (e.place ? PLACE_ORDER.indexOf(e.place) : e.kind === 'ground' ? -1 : 50);

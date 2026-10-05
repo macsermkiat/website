@@ -6,7 +6,7 @@ materials, and the kit textures are written once, outside the glb files, as
 site/public/models/deco_kit_*.webp (and *.lite.webp); every deco glb references them by URI,
 so the browser downloads them once. Only each variant's small AO map is embedded.
 
-    /home/claude/tools/bpy-venv/bin/python blender/stalls/deco.py [--only lebkuchen,kaese] [--no-render]
+    /home/claude/tools/bpy-venv/bin/python blender/stalls/deco.py [--only lebkuchen,kaese] [--no-render] [--goods]
 Outputs site/public/models/deco_<key>.glb + deco_<key>.lite.glb, and a contact sheet in review/.
 """
 import math
@@ -59,7 +59,13 @@ D, EAVE, RIDGE = 2.2, 2.62, 3.4
 # 512 for iron): when the AO image has the same size as a kit roughness/metal map, the glTF
 # exporter packs AO into that map (ORM) and the glb embeds its own copy instead of sharing
 # deco_kit_iron_rm.webp. Lite: 256 (the lite kit maps are 512).
-DECO_AO = 448
+DECO_AO = 320            # round 8 scenery: was 448 (the AO map is the one image each variant embeds)
+DECO_AO_LITE = 192       # was 256
+# Round 8 (Mac, 2026-10-05: "There's no need to fully render object in side stores, because there will
+# be no interaction to save the loading time."): the deco stalls are lane scenery, never visited
+# close up. The full build keeps full-width planks, single shingles and the sign, but drops the edge
+# chamfers under 1 cm (state.set_bevels(False)) and thins snow and round parts.
+SCENERY = True
 SEEDS = {k: 100 + i * 7 for i, k in enumerate(VARIANTS)}
 
 
@@ -113,6 +119,8 @@ def rail_and_crate(h, key, v, lite):
 
 def build_variant(key, lite):
     lamp_spots.clear()
+    if SCENERY:
+        state.set_bevels(False)
     v = VARIANTS[key]
     W = v["W"]
     h = Hut(f"deco_{key}", W=W, D=D, eave=EAVE, ridge=RIDGE, ridge_axis='x', ov_eave=0.32, ov_gable=0.2,
@@ -130,7 +138,12 @@ def build_variant(key, lite):
     h.build_counter(brackets=3, grid=0.4)
     h.build_shelves()
     h.build_roof(fascia_band=trim, barge_band=trim)
-    h.build_snow(nx=None if lite else 14)
+    if lite:
+        h.build_snow()
+    elif not SCENERY:
+        h.build_snow(nx=14)
+    else:                                   # scenery: coarser snow grid (shingle columns, board rows)
+        h.build_snow(**({"nx": 10} if v["roof"] == "shingles" else {"ns": 9}))
     # painted front posts, rails and counter lip in the trim colour
     for x in h.front_posts:
         P.box((x, yF - 0.008, (COUNTER_TOP + 2.2) / 2), (0.115, 0.018, 2.2 - COUNTER_TOP), band=trim, grain=2)
@@ -262,11 +275,13 @@ def main():
             if (lite and a.no_lite) or (not lite and a.no_full):
                 continue
             objs, rep = pipeline.build_and_export(
-                name, build, SEEDS[key], lite, ao_res=256 if lite else DECO_AO,
+                name, build, SEEDS[key], lite, ao_res=DECO_AO_LITE if lite else DECO_AO,
                 externalize="kit")
             reports[name + (".lite" if lite else "")] = rep
         if not a.no_render and not a.no_full:
             render.night_scene(ground_size=24)
+            if "--goods" in sys.argv:       # the vendor's scenery goods, as the lane sees the stall
+                pipeline.vendor_sets(name + ".glb", rotate=True)
             render.lights_at_markers(energy=120)
             render.add_light("env_fill", 'AREA', (0, 0.1, 2.35), 90, size=1.8)
             # round 3: narrow spots aimed at the upper half of the board (the round-2 110-degree
@@ -284,7 +299,8 @@ def main():
     if renders and not only:
         os.makedirs(pipeline.REVIEW, exist_ok=True)
         render.contact_sheet(renders, os.path.join(pipeline.REVIEW, "deco_contact_sheet.jpg"), cols=3,
-                             tile=(420, 300), title="Deco stall kit: nine variants, shared kit textures")
+                             tile=(420, 300), title="Deco stalls as lane scenery: nine variants, shared kit textures"
+                             + (", vendor goods" if "--goods" in sys.argv else ""))
     import json
     with open(os.path.join(state.OUT_DIR, "deco_report.json"), "w") as f:
         json.dump(reports, f, indent=1)

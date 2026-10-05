@@ -1,5 +1,5 @@
 {
- "about": "Vendor prop sets. Each glb's root node is the set origin: parent it to the named slot_ empty of the stall (layout.json id in 'stall', stall file in 'asset'). 'sets' is the list the engine reads; 'by_set' is the same data keyed by set name ({set: {slot, stall, model, lite, asset}}). 'standalone' lists vendor models that are not placed at a slot (book_open.glb). Round 8: a deco stall has up to three sets (prop_deco_<key> at slot_counter, _shelf at slot_shelf_1 holding both shelves, _front at slot_front). The ornament shop's prop_schmuck_* sets stand at stall_schmuck.glb's slots (rails, counter, shelf tiers, glass case, tree dais). 'seat' (when present) says how a set meets its stall: hang (from a rail), stand (on a dais it overhangs), ground (in front of the hut); otherwise it stands on a counter or shelf board. 'retired' lists sets that are no longer placed.",
+ "about": "Vendor prop sets. Each glb's root node is the set origin: parent it to the named slot_ empty of the stall (layout.json id in 'stall', stall file in 'asset'). 'sets' is the list the engine reads; 'by_set' is the same data keyed by set name ({set: {slot, stall, model, lite, asset}}). 'standalone' lists vendor models that are not placed at a slot (book_open.glb). Round 8: each deco stall has ONE scenery set, prop_deco_<key> at slot_counter: a single merged mesh holding the counter goods, the goods hung from slot_rail_1, both back shelves and the crate on the slot_crate bench (no act_ nodes, not clickable; Mac, 2026-10-05). The ornament shop's prop_schmuck_* sets stand at stall_schmuck.glb's slots (rails, counter, shelf tiers, glass case, tree dais). 'seat' (when present) says how a set meets its stall: hang (from a rail), stand (on a dais it overhangs), ground (in front of the hut); otherwise it stands on a counter or shelf board. 'retired' lists sets that are no longer placed.",
  "sets": [
   {
    "set": "prop_gluehwein_counter",
@@ -87,7 +87,8 @@
    "slot": "slot_cat_physics",
    "model": "prop_books_physics.glb",
    "lite": "prop_books_physics.lite.glb",
-   "asset": "stall_buecher.glb"
+   "asset": "stall_buecher.glb",
+   "seat": "lean"
   },
   {
    "set": "prop_books_lives",
@@ -95,7 +96,8 @@
    "slot": "slot_cat_lives",
    "model": "prop_books_lives.glb",
    "lite": "prop_books_lives.lite.glb",
-   "asset": "stall_buecher.glb"
+   "asset": "stall_buecher.glb",
+   "seat": "lean"
   },
   {
    "set": "prop_books_mind",
@@ -103,7 +105,8 @@
    "slot": "slot_cat_mind",
    "model": "prop_books_mind.glb",
    "lite": "prop_books_mind.lite.glb",
-   "asset": "stall_buecher.glb"
+   "asset": "stall_buecher.glb",
+   "seat": "lean"
   },
   {
    "set": "prop_books_people",
@@ -111,7 +114,8 @@
    "slot": "slot_cat_people",
    "model": "prop_books_people.glb",
    "lite": "prop_books_people.lite.glb",
-   "asset": "stall_buecher.glb"
+   "asset": "stall_buecher.glb",
+   "seat": "lean"
   },
   {
    "set": "prop_books_decisions",
@@ -119,7 +123,8 @@
    "slot": "slot_cat_decisions",
    "model": "prop_books_decisions.glb",
    "lite": "prop_books_decisions.lite.glb",
-   "asset": "stall_buecher.glb"
+   "asset": "stall_buecher.glb",
+   "seat": "lean"
   },
   {
    "set": "prop_books_craft",
@@ -127,7 +132,8 @@
    "slot": "slot_cat_craft",
    "model": "prop_books_craft.glb",
    "lite": "prop_books_craft.lite.glb",
-   "asset": "stall_buecher.glb"
+   "asset": "stall_buecher.glb",
+   "seat": "lean"
   },
   {
    "set": "prop_deco_lebkuchen",
@@ -135,7 +141,8 @@
    "slot": "slot_counter",
    "model": "prop_deco_lebkuchen.glb",
    "lite": "prop_deco_lebkuchen.lite.glb",
-   "asset": "deco_lebkuchen.glb"
+   "asset": "deco_lebkuchen.glb",
+   "seat": "span"
   },
   {
    "set": "prop_deco_mandeln",
@@ -143,7 +150,8 @@
    "slot": "slot_counter",
    "model": "prop_deco_mandeln.glb",
    "lite": "prop_deco_mandeln.lite.glb",
-   "asset": "deco_mandeln.glb"
+   "asset": "deco_mandeln.glb",
+   "seat": "span"
   },
   {
    "set": "prop_deco_kerzen",
@@ -151,7 +159,8 @@
    "slot": "slot_counter",
    "model": "prop_deco_kerzen.glb",
    "lite": "prop_deco_kerzen.lite.glb",
-   "asset": "deco_kerzen.glb"
+   "asset": "deco_kerzen.glb",
+   "seat": "span"
   },
   {
    "set": "prop_deco_spielzeug",
@@ -159,7 +168,8 @@
    "slot": "slot_counter",
    "model": "prop_deco_spielzeug.glb",
    "lite": "prop_deco_spielzeug.lite.glb",
-   "asset": "deco_spielzeug.glb"
+   "asset": "deco_spielzeug.glb",
+   "seat": "span"
   },
   {
    "set": "prop_deco_kaese",
@@ -167,7 +177,8 @@
    "slot": "slot_counter",
    "model": "prop_deco_kaese.glb",
    "lite": "prop_deco_kaese.lite.glb",
-   "asset": "deco_kaese.glb"
+   "asset": "deco_kaese.glb",
+   "seat": "span"
   },
   {
    "set": "prop_deco_crepes",
@@ -175,7 +186,8 @@
    "slot": "slot_counter",
    "model": "prop_deco_crepes.glb",
    "lite": "prop_deco_crepes.lite.glb",
-   "asset": "deco_crepes.glb"
+   "asset": "deco_crepes.glb",
+   "seat": "span"
   },
   {
    "set": "prop_deco_maroni",
@@ -183,7 +195,8 @@
    "slot": "slot_counter",
    "model": "prop_deco_maroni.glb",
    "lite": "prop_deco_maroni.lite.glb",
-   "asset": "deco_maroni.glb"
+   "asset": "deco_maroni.glb",
+   "seat": "span"
   },
   {
    "set": "prop_deco_puffer",
@@ -191,143 +204,8 @@
    "slot": "slot_counter",
    "model": "prop_deco_puffer.glb",
    "lite": "prop_deco_puffer.lite.glb",
-   "asset": "deco_puffer.glb"
-  },
-  {
-   "set": "prop_deco_lebkuchen_shelf",
-   "stall": "deco-lebkuchen",
-   "slot": "slot_shelf_1",
-   "model": "prop_deco_lebkuchen_shelf.glb",
-   "lite": "prop_deco_lebkuchen_shelf.lite.glb",
-   "asset": "deco_lebkuchen.glb"
-  },
-  {
-   "set": "prop_deco_lebkuchen_front",
-   "stall": "deco-lebkuchen",
-   "slot": "slot_front",
-   "model": "prop_deco_lebkuchen_front.glb",
-   "lite": "prop_deco_lebkuchen_front.lite.glb",
-   "asset": "deco_lebkuchen.glb",
-   "seat": "ground"
-  },
-  {
-   "set": "prop_deco_mandeln_shelf",
-   "stall": "deco-mandeln",
-   "slot": "slot_shelf_1",
-   "model": "prop_deco_mandeln_shelf.glb",
-   "lite": "prop_deco_mandeln_shelf.lite.glb",
-   "asset": "deco_mandeln.glb"
-  },
-  {
-   "set": "prop_deco_mandeln_front",
-   "stall": "deco-mandeln",
-   "slot": "slot_front",
-   "model": "prop_deco_mandeln_front.glb",
-   "lite": "prop_deco_mandeln_front.lite.glb",
-   "asset": "deco_mandeln.glb",
-   "seat": "ground"
-  },
-  {
-   "set": "prop_deco_kerzen_shelf",
-   "stall": "deco-kerzen",
-   "slot": "slot_shelf_1",
-   "model": "prop_deco_kerzen_shelf.glb",
-   "lite": "prop_deco_kerzen_shelf.lite.glb",
-   "asset": "deco_kerzen.glb"
-  },
-  {
-   "set": "prop_deco_kerzen_front",
-   "stall": "deco-kerzen",
-   "slot": "slot_front",
-   "model": "prop_deco_kerzen_front.glb",
-   "lite": "prop_deco_kerzen_front.lite.glb",
-   "asset": "deco_kerzen.glb",
-   "seat": "ground"
-  },
-  {
-   "set": "prop_deco_spielzeug_shelf",
-   "stall": "deco-spielzeug",
-   "slot": "slot_shelf_1",
-   "model": "prop_deco_spielzeug_shelf.glb",
-   "lite": "prop_deco_spielzeug_shelf.lite.glb",
-   "asset": "deco_spielzeug.glb"
-  },
-  {
-   "set": "prop_deco_spielzeug_front",
-   "stall": "deco-spielzeug",
-   "slot": "slot_front",
-   "model": "prop_deco_spielzeug_front.glb",
-   "lite": "prop_deco_spielzeug_front.lite.glb",
-   "asset": "deco_spielzeug.glb",
-   "seat": "ground"
-  },
-  {
-   "set": "prop_deco_kaese_shelf",
-   "stall": "deco-kaese",
-   "slot": "slot_shelf_1",
-   "model": "prop_deco_kaese_shelf.glb",
-   "lite": "prop_deco_kaese_shelf.lite.glb",
-   "asset": "deco_kaese.glb"
-  },
-  {
-   "set": "prop_deco_kaese_front",
-   "stall": "deco-kaese",
-   "slot": "slot_front",
-   "model": "prop_deco_kaese_front.glb",
-   "lite": "prop_deco_kaese_front.lite.glb",
-   "asset": "deco_kaese.glb",
-   "seat": "ground"
-  },
-  {
-   "set": "prop_deco_crepes_shelf",
-   "stall": "deco-crepes",
-   "slot": "slot_shelf_1",
-   "model": "prop_deco_crepes_shelf.glb",
-   "lite": "prop_deco_crepes_shelf.lite.glb",
-   "asset": "deco_crepes.glb"
-  },
-  {
-   "set": "prop_deco_crepes_front",
-   "stall": "deco-crepes",
-   "slot": "slot_front",
-   "model": "prop_deco_crepes_front.glb",
-   "lite": "prop_deco_crepes_front.lite.glb",
-   "asset": "deco_crepes.glb",
-   "seat": "ground"
-  },
-  {
-   "set": "prop_deco_maroni_shelf",
-   "stall": "deco-maroni",
-   "slot": "slot_shelf_1",
-   "model": "prop_deco_maroni_shelf.glb",
-   "lite": "prop_deco_maroni_shelf.lite.glb",
-   "asset": "deco_maroni.glb"
-  },
-  {
-   "set": "prop_deco_maroni_front",
-   "stall": "deco-maroni",
-   "slot": "slot_front",
-   "model": "prop_deco_maroni_front.glb",
-   "lite": "prop_deco_maroni_front.lite.glb",
-   "asset": "deco_maroni.glb",
-   "seat": "ground"
-  },
-  {
-   "set": "prop_deco_puffer_shelf",
-   "stall": "deco-kartoffelpuffer",
-   "slot": "slot_shelf_1",
-   "model": "prop_deco_puffer_shelf.glb",
-   "lite": "prop_deco_puffer_shelf.lite.glb",
-   "asset": "deco_puffer.glb"
-  },
-  {
-   "set": "prop_deco_puffer_front",
-   "stall": "deco-kartoffelpuffer",
-   "slot": "slot_front",
-   "model": "prop_deco_puffer_front.glb",
-   "lite": "prop_deco_puffer_front.lite.glb",
    "asset": "deco_puffer.glb",
-   "seat": "ground"
+   "seat": "span"
   },
   {
    "set": "prop_schmuck_rail_1",
@@ -379,7 +257,8 @@
    "slot": "slot_shelf_1",
    "model": "prop_schmuck_shelf.glb",
    "lite": "prop_schmuck_shelf.lite.glb",
-   "asset": "stall_schmuck.glb"
+   "asset": "stall_schmuck.glb",
+   "seat": "tiers"
   },
   {
    "set": "prop_schmuck_case",
@@ -415,7 +294,7 @@
    "model": "prop_deco_schmuck.glb",
    "lite": "prop_deco_schmuck.lite.glb",
    "asset": "deco_schmuck.glb",
-   "why": "round 8: the old Christbaumschmuck counter goods, superseded by the ornament shop's prop_schmuck_* sets (ADR 0004). Not placed; kept on disk for reference."
+   "why": "round 8: the old Christbaumschmuck hut's scenery goods (no act_ nodes), superseded by the ornament shop's prop_schmuck_* sets in stall_schmuck.glb (ADR 0004). Place it only if deco_schmuck.glb is used instead of stall_schmuck.glb."
   }
  ],
  "by_set": {
@@ -585,118 +464,6 @@
    "stall": "deco-kartoffelpuffer",
    "model": "prop_deco_puffer.glb",
    "lite": "prop_deco_puffer.lite.glb",
-   "asset": "deco_puffer.glb"
-  },
-  "prop_deco_lebkuchen_shelf": {
-   "slot": "slot_shelf_1",
-   "stall": "deco-lebkuchen",
-   "model": "prop_deco_lebkuchen_shelf.glb",
-   "lite": "prop_deco_lebkuchen_shelf.lite.glb",
-   "asset": "deco_lebkuchen.glb"
-  },
-  "prop_deco_lebkuchen_front": {
-   "slot": "slot_front",
-   "stall": "deco-lebkuchen",
-   "model": "prop_deco_lebkuchen_front.glb",
-   "lite": "prop_deco_lebkuchen_front.lite.glb",
-   "asset": "deco_lebkuchen.glb"
-  },
-  "prop_deco_mandeln_shelf": {
-   "slot": "slot_shelf_1",
-   "stall": "deco-mandeln",
-   "model": "prop_deco_mandeln_shelf.glb",
-   "lite": "prop_deco_mandeln_shelf.lite.glb",
-   "asset": "deco_mandeln.glb"
-  },
-  "prop_deco_mandeln_front": {
-   "slot": "slot_front",
-   "stall": "deco-mandeln",
-   "model": "prop_deco_mandeln_front.glb",
-   "lite": "prop_deco_mandeln_front.lite.glb",
-   "asset": "deco_mandeln.glb"
-  },
-  "prop_deco_kerzen_shelf": {
-   "slot": "slot_shelf_1",
-   "stall": "deco-kerzen",
-   "model": "prop_deco_kerzen_shelf.glb",
-   "lite": "prop_deco_kerzen_shelf.lite.glb",
-   "asset": "deco_kerzen.glb"
-  },
-  "prop_deco_kerzen_front": {
-   "slot": "slot_front",
-   "stall": "deco-kerzen",
-   "model": "prop_deco_kerzen_front.glb",
-   "lite": "prop_deco_kerzen_front.lite.glb",
-   "asset": "deco_kerzen.glb"
-  },
-  "prop_deco_spielzeug_shelf": {
-   "slot": "slot_shelf_1",
-   "stall": "deco-spielzeug",
-   "model": "prop_deco_spielzeug_shelf.glb",
-   "lite": "prop_deco_spielzeug_shelf.lite.glb",
-   "asset": "deco_spielzeug.glb"
-  },
-  "prop_deco_spielzeug_front": {
-   "slot": "slot_front",
-   "stall": "deco-spielzeug",
-   "model": "prop_deco_spielzeug_front.glb",
-   "lite": "prop_deco_spielzeug_front.lite.glb",
-   "asset": "deco_spielzeug.glb"
-  },
-  "prop_deco_kaese_shelf": {
-   "slot": "slot_shelf_1",
-   "stall": "deco-kaese",
-   "model": "prop_deco_kaese_shelf.glb",
-   "lite": "prop_deco_kaese_shelf.lite.glb",
-   "asset": "deco_kaese.glb"
-  },
-  "prop_deco_kaese_front": {
-   "slot": "slot_front",
-   "stall": "deco-kaese",
-   "model": "prop_deco_kaese_front.glb",
-   "lite": "prop_deco_kaese_front.lite.glb",
-   "asset": "deco_kaese.glb"
-  },
-  "prop_deco_crepes_shelf": {
-   "slot": "slot_shelf_1",
-   "stall": "deco-crepes",
-   "model": "prop_deco_crepes_shelf.glb",
-   "lite": "prop_deco_crepes_shelf.lite.glb",
-   "asset": "deco_crepes.glb"
-  },
-  "prop_deco_crepes_front": {
-   "slot": "slot_front",
-   "stall": "deco-crepes",
-   "model": "prop_deco_crepes_front.glb",
-   "lite": "prop_deco_crepes_front.lite.glb",
-   "asset": "deco_crepes.glb"
-  },
-  "prop_deco_maroni_shelf": {
-   "slot": "slot_shelf_1",
-   "stall": "deco-maroni",
-   "model": "prop_deco_maroni_shelf.glb",
-   "lite": "prop_deco_maroni_shelf.lite.glb",
-   "asset": "deco_maroni.glb"
-  },
-  "prop_deco_maroni_front": {
-   "slot": "slot_front",
-   "stall": "deco-maroni",
-   "model": "prop_deco_maroni_front.glb",
-   "lite": "prop_deco_maroni_front.lite.glb",
-   "asset": "deco_maroni.glb"
-  },
-  "prop_deco_puffer_shelf": {
-   "slot": "slot_shelf_1",
-   "stall": "deco-kartoffelpuffer",
-   "model": "prop_deco_puffer_shelf.glb",
-   "lite": "prop_deco_puffer_shelf.lite.glb",
-   "asset": "deco_puffer.glb"
-  },
-  "prop_deco_puffer_front": {
-   "slot": "slot_front",
-   "stall": "deco-kartoffelpuffer",
-   "model": "prop_deco_puffer_front.glb",
-   "lite": "prop_deco_puffer_front.lite.glb",
    "asset": "deco_puffer.glb"
   },
   "prop_schmuck_rail_1": {

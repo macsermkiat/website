@@ -1,8 +1,10 @@
-// Hover outline and tooltip, and clicks (or taps) on stalls, landmarks, deco stalls and the single items on
-// their counters and shelves. One raycast per pointer move: the first thing under the pointer decides, so a
-// roof post in front of a book still hides it.
+// Hover outline and tooltip, and clicks (or taps) on stalls, landmarks and the single items on their counters and
+// shelves. One raycast per pointer move: the first thing under the pointer decides, so a roof post in front of a
+// book still hides it. Deco stalls are scenery (ADR 0004): they only stop the pointer, so hovering or clicking one
+// does nothing. A pick proxy (userData.pickProxy, e.g. a Bücherstand cabinet) answers for the things inside it.
 import * as THREE from 'three';
 
+function proxyOf(o) { for (let x = o; x; x = x.parent) { if (x.userData?.pickProxy) return x; if (x.userData?.entry) return null; } return null; }
 function signOf(o) { for (let x = o; x; x = x.parent) if (x.userData?.sign) return x.userData.sign; return null; }
 function signNode(o) { let arm = null; for (let x = o; x; x = x.parent) if (x.userData?.sign) arm = x; return arm; }
 function surfaceRoot(o) { let top = o; for (let x = o; x && x.userData?.readable === o.userData.readable; x = x.parent) top = x; return top; }
@@ -11,7 +13,7 @@ function surfaceRoot(o) { let top = o; for (let x = o; x && x.userData?.readable
 // further away the pointer means the whole stall.
 export const ITEM_RANGE = 11;
 
-export function createPicking({ dom, camera, market, overlay, outline, items, labelFor, onPick, onItem, onDeco, current = () => null, extraRoots = () => [], readLabel = () => '', signLabel = () => '', onRead, onSign, onLink, readingNow = () => false }) {
+export function createPicking({ dom, camera, market, overlay, outline, items, labelFor, onPick, onItem, onProxy, proxyLabel = (p) => p.label || '', current = () => null, extraRoots = () => [], readLabel = () => '', signLabel = () => '', onRead, onSign, onLink, readingNow = () => false }) {
   const ray = new THREE.Raycaster();
   const ptr = new THREE.Vector2();
   const tip = document.createElement('div');
@@ -22,7 +24,7 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
   // coarse boxes first, so a pointer move only tests triangles of the place under it
   let boxes = [];
   const refresh = () => {
-    const roots = [...market.hotRoots, ...(market.decoRoots || []), ...extraRoots().filter(Boolean)];
+    const roots = [...market.hotRoots, ...(market.blockRoots || []), ...extraRoots().filter(Boolean)];
     boxes = roots.map((h) => ({ h, box: new THREE.Box3().setFromObject(h).expandByScalar(0.2) }));
   };
   refresh();
@@ -35,7 +37,7 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     return r;
   }
 
-  /** What is under the pointer: { id (place) | deco (entry id), item?, x, y, distance } or null. */
+  /** What is under the pointer: { id (place), item?, proxy?, x, y, distance } or null (a deco stall: null). */
   function pick(ev) {
     const r = setRay(ev);
     const cands = boxes.filter((b) => ray.ray.intersectsBox(b.box)).map((b) => b.h);
@@ -50,7 +52,7 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
       if (h) {
         let o = h.object;
         while (o && !o.userData.place && !o.userData.entry) o = o.parent;
-        if (o) return { x: ev.clientX - r.left, y: ev.clientY - r.top, distance: h.distance, id: o.userData.place || null, deco: o.userData.place ? null : o.userData.entry?.id, item: held };
+        if (o && o.userData.place) return { x: ev.clientX - r.left, y: ev.clientY - r.top, distance: h.distance, id: o.userData.place, item: held };
       }
     }
     for (const h of hits) {
@@ -64,6 +66,13 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
         return { x: ev.clientX - r.left, y: ev.clientY - r.top, distance: h.distance, readable: o0.userData.readable, id: o?.userData.place || null, target: surfaceRoot(o0) };
       }
       if (o0.userData.bulbs && hits.length > 1) continue;
+      // a pick proxy (an invisible box round a Bücherstand cabinet): it answers for what is inside it
+      const px = proxyOf(o0);
+      if (px) {
+        if (px.userData.pickProxy.off) continue;
+        let o = px; while (o && !o.userData.place) o = o.parent;
+        return { x: ev.clientX - r.left, y: ev.clientY - r.top, distance: h.distance, id: o?.userData.place || null, proxy: px.userData.pickProxy, target: px.userData.pickProxy.outline || px };
+      } else if (o0.userData.pickProxyHidden) continue;
       // the merged shelf goods: the items' own (hidden) meshes answer for them. A stall's merged body (mergeStatic)
       // still answers as its place.
       if (o0.userData.mergedItems) continue;
@@ -75,9 +84,10 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
       const item = items?.itemOf(o0);
       const place = o.userData.place || null;
       const near = h.distance < ITEM_RANGE || (place && current() === place);
-      if (item && near) return { ...base, id: place, deco: place ? null : o.userData.entry?.id, item };
+      // an item only answers where its handler lets it (the books in a closed cabinet do not)
+      if (item && near && place && (items.pickable?.(item) ?? true)) return { ...base, id: place, item };
       if (place) return { ...base, id: place };
-      if (o.userData.entry?.kind === 'deco') return { ...base, deco: o.userData.entry.id, label: o.userData.entry.label };
+      // a deco stall (scenery) or anything else: it stops the pointer, and nothing answers
       return null;
     }
     return null;
@@ -87,14 +97,14 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     hover = p?.id || null;
     items?.hover(p?.item || null);
     if (outline) {
-      const target = p?.link ? null : p?.target ? p.target : p?.item ? p.item.node : p?.id ? market.places[p.id]?.holder : p?.deco ? (market.decoRoots || []).find((h) => h.userData.entry?.id === p.deco) : null;
+      const target = p?.link ? null : p?.target ? p.target : p?.item ? p.item.node : p?.id ? market.places[p.id]?.holder : null;
       // while reading, the page itself is not outlined (the words would blur)
       outline.selectedObjects = target && !(p.readable && readingNow()) ? [target] : [];
     }
     if (p) {
       tip.hidden = false;
-      tip.textContent = p.link ? `Open: ${p.linkText || p.link}` : p.sign ? signLabel(p.sign) : p.readable ? readLabel(p.readable) : p.item ? p.item.label : p.id ? labelFor(p.id) : p.label || '';
-      tip.classList.toggle('item', !!p.item || !!p.readable || !!p.link);
+      tip.textContent = p.link ? `Open: ${p.linkText || p.link}` : p.sign ? signLabel(p.sign) : p.readable ? readLabel(p.readable) : p.proxy ? proxyLabel(p.proxy) : p.item ? p.item.label : p.id ? labelFor(p.id) : p.label || '';
+      tip.classList.toggle('item', !!p.item || !!p.readable || !!p.link || !!p.proxy);
       // kept inside the canvas: the tip is centred over the pointer and lifted above it (translate -50%, -150%),
       // so near an edge it slides in, and near the top it drops below the pointer
       const W = overlay.clientWidth || window.innerWidth, Hh = overlay.clientHeight || window.innerHeight;
@@ -133,8 +143,8 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
       onItem(p.item, p);
       return;
     }
+    if (p.proxy) { onProxy?.(p.proxy, p); return; }
     if (p.id) onPick(p.id);
-    else if (p.deco) onDeco?.(p.deco);
   });
   let tapTimer = 0;
   let onMiss = null;
@@ -146,14 +156,16 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     /** The item a click at client (x, y) would reach, or null (tests aim clicks with it). */
     itemAt: (x, y) => pick({ clientX: x, clientY: y })?.item?.node.name || null,
     /** What a click at client (x, y) would reach (tests). */
-    at: (x, y) => { const p = pick({ clientX: x, clientY: y }); return p ? { id: p.id || null, deco: p.deco || null, item: p.item?.node.name || null } : null; },
+    at: (x, y) => { const p = pick({ clientX: x, clientY: y }); return p ? { id: p.id || null, item: p.item?.node.name || null, proxy: p.proxy?.key || null } : null; },
     setEnabled(v) { enabled = v; if (!v) show(null); },
     /** Show the hover label with `text` at overlay point (x, y), as a hover there would (tests: edges); null hides. */
     tipAt: (x, y, text) => show(text == null ? null : { x, y, label: text }),
     /** A click on nothing (the sky, the ground far off). */
     onMiss(f) { onMiss = f; },
     /** What is under client (x, y): the full pick (tests). */
-    full: (x, y) => { const p = pick({ clientX: x, clientY: y }); return p ? { id: p.id || null, deco: p.deco || null, item: p.item?.node.name || null, readable: p.readable || null, sign: p.sign || null, link: p.link || null } : null; },
+    full: (x, y) => { const p = pick({ clientX: x, clientY: y }); return p ? { id: p.id || null, item: p.item?.node.name || null, proxy: p.proxy ? `${p.proxy.kind}:${p.proxy.key}` : null, readable: p.readable || null, sign: p.sign || null, link: p.link || null } : null; },
+    /** The raw hit list under client (x, y), nearest first (tests: what stops the pointer). */
+    rawAt: (x, y) => { setRay({ clientX: x, clientY: y }); const cands = boxes.filter((b) => ray.ray.intersectsBox(b.box)).map((b) => b.h); return ray.intersectObjects(cands, true).slice(0, 4).map((h) => { let o = h.object; while (o && !o.userData.entry) o = o.parent; return { entry: o?.userData.entry?.id || null, kind: o?.userData.entry?.kind || null, distance: +h.distance.toFixed(2) }; }); },
     /** Highlight a place without a pointer, for keyboard focus on the place buttons. */
     highlight(id) { if (outline) outline.selectedObjects = id && market.places[id] ? [market.places[id].holder] : []; },
   };

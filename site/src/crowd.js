@@ -8,6 +8,7 @@ import { rng } from './standins/kit.js';
 import { readVec, readRot, modelExists, liteVariant } from './layout.js';
 import { loadGlb } from './engine/loader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { bakeFigure, createFarFigure } from './crowdFar.js';
 
 const crowdFiles = import.meta.glob('./crowd.json', { eager: true, import: 'default' });
 const RAW = crowdFiles['./crowd.json'] ?? null;
@@ -20,12 +21,16 @@ const LITE_ALIAS = {
   'people_man_parka.glb': 'people_man_coat.glb',
   'people_woman_young.glb': 'people_woman_coat.glb',
   'people_child_girl.glb': 'people_child_boy.glb',
+  'people_woman_parka.glb': 'people_woman_coat.glb', // round 8's new figure: the lite market draws the coat in its place
 };
-// Full market: people farther than lod.far metres from the camera switch to their .lite.glb figure
-// (about 1.5k triangles and one draw call instead of 4.6k and four), and back nearer than lod.near.
-// The defaults depend on the GPU class (quality.js), ?lod=far overrides them, and the frame-time governor in
-// main.js pulls them in on a machine that cannot keep up.
-export const LOD_FAR = 18, LOD_NEAR = 16;
+// People farther than lod.far metres from the camera are drawn by the far crowd (crowdFar.js): their .lite.glb
+// figure, baked into a vertex animation texture and instanced, one draw call per figure for everyone far away;
+// back nearer than lod.near they are their own skinned figure again. Round 8 (docs/adr/0004): about 80 people,
+// the switch at about 25 m, and the skinned people beyond 12 m animate every second frame (beyond 18 m every
+// third), so the CPU's share stays flat. The defaults depend on the GPU class (quality.js), ?lod=far overrides
+// them, and the frame-time governor in main.js pulls them in on a machine that cannot keep up.
+export const LOD_FAR = 25, LOD_NEAR = 23;
+const THROTTLE = [[18, 3], [12, 2]]; // [metres, update every n-th frame]
 
 // ---------- one draw call per figure ----------
 // The organizer's figures have four body parts (coat, body, hat, scarf), each its own material, so four draw
@@ -369,7 +374,8 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
   const data = RAW ? (isOrganizer ? parseOrganizer(RAW) : parseCrowd(RAW)) : null;
   const plan = data && data.people.length ? data : fallbackCrowd(avoid);
   if (RAW && !(data && data.people.length)) warn('crowd.json has no people the engine can read; using the prototype crowd.');
-  const cap = lite ? plan.cap || 40 : 90;
+  // the full market's crowd: about 80 people (the organizer's crowd.json; ADR 0004), the lite market's its first 40
+  const cap = lite ? plan.cap || 40 : 96;
   const people = plan.people.slice(0, cap);
   stepVendors(people);
 
@@ -458,48 +464,105 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
   });
   const vendors = crowd.filter((p) => p.vendor);
   let lodOn = false;
+  let frameNo = 0, updateMs = 0;
+  const mixStats = { ran: 0, throttled: 0, far: 0 };
 
   /**
-   * Full market only: load each figure's .lite.glb and give every person a second, lighter level that is
-   * drawn beyond LOD_FAR metres. Called after the first frame, so it never delays the market opening.
+   * The far crowd: each figure's .lite.glb (the lite market's own figures), baked into a vertex animation texture
+   * and instanced (crowdFar.js); every person gets a slot in their figure's instanced mesh, drawn beyond lod.far.
+   * Called after the first frame and baked one figure at a time between frames, so it never holds up the market.
    */
+  const farTime = { value: 0 };
+  const farFigures = new Map(); // lite file -> far figure
+  const farStats = { figures: 0, people: 0, bakeMs: 0, vertices: 0, rows: 0 };
   async function enableLod() {
-    if (lite || lodOn) return 0;
-    const files = new Map();
-    for (const p of crowd) {
-      const m = p.plan.model || (Number.isInteger(p.plan.variant) ? plan.variants[p.plan.variant] : null);
-      const lv = m && liteVariant(m);
-      if (lv && p.levels[0].clips) files.set(p, lv);
-    }
-    const loaded = new Map();
-    await Promise.all([...new Set(files.values())].map(async (f) => {
-      try { loaded.set(f, await loadGlb(f, manager)); } catch { warn(`crowd: could not load ${f} for the distance level.`); }
-    }));
-    let n = 0;
-    for (const [p, f] of files) {
-      const src = loaded.get(f);
-      if (!src) continue;
-      const lo = makeLevel(src, p.plan, p.phase);
-      lo.root.visible = false;
-      p.g.add(lo.root);
-      p.levels.push(lo);
-      n++;
-    }
+    if (lodOn) return 0;
     lodOn = true;
+    const fileOf = (p) => {
+      const m = p.plan.model || (Number.isInteger(p.plan.variant) ? plan.variants[p.plan.variant] : null);
+      if (!m) return null;
+      return lite ? ((liteVariant(alias(m)) && modelExists(liteVariant(alias(m)))) ? liteVariant(alias(m)) : alias(m)) : liteVariant(m);
+    };
+    const groups = new Map(); // file -> [person]
+    for (const p of crowd) {
+      if (!p.levels[0].clips) continue; // a stand-in figure: stays as it is
+      const f = fileOf(p);
+      if (f && modelExists(f)) (groups.get(f) || groups.set(f, []).get(f)).push(p);
+    }
+    let n = 0;
+    for (const [f, list] of groups) {
+      let src;
+      try { src = await loadGlb(f, manager); } catch { warn(`crowd: could not load ${f} for the far crowd.`); continue; }
+      compactFigure(src);
+      const clips = clipsFor(src, shared);
+      // the clips these people play (by name), as the lite figure carries them
+      const names = new Set(list.map((p) => p.levels[0].clips.base.name));
+      const want = clips.filter((c) => names.has(c.name));
+      if (!want.length) continue;
+      await new Promise((r) => setTimeout(r, 0)); // a frame between figures
+      let baked = null;
+      try { baked = await bakeFigure(src, want); } catch (e) { warn(`crowd: could not bake ${f} (${e?.message || e}).`); }
+      if (!baked) continue;
+      let ao = null;
+      src.traverse((o) => { if (!ao && o.isMesh && o.material?.aoMap) ao = o.material.aoMap; });
+      const parts = {};
+      src.traverse((o) => { for (const pt of o.geometry?.userData?.parts || []) parts[pt.name] ||= `#${pt.color.getHexString()}`; });
+      // colours: a part's default is its material colour, given as linear values (the instance attribute is linear)
+      const far = createFarFigure(baked, { capacity: list.length, ao, lift: liftMaterial, time: farTime, colors: null });
+      const def = {};
+      src.traverse((o) => { for (const pt of o.geometry?.userData?.parts || []) def[pt.name] ||= pt.color; });
+      for (const p of list) {
+        const cc = (k) => (p.plan.colors?.[k] ? new THREE.Color(p.plan.colors[k]) : def[k] || new THREE.Color(1, 1, 1));
+        const slot = far.add(p, { mug: !noMug(p.plan) });
+        // the instance colours are written as linear floats; Color(hex) already converts to the working space
+        for (const [k, attr] of [['coat', 'iCoat'], ['hat', 'iHat'], ['scarf', 'iScarf']]) { const c = cc(k); far.mesh.geometry.getAttribute(attr).setXYZ(slot, c.r, c.g, c.b); }
+        far.mesh.geometry.getAttribute('iCoat').needsUpdate = true;
+        p.far = { fig: far, slot, clip: p.levels[0].clips.base.name, speed: p.levels[0].clips.action.timeScale || 1, on: false, root: p.levels[0].root };
+        n++;
+      }
+      root.add(far.mesh);
+      farFigures.set(f, far);
+      farStats.figures++; farStats.bakeMs += baked.ms; farStats.vertices += baked.vertices; farStats.rows += baked.rows;
+      void parts;
+    }
+    farStats.people = n;
     return n;
   }
-  const _cp = new THREE.Vector3();
-  function applyLod(p, camPos) {
-    if (p.levels.length < 2) return;
-    const d2 = p.g.position.distanceToSquared(camPos);
-    const want = p.lvl === p.levels[0] ? (d2 > lod.far * lod.far ? 1 : 0) : (d2 < lod.near * lod.near ? 0 : 1);
-    const next = p.levels[want];
-    if (next === p.lvl) return;
+  const _cp = new THREE.Vector3(), _m = new THREE.Matrix4();
+  /** The person's world matrix for their instance (the crowd group sits at the scene's origin). */
+  function farMatrix(p) {
+    p.g.updateMatrix();
+    return _m.multiplyMatrices(p.g.matrix, p.far.root.matrix);
+  }
+  function toFar(p) {
+    const lv = p.levels[0];
+    const t = lv.mixer ? lv.clips.action.time : 0;
     // carry the clip time over, so the switch does not restart a step or a sip
-    if (next.mixer && p.lvl.mixer) next.mixer.setTime(p.lvl.mixer.time);
-    p.lvl.root.visible = false;
-    next.root.visible = true;
-    p.lvl = next;
+    p.far.phase = t - farTime.value * p.far.speed;
+    p.far.root.updateMatrix();
+    p.far.fig.show(p.far.slot, farMatrix(p), p.far.clip, p.far.phase, p.far.speed);
+    lv.root.visible = false;
+    p.far.on = true;
+  }
+  function toNear(p) {
+    const lv = p.levels[0];
+    p.far.fig.hide(p.far.slot);
+    if (lv.mixer) {
+      const d = lv.clips.base.duration || 1;
+      lv.clips.action.time = (((farTime.value * p.far.speed + (p.far.phase || 0)) % d) + d) % d;
+      lv.mixer.update(0);
+      p.mixDt = 0;
+    }
+    lv.root.visible = true;
+    p.far.on = false;
+  }
+  function applyLod(p, camPos) {
+    if (!p.far) return;
+    const d2 = p.g.position.distanceToSquared(camPos);
+    const far = p.far.on ? d2 > lod.near * lod.near : d2 > lod.far * lod.far;
+    if (far && !p.far.on) toFar(p);
+    else if (!far && p.far.on) toNear(p);
+    else if (far && p.walk) p.far.fig.move(p.far.slot, farMatrix(p));
   }
 
   const bubbles = [];
@@ -595,12 +658,20 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
     /** Distance LOD: beyond `far` metres a person draws their lite figure (0: everyone does). */
     setLod(far) { lod.far = Math.max(0, far); lod.near = Math.max(0, far - 2); },
     get lod() { return { ...lod }; },
-    get lodLevels() { return crowd.filter((p) => p.levels.length > 1).length; },
+    get lodLevels() { return crowd.filter((p) => p.far).length; },
     /** Numbers for tests and the debug report. */
     stats() {
       let hidden = 0, far = 0;
-      for (const p of crowd) { if (!p.g.visible) hidden++; if (p.levels.length > 1 && p.lvl === p.levels[1]) far++; }
-      return { people: crowd.length, hidden, lite: far, lodFar: lod.far, vendorsVisible: vendors.filter((v) => v.g.visible).length, sharedAnims: shared ? { file: shared.file, clips: shared.clips.length, retargets: shared.byOffset.size } : null };
+      for (const p of crowd) { if (!p.g.visible) hidden++; if (p.far?.on) far++; }
+      return {
+        people: crowd.length, hidden, lite: far, lodFar: lod.far, vendorsVisible: vendors.filter((v) => v.g.visible).length,
+        sharedAnims: shared ? { file: shared.file, clips: shared.clips.length, retargets: shared.byOffset.size } : null,
+        // the far crowd: how many are drawn instanced now, by how many instanced meshes (draw calls), and the bake
+        far: { ...farStats, drawn: far, meshes: farFigures.size },
+        // the skinned people's animation this frame: how many mixers ran, and how many were throttled
+        mixers: { ...mixStats },
+        updateMs: +updateMs.toFixed(3),
+      };
     },
     /** For tests: the people stepped out of the current shot. */
     hiddenIds: () => crowd.filter((p) => !p.g.visible).map((p) => p.g.name),
@@ -627,12 +698,27 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
         if (seg < 20) vendorLines(camera, segDir); else vLine.length = 0;
       }
       camera.getWorldPosition(_cp);
+      const t0 = performance.now();
+      frameNo++;
+      if (!still) farTime.value += dt;
+      mixStats.ran = 0; mixStats.throttled = 0; mixStats.far = 0;
       for (const p of crowd) {
         // Vendors stay: they are what a close-up looks at. Anyone else on the sight line, or on the line to a
         // vendor in view (the queue at the counter), steps out of the shot.
+        const wasVisible = p.g.visible;
         if (look) p.g.visible = p.vendor || !(seg < 20 && (blocks(p.g.position, camera.position, segDir, seg) || blocksVendor(p.g.position, camera.position) || inCloseUp(p.g.position, camera.position, segDir, seg)));
-        if (lodOn) applyLod(p, _cp);
-        if (p.lvl.mixer && !still && p.g.visible) p.lvl.mixer.update(dt);
+        if (p.far) {
+          if (!p.g.visible) { if (p.far.on) { p.far.fig.hide(p.far.slot); p.far.on = false; p.levels[0].root.visible = true; } }
+          else applyLod(p, _cp);
+          void wasVisible;
+        }
+        // the skinned figure's clip: every frame near by, every 2nd or 3rd frame further off (the time saved up)
+        if (p.lvl.mixer && !still && p.g.visible && !p.far?.on) {
+          p.mixDt = (p.mixDt || 0) + dt;
+          const d = p.g.position.distanceTo(_cp);
+          const every = (THROTTLE.find(([m]) => d > m) || [0, 1])[1];
+          if (every === 1 || (frameNo + (p.ph * 7 | 0)) % every === 0) { p.lvl.mixer.update(p.mixDt); p.mixDt = 0; mixStats.ran++; } else mixStats.throttled++;
+        } else if (p.far?.on) mixStats.far++;
         if (p.walk && !still) {
           const a = p.path[p.seg], b = p.path[p.seg + 1];
           const len = a.distanceTo(b) || 1;
@@ -644,6 +730,7 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
           const A = p.path[p.seg], B = p.path[p.seg + 1];
           p.g.position.lerpVectors(A, B, p.u);
           p.g.rotation.y = Math.atan2((B.x - A.x) * p.dir, (B.z - A.z) * p.dir);
+          if (p.far?.on) p.far.fig.move(p.far.slot, farMatrix(p));
           if (!p.lvl.mixer) {
             p.ph += dt * p.speed * 5.2;
             p.g.position.y = Math.abs(Math.cos(p.ph)) * 0.035;
@@ -653,6 +740,7 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
           p.g.rotation.z = Math.sin(t * 0.9 + p.ph) * 0.012;
         }
       }
+      updateMs = updateMs * 0.9 + (performance.now() - t0) * 0.1;
       if (chatter && !still && t > nextTalk && standing.length) {
         const cand = standing.filter((p) => p.g.visible && t > p.sayUntil + 2);
         if (cand.length) speak(cand[(Math.random() * cand.length) | 0], phrases[(Math.random() * phrases.length) | 0]);

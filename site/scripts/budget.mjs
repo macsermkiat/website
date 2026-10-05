@@ -100,14 +100,18 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
   const props = readJson(path.join(models, 'props.json'));
   const crowd = readJson(path.join(site, 'src', 'crowd.json'));
   const places = layout?.places || [];
-  const kindOf = (e) => (e.kind === 'section' ? 'section' : e.kind === 'deco' ? 'deco' : /bandstand/.test(e.id) ? 'bandstand' : e.kind === 'landmark' ? 'ride' : /square/.test(e.id) ? 'square' : /town|church/.test(e.id) ? 'town' : null);
+  // round 8 (ADR 0004): the ornament shop is listed as a deco stall but is a stop with things to do: the engine
+  // treats it as a section stall (streamed, lite first); every other deco stall is scenery, its lite file for good
+  const play = (e) => e.kind === 'deco' && (e.stop || e.interactive);
+  const scenery = (e) => e.kind === 'deco' && !play(e);
+  const kindOf = (e) => (e.kind === 'section' || play(e) ? 'section' : e.kind === 'deco' ? 'deco' : /bandstand/.test(e.id) ? 'bandstand' : e.kind === 'landmark' ? 'ride' : /square/.test(e.id) ? 'square' : /town|church/.test(e.id) ? 'town' : null);
   // the engine opens both markets without the rides and the deco stalls (main.js: defer)
   // drawn instead of another file, never with it: { file: the file it replaces }
   const ALT = { 'instr_sax_stand.glb': 'instr_sax.glb' };
   // round 5, pass 2: the town ring too (main.js defer)
-  const deferred = (e) => e.kind === 'deco' || /riesenrad|karussell/.test(e.id) || (!args.includes('--town-first') && (e.id === 'town' || e.kind === 'town'));
+  const deferred = (e) => scenery(e) || play(e) || /riesenrad|karussell/.test(e.id) || (!args.includes('--town-first') && (e.id === 'town' || e.kind === 'town'));
   // main.js STREAMED: lite first on the full market, full detail on demand
-  const streamed = (e) => e.kind === 'section' || /bandstand/.test(e.id) || e.id === 'town' || e.id === 'tree' || e.kind === 'town' || e.kind === 'tree';
+  const streamed = (e) => e.kind === 'section' || play(e) || /bandstand/.test(e.id) || e.id === 'town' || e.id === 'tree' || e.kind === 'town' || e.kind === 'tree';
   const liteOf = (f) => { const l = f.replace(/\.glb$/, '.lite.glb'); return exists(l) ? l : f; };
 
   // groups: { id, kind, files: { full: [...], lite: [...] }, deferred: { full, lite } }
@@ -123,7 +127,7 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
     const f = files.filter(Boolean);
     // a props set may name its own lite file (props.json "lite"); otherwise <model>.lite.glb when it exists
     const lite = f.map((x) => props?.sets?.find((s) => s.model === x && s.lite)?.lite || liteOf(x));
-    groups.push({ id: e.id, kind: kindOf(e), files: { full: f, lite }, deferred: { full: deferred(e), lite: deferred(e) }, streamed: streamed(e) && lite.some((x, i) => x !== f[i]) });
+    groups.push({ id: e.id, kind: kindOf(e), files: { full: scenery(e) ? lite : f, lite }, deferred: { full: deferred(e), lite: deferred(e) }, streamed: streamed(e) && lite.some((x, i) => x !== f[i]) });
   }
   // people: every figure the crowd names and the bandstand's four players (each a person variant), and the shared clips
   const people = new Set();

@@ -55,8 +55,7 @@ def orn(s, name, origin, display, label, action, detail, pivot="hang", **extra):
 def ribbon(m, top, drop, col=C("d8b048"), r=0.0011):
     x, y, z = top
     m.tube([(x, y, z - 0.006), (x, y, z - drop)], r, 3, "sw_satin", None, col)
-    if not vlib.lite():
-        m.box((0.007, 0.016, 0.005), T(x, y, z + 0.004), "sw_satin", col, skip=("nz",))
+    m.box((0.007, 0.016, 0.005), T(x, y, z + 0.004), "sw_satin", col, skip=("nz",))   # the knot (lite too: same bounds)
     return Vector((x, y, z - drop))
 
 
@@ -68,7 +67,7 @@ def cap(m, p, r):
 
 def bauble(m, top, r, region, n=None, rings=None, scale=(1, 1, 1)):
     """A glass bauble hanging from `top` (the cap's loop): its own painted wrap from the market atlas."""
-    n = n or (9 if not vlib.lite() else 7)
+    n = n or (8 if not vlib.lite() else 7)      # round 8 pass 2: 9 -> 8 sides (shop headroom)
     rings = rings or (6 if not vlib.lite() else 5)
     c = Vector((top.x, top.y, top.z - r * 0.28 - r * scale[2]))
     m.sphere(r, n, rings, region, T(c.x, c.y, c.z, rz=math.pi / 2), WHITE, MG, scale=scale, v_by="z")
@@ -172,7 +171,7 @@ def wood_star(m, top, r=0.055):
 def angel(m, top, s=1.0):
     """A small turned and painted Erzgebirge angel hanging from a loop on her head: white gown with gold dots,
     golden wings, a rosy face (market atlas 'angel')."""
-    n = 6 if not vlib.lite() else 5
+    n = 5      # round 8 pass 2: 6 -> 5 sides, full and lite (the angels are 3-4 cm turned figures)
     S = T(top.x, top.y, top.z - 0.012) @ Matrix.Diagonal((s, s, s, 1))
     face = vlib.R("angel", (0.0, 0.62, 1.0, 1.0))
     gown = vlib.R("angel", (0.0, 0.0, 1.0, 0.55))
@@ -183,7 +182,7 @@ def angel(m, top, s=1.0):
         wing = [(0.0, 0.0), (0.03, 0.012), (0.034, -0.012), (0.012, -0.03)]
         m.extrude([(sx * x, y) for x, y in wing][::sx], 0.002, S @ T(0, 0.006, -0.03, rx=math.pi / 2),
                   "sw_metal", "sw_metal", C("d8b048"), back=True)
-    m.torus(0.009, 0.0012, 6, 3, "sw_metal", S @ T(0, 0, 0.0, rx=0.2), C("d8b048"))
+    m.torus(0.009, 0.0012, 5, 3, "sw_metal", S @ T(0, 0, 0.0, rx=0.2), C("d8b048"))
 
 
 def herrnhut(m, glow, c, R=0.12):
@@ -386,7 +385,7 @@ def rail_3():
 
 def rail_4():
     return _short_rail("prop_schmuck_rail_4", "slot_rail_4",
-                       [("bird", 1, 0), ("strawstar", 6, 0.04), ("woodstar", 3, 0.03), ("bird", 2, 0)], "r4")
+                       [("icicle", 3, 0.03), ("strawstar", 6, 0.04), ("woodstar", 3, 0.03), ("icicle", 4, 0.03)], "r4")
 
 
 def smoker(m, M):
@@ -497,7 +496,7 @@ def counter():
             r = 0.034
             reg = meta[(k * 5 + t * 7) % len(meta)][0]
             c = Mt @ Vector((cx, cy, 0.035 + r * 0.6))
-            m.sphere(r, seg(7, 6), seg(5, 3), reg, T(c.x, c.y, c.z, rx=drng.uniform(-0.4, 0.4), rz=drng.uniform(0, 6)),
+            m.sphere(r, seg(6, 6), seg(4, 3), reg, T(c.x, c.y, c.z, rx=drng.uniform(-0.4, 0.4), rz=drng.uniform(0, 6)),
                      WHITE, MG)
     for j in range(3):
         F.carton(m, T(1.08, 0.08 - j * 0.004, j * 0.08, rz=0.05 * (j - 1)), 0.2, 0.14, 0.08, "bx_schmuck")
@@ -533,15 +532,15 @@ def shelf():
     for k, x in enumerate((-0.95, -0.82, -0.69, 0.69, 0.82, 0.95)):
         angel(m, Vector((x, y2 + 0.02, z2 + 0.1 + 0.012)), 1.1)
         m.cyl(0.03, 0.03, 0.01, 6, vlib.RW("wood"), T(x, y2 + 0.02, z2), C("6a4a2c"))
-    for k, x in enumerate((-0.4, 0.0, 0.4)):
-        m.box((0.012, 0.012, 0.15), T(x, y2 + 0.06, z2 + 0.075), vlib.RW("wood"), C("6a4a2c"))
-        straw_star(m, Vector((x, y2 + 0.05, z2 + 0.16)), 0.065)
+    for k, x in enumerate((-0.45, 0.2, 0.45)):      # clear of the tier's middle brace at x 0
+        m.box((0.012, 0.012, 0.15), T(x, y2 + 0.0, z2 + 0.075), vlib.RW("wood"), C("6a4a2c"))
+        straw_star(m, Vector((x, y2 - 0.01, z2 + 0.16)), 0.065)
     for x in (-hw + 0.12, hw - 0.12):
         for j in range(3):
             F.carton(m, T(x, y2 + 0.04, z2 + j * 0.04), 0.22, 0.2, 0.04, "bx_schmuck")
     # tier 3 (0.24 deep, 0.46 clear): the menu board and a pair of soldier nutcrackers guarding it
     x3, y3, z3 = _tier(3)
-    F.menu_board(m, T(0.0, y3 + 0.05, z3), 0.38, 0.28, "mn_schmuck")
+    F.menu_board(m, T(0.0, y3 - 0.03, z3), 0.38, 0.28, "mn_schmuck", lean=0.08)
     for sx in (-1, 1):
         nutcracker(m, T(sx * 0.34, y3, z3), C("1d3a78") if sx < 0 else C("1f5a3a"), C("f2ead8"), C("141414"), s=0.62)
     for x in (-hw + 0.15, -hw + 0.42, hw - 0.42, hw - 0.15):
@@ -562,7 +561,7 @@ def case():
     m.box((0.5, 0.2, 0.028), T(0.0, -0.03, 0.014), "kraft", C("e8dcc0"), skip=("nz",))
     for k in range(10):
         cx, cy, r = -0.2 + (k % 5) * 0.1, -0.075 + (k // 5) * 0.09, 0.034
-        m.sphere(r, seg(7, 6), seg(5, 4), meta[(k * 7 + 3) % len(meta)][0], T(cx, cy, 0.028 + r * 0.7, rz=k), WHITE, MG)
+        m.sphere(r, seg(6, 6), seg(4, 3), meta[(k * 7 + 3) % len(meta)][0], T(cx, cy, 0.028 + r * 0.7, rz=k), WHITE, MG)
     F.carton(m, T(0.0, 0.11, 0.0, rx=-0.12), 0.5, 0.03, 0.2, "bx_schmuck")
     # the glass shelf: three angels and two carved stars on stands
     for k, x in enumerate((-0.12, 0.0, 0.12)):
@@ -582,10 +581,10 @@ def tree():
     s = vlib.PropSet("prop_schmuck_tree", "slot_tree", STALL, footprint=tuple(SLOTS["slot_tree"]["top_size"]))
     m = s.static
     x0, y0 = 0.0, 0.0
-    n = seg(12, 7)
-    m.lathe([(0.14, 0.0), (0.17, 0.2), (0.18, 0.22), (0.0, 0.22)], n, vlib.RW("stave"), T(x0, y0, 0), C("8a5a34"))
+    n = 12        # full and lite alike: the tiers' outline (and so the tree's bounds) must match
+    m.lathe([(0.14, 0.0), (0.17, 0.2), (0.18, 0.22), (0.0, 0.22)], seg(12, 8), vlib.RW("stave"), T(x0, y0, 0), C("8a5a34"))
     for z in (0.05, 0.17):
-        m.cyl(0.145 + z * 0.15, 0.145 + z * 0.15, 0.015, n, "sw_metal_rough", T(x0, y0, z), C("3a3a3a"), caps=False)
+        m.cyl(0.145 + z * 0.15, 0.145 + z * 0.15, 0.015, 8 if vlib.lite() else n, "sw_metal_rough", T(x0, y0, z), C("3a3a3a"), caps=False)
     m.cyl(0.025, 0.02, 0.2, 6, vlib.RW("wood"), T(x0, y0, 0.2), C("4a3020"), caps=False)
     tiers = [(0.34, 0.3, 0.56), (0.29, 0.48, 0.74), (0.23, 0.64, 0.9), (0.16, 0.8, 1.04), (0.1, 0.94, 1.14)]
     if vlib.lite():
@@ -619,8 +618,9 @@ def tree():
 
 def _def(fn, slot, seed, kind, cam, label):
     return dict(fn=fn, slot=slot, stall=STALL, kind=kind, section=False, seed=seed, label=label, width=4.5,
-                cam=cam, fill=True, seat=("hang" if slot.startswith("slot_rail") else
-                                          "stand" if slot == "slot_tree" else "board"))
+                cam=cam, fill=True, ao_size=(256, 128),     # small AO maps keep the shop under its 2 MB
+                seat=("hang" if slot.startswith("slot_rail") else "stand" if slot == "slot_tree" else
+                      "tiers" if fn is shelf else "board"))
 
 
 SETS = {

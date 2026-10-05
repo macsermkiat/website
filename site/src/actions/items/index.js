@@ -1,25 +1,27 @@
 // Every item on the counters and shelves is its own clickable object: a book, a glass, a mug, a wine bottle,
-// a sausage, a roll, and the goods of the deco stalls. This module finds them (the act_ nodes of the vendor's
+// a sausage, a roll, and the ornament shop's ornaments. This module finds them (the act_ nodes of the vendor's
 // prop sets, named in site/public/models/items.json), lifts them a little under the pointer, and hands a click
-// to the stall's own handler (beer.js, gluehwein.js, wurst.js, books.js, deco.js).
+// to the stall's own handler (beer.js, gluehwein.js, wurst.js, books.js, schmuck.js). The deco stalls' goods are
+// scenery with no act_ nodes (ADR 0004), so nothing here touches them.
 import * as THREE from 'three';
 import { infoOf, kindOf, worldDirToParent, boxOf, UP } from './common.js';
 import { createBeer } from './beer.js';
 import { createGluehwein } from './gluehwein.js';
 import { createWurst } from './wurst.js';
 import { createBooks } from './books.js';
-import { createDeco } from './deco.js';
+import { createSchmuck } from './schmuck.js';
 
 // act_ kinds a visitor can click; the rest (steam, smoke, the grill, the ladle) only move for them
-const CLICKABLE = new Set(['book', 'glass', 'tap', 'mug', 'bottle', 'wineglass', 'kettle', 'pot', 'lid', 'sausage', 'roll', 'served', 'deco']);
-// kinds whose click the camera comes in close for (a book comes to the visitor instead)
-const FOCUS = new Set(['glass', 'tap', 'mug', 'bottle', 'wineglass', 'kettle', 'pot', 'lid', 'sausage', 'roll', 'served', 'deco']);
+const CLICKABLE = new Set(['book', 'glass', 'tap', 'mug', 'bottle', 'wineglass', 'kettle', 'pot', 'lid', 'sausage', 'roll', 'served', 'orn']);
+// kinds whose click the camera comes in close for (a book comes to the visitor instead; an ornament plays where it
+// hangs, seen from the shop's own view)
+const FOCUS = new Set(['glass', 'tap', 'mug', 'bottle', 'wineglass', 'kettle', 'pot', 'lid', 'sausage', 'roll', 'served']);
 const HOVER_LIFT = 0.018; // metres an item rises under the pointer
 
 export function createItems(ctx) {
   const { market, anim } = ctx;
   const byNode = new Map(); // pivot -> item
-  const byPlace = {}; // place id (or deco entry id) -> [item]
+  const byPlace = {}; // place id -> [item]
   let hovered = null;
 
   /** Make an item record for an act_ pivot. */
@@ -48,7 +50,7 @@ export function createItems(ctx) {
   for (const place of Object.values(market.places)) scanPlace(place);
 
   const sub = { ...ctx, items: { of: (id, kind) => (byPlace[id] || []).filter((i) => !kind || i.kind === kind), add, own, release, settle } };
-  const handlers = [createBeer(sub), createGluehwein(sub), createWurst(sub), createBooks(sub), createDeco(sub)];
+  const handlers = [createBeer(sub), createGluehwein(sub), createWurst(sub), createBooks(sub), createSchmuck(sub)];
   const onClick = {};
   for (const h of handlers) Object.assign(onClick, h.kinds || {});
 
@@ -118,17 +120,25 @@ export function createItems(ctx) {
       if (item) hoverOn(item);
     },
     get hovered() { return hovered; },
+    /** May the pointer pick this item now? (a Bücherstand cabinet's books only while that cabinet is open) */
+    pickable(item) {
+      for (const h of handlers) { const v = h.pickable?.(item); if (v === false) return false; }
+      return true;
+    },
+    /** A click on a pick proxy (a cabinet): its handler's. */
+    proxyClick(px) { for (const h of handlers) if (h.proxyClick?.(px)) return true; return false; },
     click(item) {
       const fn = onClick[item.kind];
       if (!fn) return false;
       fn(item);
       return true;
     },
-    /** Deco stalls and other models that arrive after the first frame. */
+    /** Places that arrive after the first frame (the rides, a deferred ornament shop). */
     addPlaced(placed) {
       for (const p of placed) {
-        if (p.entry.place && market.places[p.entry.place]) { scanPlace(market.places[p.entry.place]); continue; }
-        for (const h of handlers) h.addPlaced?.(p);
+        if (!p.entry.place || !market.places[p.entry.place]) continue;
+        scanPlace(market.places[p.entry.place]);
+        for (const h of handlers) h.addPlace?.(market.places[p.entry.place]);
       }
     },
     /** Where a click on this item plays out (world): the camera comes in close to it. Books present

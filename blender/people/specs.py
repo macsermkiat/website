@@ -49,6 +49,11 @@ BASE = [
          scarf=dict(style="wrap", color="#d9667a", fringe=False),
          hat=dict(style="bobble", color="#f0e6d6"),
          trousers="#6a3a5a", tights=True, boots=dict(style="boot", color="#7a3b2a"), gloves="#d9667a", curl=0.7),
+    dict(name="people_woman_parka", role="crowd", body="woman", H=1.66, skin="#c79274", hair="long", hair_color="#1f1712",
+         coat=dict(style="mid", color="#2e5e6e", collar="hood", fur="#9a8a74", toggles=True, buttons=4, flare=1.15),
+         scarf=dict(style="wrap", color="#c45a2a", bulk=1.1, fringe=False),
+         hat=dict(style="beanie", color="#e8dcc6", pompom=True, brim=True),
+         trousers="#262a33", boots=dict(style="tall", color="#4a3a2c"), gloves="#c45a2a", lip="#9a4f52"),
 ]
 
 BAND = [
@@ -109,6 +114,25 @@ VENDORS = [
          scarf=dict(style="long", color="#7d2f35", stripes=(2, 0.7)),
          hat=dict(style="flatcap", color="#5b5145"),
          trousers="#3b3a36", boots=dict(style="shoe", color="#3a2518"), gloves="#4a3a2c", curl=0.75, serve_mug=False),
+    # round 8 (ADR 0004): the deco stalls and the ornament shop. One man and one woman, recoloured per stall in
+    # crowd.json. lite_face keeps eyes, brows and mouth in the lite file, because the deco stalls are scenery and
+    # their vendors are drawn with the lite figure only (Mac: no need to fully render the side stalls).
+    dict(name="people_vendor_deco_m", role="vendor", stall="deco", body="man", H=1.78, skin="#dca07c", face_detail=True,
+         lite_face=True, hair="short", hair_color="#4a3426", beard=True,
+         coat=dict(style="short", color="#4a3b32", collar="stand", quilt=0.07, buttons=0, pockets=True,
+                   below_hip=0.06),
+         apron=dict(color="#5a4632", long=True),
+         scarf=dict(style="wrap", color="#c8962c", bulk=0.85, fringe=False),
+         hat=dict(style="beanie", color="#2f4a3a", brim=True),
+         trousers="#2e2b28", boots=dict(style="boot", color="#3a2a1f"), gloves="#3b2f27", curl=0.75, serve_mug=False),
+    dict(name="people_vendor_deco_f", role="vendor", stall="deco", body="woman", H=1.64, skin="#e6a684", face_detail=True,
+         lite_face=True, hair="bob", hair_color="#7a5a44",
+         coat=dict(style="mid", color="#2e3f5a", collar="turn", buttons=4, pockets=True),
+         apron=dict(color="#7a2a2a", stripe=True),
+         scarf=dict(style="wrap", color="#d9d2c4", stripes=(2, 0.6), fringe=False),
+         hat=dict(style="earflap", color="#9e2a2b"),
+         trousers="#2a2a2e", tights=True, boots=dict(style="boot", color="#3d2a1f"), gloves="#6b3a2a", curl=0.75,
+         lip="#a0565a", serve_mug=False),
 ]
 
 ALL = BASE + BAND + VENDORS

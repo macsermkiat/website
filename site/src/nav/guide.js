@@ -52,7 +52,7 @@ export function createGuide({ camera, rig, stroll, streamer, actions, world, sto
     arrived = true;
     document.documentElement.dataset.walking = 'false';
     stopbar.show(id, { prevId: stroll.prev(id), nextId: stroll.next(id) });
-    announce(`At the ${name(id)}: ${sections[id]?.sub || ''}. Press Enter to read what is written here.`);
+    announce(sections[id]?.play ? `At the ${name(id)}: ${sections[id]?.sub || ''}. Click the ornaments, or use the buttons below.` : `At the ${name(id)}: ${sections[id]?.sub || ''}. Press Enter to read what is written here.`);
     if (pendingRead) { const r = pendingRead; pendingRead = null; world.open(r); }
   }
 

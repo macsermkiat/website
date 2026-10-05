@@ -18,7 +18,7 @@ import build  # noqa: E402
 import rig  # noqa: E402
 import specs  # noqa: E402
 
-REVIEW = os.path.join(REPO, "review", "round-1", "organizer")
+REVIEW = os.path.join(REPO, "review", "round-8", "organizer")
 DIAG = os.path.join(REPO, "blender", "out", "people", "renders")
 TMP = os.path.join(REPO, "blender", "out", "people", "renders")
 
@@ -225,7 +225,8 @@ def stack_strips(pngs, labels, out_jpg, gap, width=1280):
         except Exception:
             return ImageFont.load_default()
     y = 0
-    for im, names in zip(ims, labels):
+    gaps = gap if isinstance(gap, (list, tuple)) else [gap] * len(ims)
+    for im, names, gap in zip(ims, labels, gaps):
         sheet.paste(im, (0, y))
         n = len(names)
         # figure i stands at x = (i - (n-1)/2) * gap; the camera sees +-3.84 m at the figures (45 mm lens, 9.6 m)
@@ -303,19 +304,21 @@ def main():
         # 4 musicians below, so no figure hides another (pass 1 put vendors and band behind the crowd)
         strips = [
             ("crowd", [(sp, clip, t) for sp, clip, t in zip(
-                specs.BASE, ["idle", "chat", "idle_free", "drink", "laugh", "chat_free", "idle_free", "walk_free"],
-                [1.3, 2.0, 2.7, 3.4, 1.1, 4.8, 5.5, 0.35])]),
+                specs.BASE, ["idle", "chat", "idle_free", "drink", "laugh", "chat_free", "idle_free", "walk_free", "chat"],
+                [1.3, 2.0, 2.7, 3.4, 1.1, 4.8, 5.5, 0.35, 3.1])]),
             ("staff", [(sp, "serve", 2.6 + 0.3 * i) for i, sp in enumerate(specs.VENDORS)]
              + [(sp, "idle" if sp["inst"] in ("piano", "drums") else "rest", 1.0 + 0.8 * i)
                 for i, sp in enumerate(specs.BAND)]),
         ]
         sw, sh = res[0], res[1] // 2
         pngs = []
+        gaps = []
         for k, (tag, row) in enumerate(strips):
             scene, coll = build.reset()
             env_c = env(scene)
             n = len(row)
-            gap = 0.86
+            gap = min(0.86, 7.4 / n)      # round 8: 9 crowd figures, and 6 vendors + 4 musicians below
+            gaps.append(gap)
             for i, (sp, clip, t) in enumerate(row):
                 x = -(n - 1) * gap / 2 + i * gap
                 place(sp, coll, (x, 0, 0), 0.1 * math.sin(i * 1.7), clip, t, name=f"{tag}{i}")
@@ -324,7 +327,7 @@ def main():
             camera(env_c, (0.0, -9.6, 1.25), (0, 0, 0.95), 45)
             pngs.append(render(scene, os.path.join(TMP, f"lineup_{tag}.png"), a.samples, (sw, sh)))
         labels = [[sp["name"].replace("people_", "") for sp, _, _ in row] for _, row in strips]
-        stack_strips(pngs, labels, a.out or os.path.join(REVIEW, "lineup.jpg"), gap)
+        stack_strips(pngs, labels, a.out or os.path.join(REVIEW, "lineup.jpg"), gaps)
     elif what == "band":
         # the ride builder's bandstand and instruments (raw exports), players at the slot_* empties
         RAWD = os.path.join(REPO, "blender", "out", "raw")

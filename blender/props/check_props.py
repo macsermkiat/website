@@ -14,7 +14,8 @@ FAIL (exit 1):
   1.15 m front opening; clickable goods have their origin at their base
 - every material except glass, liquids and emissives has a baked occlusion texture (TEXCOORD_1)
 - section stall + its props <= 60k triangles with >= 2000 headroom (500 in round 6 pass 1), and <= 3 MB with shared textures
-- deco stall + its goods <= 20k triangles (BUILD.md budget)
+- deco stall + its goods <= 20k triangles and <= 1 MB counted as the stall glb + goods glb (the shared prop_tex_*
+  textures load once for the market and are listed apart; round 8 pass 2)
 - the full and lite glb of a set carry the same act_ nodes, at the same place, with the same extras
   (name, kind, title, author, cover_material), and items.json lists no act_ node a glb lacks
 - seat check (blender/props/seat_check.mjs, node): no prop triangle cuts into its stall (counter,
@@ -23,8 +24,7 @@ FAIL (exit 1):
 - full / lite bounds parity: every act_ node's subtree (the node and everything under it) has the same
   world bounding box in the lite glb as in the full glb within 1 cm, and every named mesh node within 2 cm
   (so a lite simplification that changes the shape, e.g. a foam head growing into a column, fails)
-- round 8 (ADR 0004): every deco stall (counter, shelves, front) <= 20k with its goods and at least five act_
-  nodes per stall; the ornament shop (stall_schmuck.glb) <= 40k triangles and 2 MB with its goods, and it carries
+- round 8 (ADR 0004): every deco stall <= 20k with its goods and no act_ nodes (scenery since 2026-10-05); the ornament shop (stall_schmuck.glb) <= 40k triangles and 2 MB with its goods, and it carries
   >= 12 act_orn_bauble_<n>, act_orn_pickle, the pine cone, bird, mushroom, icicle, straw/wooden stars, angels,
   act_orn_herrnhut with a bulb_warm core, act_orn_nutcracker_jaw, act_orn_smoker with fx_smoke_<n>, the
   Schwibbogen with act_orn_candle_<n> and hook_tree_<n> empties; every deco act_ item has a label and action.
@@ -62,6 +62,10 @@ DECO_KEYS = ["lebkuchen", "mandeln", "kerzen", "spielzeug", "schmuck", "kaese", 
 FILL_KEYS = [d for d in DECO_KEYS if d != "schmuck"]
 SCHMUCK_SETS = [f"prop_schmuck_{g}" for g in ("rail_1", "rail_2", "rail_3", "rail_4", "counter", "shelf", "case", "tree")]
 SCHMUCK_TRIS, SCHMUCK_MB = 40000, 2.0
+# BUILD.md: a deco stall with its goods <= 1 MB. Round 8 pass 2 (judges): counted as the stall glb plus its own
+# goods glb only; the shared prop textures (prop_tex_*) load once for the whole market, so they are reported in
+# their own column and not charged to every stall (the ornament shop still counts them, the stricter reading)
+DECO_MB = 1.0
 NO_AO = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade",
          "write_")
 BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|sausage|coaster)_\d+$|^act_grill$"
@@ -150,6 +154,24 @@ def check_ao(name, js):
             return
 
 
+SCENERY_FULL, SCENERY_LITE = 4000, 1500
+
+
+def check_scenery(name, js, nodes, variant):
+    """Round 8 (Mac, 2026-10-05): a deco stall's goods are one or two merged meshes, no act_ / fx_ nodes, at
+    most about 4k triangles (1.5k lite)."""
+    bad = [n for n in nodes if n.startswith(("act_", "fx_", "light_"))]
+    if bad:
+        fail(f"{name}: scenery carries {bad[:5]}")
+    meshes = [n for n in js["nodes"] if "mesh" in n]
+    if len(meshes) > 2:
+        fail(f"{name}: {len(meshes)} mesh nodes (scenery is one or two merged meshes)")
+    tris = glb_tools.triangle_count(js)
+    cap = SCENERY_FULL if variant == "full" else SCENERY_LITE
+    if tris > cap * 1.05:
+        fail(f"{name}: {tris} triangles (> about {cap})")
+
+
 def check_geometry(name, r, seat="board"):
     size, lo, hi = r.get("size"), r.get("bbox_min"), r.get("bbox_max")
     if not size:
@@ -164,6 +186,11 @@ def check_geometry(name, r, seat="board"):
             fail(f"{name} reaches {lo[2]:.3f} m below its slot")
         if hi[2] > 1.45 + 1e-3:
             fail(f"{name} is {hi[2]:.3f} m tall (> 1.45)")
+    elif seat == "span":
+        # round 8 scenery: one set at slot_counter reaching the crate bench (0.71 m below, 0.5 m in front), the
+        # rail (0.97 m above) and both back shelves (1.96 m behind); it must stay inside the hut's opening
+        if lo[2] < -0.72 or hi[2] > 1.16 or lo[1] < -0.73 or hi[1] > 2.095:
+            fail(f"{name}: scenery reaches outside the hut (bbox {lo} .. {hi})")
     elif size[1] > 0.5 + 1e-3:
         fail(f"{name} is {size[1]:.3f} m deep (> 0.5)")
     floor = r.get("grill_seat", {}).get("floor_z")
@@ -370,6 +397,8 @@ def seat_check(sets):
               f"{'%.3f..%.3f' % (bb['min'][1], bb['max'][1]):>15s}  "
               + (", ".join(f"{c['node']} at {c['at']}" for c in cuts[:4]) or "none"))
         for c in cuts:
+            if c.get("sunk") and seats.get(key) == "hang":
+                continue     # under a rail's footprint is where hanging goods belong (the rail is not a solid top)
             how = "sunk under a stall top by" if c.get("sunk") else "reaching behind a stall face by"
             fail(f"{tag}: {c['node']} cuts into the stall at {c['at']} (slot frame, m), {how} {c['depth'] * 100:.1f} cm")
         if seats.get(key, "board") != "board":
@@ -612,13 +641,16 @@ def write_notes(rows, section_rows, deco_rows, tex, tex_lite, glb_full, glb_lite
     for st, a, b, tot, room, mb, lt, lmb in section_rows:
         L.append(f"| {st} | {a} | {b} | {tot} / {lt // 1000}k {'OK' if room >= HEADROOM else 'FAIL'} | {room} | "
                  f"{mb:.2f} / {lmb:.0f} |")
-    L += ["", "Deco stalls, stall plus all its goods sets against 20k (the ornament shop, stall_schmuck.glb, against "
-          "40k and 2 MB; check_props fails over):", "",
-          "| deco stall | stall tris | goods | total / budget | room | clickable | MB with goods |",
-          "|---|---|---|---|---|---|---|"]
-    for d, a, b, tot, lim, n_act, mb in deco_rows:
+    L += ["", "Deco stalls, stall plus its one scenery goods set against 20k (the ornament shop, stall_schmuck.glb, with its eight goods sets against "
+          "40k and 2 MB; check_props fails over). MB is the stall glb plus its goods glb against the 1 MB budget; the "
+          "shared prop textures load once for the whole market and are listed apart (the ornament shop's MB includes "
+          "them, against its 2 MB):", "",
+          "| deco stall | stall tris | goods | total / budget | room | act_ nodes (0: scenery) | MB stall + goods / budget "
+          "| shared textures used (loaded once) |",
+          "|---|---|---|---|---|---|---|---|"]
+    for d, a, b, tot, lim, n_act, mb, mb_tex, lim_mb in deco_rows:
         L.append(f"| {d} | {a} | {b} | {tot} / {lim // 1000}k {'OK' if tot <= lim else 'over'} | {lim - tot} | "
-                 f"{n_act} | {mb:.2f} |")
+                 f"{n_act} | {mb:.2f} / {lim_mb:.0f} {'OK' if mb <= lim_mb else 'over'} | {mb_tex:.2f} MB |")
     L += ["", "<!-- check_props:end -->"]
     block = "\n".join(L)
     txt = open(NOTES).read() if os.path.exists(NOTES) else ""
@@ -654,7 +686,7 @@ def main():
     for f in files:
         if f not in sets and f not in retired:
             fail(f"{f}.glb is not in props.json")
-    for n in SECTION_SETS + [f"prop_deco_{d}{p}" for d in FILL_KEYS for p in ("", "_shelf", "_front")] + SCHMUCK_SETS:
+    for n in SECTION_SETS + [f"prop_deco_{d}" for d in FILL_KEYS] + SCHMUCK_SETS:
         if n not in sets:
             fail(f"missing set {n}")
     tex = sum(os.path.getsize(os.path.join(MODELS, t)) for t in os.listdir(MODELS)
@@ -686,7 +718,10 @@ def main():
             jss[variant] = js
             nodes = glb_tools.node_names(js)
             check_nodes(f"{name} ({variant})", js, nodes)
-            check_ao(f"{name} ({variant})", js)
+            if e.get("seat") == "span":
+                check_scenery(f"{name} ({variant})", js, nodes, variant)
+            else:
+                check_ao(f"{name} ({variant})", js)
         check_parity(name, jss["full"], jss["lite"])
         bounds_worst[name] = check_bounds_parity(name, jss["full"], jss["lite"])
         for n in glb_tools.node_names(jss["full"]):
@@ -736,15 +771,26 @@ def main():
         tot = sr["triangles"] + pt
         n_act = sum(1 for n, st in seen.items() if sets[st]["stall"] == sid)
         used = set().union(*(r[2] for r in per_stall.get(sid, []))) if per_stall.get(sid) else set()
-        mb = (sr["bytes"] + sum(r[0]["bytes"] for r in per_stall.get(sid, []))
-              + sum(os.path.getsize(os.path.join(MODELS, u)) for u in used)) / 1e6
-        print(f"{d:14s} {sr['triangles']:6d} {pt:6d} {tot:6d} {n_act:5d}  {mb:.2f} MB  ({asset}, of {lim // 1000}k)")
-        deco_rows.append((d, sr["triangles"], pt, tot, lim, n_act, mb))
+        mb_own = (sr["bytes"] + sum(r[0]["bytes"] for r in per_stall.get(sid, []))) / 1e6
+        mb_tex = sum(os.path.getsize(os.path.join(MODELS, u)) for u in used) / 1e6
+        # deco stalls: the stall's own files (shared textures apart); the ornament shop: with its shared textures
+        mb = mb_own + mb_tex if d == "schmuck" else mb_own
+        lim_mb = SCHMUCK_MB if d == "schmuck" else DECO_MB
+        print(f"{d:14s} {sr['triangles']:6d} {pt:6d} {tot:6d} {n_act:5d}  {mb:.2f} MB of {lim_mb:.0f} "
+              f"(+ {mb_tex:.2f} MB shared textures{' included' if d == 'schmuck' else ', loaded once'})  "
+              f"({asset}, of {lim // 1000}k)")
+        deco_rows.append((d, sr["triangles"], pt, tot, lim, n_act, mb, mb_tex, lim_mb))
+        if d != "schmuck" and mb > DECO_MB:
+            fail(f"deco {d}: stall + goods glbs {mb:.2f} MB (> {DECO_MB})")
         if tot > lim:
             fail(f"deco {d}: stall {sr['triangles']} + goods {pt} = {tot} > {lim} "
                  f"({'the stall alone leaves ' + str(max(0, lim - sr['triangles'])) + ' for goods'})")
-        if n_act < 5:
-            fail(f"deco {d}: only {n_act} clickable act_ nodes (round 8 wants at least five per stall)")
+        if d == "schmuck" and n_act < 5:
+            fail(f"ornament shop: only {n_act} clickable act_ nodes")
+        if d != "schmuck" and n_act:
+            fail(f"deco {d}: {n_act} act_ nodes (deco stalls are scenery since 2026-10-05)")
+        if d != "schmuck" and any(it.get("stall") == sid for it in items.values()):
+            fail(f"deco {d}: items.json still has entries for this scenery stall")
         if d == "schmuck" and mb > SCHMUCK_MB:
             fail(f"ornament shop: {mb:.2f} MB with its goods and their shared textures (> {SCHMUCK_MB})")
     check_fill(sets, items, seen)

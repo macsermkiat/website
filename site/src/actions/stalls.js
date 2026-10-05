@@ -150,9 +150,9 @@ export function createStallActions(ctx) {
     glueh: { hint: actionHint('glueh', 'Pour a cup of Glühwein, then raise it with the crowd.') + itemHint('glueh'), acts: [{ key: 'pour', label: 'Pour a cup', fn: pourMug }, { key: 'prost', label: 'Prost!', fn: prostGlueh }] },
     bier: { hint: actionHint('bier', 'Pull a pint from the middle tap.') + itemHint('bier'), acts: [{ key: 'pint', label: 'Pull a pint', fn: pullPint }, { key: 'prost', label: 'Prost!', fn: prostBier }] },
     wurst: { hint: actionHint('wurst', 'Turn the sausages on the grill.') + itemHint('wurst'), acts: [{ key: 'turn', label: 'Turn the sausages', fn: turnSausages }, { key: 'bun', label: 'One in a bun, please', fn: bun }] },
-    books: { hint: actionHint('books', 'Click any spine on the shelves, or let the bookseller choose.') + ' <em>Every titled spine is a book Mac has read; it opens with his notes on it.</em>', acts: [{ key: 'book', label: 'Pick a book for me', fn: () => H.pickBook?.() }],
-      // one button per category shelf: the camera looks along that section (cam_cat_<key>, or worked out from its books)
-      views: { label: 'Look along a shelf', list: () => (H.shelves?.() || []).map((c) => ({ key: c.key, label: c.label, title: c.en, fn: () => H.showShelf?.(c.key) })) } },
+    books: { hint: actionHint('books', 'Tap a cabinet to open it, then a cover; or let the bookseller choose.') + ' <em>Every book in the cabinets is one Mac has read; it opens with his notes on it.</em>', acts: [{ key: 'book', label: 'Pick a book for me', fn: () => H.pickBook?.() }],
+      // one button per category cabinet (ADR 0004): the camera comes to it, its door opens and its covers come forward
+      views: { label: 'Open a cabinet', list: () => (H.cabinets?.() || []).map((c) => ({ key: c.key, label: c.label, title: c.en, fn: () => H.openCabinet?.(c.key) })) } },
     update(dt, t, still) {
       emitters.forEach((e) => e.update(dt, still));
     },

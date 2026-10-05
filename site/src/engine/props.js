@@ -76,7 +76,7 @@ export async function placeProps(placed, { lite, liteOf = null, manager, warn, e
       obj.name = obj.name || `prop_${file}`;
       obj.userData.propFile = file; // which file a set came from (for debugging and tests)
       obj.userData.propSet = it.set || file.replace(/(\.lite)?\.glb$/, '');
-      if (useLite && !lite && file !== it.model) obj.userData.fullFile = it.model;
+      if (useLite && !lite && file !== it.model && !target.entry.liteOnly) obj.userData.fullFile = it.model;
       slot.add(obj);
       n++;
     } catch (e) {

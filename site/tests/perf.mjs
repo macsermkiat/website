@@ -9,7 +9,13 @@
 // writes them all to review/perf/<date>.json. Exit code: 0 when every view meets its target, 1 when one misses,
 // 2 when the browser drew on software GL (SwiftShader, llvmpipe), which is not a measurement.
 //
+// Round 8: each market's line also gives the first-load size (everything fetched before the market opened) and the
+// crowd's cost: people, how many are drawn as far instances (the vertex-animation crowd beyond about 25 m), how many
+// mixers ran or were throttled in the last frame, and the crowd's own update time per frame.
+//
 // Options: --market full,lite   --size 1440x900   --port 4319   --out ../review/perf   --headless (some GPUs only)
+//          --software   run headless on SwiftShader (the build machine): sizes and crowd counts are real, frame times
+//                       are not a GPU measurement (exit code 2 as always on software GL)
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -36,7 +42,16 @@ await new Promise((res, rej) => {
   server.on('exit', (c) => rej(new Error('vite preview exited ' + c)));
 });
 
-const browser = await chromium.launch({ headless: args.includes('--headless'), args: ['--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--disable-frame-rate-limit', '--disable-gpu-vsync'] });
+const SOFT = args.includes('--software');
+const browser = await chromium.launch(SOFT
+  ? { headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] }
+  : { headless: args.includes('--headless'), args: ['--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--disable-frame-rate-limit', '--disable-gpu-vsync'] });
+/** Everything requested before the market opened (the page marks 'market-ready' just before its first frame). */
+const bytesAtReady = (page) => page.evaluate(() => {
+  const t = performance.getEntriesByName('market-ready')[0]?.startTime ?? Infinity;
+  const doc = performance.getEntriesByType('navigation')[0];
+  return (doc?.encodedBodySize || 0) + performance.getEntriesByType('resource').filter((r) => r.startTime < t).reduce((a, r) => a + (r.encodedBodySize || r.decodedBodySize || 0), 0);
+});
 const report = { at: new Date().toISOString(), size: `${W}x${H}`, markets: {} };
 let verdict = 0;
 try {
@@ -46,19 +61,24 @@ try {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-    await page.goto(`http://localhost:${PORT}/website/?perf=tour&quality=${market}&governor=0`, { waitUntil: 'load', timeout: 120000 });
-    await page.waitForFunction(() => document.documentElement.dataset.ready === 'true', null, { timeout: 180000 });
+    const SLOW = SOFT ? 10 : 1; // software GL: minutes, not seconds
+    await page.goto(`http://localhost:${PORT}/website/?perf=tour&quality=${market}&governor=0`, { waitUntil: 'load', timeout: 120000 * SLOW });
+    await page.waitForFunction(() => document.documentElement.dataset.ready === 'true', null, { timeout: 180000 * SLOW });
+    const firstLoad = await bytesAtReady(page);
     const gpu = await page.evaluate(() => window.__market.perf()?.gpu || 'unknown');
     console.log(`\n${market} market on ${gpu}`);
-    await page.waitForFunction(() => window.__market.perfTour(), null, { timeout: 240000, polling: 1000 });
+    console.log(`  first load ${(firstLoad / 1e6).toFixed(2)} MB (fetched before the market opened)`);
+    await page.waitForFunction(() => window.__market.perfTour(), null, { timeout: 240000 * SLOW, polling: 1000 });
     const tour = await page.evaluate(() => window.__market.perfTour());
     const t = TARGET[market] || TARGET.full;
     const stops = tour.lines.map((s) => ({ ...s, ok: s.p50 <= t.p50 && s.p95 <= t.p95 }));
     for (const s of stops) console.log(`  ${s.ok ? 'ok  ' : 'MISS'} ${s.view.padEnd(12)} median ${String(s.p50).padStart(5)} ms  p95 ${String(s.p95).padStart(5)} ms  ${s.calls} draws  ${(s.triangles / 1000).toFixed(0)}k tris`);
+    const crowd = await page.evaluate(() => { const c = window.__market.crowd(); return { people: c.people, lodFar: c.lodFar, far: c.far, mixers: c.mixers, updateMs: c.updateMs }; });
+    console.log(`  crowd ${crowd.people} people: ${crowd.far?.drawn ?? 0} drawn as far instances in ${crowd.far?.meshes ?? 0} draws (${crowd.far?.figures ?? 0} figures baked in ${crowd.far?.bakeMs ?? 0} ms); mixers ran ${crowd.mixers?.ran ?? '?'}, throttled ${crowd.mixers?.throttled ?? '?'}; crowd update ${crowd.updateMs ?? '?'} ms/frame`);
     const software = SOFTWARE.test(gpu);
     if (software) { console.log('  software GL: these numbers are not a GPU measurement'); verdict = 2; }
     else if (stops.some((s) => !s.ok) && verdict === 0) verdict = 1;
-    report.markets[market] = { gpu, software, target: t, stops, errors };
+    report.markets[market] = { gpu, software, target: t, firstLoadBytes: firstLoad, crowd, stops, errors };
     await ctx.close();
   }
 } finally {

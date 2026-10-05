@@ -7,7 +7,7 @@ import { woodMaterial, paintMaterial, lampGlassMaterial, brassMaterial, woodBox 
 import { label, fitSize } from '../world/text.js';
 
 /** German place names on the arms (the section in English underneath). */
-export const ARM_NAMES = { glueh: 'Glühwein', bier: 'Bier vom Fass', wurst: 'Bratwurst', books: 'Bücher', band: 'Musik', ferris: 'Riesenrad', carousel: 'Karussell' };
+export const ARM_NAMES = { glueh: 'Glühwein', bier: 'Bier vom Fass', wurst: 'Bratwurst', books: 'Bücher', band: 'Musik', ferris: 'Riesenrad', carousel: 'Karussell', schmuck: 'Christbaumschmuck' };
 export const SIGN_AT = [-3.4, 0, 19.2];
 
 /**

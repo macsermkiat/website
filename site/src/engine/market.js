@@ -37,7 +37,7 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
 
   const market = {
     layout, placed: [], places: {}, bulbMaterials: [], snow: [], rides: [], lightSpots: [], mixers: [], propCount: 0, instrumentCount: 0,
-    hotRoots: [], decoRoots: [], decos: {}, merges: {}, deferred: later.map((e) => e.id), report: [],
+    hotRoots: [], blockRoots: [], merges: {}, deferred: later.map((e) => e.id), report: [],
     // bindings that did not resolve exactly (layout.json assets, props.json sets): reported, never guessed
     bindings: [...layout.bindings],
     // other breaks of the BUILD.md contract found while loading (too many light_ markers)
@@ -48,9 +48,10 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
   async function load(entries, progress) {
     let done = 0;
     const placed = await pool(entries, 4, async (entry) => {
-      const res = await loadEntry(entry, { lite: lite || !!stream(entry), manager, warn });
+      // a deco stall (scenery, ADR 0004) is its light file on both markets, and never upgraded
+      const res = await loadEntry(entry, { lite: lite || !!stream(entry) || !!entry.liteOnly, manager, warn });
       progress?.(++done / entries.length, entry);
-      return { entry, ...res, streamed: !lite && !!stream(entry) && res.source === 'lite' };
+      return { entry, ...res, streamed: !lite && !entry.liteOnly && !!stream(entry) && res.source === 'lite' };
     });
     for (const p of placed) {
       const { entry, root } = p;
@@ -73,7 +74,7 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
     }
     scene.updateMatrixWorld(true);
     const elsewhere = all.filter((e) => !entries.includes(e));
-    const liteOf = (e) => !lite && !!stream(e);
+    const liteOf = (e) => !lite && (!!stream(e) || !!e.liteOnly);
     market.propCount += await placeProps(placed.map((p) => ({ ...p, nodes: scanNodes(p.root) })), { lite, liteOf, manager, warn, elsewhere, bindings: market.bindings });
     market.instrumentCount += await placeInstruments(placed, scanNodes, { lite, liteOf, manager, warn });
     scene.updateMatrixWorld(true);
@@ -122,9 +123,9 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
         market.hotRoots.push(p.holder);
       }
       if (p.entry.kind === 'deco') {
-        // deco stalls open no panel, but a click flies to their close-up and their goods can be looked at
-        market.decoRoots.push(p.holder);
-        market.decos[p.entry.id] = { id: p.entry.id, entry: p.entry, holder: p.holder, root: p.root, nodes, ry: p.holder.rotation.y, center: p.holder.position.clone().setY(1.6) };
+        // deco stalls are scenery (ADR 0004): not clickable, no close-up. Their holders only stop the pointer, so a
+        // click on one reaches nothing behind it.
+        market.blockRoots.push(p.holder);
       }
       market.placed.push(p);
       market.report.push({ id: p.entry.id, place: p.entry.place || null, kind: p.entry.kind, source: p.source, file: p.file, deferred: later.includes(p.entry) || undefined });

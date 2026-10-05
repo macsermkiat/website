@@ -75,7 +75,7 @@ are filled from the nearest island (no black bleeding through mipmaps), and valu
 `[bake.AO_FLOOR, 1]` (0.32) so no surface goes black under the site's lights. If the AO resolution equals the kit roughness texture's,
 the Blender exporter packs both into one ORM image. Use a size no kit map has (kits are 1024,
 iron 512; lite kit maps 512): the section stalls bake AO at 768 (lite 384) and the deco stalls
-at 448 (lite 256), so every stall references the shared kit roughness maps.
+at 320 (lite 192; 448/256 before round 8), so every stall references the shared kit roughness maps.
 
 Named tints (`geo.TINTS`): `pine honey oak dark walnut grey soot shingle white`, or any linear RGB tuple.
 
@@ -85,6 +85,7 @@ Named tints (`geo.TINTS`): `pine honey oak dark walnut grey soot shingle white`,
 - `reset(seed_value=1, lite_mode=False)`: factory-empty file, Cycles set up by `configure_cycles`, seeds `state.rng`, sets the LOD.
 - `configure_cycles(scene=None)`: device from `NM_DEVICE` (CPU, or METAL/CUDA/OPTIX/HIP/ONEAPI for the GPU) and threads from `NM_THREADS` (0 = all cores, default 2).
 - `lite()`: True while building a `*.lite.glb`. The helpers then drop bevels, shingles become one strip per course, and spheres, text and garlands get fewer segments.
+- `set_bevels(on)` / `bevels()` (round 8): `set_bevels(False)` makes a full build drop every edge chamfer under 1 cm in `Part.box`/`mbox`, as lite does, while keeping full plank widths, single shingles, text and the larger rounds (a counter's worn front edge). Use it for scenery that is only ever seen from a lane, such as the deco stalls. `reset()` turns bevels back on, and `bevels()` is False in lite builds.
 - `rng`: the only random stream the helpers use. Seed it for repeatable builds.
 - `font(name)`: bundled OFL fonts: `fraktur` (UnifrakturMaguntia), `fraktur_bold` (UnifrakturCook), `fell_sc`, `fell_italic` (IM Fell English), `alegreya_sc` (Alegreya SC ExtraBold). The stall signs use `fraktur_bold`, `fell_italic` and `alegreya_sc`.
 - Paths: `REPO`, `MODELS_DIR` (`site/public/models`), `OUT_DIR` (`blender/out`, gitignored), `KIT_DIR`.
@@ -186,7 +187,7 @@ The section stalls' boards (round 6):
   - `act_cab_<key>` is an empty on the door's hinge line (bottom-left corner of the glazed door, rotated with the cabinet) with the door frame (`cab_door_<key>`, paint) and pane (`cab_glass_<key>`, `glass_clear`) as child meshes; a negative rotation about its local vertical swings the door toward the visitor. `NM_OPEN_DOORS=1` opens them in the Cycles preview.
   - `python3 blender/stalls/buecher_sections.py --check [file.glb ...]` is read-only: it compares the json with the module (in memory) and every `slot_cat_`, `cam_cat_`, `cam_cat_*_target` and `act_cab_` node of the glbs (default: both Bücherstand LODs) with the json, and exits 1 on any mismatch. Only the plain command (no `--check`) writes the json.
 - `stalls/schmuck.py` (round 8): the Christbaumschmuck ornament shop `stall_schmuck.glb`, 4.5 m wide. Besides the usual slots it has `slot_rail_1..4` (brass rails; each empty at the rail's left end, +X along it), `slot_tree` (top of the dais in the right bay), `slot_cabinet` (velvet floor of the built-in glass case in the left bay) and `slot_shelf_1..3` (three tiers on the back wall). The build writes `blender/stalls/schmuck_slots.json` (rail lengths and free drop, tree dais size and height limit, glass case inner size and shelf height, tier sizes).
-- `stalls/deco.py` (round 8): every deco variant has a turned wooden hanging rail across the front opening (`slot_rail_1`, at the rail's left end, +X along it, 2.02 m high) and a low slatted bench at the front-left corner for one crate or basket (`slot_crate`, on its top). `blender/stalls/deco_slots.json` lists both per variant.
+- `stalls/deco.py` (round 8): every deco variant has a turned wooden hanging rail across the front opening (`slot_rail_1`, at the rail's left end, +X along it, 2.02 m high) and a low slatted bench at the front-left corner for one crate or basket (`slot_crate`, on its top). `blender/stalls/deco_slots.json` lists both per variant. The deco stalls are lane scenery (Mac, 2026-10-05: no interaction, so save loading time): `deco.SCENERY` builds the full file with `state.set_bevels(False)`, a coarser snow grid and a 320 px AO map, about a quarter fewer triangles and a third fewer bytes than the round-7 builds. `--goods` adds the vendor's sets (from `props.json`) to the contact-sheet renders.
 
 ## Checking a stall in the browser
 

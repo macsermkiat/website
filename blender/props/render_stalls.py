@@ -50,10 +50,10 @@ def args():
     keys = [k for k in (a[0].split(",") if a and not a[0].startswith("--") else [])]
     get = lambda f, d: a[a.index(f) + 1] if f in a else d
     return keys, tuple(int(v) for v in get("--res", "640x360").split("x")), int(get("--samples", "32")), \
-        get("--cam", "view"), "--sheet" in a
+        get("--cam", "view"), "--sheet" in a, "--lite" in a
 
 
-def stage(key):
+def stage(key, lite=False):
     state.reset(1)
     render.night_scene(ground_size=30)
     with open(os.path.join(MODELS, "props.json")) as f:
@@ -61,6 +61,8 @@ def stage(key):
     stall_id = "deco-" + ("kartoffelpuffer" if key == "puffer" else key)
     sets = [e for e in pj["sets"] if e["stall"] == stall_id]
     asset = sets[0]["asset"] if sets else f"deco_{key}.glb"
+    if lite:
+        asset = asset.replace(".glb", ".lite.glb")
     objs = render.import_glb(os.path.join(MODELS, asset), at=(0, 0, 0))
     bpy.context.view_layer.update()
     slots = {o.name.split(".")[0]: o for o in objs if o.name.startswith("slot_")}
@@ -69,7 +71,7 @@ def stage(key):
         if slot is None:
             print(f"[stalls] {asset} has no {e['slot']} for {e['set']}")
             continue
-        new = render.import_glb(os.path.join(MODELS, e["model"]), at=(0, 0, 0))
+        new = render.import_glb(os.path.join(MODELS, e["lite"] if lite else e["model"]), at=(0, 0, 0))
         for o in new:
             if o.parent is None:
                 o.matrix_world = slot.matrix_world @ o.matrix_world
@@ -89,13 +91,13 @@ def stage(key):
 
 
 def main():
-    keys, res, samples, cam, sheet = args()
+    keys, res, samples, cam, sheet, lite = args()
     os.makedirs(RENDERS, exist_ok=True)
     for key in keys:
-        stage(key)
+        stage(key, lite)
         loc, tgt, lens = (CAMS_SCHMUCK if key == "schmuck" else CAMS)[cam]
         render.camera(loc, tgt, lens=lens, dof=None)
-        tag = "" if cam == "view" else f"_{cam}"
+        tag = ("" if cam == "view" else f"_{cam}") + ("_lite" if lite else "")
         png = os.path.join(RENDERS, f"stall_{key}{tag}.png")
         render.render(png, samples=samples, res=res, jpeg=os.path.join(REVIEW, f"stall_{key}{tag}.jpg"), jpeg_width=1280)
     if sheet:

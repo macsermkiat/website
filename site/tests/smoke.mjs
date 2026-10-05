@@ -1,4 +1,4 @@
-// End-to-end smoke test (round 5): the built site served by `vite preview`, driven by Playwright on software GL.
+// End-to-end smoke test (round 5, extended in round 8): the built site served by `vite preview`, driven by Playwright on software GL.
 // 0. unit checks (tests/unit.mjs)
 // 1. stroll (full market, 1280 px): the home still, the first-load size, the architect's stroll and the carpenter's
 //    signpost, no orbit (a drag turns the head at most 15°), a click on the signpost walking to a stop at walking pace,
@@ -10,8 +10,11 @@
 //    keyboard, the on-screen signpost and a click in 3D
 // 3. lite market auto-detected on a weak GPU (first-load size); 4. a phone with reduced motion and touch
 // 5. plain.html and the credits; 6. every model missing: stand-ins, no errors; 7. recorded stems on the full market
+// 8. (round 8) deco stalls are scenery: not clickable, no close-up, never more than their lite file (in the stroll
+//    phase); the ornament shop (schmuck): a stroll stop with every interaction; the Bücherstand cabinets on a 390 px
+//    phone (cabinet): tap, open, only its books pickable, covers at least 44 px, arrows, a clear way back
 // Fails on any console error, failed request or HTTP error.
-// Usage: npm run build && node tests/smoke.mjs [--out ../review/round-5/engineer] [--port 4317] [--only unit,stroll,reading,interact,lite,phone,plain,missing,audio]
+// Usage: npm run build && node tests/smoke.mjs [--out ../review/round-5/engineer] [--port 4317] [--only unit,stroll,reading,interact,schmuck,cabinet,lite,phone,plain,missing,audio]
 import { spawn } from 'node:child_process';
 import { mkdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -22,7 +25,7 @@ const { chromium } = pw.default || pw;
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
-const OUT = path.resolve(opt('--out', '../review/round-5/engineer'));
+const OUT = path.resolve(opt('--out', '../review/round-8/engineer'));
 const PORT = +opt('--port', 4317);
 const ONLY = opt('--only', 'all');
 const READY_S = +opt('--ready', 300); // seconds a market may take to open (a loaded machine needs more)
@@ -154,9 +157,9 @@ try {
     check('the still fades out once the market is drawn', await page.waitForFunction(() => document.getElementById('still').classList.contains('done'), null, { timeout: 120000 }).then(() => true, () => false));
     check('no side panel or reading aside on the 3D page', await page.evaluate(() => !document.querySelector('#panel, #reader, aside.panel, aside.reader')));
     check('the stroll runs on the architect\'s stops and legs', /stops and legs/.test(report.stroll.lane), report.stroll.lane);
-    check('the stroll\'s loop is the architect\'s order', JSON.stringify(report.stroll.stops) === JSON.stringify(['glueh', 'ferris', 'wurst', 'band', 'bier', 'carousel', 'books']), JSON.stringify(report.stroll.stops));
+    check('the stroll\'s loop is the architect\'s order', JSON.stringify(report.stroll.stops) === JSON.stringify(['glueh', 'band', 'bier', 'books', 'schmuck', 'carousel', 'ferris', 'wurst']), JSON.stringify(report.stroll.stops));
     check('the signpost in the market is the carpenter\'s (act_sign_ boards)', /act_sign_/.test(report.stroll.signpost), report.stroll.signpost);
-    check('the on-screen signpost has seven arms and an overview', (await page.locator('#signboard .sb-arm').count()) === 7 && (await page.locator('#signboard .sb-home').count()) === 1);
+    check('the on-screen signpost has eight arms (the ornament shop too) and an overview', (await page.locator('#signboard .sb-arm').count()) === 8 && (await page.locator('#signboard .sb-home').count()) === 1);
     check('streaming: the section stalls and the bandstand open at lite detail', await page.evaluate(() => { const s = window.__market.streaming().state; return ['gluehwein', 'bierstand', 'bratwurst', 'buecherstand', 'bandstand'].every((id) => s[id] === 'lite' || s[id] === 'loading' || s[id] === 'full'); }), JSON.stringify(await page.evaluate(() => window.__market.streaming().state)));
     // pass 2: the town ring is not in the first load; it comes with the rides and deco stalls just after the first frame
     check('streaming: the town ring comes just after the first frame, with the rides', await page.evaluate(() => window.__market.report.deferred.includes('town')), JSON.stringify(await page.evaluate(() => window.__market.report.deferred)));
@@ -179,6 +182,39 @@ try {
     await page.mouse.move(box.x + box.width * 0.5, box.y - 40); // off the canvas: no hover label in the picture
     await page.evaluate(() => window.__market.settled());
     await shot(page, 'home_signpost.jpg');
+    // deco stalls are scenery (ADR 0004): their lite file only, even on the full market, and a click on one does nothing
+    {
+      const deco = await page.evaluate(() => {
+        const m = window.__market;
+        const models = m.report.models.filter((x) => x.kind === 'deco');
+        const full = performance.getEntriesByType('resource').map((r) => r.name).filter((u) => /\/models\/(deco_|prop_deco_)[^/]*\.glb$/.test(u) && !/\.lite\.glb$/.test(u));
+        return { ids: m.decos(), files: models.map((x) => x.file), full, streamed: m.decos().filter((id) => m.streaming().state[id] !== 'scenery') };
+      });
+      check('deco stalls: every one is in the market, at its lite file only (no full-detail download, nothing streams)', deco.ids.length >= 6 && deco.files.length === deco.ids.length && deco.files.every((f) => /\.lite\.glb$/.test(f || '')) && !deco.full.length && !deco.streamed.length, JSON.stringify(deco));
+      const hit = await page.evaluate((ids) => {
+        const m = window.__market;
+        for (const id of ids) {
+          const c = m.entryPoint(id);
+          if (!c?.onScreen) continue;
+          for (let r = 0; r <= 30; r += 5) for (let a = 0; a < 12; a++) {
+            const x = c.x + Math.cos(a * Math.PI / 6) * r, y = c.y + Math.sin(a * Math.PI / 6) * r;
+            const raw = m.rawAt(x, y)[0];
+            if (raw?.entry === id) return { id, x, y, pick: m.pickAt(x, y) };
+          }
+        }
+        return null;
+      }, deco.ids);
+      if (hit) {
+        await page.mouse.move(hit.x, hit.y);
+        await page.evaluate(() => window.__market.advance(0.5));
+        const tip = await page.evaluate(() => { const t = document.querySelector('.overlay .tip'); return t && !t.hidden ? t.textContent : null; });
+        await page.mouse.click(hit.x, hit.y);
+        await page.evaluate(() => window.__market.advance(2));
+        const after = await page.evaluate(() => ({ stop: window.__market.stop, mode: window.__market.cam().mode, reading: window.__market.reading().open, note: window.__market.note() }));
+        check(`deco stalls are not clickable: a click on ${hit.id} picks nothing, shows no label, and the view stays home (no close-up)`, !hit.pick && !tip && after.stop === null && after.mode === 'home' && !after.reading, JSON.stringify({ hit, tip, after }));
+      } else check('deco stalls are not clickable (a deco stall in the home view to click on)', false, 'no deco stall pixel in view');
+      check('no deco stops in the stroll and no deco fly-to', !report.stroll.stops.some((s) => /deco/.test(s)) && !(await page.evaluate(() => 'openDeco' in window.__market || 'decos' in (window.__market.handlers || {}))));
+    }
     // a click on the signpost's Glühwein board walks there
     const sign = await page.evaluate(() => {
       const m = window.__market;
@@ -192,7 +228,7 @@ try {
     const right = await page.evaluate(() => {
       const m = window.__market;
       let best = null;
-      for (const id of ['gluehwein', 'bratwurst', 'bierstand', 'buecherstand', 'bandstand', 'riesenrad', 'karussell']) {
+      for (const id of ['gluehwein', 'bratwurst', 'bierstand', 'buecherstand', 'bandstand', 'riesenrad', 'karussell', 'schmuck']) {
         const c = m.screenPoint(`act_sign_${id}`);
         if (!c?.onScreen) continue;
         for (let r = 0; r <= 24; r += 3) for (let a = 0; a < 12; a++) { const x = c.x + Math.cos(a * Math.PI / 6) * r, y = c.y + Math.sin(a * Math.PI / 6) * r; if (m.pickAt(x, y)?.sign && (!best || x > best.x)) best = { x, y }; }
@@ -249,19 +285,24 @@ try {
     const sr = await page.evaluate(() => window.__market.streaming());
     check('streaming: the stall at the stop comes in at full detail', sr.state.gluehwein === 'full', JSON.stringify(sr.state));
     check('streaming: the swap kept every action\'s nodes (no graft errors)', !sr.report.some((r) => /fail|error/i.test(JSON.stringify(r))), JSON.stringify(sr.report).slice(0, 300));
-    // the arrows walk on along the loop: the Riesenrad is next, and its stop is the overview from the top gondola
+    // the arrows walk on along the loop: the bandstand is next after the Glühwein stall
     await page.focus('#stage canvas');
+    const walkOn = () => page.evaluate(() => { const m = window.__market; for (let i = 0; i < 60 && m.cam().moving; i++) m.advance(0.5); m.advance(0.5); });
     await page.keyboard.press('ArrowRight');
-    await page.evaluate(() => { const m = window.__market; for (let i = 0; i < 60 && m.cam().moving; i++) m.advance(0.5); m.advance(0.5); });
+    await walkOn();
+    check('→ walks on to the next stop (the bandstand)', (await page.evaluate(() => window.__market.stop)) === 'band');
+    await page.keyboard.press('ArrowLeft');
+    await walkOn();
+    check('← walks back to the stop before', (await page.evaluate(() => window.__market.stop)) === 'glueh');
+    // the number keys follow the signpost's order: 6 is the Riesenrad, whose stop is the overview from the top gondola
+    await page.keyboard.press('6');
+    await walkOn();
     const fr = await page.evaluate(() => ({ stop: window.__market.stop, cam: window.__market.cam() }));
-    check('→ walks on to the next stop (the Riesenrad)', fr.stop === 'ferris');
+    check('key 6 walks to the Riesenrad', fr.stop === 'ferris');
     check('the Riesenrad stop is the overview, high on the wheel', fr.cam.pos[1] > 14, JSON.stringify(fr.cam.pos));
     await page.evaluate(() => window.__market.freeze(false));
     await shot(page, 'stop_riesenrad_overview.jpg', '#stage');
     await page.evaluate(() => window.__market.freeze(true));
-    await page.keyboard.press('ArrowLeft');
-    await page.evaluate(() => { const m = window.__market; for (let i = 0; i < 60 && m.cam().moving; i++) m.advance(0.5); m.advance(0.5); });
-    check('← walks back to the stop before', (await page.evaluate(() => window.__market.stop)) === 'glueh');
     await page.keyboard.press('4');
     check('key 4 walks to the Bücherstand', (await page.evaluate(() => window.__market.stop)) === 'books');
     await page.evaluate(() => { const m = window.__market; for (let i = 0; i < 60 && m.cam().moving; i++) m.advance(0.5); m.advance(0.5); });
@@ -505,7 +546,7 @@ try {
     check('key 3 walks to the Bratwurst stand', (await state(page, 'stop')) === 'wurst');
     await page.keyboard.press('ArrowRight');
     await page.evaluate(() => window.__market.advance(1));
-    check('→ walks on along the loop (the bandstand after the Bratwurst)', (await state(page, 'stop')) === 'band');
+    check('→ walks on along the loop (the Bratwurst is the last stop, so round to the Glühwein stall)', (await state(page, 'stop')) === 'glueh');
     await page.keyboard.press('Escape');
     await page.evaluate(() => window.__market.advance(1));
     check('Escape at a stop goes back to the overview', (await state(page, 'stop')) === null);
@@ -513,6 +554,181 @@ try {
     await page.keyboard.press('Enter');
     await page.evaluate(() => window.__market.advance(1));
     check('Enter on a signpost arm walks there', (await state(page, 'stop')) === 'books');
+    await ctx.close();
+  }
+
+  if (run('schmuck')) {
+    log('the ornament shop: a stroll stop with a signpost arm, and every interaction (lite market, 960 px)');
+    const { ctx, page } = await openPage(`${BASE}?quality=lite&snow=0`, { viewport: { width: 960, height: 640 } });
+    await waitReady(page);
+    const report = await page.evaluate(() => window.__market.report);
+    const settle = () => page.evaluate(() => { const m = window.__market; for (let i = 0; i < 60 && m.cam().moving; i++) m.advance(0.5); m.advance(0.5); });
+    check('the ornament shop is a stop on the stroll, between the Bücherstand and the Karussell', report.stroll.stops.join() === 'glueh,band,bier,books,schmuck,carousel,ferris,wurst', report.stroll.stops.join());
+    check('the signpost has an arm for it, in the market (act_sign_schmuck) and on screen', !!(await page.evaluate(() => window.__market.screenPoint('act_sign_schmuck'))) && (await page.locator('#signboard .sb-arm[data-place="schmuck"]').count()) === 1);
+    check('the shop is the vendor\'s stall_schmuck.glb, not a deco stall', report.models.some((m) => m.place === 'schmuck' && /stall_schmuck/.test(m.file || '') && m.kind !== 'deco'), JSON.stringify(report.models.filter((m) => m.place === 'schmuck')));
+    await page.click('#signboard .sb-arm[data-place="schmuck"]');
+    await settle();
+    const at = await page.evaluate(() => ({ stop: window.__market.stop, arrived: window.__market.arrived, here: document.getElementById('hereName').textContent }));
+    check('the signpost arm walks to the ornament shop', at.stop === 'schmuck' && at.arrived && /Christbaumschmuck/.test(at.here), JSON.stringify(at));
+    const want = ['ring', 'star', 'nut', 'smoke', 'candles', 'hang', 'pickle'];
+    const bar = await page.evaluate(() => [...document.querySelectorAll('#stopActs [data-action]')].map((b) => b.dataset.action));
+    check('the stop bar offers the shop\'s seven things to do', want.every((k) => bar.includes(k)), bar.join(' '));
+    const S = () => page.evaluate(() => window.__market.handlers.schmuck());
+    const s0 = await S();
+    check('the shop\'s goods are found (baubles, tree hooks, candles out, star dark)', s0 && s0.baubles >= 8 && s0.hooks >= 8 && s0.candles.of >= 5 && s0.candles.lit === 0 && !s0.star.on, JSON.stringify(s0));
+    await page.evaluate(() => window.__market.freeze(true)); // the clock runs by advance(); timers run in real time
+    // a bauble spins and rings a soft glass note, a different note for each bauble
+    const notes = await page.evaluate((n) => Array.from({ length: n }, (_, i) => window.__market.handlers.ornamentNote(`act_orn_bauble_${i}`)), s0.baubles);
+    check('every bauble has its own note', notes.every(Boolean) && new Set(notes).size === notes.length, notes.join(' '));
+    const rung = await page.evaluate(() => {
+      const m = window.__market, out = [];
+      for (const name of ['act_orn_bauble_0', 'act_orn_bauble_5']) {
+        const q0 = m.item(name).quaternion;
+        m.clickItem(name);
+        m.advance(0.3);
+        const q1 = m.item(name).quaternion;
+        const log = m.sfxLog().filter((x) => x.name === 'glass');
+        out.push({ name, spun: q0.some((v, i) => Math.abs(v - q1[i]) > 0.02), note: log.at(-1)?.note, want: m.handlers.ornamentNote(name) });
+        m.advance(3);
+      }
+      return out;
+    });
+    check('a clicked bauble spins and rings its own glass note', rung.every((r) => r.spun && r.note && r.note === r.want) && rung[0].note !== rung[1].note, JSON.stringify(rung));
+    // the Herrnhut star lights
+    await page.click('#stopActs [data-action="star"]');
+    await page.evaluate(() => window.__market.advance(2.5));
+    const s1 = await S();
+    check('the Herrnhut star lights', s1.star.on && s1.star.glow > s0.star.glow + 0.3, JSON.stringify([s0.star, s1.star]));
+    // the nutcracker's jaw opens
+    const jaw = await page.evaluate(() => { const m = window.__market; m.act('schmuck', 'nut'); m.advance(0.12); const a = m.handlers.schmuck().jaw; m.advance(2); return { mid: a, after: m.handlers.schmuck().jaw, crack: m.sfxLog().some((x) => x.name === 'crack') }; });
+    check('the nutcracker\'s jaw opens (and a nut cracks)', jaw.mid?.angle > 0.15 && jaw.after.angle < 0.05 && jaw.crack, JSON.stringify(jaw));
+    // the Räuchermännchen puffs smoke
+    const sm = await page.evaluate(() => { const m = window.__market; m.act('schmuck', 'smoke'); m.advance(1.2); return m.handlers.schmuck().smoke; });
+    check('the Räuchermännchen puffs smoke', sm.left > 0 && sm.opacity > 0, JSON.stringify(sm));
+    // the Schwibbogen's candles light one by one
+    const seq = await page.evaluate(() => new Promise((res) => {
+      const m = window.__market; m.act('schmuck', 'candles');
+      const seen = [m.handlers.schmuck().candles.lit], t0 = performance.now();
+      const id = setInterval(() => { const c = m.handlers.schmuck().candles; if (seen.at(-1) !== c.lit) seen.push(c.lit); if (c.lit === c.of || performance.now() - t0 > 8000) { clearInterval(id); res({ seen, of: c.of }); } }, 50);
+    }));
+    check('the Schwibbogen\'s candles light one by one', seq.seen.at(-1) === seq.of && seq.seen.length >= 3, JSON.stringify(seq));
+    // an ornament hangs on the tree's hooks, and a second click puts it back on its rail
+    const hung = await page.evaluate(() => {
+      const m = window.__market, name = 'act_orn_bauble_3';
+      const p0 = m.item(name).position;
+      m.clickItem(name); m.advance(2);
+      m.act('schmuck', 'hang'); m.advance(3);
+      const s = m.handlers.schmuck(), p1 = m.item(name).position;
+      m.clickItem(name); m.advance(3);
+      return { hung: s.hung, moved: Math.hypot(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]), back: m.handlers.schmuck().hung, home: Math.hypot(...m.item(name).position.map((v, i) => v - p0[i])) };
+    });
+    check('an ornament hangs on a hook of the display tree, and goes back to its rail', hung.hung.includes('act_orn_bauble_3') && hung.moved > 0.1 && !hung.back.length && hung.home < 0.01, JSON.stringify(hung));
+    // the pickle: a reward, a gentle chime and a line of words in the shop
+    await page.click('#stopActs [data-action="pickle"]');
+    await page.click('#stopActs [data-action="pickle"]');
+    await page.evaluate(() => window.__market.advance(1.2));
+    const pk = await page.evaluate(() => ({ s: window.__market.handlers.schmuck().pickle, chime: window.__market.sfxLog().some((x) => x.name === 'reward'), flag: document.documentElement.dataset.pickle, text: window.__market.textOn ? null : null }));
+    check('finding the pickle gives a reward: a chime and a line of words in the scene', pk.s.found && pk.s.reward && /Weihnachtsgurke/.test(pk.s.text || '') && pk.chime && pk.flag === 'found', JSON.stringify(pk));
+    await page.evaluate(() => window.__market.freeze(false));
+    await shot(page, 'stop_schmuck.jpg', '#stage');
+    await page.evaluate(() => window.__market.freeze(true));
+    await page.evaluate(() => window.__market.advance(9));
+    check('the reward\'s words go after a few seconds', !(await S()).pickle.reward);
+    // a click in 3D on one of the shop's pieces does its thing
+    {
+      let done = null;
+      for (const name of ['act_orn_nutcracker', 'act_orn_smoker', 'act_orn_schwibbogen', 'act_orn_herrnhut', 'act_orn_bauble_8', 'act_orn_bauble_2']) {
+        const aim = await aimAt(page, name);
+        if (!aim) continue;
+        const n0 = (await page.evaluate(() => window.__market.sfxLog().length));
+        await page.mouse.click(aim.x, aim.y);
+        await page.evaluate(() => window.__market.advance(1));
+        const n1 = (await page.evaluate(() => window.__market.sfxLog().length));
+        done = { name, sounds: n1 - n0 };
+        break;
+      }
+      check('a click in 3D on an ornament does its thing (a sound, a movement)', done?.sounds > 0, JSON.stringify(done));
+    }
+    await page.evaluate(() => window.__market.freeze(false));
+    await ctx.close();
+  }
+
+  if (run('cabinet')) {
+    log('the Bücherstand cabinets on a 390 px phone: tap, open, its books only, covers ≥ 44 px, arrows, a way back');
+    const { ctx, page } = await openPage(`${BASE}?snow=0`, { reducedMotion: 'reduce', viewport: { width: 390, height: 844 }, touch: true });
+    await waitReady(page);
+    await page.tap('#signboard .sb-toggle');
+    await page.tap('#signboard .sb-arm[data-place="books"]');
+    await frames(page, 2);
+    check('phone: the signpost walks to the Bücherstand', (await state(page, 'stop')) === 'books' && (await page.evaluate(() => window.__market.arrived)));
+    const cabs = await page.evaluate(() => window.__market.handlers.cabinets());
+    check('the Bücherstand has its six cabinets, each with a door (act_cab_), a sign (sign_cat_) and a tap target', cabs.length === 6 && cabs.every((c) => c.door && c.sign && c.proxy && c.books > 0), JSON.stringify(cabs));
+    // before any cabinet is open, a tap on a cabinet's door or sign is a tap on the cabinet, never on one book
+    const key = cabs[0].key;
+    const tapAt = await page.evaluate((key) => {
+      const m = window.__market;
+      for (const name of [`engine_cabinet_proxy_${key}`, `sign_cat_${key}`, `act_cab_${key}`]) {
+        const c = m.screenPoint(name);
+        if (!c?.onScreen) continue;
+        for (let r = 0; r <= 30; r += 3) for (let a = 0; a < 12; a++) {
+          const x = c.x + Math.cos(a * Math.PI / 6) * r, y = c.y + Math.sin(a * Math.PI / 6) * r;
+          if (m.pickAt(x, y)?.proxy === `cabinet:${key}`) return { x, y, via: name };
+        }
+      }
+      return null;
+    }, key);
+    if (tapAt) await page.touchscreen.tap(tapAt.x, tapAt.y);
+    else await page.evaluate((k) => window.__market.handlers.openCabinet(k), key);
+    await frames(page, 3);
+    await page.evaluate(() => window.__market.advance(2));
+    await stillCamera(page);
+    const st = await page.evaluate(() => window.__market.handlers.cabinetState());
+    check('tapping a cabinet moves to its view, opens its door and brings its books forward', !!tapAt && st?.key === key && st.open && st.door > 1 && (await page.evaluate(() => document.documentElement.dataset.cabinet)) === key, JSON.stringify({ tapAt, st }));
+    check('a clear way back is on screen (Step back)', await page.locator('#stepBack').isVisible());
+    // only this cabinet's books answer the pointer
+    const grid = await page.evaluate((mine) => {
+      const m = window.__market, r = document.querySelector('#stage canvas').getBoundingClientRect(), seen = new Set();
+      for (let y = r.top + 4; y < r.bottom; y += 12) for (let x = r.left + 4; x < r.right; x += 12) { const n = m.itemAt(x, y); if (n && /book|spine|cover/i.test(n)) seen.add(n); }
+      return { seen: [...seen], others: [...seen].filter((n) => !mine.includes(n)) };
+    }, st.books);
+    check('only the open cabinet\'s books are pickable', grid.seen.length > 0 && !grid.others.length, JSON.stringify(grid).slice(0, 300));
+    const sizes = await page.evaluate((names) => names.map((n) => ({ n, ...window.__market.screenBox(n) })), st.books);
+    const small = sizes.filter((b) => !b.onScreen || Math.min(b.w, b.h) < 44);
+    check('every cover in the open cabinet is at least 44 px on a 390 px screen, and in view', !small.length, `${sizes.length} covers; smallest ${Math.min(...sizes.map((b) => Math.min(b.w, b.h))).toFixed(1)} px; ${JSON.stringify(small.map((b) => [b.n, Math.round(b.w), Math.round(b.h)]).slice(0, 4))}`);
+    await shot(page, 'phone_cabinet_open.jpg', null, { keepScroll: true });
+    // the arrows: ← → between the books, ↑ ↓ between the cabinets
+    await page.focus('#stage canvas');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    const f2 = await page.evaluate(() => window.__market.handlers.cabinetState());
+    await page.keyboard.press('ArrowLeft');
+    const f1 = await page.evaluate(() => window.__market.handlers.cabinetState());
+    check('← → move between the open cabinet\'s books', f2.focus === st.books[Math.min(1, st.books.length - 1)] && f1.focus === st.books[0] && (await state(page, 'stop')) === 'books', JSON.stringify([f2.focus, f1.focus]));
+    await page.keyboard.press('ArrowDown');
+    await frames(page, 2);
+    const nextCab = await page.evaluate(() => window.__market.handlers.cabinetState());
+    check('↓ opens the next cabinet (the first one shuts)', nextCab?.key === cabs[1].key && nextCab.open, JSON.stringify(nextCab));
+    await page.keyboard.press('ArrowUp');
+    await frames(page, 2);
+    check('↑ goes back to the cabinet before', (await page.evaluate(() => window.__market.handlers.cabinetState()?.key)) === key);
+    // a tapped cover opens that book; Escape puts it back with the cabinet still open
+    const book = st.books[0];
+    const bAim = await aimAt(page, book);
+    if (bAim) await page.touchscreen.tap(bAim.x, bAim.y);
+    else await page.evaluate((n) => window.__market.clickItem(n), book);
+    for (let i = 0; i < 30 && (await page.evaluate(() => window.__market.openedBook()?.state)) !== 'open'; i++) await page.evaluate(() => window.__market.advance(0.5));
+    const ob = await page.evaluate(() => window.__market.openedBook());
+    check('tapping a cover opens that book', !!bAim && ob?.name === book && ob.state === 'open', JSON.stringify({ bAim, ob }));
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => window.__market.advance(2));
+    const afterBook = await page.evaluate(() => ({ book: window.__market.openedBook(), cab: window.__market.handlers.cabinetState()?.key }));
+    check('Escape puts the book back, and the cabinet is still open', afterBook.book === null && afterBook.cab === key, JSON.stringify(afterBook));
+    await page.tap('#stepBack');
+    await page.evaluate(() => window.__market.advance(2));
+    const back = await page.evaluate(() => ({ cab: window.__market.handlers.cabinetState(), stop: window.__market.stop, door: document.documentElement.dataset.cabinet || null }));
+    check('Step back shuts the cabinet and returns to the stall\'s view', back.cab === null && back.stop === 'books' && !back.door, JSON.stringify(back));
+    const closedPick = await page.evaluate((names) => names.filter((n) => { const b = window.__market.screenBox(n); return b && window.__market.itemAt(b.x, b.y) === n; }), st.books);
+    check('with the cabinet shut its books no longer answer the pointer', !closedPick.length, closedPick.join(' '));
     await ctx.close();
   }
 

@@ -553,6 +553,9 @@ def _blend(m, alpha):
             pass
 
 
+BOOK_GLOW = 0.3          # emissive factor of the book_cover_<n> materials (round 8 pass 2)
+
+
 def material(key):
     """Materials by key. Names are what the glb carries (coal_glow is named by the build contract)."""
     if key in _MATS and _MATS[key].name in bpy.data.materials:
@@ -561,7 +564,14 @@ def material(key):
         # one material per book, book_cover_<n>, so the engine can find a book's cover by name
         m = bpy.data.materials.new(f"book_cover_{key[5:]}" if key != "books" else "vendor_books")
         m.use_nodes = True
-        _atlas_nodes(m, atlas="books")
+        b = _atlas_nodes(m, atlas="books")
+        if key != "books":
+            # round 8 pass 2 (judges: the cabinets' left column read too dim at cam_cat): Mac's own books glow
+            # faintly with their own printed colours (emissiveTexture = the books colour map, factor BOOK_GLOW),
+            # so every title and author reads wherever the cabinet's lamps fall off. No extra texture is shipped.
+            tc = next(n for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image and "books_color" in n.image.name)
+            m.node_tree.links.new(tc.outputs["Color"], b.inputs["Emission Color"])
+            b.inputs["Emission Strength"].default_value = BOOK_GLOW
         _MATS[key] = m
         return m
     if key == "market":

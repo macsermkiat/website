@@ -35,7 +35,7 @@ CROWD = os.path.join(REPO, "site", "src", "crowd.json")
 MODELS = os.path.join(REPO, "site", "public", "models")
 FURN = os.path.join(HERE, "out", "furniture.json")
 NODES = os.path.join(HERE, "out", "stroll_nodes.json")
-REVIEW = os.path.join(REPO, "review", "round-5", "architect")
+REVIEW = os.path.join(REPO, "review", "round-8", "architect")
 
 EYE = 1.6               # walking eye height (m)
 CLEAR_M = 0.7           # from a stall's, ride's or the tree's surface in the walking band (0.05-2.2 m)
@@ -54,11 +54,18 @@ N = int(2 * EXT / RES)
 # to the Bratwurst (left front) -> along the front lane -> Musikpavillon -> Bierstand -> up the right
 # side -> Karussell -> back to the Bücherstand (right front) -> home.  Each side is walked out and back
 # once; no other lane is walked twice and no leg is longer than 35 m.
-ORDER = ["home", "gluehwein", "riesenrad", "bratwurst", "bandstand", "bierstand", "karussell", "buecherstand"]
+# Round 8 (docs/adr/0004): the loop now walks the whole market.  home -> Glühwein (the host's welcome) ->
+# Musikpavillon -> Bierstand -> Bücherstand -> out along the front-right to the ornament shop
+# (Christbaumschmuck, the eighth stop, at the south end of the right deco lane) -> north up the right deco
+# lane past Käse and Holzspielzeug -> Karussell -> through the gap between the tree and the carousel and
+# west along the back row (Kartoffelpuffer, Heiße Maroni, Crêpes) -> Riesenrad -> south down the left deco
+# lane (Lebkuchen, Gebrannte Mandeln, Kerzen) -> Bratwurst -> home.  No lane is walked twice.
+ORDER = ["home", "gluehwein", "bandstand", "bierstand", "buecherstand", "deco-schmuck", "karussell", "riesenrad", "bratwurst"]
 LABELS = {"home": ("Marktplatz", "Market square"), "gluehwein": ("Glühwein", "About"),
           "bratwurst": ("Bratwurst", "Writing"), "bierstand": ("Bierstand", "Projects"),
           "buecherstand": ("Bücherstand", "Reading"), "bandstand": ("Musikpavillon", "Music"),
-          "riesenrad": ("Riesenrad", "Big questions"), "karussell": ("Karussell", "Contact")}
+          "riesenrad": ("Riesenrad", "Big questions"), "karussell": ("Karussell", "Contact"),
+          "deco-schmuck": ("Christbaumschmuck", "Ornaments")}
 
 
 def rot(x, z, a):
@@ -285,30 +292,109 @@ def resample(poly, step):
     return np.stack([np.interp(s, d, poly[:, k]) for k in range(poly.shape[1])], 1), d[-1]
 
 
-def approach_point(stop, back=2.4):
-    """A point `back` metres behind a stop's eye, along its view, so the walk arrives facing it."""
+def approach_point(stop, back=2.4, toward=None, max_turn=math.radians(55)):
+    """A point `back` metres behind a stop's eye, along its view, so the walk arrives facing it.
+    Round 8: when the walk comes from (or leaves toward) the side, `toward` (a point on the way) swings that
+    point up to max_turn round the eye toward it, so the walk does not overshoot and hook back; the engine
+    turns the view to the stop's target over the last few metres."""
     e, t = np.array(stop["eye"]), np.array(stop["target"])
     f = np.array([t[0] - e[0], t[2] - e[2]]); f /= np.linalg.norm(f)
-    return (e[0] - f[0] * back, e[2] - f[1] * back)
+    b0 = -f
+    ang = 0.0
+    if toward is not None:
+        h = np.array([toward[0] - e[0], toward[1] - e[2]])
+        if np.linalg.norm(h) > 1e-6:
+            h /= np.linalg.norm(h)
+            ang = math.atan2(b0[0] * h[1] - b0[1] * h[0], float(np.dot(b0, h)))
+    want = max(-max_turn, min(max_turn, ang))
+    # the swing nearest the wanted one whose approach keeps clear of everything (people, poles, stalls)
+    cands = sorted(np.radians(np.arange(-75, 76, 5)), key=lambda a: abs(a - want))
+    for a in cands:
+        c, s_ = math.cos(a), math.sin(a)
+        b = np.array([b0[0] * c - b0[1] * s_, b0[0] * s_ + b0[1] * c])
+        pt = (e[0] + b[0] * back, e[2] + b[1] * back)
+        if "m" not in _MARGIN or los(_MARGIN["m"], (e[0], e[2]), pt, 0.7):
+            return pt
+    c, s_ = math.cos(want), math.sin(want)
+    b = np.array([b0[0] * c - b0[1] * s_, b0[0] * s_ + b0[1] * c])
+    return (e[0] + b[0] * back, e[2] + b[1] * back)
 
 
-def plan_leg(cost, clear, A, B):
+_MARGIN = {}
+
+
+# Round 8: loop legs that must walk past the deco lanes and the back row go through via points: a point
+# on the lane in front of each deco counter (VIA_FRONT metres out from the stall's origin along its front),
+# and the gap between the tree and the Karussell.  Each stretch between via points is planned and
+# string-pulled on its own, so the walk cannot cut across and skip a stall.
+VIA_FRONT = 4.0
+VIA = {
+    ("deco-schmuck", "karussell"): ["deco-kaese", "deco-spielzeug"],
+    ("karussell", "riesenrad"): ["@gap", "deco-kartoffelpuffer", "deco-maroni", "deco-crepes"],
+    ("riesenrad", "bratwurst"): ["deco-lebkuchen", "deco-mandeln", "deco-kerzen"],
+}
+_PLACES = {}
+
+
+# jumps between the Karussell and the front of the market walk up the right deco lane too (the way the loop
+# goes), not through the people at the Bücherstand's flank
+FRONT = {"home", "gluehwein", "bandstand", "bierstand", "buecherstand", "bratwurst"}
+
+
+def via_names(a, b):
+    if (a, b) in VIA:
+        return VIA[(a, b)]
+    if (b, a) in VIA:
+        return VIA[(b, a)][::-1]
+    if b == "karussell" and a in FRONT:
+        return ["deco-kaese"]
+    if a == "karussell" and b in FRONT:
+        return ["deco-kaese"]
+    return []
+
+
+def via_points(a, b):
+    out = []
+    for v in via_names(a, b):
+        if v == "@gap":
+            t, c = _PLACES["tree"]["pos"], _PLACES["karussell"]["pos"]
+            d = np.array(c, float) - np.array(t, float); L_ = np.linalg.norm(d); d /= L_
+            rt, rc = 5.3, 6.33                       # the fir's lowest boughs and the carousel's rim
+            m = (np.array(t) + d * rt + np.array(t) + d * (L_ - rc)) / 2
+            out.append((float(m[0]), float(m[1])))
+            continue
+        p = _PLACES[v]
+        dx, dz = rot(0.0, VIA_FRONT, p.get("rotY", 0.0))
+        out.append((p["pos"][0] + dx, p["pos"][1] + dz))
+    return out
+
+
+def plan_leg(cost, clear, A, B, loop=True):
     a2, b2 = (A["eye"][0], A["eye"][2]), (B["eye"][0], B["eye"][2])
+    vias = via_points(A["id"], B["id"])
     if A["id"] == "home":
         a_out = (1.0, 17.0)           # walk down from the home view onto the front lane
     else:
-        a_out = approach_point(A)
-    b_in = (1.0, 17.0) if B["id"] == "home" else approach_point(B)
-    cells = astar(cost, to_ij(*a_out), to_ij(*b_in))
-    xy = [((i + 0.5) * RES - EXT, (j + 0.5) * RES - EXT) for i, j in cells]
-    # string-pull: keep the farthest point still in sight with full clearance (+ a margin)
-    pulled = [xy[0]]; k = 0
-    while k < len(xy) - 1:
-        far = k + 1
-        for m in range(len(xy) - 1, k, -1):
-            if los(clear, xy[k], xy[m], 0.5):
-                far = m; break
-        pulled.append(xy[far]); k = far
+        a_out = approach_point(A, toward=(vias[0] if vias else b2) if loop else None)
+    b_in = (1.0, 17.0) if B["id"] == "home" else approach_point(B, toward=(vias[-1] if vias else a2) if loop else None)
+    anchors = [a_out] + vias + [b_in]
+    cost = cost.copy()                       # let the walk leave and reach each anchor even where it is tight
+    for pt in anchors:
+        i, j = to_ij(*pt)
+        win = cost[max(0, i - 6):i + 7, max(0, j - 6):j + 7]
+        win[~np.isfinite(win)] = 3.0
+    pulled = [anchors[0]]
+    for s0, s1 in zip(anchors[:-1], anchors[1:]):
+        cells = astar(cost, to_ij(*s0), to_ij(*s1))
+        xy = [((i + 0.5) * RES - EXT, (j + 0.5) * RES - EXT) for i, j in cells]
+        # string-pull: keep the farthest point still in sight with full clearance (+ a margin)
+        k = 0
+        while k < len(xy) - 1:
+            far = k + 1
+            for m in range(len(xy) - 1, k, -1):
+                if los(clear, xy[k], xy[m], 0.7):
+                    far = m; break
+            pulled.append(xy[far]); k = far
     # dense polyline -> Chaikin smoothing (corners cut, ends kept) -> resample
     poly = np.array(([a2] if A["id"] != "home" else []) + pulled + ([b2] if B["id"] != "home" else []), float)
     for _ in range(4):
@@ -437,8 +523,11 @@ def check_leg(pts, margin, d_big, d_small, named, ppl, edge):
 
 def main():
     L, places = load()
+    _PLACES.update(places)
     nodes = dump_nodes(places)
     furn = json.load(open(FURN))
+    # the string-light poles as architect_plan.py has them now (square.py writes the same list when it runs)
+    furn["poles"] = [[float(x), float(z), 0.2] for k, (x, z) in enumerate(P.POLES_THREE) if k not in P.RETIRED_POLES]
     crowd = json.load(open(CROWD)) if os.path.exists(CROWD) else {}
     big, small, edge, named = obstacles(places, nodes, furn)
     ppl, movers = people(crowd)
@@ -453,6 +542,7 @@ def main():
     # margin: how far the camera could still move toward the nearest thing before it is too close
     margin = np.minimum(np.minimum(d_big - CLEAR_M, d_small - FURN_M), d_ppl - PERSON_M)
     margin[edge] = -1
+    _MARGIN["m"] = margin
     solid = big | small
 
     if os.environ.get("CHECK_ONLY"):
@@ -477,7 +567,7 @@ def main():
         unplanned = []
         for a, b, loop in pairs:
             try:
-                pts = plan_leg(cost, margin, byid[a], byid[b])
+                pts = plan_leg(cost, margin, byid[a], byid[b], loop)
             except RuntimeError as e:
                 print(f"[stroll] {a} -> {b}: {e}"); unplanned.append((a, b)); continue
             length = float(np.sum(np.linalg.norm(np.diff(np.array(pts), axis=0), axis=1)))
@@ -521,7 +611,7 @@ def main():
                 lg["path_nodes"] = [f"path_{k:03d}", f"path_{k + len(lg['points']) - 1:03d}"]
                 k += len(lg["points"])
         L["stroll"] = {
-            "about": ("Guided stroll (docs/adr/0003). stops is the loop in walking order (prev/next walk to the "
+            "about": ("Guided stroll (docs/adr/0003, round 8: docs/adr/0004). stops is the loop in walking order (prev/next walk to the "
                       "neighbouring stop); a stop's eye/target are three.js metres and match the place's cam_view / "
                       "cam_target (riesenrad: the foot of the wheel, with `overview` the view from the top gondola). "
                       "legs holds one path per pair of stops: loop legs join neighbours, the rest let a signpost "
@@ -533,14 +623,27 @@ def main():
                       "standing person in crowd.json (walkers move, so the crowd should let them yield). Look along the path and turn toward the "
                       "stop's target over the last few metres. square.glb carries the loop legs as empties "
                       "path_000... in order (path_nodes gives each loop leg's first and last). Generated by "
-                      "blender/square/stroll.py; re-run it after layout or crowd changes."),
+                      "blender/square/stroll.py; re-run it after layout or crowd changes. Round 8: nine stops; "
+                      "the eighth place is the ornament shop (layout id deco-schmuck, signpost arm act_sign_schmuck, "
+                      "its eye/target from stall_schmuck.glb's cam_view / cam_target). The loop walks the whole market: "
+                      "Bücherstand -> ornament shop goes out along the front-right, ornament shop -> Karussell walks up "
+                      "the right deco lane past Käse and Holzspielzeug, Karussell -> Riesenrad goes through the gap "
+                      "between the tree and the carousel and along the back row past Kartoffelpuffer, Heiße Maroni and "
+                      "Crêpes, and Riesenrad -> Bratwurst walks down the left deco lane past Lebkuchen, Gebrannte "
+                      "Mandeln and Kerzen, about 2 m off each deco counter (deco_pass gives each stall's nearest loop "
+                      "point). Jumps between the Karussell and the front walk up the right deco lane as well."),
             "eye_height": EYE,
             "order": ORDER,
             "stops": stops,
+            "deco_pass": deco_pass(legs),
             "legs": legs,
         }
         write_layout(L)
-    draw_map(stops, legs, solid, ppl, movers, places, furn)
+    dp = deco_pass(legs)
+    for pid, v in dp.items():
+        line = f"deco pass {pid:>22}: {v['from_counter_m']:.2f} m from the counter front, on {v['leg']}"
+        report.append(line); print("[deco]", line)
+    draw_map(stops, legs, solid, ppl, movers, places, furn, dp, named, nodes)
     with open(os.path.join(HERE, "out", "stroll_check.txt"), "w") as f:
         f.write("\n".join(report) + f"\nfailures: {bad}\nlegs below the {ROBUST} m robustness target: {warn}\n"
                 "(checked on centripetal, uniform and chordal Catmull-Rom curves)\n")
@@ -548,6 +651,32 @@ def main():
         bad += len(unplanned)
     print(f"[stroll] failures: {bad}")
     sys.exit(1 if bad else 0)
+
+
+DECO_FRONT = 1.76         # a deco stall's counter front, metres out from its origin (deco kit bounding box)
+
+
+def deco_pass(legs):
+    """Each deco stall's nearest point on the loop: which leg, how far from the middle of its counter front."""
+    out = {}
+    loop = [lg for lg in legs if lg["loop"]]
+    for pid, p in _PLACES.items():
+        if p["kind"] != "deco":
+            continue
+        front = 1.82 if p["asset"].startswith("stall_") else DECO_FRONT
+        dx, dz = rot(0.0, front, p.get("rotY", 0.0))
+        fx, fz = p["pos"][0] + dx, p["pos"][1] + dz
+        best = (99.0, None)
+        for lg in loop:
+            d = catmull(lg["points"], per=10)
+            d = d[d[:, 1] <= 3.5]
+            if not len(d):
+                continue
+            dd = float(np.hypot(d[:, 0] - fx, d[:, 2] - fz).min())
+            if dd < best[0]:
+                best = (dd, f"{lg['from']} -> {lg['to']}")
+        out[pid] = {"leg": best[1], "from_counter_m": round(best[0], 2)}
+    return out
 
 
 def seg_pts(wp, step=0.2):
@@ -569,6 +698,8 @@ def write_layout(L):
     s += f'    "about": {json.dumps(stroll["about"], ensure_ascii=False)},\n'
     s += f'    "eye_height": {stroll["eye_height"]},\n'
     s += f'    "order": {json.dumps(stroll["order"])},\n'
+    if "deco_pass" in stroll:
+        s += f'    "deco_pass": {json.dumps(stroll["deco_pass"], ensure_ascii=False)},\n'
     s += '    "stops": [\n' + ",\n".join("      " + json.dumps(st, ensure_ascii=False) for st in stroll["stops"]) + "\n    ],\n"
     s += '    "legs": [\n' + ",\n".join("      " + json.dumps(lg, ensure_ascii=False) for lg in stroll["legs"]) + "\n    ]\n"
     s += "  }\n}\n"
@@ -578,49 +709,94 @@ def write_layout(L):
     L["places"] = places; L["stroll"] = stroll
 
 
-def draw_map(stops, legs, solid, ppl, movers, places, furn):
+def draw_map(stops, legs, solid, ppl, movers, places, furn, dp=None, named=None, nodes=None):
     try:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+        from matplotlib.colors import ListedColormap
     except ImportError:
         print("[stroll] no matplotlib, map skipped"); return
     os.makedirs(REVIEW, exist_ok=True)
     fig, ax = plt.subplots(figsize=(12.8, 12.8), dpi=100)
     ax.set_facecolor("#1c1f26")
-    ax.imshow(solid.T, origin="lower", extent=[-EXT, EXT, -EXT, EXT], cmap="Greys", alpha=0.85, vmin=0, vmax=1.4)
+    ext = [-EXT, EXT, -EXT, EXT]
+    ax.imshow(solid.T, origin="lower", extent=ext, cmap=ListedColormap(["#1c1f26", "#5a5d66"]), vmin=0, vmax=1)
+    # footprints by kind: deco stalls warm brown, the ornament shop gold, section stalls and rides grey-blue
+    if named:
+        tint = {"deco": "#8a5a33", "section": "#6d7891", "ride": "#6d7891", "scenery": "#3f6b45"}
+        for kind, nm, m in named:
+            c = tint.get(kind)
+            if nm == "deco-schmuck":
+                c = "#d9a520"
+            if nm == "tree":
+                c = "#2f6b3a"
+            if c and m is not None and m.any():
+                ax.imshow(np.ma.masked_where(~m.T, m.T), origin="lower", extent=ext,
+                          cmap=ListedColormap([c]), vmin=0, vmax=1, alpha=0.95, zorder=2)
     th = np.linspace(0, 2 * np.pi, 400)
     pr = np.array([P.plaza_r(t) for t in th])
     ax.plot(pr * np.cos(th), -pr * np.sin(th), color="#777", lw=1)
     for wid, path in movers:
-        w = np.array(path); ax.plot(w[:, 0], w[:, 1], color="#4a6b8a", lw=0.8, ls=":")
+        w = np.array(path); ax.plot(w[:, 0], w[:, 1], color="#4a6b8a", lw=0.8, ls=":", zorder=3)
     for px, pz, _ in ppl:
-        ax.add_patch(plt.Circle((px, pz), PERSON_R, color="#e0a040"))
-        ax.add_patch(plt.Circle((px, pz), PERSON_M, fill=False, color="#e0a040", lw=0.4))
+        ax.add_patch(plt.Circle((px, pz), PERSON_R, color="#e0a040", zorder=4))
+        ax.add_patch(plt.Circle((px, pz), PERSON_M, fill=False, color="#e0a040", lw=0.4, zorder=4))
     for kind, items in furn.items():
         for x, z, r in items:
-            ax.add_patch(plt.Circle((x, z), r + FURN_M, fill=False, color="#6fa0d0", lw=0.4))
+            ax.add_patch(plt.Circle((x, z), r + FURN_M, fill=False, color="#6fa0d0", lw=0.4, zorder=4))
     for lg in legs:
         d = catmull(lg["points"], per=10)
         if lg["loop"]:
-            ax.plot(d[:, 0], d[:, 2], color="#ff5a3c", lw=2.4, zorder=5)
-            ax.scatter([p[0] for p in lg["points"]], [p[2] for p in lg["points"]], s=6, color="#ffd0a0", zorder=6)
+            ax.plot(d[:, 0], d[:, 2], color="#ff5a3c", lw=2.6, zorder=6)
+            # walking direction arrows every ~8 m
+            seg = np.r_[0, np.cumsum(np.hypot(np.diff(d[:, 0]), np.diff(d[:, 2])))]
+            for t in np.arange(4.0, seg[-1] - 2, 8.0):
+                k = int(np.searchsorted(seg, t))
+                if 0 < k < len(d) - 1 and d[k, 1] < 3.5:
+                    ax.annotate("", xy=(d[k + 1, 0], d[k + 1, 2]), xytext=(d[k - 1, 0], d[k - 1, 2]),
+                                arrowprops=dict(arrowstyle="-|>", color="#ffcf9a", lw=0, mutation_scale=13), zorder=7)
         else:
-            ax.plot(d[:, 0], d[:, 2], color="#7fd07f", lw=0.7, alpha=0.6, zorder=4)
+            ax.plot(d[:, 0], d[:, 2], color="#7fd07f", lw=0.6, alpha=0.45, zorder=5)
     for k, s in enumerate(stops):
-        ax.scatter([s["eye"][0]], [s["eye"][2]], s=80, color="#fff", zorder=7, edgecolor="#ff5a3c")
-        ax.annotate(f"{k}. {s['label']}", (s["eye"][0], s["eye"][2]), xytext=(6, 6), textcoords="offset points",
-                    color="w", fontsize=11, zorder=8)
+        shop = s["id"] == "deco-schmuck"
+        ax.scatter([s["eye"][0]], [s["eye"][2]], s=150 if shop else 90, color="#ffd34d" if shop else "#fff",
+                   marker="*" if shop else "o", zorder=8, edgecolor="#ff5a3c")
+        ax.annotate(f"{k}. {s['label']}", (s["eye"][0], s["eye"][2]), xytext=(7, -12), textcoords="offset points",
+                    color="#ffd34d" if shop else "w", fontsize=11, fontweight="bold", zorder=9)
         ax.annotate("", xy=(s["target"][0], s["target"][2]), xytext=(s["eye"][0], s["eye"][2]),
-                    arrowprops=dict(arrowstyle="->", color="#fff", lw=0.8))
+                    arrowprops=dict(arrowstyle="->", color="#fff", lw=0.8), zorder=8)
     for p in places.values():
         if p["kind"] in ("section", "landmark", "deco"):
-            ax.text(p["pos"][0], p["pos"][1], p["label"], color="#bbb", fontsize=7, ha="center", va="center")
+            txt = p["label"]
+            if dp and p["id"] in dp and p["id"] != "deco-schmuck":
+                txt += f"\n{dp[p['id']]['from_counter_m']:.1f} m"
+            ax.text(p["pos"][0], p["pos"][1], txt, color="#fff" if p["kind"] == "deco" else "#ddd", fontsize=7.5,
+                    ha="center", va="center", zorder=9)
+    # the signpost and its arms, read from the shipped signpost.glb (act_sign_* nodes, top board first)
+    sp = places.get("signpost")
+    if sp:
+        ax.scatter([sp["pos"][0]], [sp["pos"][1]], s=70, marker="^", color="#c8a46a", zorder=9, edgecolor="k")
+        arms = []
+        if nodes and "signpost.glb" in nodes:
+            n = nodes["signpost.glb"]["nodes"]
+            arms = [k[len("act_sign_"):] for k, v in sorted(n.items(), key=lambda kv: -kv[1][1]) if k.startswith("act_sign_")]
+        txt = "Wegweiser (signpost.glb) arms, top to bottom:\n" + "\n".join(
+            ("  * " if a == "schmuck" else "    ") + a for a in arms)
+        ax.text(-33, 33.5, txt, color="#e8dcbc", fontsize=9, va="bottom", ha="left", family="monospace", zorder=10,
+                bbox=dict(boxstyle="round", fc="#111", ec="#c8a46a", alpha=0.9))
+        ax.annotate("signpost", (sp["pos"][0], sp["pos"][1]), xytext=(6, 4), textcoords="offset points",
+                    color="#c8a46a", fontsize=9, zorder=9)
+    order = " > ".join(f"{k}" for k in range(len(stops))) + " > 0"
+    leg_txt = ("Red: the loop (arrows: walking direction; " + order + ").  Green: direct legs for the signpost.\n"
+               "Brown: deco stalls (number: nearest loop point to the counter front).  Gold star: the ornament shop stop.\n"
+               "Grey-blue: section stalls, rides.  Orange: standing people (0.6 m ring).  Blue rings: furniture + 0.5 m.  Dotted: walkers.")
+    ax.text(33, -31.3, leg_txt, color="#ddd", fontsize=8, va="top", ha="right", zorder=10,
+            bbox=dict(boxstyle="round", fc="#111", ec="#555", alpha=0.9))
     ax.set_xlim(-34, 34); ax.set_ylim(36, -32)        # +z toward the bottom: the home camera is at the bottom
     ax.set_aspect("equal")
-    ax.set_title("Guided stroll, top-down (three.js x right, z down). Red: loop legs; green: direct legs; "
-                 "grey: stalls, rides, tree (0.05-2.2 m), furniture; orange: standing people (0.6 m ring); blue: furniture + 0.5 m; dotted: walkers",
-                 color="w", fontsize=9)
+    ax.set_title("Guided stroll, round 8: top-down check (three.js x right, z down; home camera at the bottom)",
+                 color="w", fontsize=11)
     fig.patch.set_facecolor("#111")
     ax.tick_params(colors="#aaa")
     fig.tight_layout()

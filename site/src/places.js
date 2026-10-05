@@ -1,5 +1,6 @@
-// The seven interactive places and how to recognise them in file names, layout ids and node names.
-export const PLACE_ORDER = ['glueh', 'bier', 'wurst', 'books', 'band', 'ferris', 'carousel'];
+// The interactive places and how to recognise them in file names, layout ids and node names.
+// Round 8 (docs/adr/0004): the ornament shop (layout id deco-schmuck) is the eighth, a stop for play with no section text.
+export const PLACE_ORDER = ['glueh', 'bier', 'wurst', 'books', 'band', 'ferris', 'carousel', 'schmuck'];
 
 export const PLACE_ALIASES = {
   glueh: ['glueh', 'gluehwein', 'glühwein', 'gluhwein', 'about'],
@@ -9,10 +10,13 @@ export const PLACE_ALIASES = {
   band: ['band', 'bandstand', 'music'],
   ferris: ['ferris', 'riesenrad', 'ferriswheel', 'wheel', 'big-questions', 'bigquestions'],
   carousel: ['carousel', 'karussell', 'carrousel', 'contact'],
+  schmuck: ['schmuck', 'deco-schmuck', 'christbaumschmuck', 'ornaments', 'ornament-shop', 'stall-schmuck'],
 };
 
 export const SECTION_STALLS = ['glueh', 'bier', 'wurst', 'books'];
 export const LANDMARKS = ['band', 'ferris', 'carousel'];
+/** Places that are for play: a stop on the stroll with things to do, but no section text (the ornament shop). */
+export const PLAY_PLACES = ['schmuck'];
 
 const norm = (s) => String(s || '').toLowerCase().normalize('NFC').replace(/[\s_.]+/g, '-');
 

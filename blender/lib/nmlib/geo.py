@@ -191,8 +191,8 @@ class Part:
         b = self.default_bevel if bevel is None else bevel
         if b is None:
             b = 0.004 if self.kind != "flat" else 0.0
-        if state.lite():
-            b = 0.0
+        if state.lite() or (not state.bevels() and b < 0.01):
+            b = 0.0                     # scenery builds (state.set_bevels(False)) keep only >= 1 cm rounds
         if b and min(size) > 2.6 * b:
             bm.normal_update()
             sharp = [e for e in bm.edges if len(e.link_faces) == 2 and

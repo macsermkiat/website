@@ -257,7 +257,7 @@
    "stall": "buecherstand",
    "name": "The Pragmatic Programmer",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Pragmatic Programmer",
    "author": "David Thomas and Andrew Hunt",
    "slug": "the-pragmatic-programmer",
@@ -265,17 +265,19 @@
    "category_de": "Handwerk & Gewohnheit",
    "cover_material": "book_cover_50",
    "cover_uv": [
-    0.82251,
-    0.62447,
-    0.91333,
-    0.70756
+    0.0022,
+    0.31766,
+    0.13843,
+    0.4156
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.024,
-    0.235,
-    0.187
+    0.019,
+    0.182,
+    0.145
    ]
   },
   "act_book_51": {
@@ -283,7 +285,7 @@
    "stall": "buecherstand",
    "name": "Clean Code",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Clean Code",
    "author": "Robert C. Martin",
    "slug": "clean-code",
@@ -291,17 +293,19 @@
    "category_de": "Handwerk & Gewohnheit",
    "cover_material": "book_cover_51",
    "cover_uv": [
-    0.0022,
-    0.71254,
-    0.08862,
-    0.79563
+    0.14282,
+    0.31766,
+    0.27271,
+    0.4156
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.026,
-    0.235,
-    0.178
+    0.021,
+    0.191,
+    0.145
    ]
   },
   "act_book_52": {
@@ -309,7 +313,7 @@
    "stall": "buecherstand",
    "name": "Deep Work",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Deep Work",
    "author": "Cal Newport",
    "slug": "deep-work",
@@ -317,17 +321,19 @@
    "category_de": "Handwerk & Gewohnheit",
    "cover_material": "book_cover_52",
    "cover_uv": [
-    0.69849,
-    0.79883,
-    0.7688,
-    0.87518
+    0.68677,
+    0.61426,
+    0.79224,
+    0.70438
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.026,
-    0.216,
-    0.145
+    0.215,
+    0.144
    ]
   },
   "act_book_53": {
@@ -335,7 +341,7 @@
    "stall": "buecherstand",
    "name": "Atomic Habits",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Atomic Habits",
    "author": "James Clear",
    "slug": "atomic-habits",
@@ -343,17 +349,19 @@
    "category_de": "Handwerk & Gewohnheit",
    "cover_material": "book_cover_53",
    "cover_uv": [
-    0.41284,
-    0.71254,
-    0.48804,
-    0.79563
+    0.74829,
+    0.31766,
+    0.86108,
+    0.4156
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.026,
-    0.235,
-    0.155
+    0.024,
+    0.215,
+    0.142
    ]
   },
   "act_book_54": {
@@ -361,7 +369,7 @@
    "stall": "buecherstand",
    "name": "Ultralearning",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Ultralearning",
    "author": "Scott H. Young",
    "slug": "ultralearning",
@@ -369,17 +377,19 @@
    "category_de": "Handwerk & Gewohnheit",
    "cover_material": "book_cover_54",
    "cover_uv": [
-    0.74048,
-    0.62447,
-    0.81812,
-    0.70934
+    0.60767,
+    0.21498,
+    0.72437,
+    0.31515
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.026,
-    0.24,
-    0.16
+    0.023,
+    0.215,
+    0.143
    ]
   },
   "act_book_39": {
@@ -387,7 +397,7 @@
    "stall": "buecherstand",
    "name": "Quit",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Quit",
    "author": "Annie Duke",
    "slug": "quit",
@@ -395,17 +405,19 @@
    "category_de": "Risiko & Entscheidungen",
    "cover_material": "book_cover_39",
    "cover_uv": [
-    0.33032,
-    0.62447,
-    0.40796,
-    0.70934
+    0.0022,
+    0.21498,
+    0.1189,
+    0.31515
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.028,
-    0.24,
-    0.16
+    0.025,
+    0.215,
+    0.143
    ]
   },
   "act_book_40": {
@@ -413,7 +425,7 @@
    "stall": "buecherstand",
    "name": "Poor Charlie’s Almanack",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Poor Charlie’s Almanack",
    "author": "Charles T. Munger",
    "slug": "poor-charlies-almanack",
@@ -421,17 +433,19 @@
    "category_de": "Risiko & Entscheidungen",
    "cover_material": "book_cover_40",
    "cover_uv": [
-    0.02563,
-    0.51509,
-    0.11792,
-    0.60707
+    0.0022,
+    0.00126,
+    0.14087,
+    0.10979
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.042,
-    0.26,
-    0.19
+    0.032,
+    0.198,
+    0.145
    ]
   },
   "act_book_41": {
@@ -439,7 +453,7 @@
    "stall": "buecherstand",
    "name": "The Misbehavior of Markets",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Misbehavior of Markets",
    "author": "Benoit Mandelbrot and Richard L. Hudson",
    "slug": "the-misbehavior-of-markets",
@@ -447,17 +461,19 @@
    "category_de": "Risiko & Entscheidungen",
    "cover_material": "book_cover_41",
    "cover_uv": [
-    0.33325,
-    0.71254,
-    0.40845,
-    0.79563
+    0.6311,
+    0.31766,
+    0.7439,
+    0.4156
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.028,
-    0.235,
-    0.155
+    0.026,
+    0.215,
+    0.142
    ]
   },
   "act_book_42": {
@@ -465,7 +481,7 @@
    "stall": "buecherstand",
    "name": "Antifragile",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Antifragile",
    "author": "Nassim Nicholas Taleb",
    "slug": "antifragile",
@@ -473,17 +489,19 @@
    "category_de": "Risiko & Entscheidungen",
    "cover_material": "book_cover_42",
    "cover_uv": [
-    0.8064,
-    0.71254,
-    0.88013,
-    0.79386
+    0.3479,
+    0.41811,
+    0.45874,
+    0.51409
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.034,
-    0.23,
-    0.152
+    0.032,
+    0.215,
+    0.142
    ]
   },
   "act_book_43": {
@@ -491,7 +509,7 @@
    "stall": "buecherstand",
    "name": "The Black Swan",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Black Swan",
    "author": "Nassim Nicholas Taleb",
    "slug": "the-black-swan",
@@ -499,17 +517,19 @@
    "category_de": "Risiko & Entscheidungen",
    "cover_material": "book_cover_43",
    "cover_uv": [
-    0.88452,
-    0.71254,
-    0.95825,
-    0.79386
+    0.46313,
+    0.41811,
+    0.57397,
+    0.51409
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.028,
-    0.23,
-    0.152
+    0.026,
+    0.215,
+    0.142
    ]
   },
   "act_book_44": {
@@ -517,7 +537,7 @@
    "stall": "buecherstand",
    "name": "Algorithms to Live By",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Algorithms to Live By",
    "author": "Brian Christian and Tom Griffiths",
    "slug": "algorithms-to-live-by",
@@ -525,17 +545,19 @@
    "category_de": "Risiko & Entscheidungen",
    "cover_material": "book_cover_44",
    "cover_uv": [
-    0.84546,
-    0.79883,
-    0.91333,
-    0.87518
+    0.0022,
+    0.71024,
+    0.10425,
+    0.80036
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.026,
-    0.216,
-    0.14
+    0.215,
+    0.139
    ]
   },
   "act_book_45": {
@@ -543,7 +565,7 @@
    "stall": "buecherstand",
    "name": "Framers",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Framers",
    "author": "Kenneth Cukier et al.",
    "slug": "framers",
@@ -551,17 +573,19 @@
    "category_de": "Risiko & Entscheidungen",
    "cover_material": "book_cover_45",
    "cover_uv": [
-    0.41235,
-    0.62447,
-    0.48999,
-    0.70934
+    0.12329,
+    0.21498,
+    0.23999,
+    0.31515
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.026,
-    0.24,
-    0.16
+    0.023,
+    0.215,
+    0.143
    ]
   },
   "act_book_46": {
@@ -569,7 +593,7 @@
    "stall": "buecherstand",
    "name": "Think Again",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Think Again",
    "author": "Adam Grant",
    "slug": "think-again",
@@ -577,17 +601,19 @@
    "category_de": "Risiko & Entscheidungen",
    "cover_material": "book_cover_46",
    "cover_uv": [
-    0.49438,
-    0.62447,
-    0.57202,
-    0.70934
+    0.24438,
+    0.21498,
+    0.36108,
+    0.31515
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.026,
-    0.24,
-    0.16
+    0.023,
+    0.215,
+    0.143
    ]
   },
   "act_book_47": {
@@ -595,7 +621,7 @@
    "stall": "buecherstand",
    "name": "Calling Bullshit",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Calling Bullshit",
    "author": "Carl T. Bergstrom and Jevin D. West",
    "slug": "calling-bullshit",
@@ -603,17 +629,19 @@
    "category_de": "Risiko & Entscheidungen",
    "cover_material": "book_cover_47",
    "cover_uv": [
-    0.57642,
-    0.62447,
-    0.65405,
-    0.70934
+    0.36548,
+    0.21498,
+    0.48218,
+    0.31515
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.03,
-    0.24,
-    0.16
+    0.027,
+    0.215,
+    0.143
    ]
   },
   "act_book_48": {
@@ -621,7 +649,7 @@
    "stall": "buecherstand",
    "name": "Thinking, Fast and Slow",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Thinking, Fast and Slow",
    "author": "Daniel Kahneman",
    "slug": "thinking-fast-and-slow",
@@ -629,17 +657,19 @@
    "category_de": "Risiko & Entscheidungen",
    "cover_material": "book_cover_48",
    "cover_uv": [
-    0.0022,
-    0.79883,
-    0.07593,
-    0.88015
+    0.57837,
+    0.41811,
+    0.68921,
+    0.51409
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.036,
-    0.23,
-    0.152
+    0.034,
+    0.215,
+    0.142
    ]
   },
   "act_book_49": {
@@ -647,7 +677,7 @@
    "stall": "buecherstand",
    "name": "The Book of Why",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Book of Why",
    "author": "Judea Pearl and Dana Mackenzie",
    "slug": "the-book-of-why",
@@ -655,17 +685,19 @@
    "category_de": "Risiko & Entscheidungen",
    "cover_material": "book_cover_49",
    "cover_uv": [
-    0.65845,
-    0.62447,
-    0.73608,
-    0.70934
+    0.48657,
+    0.21498,
+    0.60327,
+    0.31515
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.03,
-    0.24,
-    0.16
+    0.027,
+    0.215,
+    0.143
    ]
   },
   "act_book_10": {
@@ -841,7 +873,7 @@
    "stall": "buecherstand",
    "name": "The Laws of Human Nature",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Laws of Human Nature",
    "author": "Robert Greene",
    "slug": "the-laws-of-human-nature",
@@ -849,17 +881,19 @@
    "category_de": "Geist & Körper",
    "cover_material": "book_cover_16",
    "cover_uv": [
-    0.7019,
-    0.51509,
-    0.77954,
-    0.59996
+    0.12329,
+    0.1123,
+    0.23999,
+    0.21247
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.05,
-    0.24,
-    0.16
+    0.035,
+    0.215,
+    0.143
    ]
   },
   "act_book_17": {
@@ -867,7 +901,7 @@
    "stall": "buecherstand",
    "name": "Man's Search for Meaning",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Man's Search for Meaning",
    "author": "Viktor E. Frankl",
    "slug": "mans-search-for-meaning",
@@ -875,13 +909,15 @@
    "category_de": "Geist & Körper",
    "cover_material": "book_cover_17",
    "cover_uv": [
-    0.42554,
-    0.88335,
-    0.48608,
-    0.95046
+    0.87134,
+    0.80287,
+    0.96265,
+    0.88211
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.02,
     0.19,
@@ -893,7 +929,7 @@
    "stall": "buecherstand",
    "name": "Grit",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Grit",
    "author": "Angela Duckworth",
    "slug": "grit",
@@ -901,17 +937,19 @@
    "category_de": "Geist & Körper",
    "cover_material": "book_cover_18",
    "cover_uv": [
-    0.78394,
-    0.51509,
-    0.86157,
-    0.59996
+    0.24438,
+    0.1123,
+    0.36108,
+    0.21247
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.03,
-    0.24,
-    0.16
+    0.027,
+    0.215,
+    0.143
    ]
   },
   "act_book_19": {
@@ -919,7 +957,7 @@
    "stall": "buecherstand",
    "name": "How to Be Bold",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "How to Be Bold",
    "author": "Ranjay Gulati",
    "slug": "how-to-be-bold",
@@ -927,17 +965,19 @@
    "category_de": "Geist & Körper",
    "cover_material": "book_cover_19",
    "cover_uv": [
-    0.09302,
-    0.71254,
-    0.16968,
-    0.79563
+    0.2771,
+    0.31766,
+    0.39233,
+    0.4156
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.028,
-    0.235,
-    0.158
+    0.026,
+    0.215,
+    0.145
    ]
   },
   "act_book_20": {
@@ -945,7 +985,7 @@
    "stall": "buecherstand",
    "name": "The Courage to Be Happy",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Courage to Be Happy",
    "author": "Ichiro Kishimi and Fumitake Koga",
    "slug": "the-courage-to-be-happy",
@@ -953,13 +993,15 @@
    "category_de": "Geist & Körper",
    "cover_material": "book_cover_20",
    "cover_uv": [
-    0.0022,
-    0.88335,
-    0.07007,
-    0.95756
+    0.57642,
+    0.71024,
+    0.67847,
+    0.79785
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.024,
     0.21,
@@ -971,7 +1013,7 @@
    "stall": "buecherstand",
    "name": "The Courage to Be Disliked",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Courage to Be Disliked",
    "author": "Ichiro Kishimi and Fumitake Koga",
    "slug": "the-courage-to-be-disliked",
@@ -979,13 +1021,15 @@
    "category_de": "Geist & Körper",
    "cover_material": "book_cover_21",
    "cover_uv": [
-    0.07446,
-    0.88335,
-    0.14233,
-    0.95756
+    0.68286,
+    0.71024,
+    0.78491,
+    0.79785
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.024,
     0.21,
@@ -997,7 +1041,7 @@
    "stall": "buecherstand",
    "name": "Ultra-Processed People",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Ultra-Processed People",
    "author": "Chris van Tulleken",
    "slug": "ultra-processed-people",
@@ -1005,17 +1049,19 @@
    "category_de": "Geist & Körper",
    "cover_material": "book_cover_22",
    "cover_uv": [
-    0.86597,
-    0.51509,
-    0.9436,
-    0.59996
+    0.36548,
+    0.1123,
+    0.48218,
+    0.21247
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.034,
-    0.24,
-    0.16
+    0.03,
+    0.215,
+    0.143
    ]
   },
   "act_book_23": {
@@ -1023,7 +1069,7 @@
    "stall": "buecherstand",
    "name": "Breath",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Breath",
    "author": "James Nestor",
    "slug": "breath",
@@ -1031,17 +1077,19 @@
    "category_de": "Geist & Körper",
    "cover_material": "book_cover_23",
    "cover_uv": [
-    0.0022,
-    0.62447,
-    0.07983,
-    0.70934
+    0.48657,
+    0.1123,
+    0.60327,
+    0.21247
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.028,
-    0.24,
-    0.16
+    0.025,
+    0.215,
+    0.143
    ]
   },
   "act_book_24": {
@@ -1049,7 +1097,7 @@
    "stall": "buecherstand",
    "name": "The Almanack of Naval Ravikant",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Almanack of Naval Ravikant",
    "author": "Eric Jorgenson",
    "slug": "the-almanack-of-naval-ravikant",
@@ -1057,17 +1105,19 @@
    "category_de": "Geist & Körper",
    "cover_material": "book_cover_24",
    "cover_uv": [
-    0.23657,
-    0.79883,
-    0.3103,
-    0.87944
+    0.0022,
+    0.5166,
+    0.11304,
+    0.61175
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.02,
-    0.228,
-    0.152
+    0.019,
+    0.215,
+    0.143
    ]
   },
   "act_book_25": {
@@ -1075,7 +1125,7 @@
    "stall": "buecherstand",
    "name": "Unreasonable Hospitality",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Unreasonable Hospitality",
    "author": "Will Guidara",
    "slug": "unreasonable-hospitality",
@@ -1083,17 +1133,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_25",
    "cover_uv": [
-    0.08423,
-    0.62447,
-    0.16187,
-    0.70934
+    0.60767,
+    0.1123,
+    0.72437,
+    0.21247
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.03,
-    0.24,
-    0.16
+    0.027,
+    0.215,
+    0.143
    ]
   },
   "act_book_26": {
@@ -1101,7 +1153,7 @@
    "stall": "buecherstand",
    "name": "Six-Minute X-Ray",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Six-Minute X-Ray",
    "author": "Chase Hughes",
    "slug": "six-minute-x-ray",
@@ -1109,17 +1161,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_26",
    "cover_uv": [
-    0.3147,
-    0.79883,
-    0.38843,
-    0.87944
+    0.11743,
+    0.5166,
+    0.22827,
+    0.61175
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.024,
-    0.228,
-    0.152
+    0.023,
+    0.215,
+    0.143
    ]
   },
   "act_book_27": {
@@ -1127,7 +1181,7 @@
    "stall": "buecherstand",
    "name": "Set Boundaries, Find Peace",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Set Boundaries, Find Peace",
    "author": "Nedra Glover Tawwab",
    "slug": "set-boundaries-find-peace",
@@ -1135,17 +1189,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_27",
    "cover_uv": [
-    0.77319,
-    0.79883,
-    0.84106,
-    0.87518
+    0.79663,
+    0.61426,
+    0.89868,
+    0.70438
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.024,
-    0.216,
-    0.14
+    0.215,
+    0.139
    ]
   },
   "act_book_28": {
@@ -1153,7 +1209,7 @@
    "stall": "buecherstand",
    "name": "Cues",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Cues",
    "author": "Vanessa Van Edwards",
    "slug": "cues",
@@ -1161,17 +1217,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_28",
    "cover_uv": [
-    0.57202,
-    0.71254,
-    0.64575,
-    0.79386
+    0.0022,
+    0.41811,
+    0.11304,
+    0.51409
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.026,
-    0.23,
-    0.152
+    0.024,
+    0.215,
+    0.142
    ]
   },
   "act_book_29": {
@@ -1179,7 +1237,7 @@
    "stall": "buecherstand",
    "name": "Captivate",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Captivate",
    "author": "Vanessa Van Edwards",
    "slug": "captivate",
@@ -1187,17 +1245,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_29",
    "cover_uv": [
-    0.65015,
-    0.71254,
-    0.72388,
-    0.79386
+    0.11743,
+    0.41811,
+    0.22827,
+    0.51409
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.028,
-    0.23,
-    0.152
+    0.026,
+    0.215,
+    0.142
    ]
   },
   "act_book_30": {
@@ -1205,7 +1265,7 @@
    "stall": "buecherstand",
    "name": "How to Know a Person",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "How to Know a Person",
    "author": "David Brooks",
    "slug": "how-to-know-a-person",
@@ -1213,17 +1273,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_30",
    "cover_uv": [
-    0.16626,
-    0.62447,
-    0.2439,
-    0.70934
+    0.72876,
+    0.1123,
+    0.84546,
+    0.21247
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.028,
-    0.24,
-    0.16
+    0.025,
+    0.215,
+    0.143
    ]
   },
   "act_book_31": {
@@ -1231,7 +1293,7 @@
    "stall": "buecherstand",
    "name": "Crucial Conversations",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Crucial Conversations",
    "author": "Joseph Grenny et al.",
    "slug": "crucial-conversations",
@@ -1239,17 +1301,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_31",
    "cover_uv": [
-    0.39282,
-    0.79883,
-    0.46655,
-    0.87944
+    0.23267,
+    0.5166,
+    0.34351,
+    0.61175
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.024,
-    0.228,
-    0.152
+    0.023,
+    0.215,
+    0.143
    ]
   },
   "act_book_32": {
@@ -1257,7 +1321,7 @@
    "stall": "buecherstand",
    "name": "The Next Conversation",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "The Next Conversation",
    "author": "Jefferson Fisher",
    "slug": "the-next-conversation",
@@ -1265,17 +1329,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_32",
    "cover_uv": [
-    0.62378,
-    0.79883,
-    0.69409,
-    0.87518
+    0.5769,
+    0.61426,
+    0.68237,
+    0.70438
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.024,
-    0.216,
-    0.145
+    0.215,
+    0.144
    ]
   },
   "act_book_33": {
@@ -1283,7 +1349,7 @@
    "stall": "buecherstand",
    "name": "Supercommunicators",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Supercommunicators",
    "author": "Charles Duhigg",
    "slug": "supercommunicators",
@@ -1291,17 +1357,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_33",
    "cover_uv": [
-    0.24829,
-    0.62447,
-    0.32593,
-    0.70934
+    0.84985,
+    0.1123,
+    0.96655,
+    0.21247
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.03,
-    0.24,
-    0.16
+    0.027,
+    0.215,
+    0.143
    ]
   },
   "act_book_34": {
@@ -1309,7 +1377,7 @@
    "stall": "buecherstand",
    "name": "Influence",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Influence",
    "author": "Robert B. Cialdini",
    "slug": "influence",
@@ -1317,17 +1385,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_34",
    "cover_uv": [
-    0.25366,
-    0.71254,
-    0.32886,
-    0.79563
+    0.51392,
+    0.31766,
+    0.62671,
+    0.4156
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.036,
-    0.235,
-    0.155
+    0.033,
+    0.215,
+    0.142
    ]
   },
   "act_book_35": {
@@ -1335,7 +1405,7 @@
    "stall": "buecherstand",
    "name": "Never Split the Difference",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Never Split the Difference",
    "author": "Chris Voss and Tahl Raz",
    "slug": "never-split-the-difference",
@@ -1343,17 +1413,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_35",
    "cover_uv": [
-    0.47095,
-    0.79883,
-    0.54468,
-    0.87944
+    0.3479,
+    0.5166,
+    0.45874,
+    0.61175
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.026,
-    0.228,
-    0.152
+    0.025,
+    0.215,
+    0.143
    ]
   },
   "act_book_36": {
@@ -1361,7 +1433,7 @@
    "stall": "buecherstand",
    "name": "Unf*ck Your Boundaries",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Unf*ck Your Boundaries",
    "author": "Faith G. Harper",
    "slug": "unf-ck-your-boundaries",
@@ -1369,13 +1441,15 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_36",
    "cover_uv": [
-    0.49048,
-    0.88335,
-    0.552,
-    0.9462
+    0.05493,
+    0.88993,
+    0.14722,
+    0.96415
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.022,
     0.178,
@@ -1387,7 +1461,7 @@
    "stall": "buecherstand",
    "name": "How to Win Friends & Influence People",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "How to Win Friends & Influence People",
    "author": "Dale Carnegie",
    "slug": "how-to-win-friends-and-influence-people",
@@ -1395,13 +1469,15 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_37",
    "cover_uv": [
-    0.14673,
-    0.88335,
-    0.2146,
-    0.95756
+    0.78931,
+    0.71024,
+    0.89136,
+    0.79785
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
     0.024,
     0.21,
@@ -1413,7 +1489,7 @@
    "stall": "buecherstand",
    "name": "Stop Walking on Eggshells",
    "kind": "book",
-   "pivot": "base",
+   "pivot": "the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X",
    "title": "Stop Walking on Eggshells",
    "author": "Paul T. Mason and Randi Kreger",
    "slug": "stop-walking-on-eggshells",
@@ -1421,17 +1497,19 @@
    "category_de": "Menschen & Gespräche",
    "cover_material": "book_cover_38",
    "cover_uv": [
-    0.72827,
-    0.71254,
-    0.802,
-    0.79386
+    0.23267,
+    0.41811,
+    0.34351,
+    0.51409
    ],
    "cover_texture": "prop_tex_books_color.webp",
-   "where": "section",
+   "where": "cabinet",
+   "face_out": true,
+   "lean_deg": 15.0,
    "size_m": [
-    0.03,
-    0.23,
-    0.152
+    0.028,
+    0.215,
+    0.142
    ]
   },
   "act_book_00": {
@@ -1713,853 +1791,6 @@
     0.215,
     0.145
    ]
-  },
-  "act_crepe_0": {
-   "set": "prop_deco_crepes",
-   "stall": "deco-crepes",
-   "name": "Crêpe mit Zucker und Zimt",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A thin buttery crêpe folded in quarters, with sugar and cinnamon, 3 €."
-  },
-  "act_crepe_1": {
-   "set": "prop_deco_crepes",
-   "stall": "deco-crepes",
-   "name": "Crêpe mit Nuss-Nougat",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A thin buttery crêpe folded in quarters, with nut-nougat cream, 3,50 €."
-  },
-  "act_crepe_2": {
-   "set": "prop_deco_crepes",
-   "stall": "deco-crepes",
-   "name": "Crêpe mit Apfelmus",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A thin buttery crêpe folded in quarters, with warm apple purée, 3,50 €."
-  },
-  "act_crepe_3": {
-   "set": "prop_deco_crepes",
-   "stall": "deco-crepes",
-   "name": "Crêpe mit Zitrone und Zucker",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A thin buttery crêpe folded in quarters, with lemon juice and sugar, 3 €."
-  },
-  "act_jar_0": {
-   "set": "prop_deco_crepes",
-   "stall": "deco-crepes",
-   "name": "Jar of nut-nougat cream",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A big jar of nut-nougat cream (Nuss-Nougat-Creme), spread on with a palette knife: the most asked-for crêpe on the board."
-  },
-  "act_jar_1": {
-   "set": "prop_deco_crepes",
-   "stall": "deco-crepes",
-   "name": "Jar of apple purée",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Homemade apple purée (Apfelmus) for the apple crêpes, a little cinnamon in it."
-  },
-  "act_shaker_0": {
-   "set": "prop_deco_crepes",
-   "stall": "deco-crepes",
-   "name": "Sugar shaker",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A glass shaker of fine sugar with a steel cap, for dusting the crêpes."
-  },
-  "act_shaker_1": {
-   "set": "prop_deco_crepes",
-   "stall": "deco-crepes",
-   "name": "Cinnamon shaker",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A glass shaker of ground cinnamon with a steel cap."
-  },
-  "act_cheese_0": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Allgäuer Bergkäse",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Allgäuer Bergkäse, a whole 44 cm wheel aged twelve months, opened at the front: nutty, a little crystalline. Cut to order, 100 g for 3,50 €.",
-   "cut": true
-  },
-  "act_cheese_1": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Butterkäse",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Butterkäse: mild, soft and creamy, the cheese every child at the counter asks to taste."
-  },
-  "act_cheese_10": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Mini Gouda in red wax",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A round mini Gouda in red wax, about 400 g: a cheese to take home as a present."
-  },
-  "act_cheese_11": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Räucherkäse",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A small smoked cheese (Räucherkäse) with a brown, beech-smoked rind."
-  },
-  "act_cheese_12": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Mini Gouda in red wax",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A round mini Gouda in red wax, about 400 g: a cheese to take home as a present."
-  },
-  "act_cheese_2": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Tilsiter",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Tilsiter: a washed golden rind and a sharp, spicy paste."
-  },
-  "act_cheese_3": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Edamer in red wax",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A small Edamer sealed in red wax, mild and firm."
-  },
-  "act_cheese_4": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Weißlacker",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Weißlacker: an Allgäu beer cheese, soft, salty and strong."
-  },
-  "act_cheese_5": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Romadur",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Romadur: a washed-rind soft cheese, milder than it smells."
-  },
-  "act_cheese_6": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Limburger",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Limburger: a ripe washed-rind cheese with a big smell and a mild heart."
-  },
-  "act_cheese_7": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Räucherkäse",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A small smoked cheese (Räucherkäse) with a brown, beech-smoked rind."
-  },
-  "act_cheese_8": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Mini Gouda in red wax",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A round mini Gouda in red wax, about 400 g: a cheese to take home as a present."
-  },
-  "act_cheese_9": {
-   "set": "prop_deco_kaese",
-   "stall": "deco-kaese",
-   "name": "Räucherkäse",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A small smoked cheese (Räucherkäse) with a brown, beech-smoked rind."
-  },
-  "act_candle_0": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "Royal blue pillar candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Royal blue pillar candle, 12 cm tall, 6 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
-   "colour": "royal blue",
-   "lit": false
-  },
-  "act_candle_1": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "Royal blue pillar candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Royal blue pillar candle, 17 cm tall, 6 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
-   "colour": "royal blue",
-   "lit": false
-  },
-  "act_candle_10": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "Fir-green pillar candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Fir-green pillar candle, 11 cm tall, 8 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
-   "colour": "fir-green",
-   "lit": false
-  },
-  "act_candle_11": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "Ivory pillar candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Ivory pillar candle, 20 cm tall, 5 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
-   "colour": "ivory",
-   "lit": false
-  },
-  "act_candle_2": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "White block candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "White block candle, 7 cm tall, 8 cm across. A short, wide block for a windowsill; burns for about 40 hours.",
-   "colour": "white",
-   "lit": false
-  },
-  "act_candle_3": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "Plum pillar candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Plum pillar candle, 14 cm tall, 5 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
-   "colour": "plum",
-   "lit": false
-  },
-  "act_candle_4": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "Royal blue pillar candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Royal blue pillar candle, 17 cm tall, 6 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat. Lit, to show the flame.",
-   "colour": "royal blue",
-   "lit": true
-  },
-  "act_candle_5": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "Sky-blue pillar candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Sky-blue pillar candle, 20 cm tall, 7 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
-   "colour": "sky-blue",
-   "lit": false
-  },
-  "act_candle_6": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "Fir-green pillar candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Fir-green pillar candle, 21 cm tall, 7 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
-   "colour": "fir-green",
-   "lit": false
-  },
-  "act_candle_7": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "White pillar candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "White pillar candle, 13 cm tall, 8 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
-   "colour": "white",
-   "lit": false
-  },
-  "act_candle_8": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "Fir-green block candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Fir-green block candle, 6 cm tall, 8 cm across. A short, wide block for a windowsill; burns for about 40 hours.",
-   "colour": "fir-green",
-   "lit": false
-  },
-  "act_candle_9": {
-   "set": "prop_deco_kerzen",
-   "stall": "deco-kerzen",
-   "name": "Sky-blue pillar candle",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Sky-blue pillar candle, 19 cm tall, 9 cm across. Hand-dipped, layer on layer, in the Kerzenzieher's vat.",
-   "colour": "sky-blue",
-   "lit": false
-  },
-  "act_lebkuchen_heart_0": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Ich liebe Dich”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Ich liebe Dich” (I love you), piped in white icing inside a scalloped border, with sugar flowers. About 24 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Ich liebe Dich",
-   "size_cm": 24,
-   "label": "Lebkuchenherz „Ich liebe Dich“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_1": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Frohe Weihnachten”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 20 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Frohe Weihnachten",
-   "size_cm": 20,
-   "label": "Lebkuchenherz „Frohe Weihnachten“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_10": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Frohe Weihnachten”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 12 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Frohe Weihnachten",
-   "size_cm": 12,
-   "label": "Lebkuchenherz „Frohe Weihnachten“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_11": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Für Dich”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Für Dich” (for you), white icing in a pink scalloped border, with sugar roses. About 12 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Für Dich",
-   "size_cm": 12,
-   "label": "Lebkuchenherz „Für Dich“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_12": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Schatz”",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "“Schatz” (sweetheart), white icing in a blue piped border. About 17 cm across. Leaning on the display board, ribbon tucked behind.",
-   "icing": "Schatz",
-   "size_cm": 17,
-   "label": "Lebkuchenherz „Schatz“",
-   "action": "lift"
-  },
-  "act_lebkuchen_heart_13": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Prost!”",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "“Prost!” (cheers!), in yellow icing: a heart for the Glühwein crowd. About 15 cm across. Leaning on the display board, ribbon tucked behind.",
-   "icing": "Prost!",
-   "size_cm": 15,
-   "label": "Lebkuchenherz „Prost!“",
-   "action": "lift"
-  },
-  "act_lebkuchen_heart_14": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Nachtmarkt”",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "“Nachtmarkt” (night market), in white icing in a pink border: a souvenir of the evening. About 17 cm across. Leaning on the display board, ribbon tucked behind.",
-   "icing": "Nachtmarkt",
-   "size_cm": 17,
-   "label": "Lebkuchenherz „Nachtmarkt“",
-   "action": "lift"
-  },
-  "act_lebkuchen_heart_15": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Ich liebe Dich”",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "“Ich liebe Dich” (I love you), piped in white icing inside a scalloped border, with sugar flowers. About 15 cm across. Leaning on the display board, ribbon tucked behind.",
-   "icing": "Ich liebe Dich",
-   "size_cm": 15,
-   "label": "Lebkuchenherz „Ich liebe Dich“",
-   "action": "lift"
-  },
-  "act_lebkuchen_heart_16": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Frohe Weihnachten”",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 17 cm across. Leaning on the display board, ribbon tucked behind.",
-   "icing": "Frohe Weihnachten",
-   "size_cm": 17,
-   "label": "Lebkuchenherz „Frohe Weihnachten“",
-   "action": "lift"
-  },
-  "act_lebkuchen_heart_2": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Für Dich”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Für Dich” (for you), white icing in a pink scalloped border, with sugar roses. About 20 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Für Dich",
-   "size_cm": 20,
-   "label": "Lebkuchenherz „Für Dich“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_3": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Schatz”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Schatz” (sweetheart), white icing in a blue piped border. About 15 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Schatz",
-   "size_cm": 15,
-   "label": "Lebkuchenherz „Schatz“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_4": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Prost!”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Prost!” (cheers!), in yellow icing: a heart for the Glühwein crowd. About 12 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Prost!",
-   "size_cm": 12,
-   "label": "Lebkuchenherz „Prost!“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_5": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Nachtmarkt”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Nachtmarkt” (night market), in white icing in a pink border: a souvenir of the evening. About 15 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Nachtmarkt",
-   "size_cm": 15,
-   "label": "Lebkuchenherz „Nachtmarkt“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_6": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Ich liebe Dich”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Ich liebe Dich” (I love you), piped in white icing inside a scalloped border, with sugar flowers. About 15 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Ich liebe Dich",
-   "size_cm": 15,
-   "label": "Lebkuchenherz „Ich liebe Dich“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_7": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Frohe Weihnachten”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Frohe Weihnachten” (Merry Christmas), white lettering in a yellow piped border. About 17 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Frohe Weihnachten",
-   "size_cm": 17,
-   "label": "Lebkuchenherz „Frohe Weihnachten“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_8": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Für Dich”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Für Dich” (for you), white icing in a pink scalloped border, with sugar roses. About 17 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Für Dich",
-   "size_cm": 17,
-   "label": "Lebkuchenherz „Für Dich“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_9": {
-   "set": "prop_deco_lebkuchen",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchen heart “Schatz”",
-   "kind": "deco",
-   "pivot": "hang: the ribbon's knot on the rod; the item swings about it",
-   "detail": "“Schatz” (sweetheart), white icing in a blue piped border. About 14 cm across. It hangs on a ribbon, to wear around your neck.",
-   "icing": "Schatz",
-   "size_cm": 14,
-   "label": "Lebkuchenherz „Schatz“",
-   "action": "swing"
-  },
-  "act_lebkuchen_heart_24": {
-   "set": "prop_deco_lebkuchen_front",
-   "stall": "deco-lebkuchen",
-   "name": "Lebkuchenherz „Für Dich“",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A small Lebkuchen heart on a ribbon, “Für Dich” (for you) in white icing, lying in the crate at the front for passers-by. 3 €.",
-   "label": "Lebkuchenherz „Für Dich“",
-   "action": "lift",
-   "icing": "Für Dich",
-   "size_cm": 12
-  },
-  "act_lebkuchen_box_0": {
-   "set": "prop_deco_lebkuchen_shelf",
-   "stall": "deco-lebkuchen",
-   "name": "Elisen-Lebkuchen, 200 g · 7,50 €",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A red and gold carton of Elisen-Lebkuchen, Nuremberg style: soft round gingerbread with almonds and hazelnuts on a wafer, half of them glazed in chocolate.",
-   "label": "Elisen-Lebkuchen, 200 g · 7,50 €",
-   "action": "lift"
-  },
-  "act_lebkuchen_box_1": {
-   "set": "prop_deco_lebkuchen_shelf",
-   "stall": "deco-lebkuchen",
-   "name": "Aachener Printen, 250 g · 6 €",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A blue carton of Aachener Printen: hard, spiced honey gingerbread bars from Aachen, with herbs and rock sugar baked in.",
-   "label": "Aachener Printen, 250 g · 6 €",
-   "action": "lift"
-  },
-  "act_lebkuchen_heart_20": {
-   "set": "prop_deco_lebkuchen_shelf",
-   "stall": "deco-lebkuchen",
-   "name": "Großes Lebkuchenherz",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A big Lebkuchen heart, 26 cm across, piped with a lace border and a greeting: the one to hang by the door at home. 9 €.",
-   "label": "Großes Lebkuchenherz",
-   "action": "lift",
-   "icing": "Frohe Weihnachten",
-   "size_cm": 26
-  },
-  "act_lebkuchen_heart_23": {
-   "set": "prop_deco_lebkuchen_shelf",
-   "stall": "deco-lebkuchen",
-   "name": "Großes Lebkuchenherz",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A big Lebkuchen heart, 26 cm across, piped with a lace border and a greeting: the one to hang by the door at home. 9 €.",
-   "label": "Großes Lebkuchenherz",
-   "action": "lift",
-   "icing": "Ich liebe Dich",
-   "size_cm": 26
-  },
-  "act_cone_0": {
-   "set": "prop_deco_mandeln",
-   "stall": "deco-mandeln",
-   "name": "Paper cone of gebrannte Mandeln",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Gebrannte Mandeln: almonds turned in bubbling sugar, vanilla and cinnamon until they crackle, still warm. 100 g in a paper cone, 3,50 €.",
-   "grams": 100
-  },
-  "act_cone_1": {
-   "set": "prop_deco_mandeln",
-   "stall": "deco-mandeln",
-   "name": "Paper cone of Zimtmandeln",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Zimtmandeln: the same almonds with an extra coat of cinnamon sugar. 100 g in a paper cone, 3,50 €.",
-   "grams": 100
-  },
-  "act_cone_2": {
-   "set": "prop_deco_mandeln",
-   "stall": "deco-mandeln",
-   "name": "Paper cone of gebrannte Cashews",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Gebrannte Cashews: cashews in the same crackling sugar coat. 100 g in a paper cone, 3,50 €.",
-   "grams": 100
-  },
-  "act_cone_3": {
-   "set": "prop_deco_mandeln",
-   "stall": "deco-mandeln",
-   "name": "Paper cone of Schokomandeln",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Schokomandeln: roasted almonds dipped in dark chocolate. 100 g in a paper cone, 3,50 €.",
-   "grams": 100
-  },
-  "act_cone_4": {
-   "set": "prop_deco_mandeln",
-   "stall": "deco-mandeln",
-   "name": "Paper cone of gebrannte Erdnüsse",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Gebrannte Erdnüsse: peanuts in a crackling sugar coat, the cheapest bag on the counter. 100 g in a paper cone, 3,50 €.",
-   "grams": 100
-  },
-  "act_cone_5": {
-   "set": "prop_deco_mandeln",
-   "stall": "deco-mandeln",
-   "name": "Paper cone of gebrannte Mandeln",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Gebrannte Mandeln: almonds turned in bubbling sugar, vanilla and cinnamon until they crackle, still warm. 200 g in a paper cone, 6 €.",
-   "grams": 200
-  },
-  "act_cone_6": {
-   "set": "prop_deco_mandeln",
-   "stall": "deco-mandeln",
-   "name": "Paper cone of Zimtmandeln",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Zimtmandeln: the same almonds with an extra coat of cinnamon sugar. 200 g in a paper cone, 6 €.",
-   "grams": 200
-  },
-  "act_cone_7": {
-   "set": "prop_deco_mandeln",
-   "stall": "deco-mandeln",
-   "name": "Paper cone of gebrannte Cashews",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Gebrannte Cashews: cashews in the same crackling sugar coat. 200 g in a paper cone, 6 €.",
-   "grams": 200
-  },
-  "act_cone_8": {
-   "set": "prop_deco_mandeln",
-   "stall": "deco-mandeln",
-   "name": "Paper cone of Schokomandeln",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Schokomandeln: roasted almonds dipped in dark chocolate. 200 g in a paper cone, 6 €.",
-   "grams": 200
-  },
-  "act_cone_9": {
-   "set": "prop_deco_mandeln",
-   "stall": "deco-mandeln",
-   "name": "Paper cone of gebrannte Erdnüsse",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Gebrannte Erdnüsse: peanuts in a crackling sugar coat, the cheapest bag on the counter. 200 g in a paper cone, 6 €.",
-   "grams": 200
-  },
-  "act_bag_0": {
-   "set": "prop_deco_maroni",
-   "stall": "deco-maroni",
-   "name": "Bag of heiße Maroni",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A kraft bag printed “Heiße Maroni”: sweet chestnuts roasted over charcoal until the shells split, about 200 g for 4 €. Peel them while they are hot."
-  },
-  "act_bag_1": {
-   "set": "prop_deco_maroni",
-   "stall": "deco-maroni",
-   "name": "Bag of heiße Maroni",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A kraft bag printed “Heiße Maroni”: sweet chestnuts roasted over charcoal until the shells split, about 200 g for 4 €. Peel them while they are hot."
-  },
-  "act_bag_2": {
-   "set": "prop_deco_maroni",
-   "stall": "deco-maroni",
-   "name": "Bag of heiße Maroni",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A kraft bag printed “Heiße Maroni”: sweet chestnuts roasted over charcoal until the shells split, about 200 g for 4 €. Peel them while they are hot."
-  },
-  "act_bag_3": {
-   "set": "prop_deco_maroni",
-   "stall": "deco-maroni",
-   "name": "Bag of heiße Maroni",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A kraft bag printed “Heiße Maroni”: sweet chestnuts roasted over charcoal until the shells split, about 200 g for 4 €. Peel them while they are hot."
-  },
-  "act_scale_0": {
-   "set": "prop_deco_maroni",
-   "stall": "deco-maroni",
-   "name": "Shop scale",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "An old red-enamelled shop scale with a brass pan: the chestnuts are sold by weight."
-  },
-  "act_jar_2": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Jar of applesauce",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A jar of homemade applesauce (Apfelmus) to take home, 3 €."
-  },
-  "act_jar_3": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Jar of applesauce",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A jar of homemade applesauce (Apfelmus) to take home, 3 €."
-  },
-  "act_jar_4": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Jar of applesauce",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A jar of homemade applesauce (Apfelmus) to take home, 3 €."
-  },
-  "act_plate_0": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Three Kartoffelpuffer with applesauce",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "Three Kartoffelpuffer on a paper plate with a spoonful of applesauce and a wooden fork, 5 €."
-  },
-  "act_puffer_0": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Kartoffelpuffer",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
-  },
-  "act_puffer_1": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Kartoffelpuffer",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
-  },
-  "act_puffer_2": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Kartoffelpuffer",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
-  },
-  "act_puffer_3": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Kartoffelpuffer",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
-  },
-  "act_puffer_4": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Kartoffelpuffer",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
-  },
-  "act_puffer_5": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Kartoffelpuffer",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
-  },
-  "act_puffer_6": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Kartoffelpuffer",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
-  },
-  "act_puffer_7": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Kartoffelpuffer",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
-  },
-  "act_puffer_8": {
-   "set": "prop_deco_puffer",
-   "stall": "deco-kartoffelpuffer",
-   "name": "Kartoffelpuffer",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A Kartoffelpuffer (Reibekuchen): grated potato and onion fried in hot oil until the lacy edge goes crisp. Three with applesauce for 5 €."
-  },
-  "act_nutcracker_0": {
-   "set": "prop_deco_spielzeug",
-   "stall": "deco-spielzeug",
-   "name": "Erzgebirge nutcracker",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A turned and painted nutcracker from the Erzgebirge: a king's guard in a red coat, 34 cm tall. Lift the lever at his back and he cracks a walnut."
-  },
-  "act_nutcracker_1": {
-   "set": "prop_deco_spielzeug",
-   "stall": "deco-spielzeug",
-   "name": "Erzgebirge nutcracker",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A turned and painted nutcracker from the Erzgebirge: a soldier in a blue coat and red shako, 29 cm tall. Lift the lever at his back and he cracks a walnut."
-  },
-  "act_nutcracker_2": {
-   "set": "prop_deco_spielzeug",
-   "stall": "deco-spielzeug",
-   "name": "Erzgebirge nutcracker",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A turned and painted nutcracker from the Erzgebirge: a forester in a green coat, 24 cm tall. Lift the lever at his back and he cracks a walnut."
-  },
-  "act_rockinghorse_0": {
-   "set": "prop_deco_spielzeug",
-   "stall": "deco-spielzeug",
-   "name": "Little rocking horse",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A little white rocking horse with a red saddle on curved rockers. Give it a push."
-  },
-  "act_top_0": {
-   "set": "prop_deco_spielzeug",
-   "stall": "deco-spielzeug",
-   "name": "Spinning top",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A turned wooden spinning top in red lacquer with a cream stripe."
-  },
-  "act_top_1": {
-   "set": "prop_deco_spielzeug",
-   "stall": "deco-spielzeug",
-   "name": "Spinning top",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A turned wooden spinning top in blue lacquer with a cream stripe."
-  },
-  "act_top_2": {
-   "set": "prop_deco_spielzeug",
-   "stall": "deco-spielzeug",
-   "name": "Spinning top",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A turned wooden spinning top in yellow lacquer with a cream stripe."
-  },
-  "act_train_0": {
-   "set": "prop_deco_spielzeug",
-   "stall": "deco-spielzeug",
-   "name": "Wooden toy train",
-   "kind": "deco",
-   "pivot": "base",
-   "detail": "A painted wooden train: a red engine with a black boiler and two wagons loaded with blocks."
   },
   "act_ladle": {
    "set": "prop_gluehwein_counter",
@@ -3429,6 +2660,338 @@
    "label": "Herrnhuter Stern · 29 €",
    "action": "light",
    "lit_material": "bulb_warm"
+  },
+  "act_orn_angel_0": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Wooden angel",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A turned and painted Erzgebirge angel in a white gown with golden dots and gold wings.",
+   "label": "Engel aus dem Erzgebirge",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_angel_1": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Wooden angel",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A turned and painted Erzgebirge angel in a white gown with golden dots and gold wings.",
+   "label": "Engel aus dem Erzgebirge",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_bauble_16": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, midnight blue",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A smaller Lauscha bauble, midnight blue, 6 cm. It rings a E7.",
+   "label": "Glaskugel, midnight blue",
+   "action": "ring",
+   "note": "E7",
+   "hangable": true,
+   "region": "bauble_2"
+  },
+  "act_orn_bauble_17": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, snow white",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A smaller Lauscha bauble, snow white, 7 cm. It rings a F7.",
+   "label": "Glaskugel, snow white",
+   "action": "ring",
+   "note": "F7",
+   "hangable": true,
+   "region": "bauble_3"
+  },
+  "act_orn_bauble_18": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, fir green",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A smaller Lauscha bauble, fir green, 6 cm. It rings a G7.",
+   "label": "Glaskugel, fir green",
+   "action": "ring",
+   "note": "G7",
+   "hangable": true,
+   "region": "bauble_4"
+  },
+  "act_orn_bauble_19": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, teal",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A smaller Lauscha bauble, teal, 8 cm. It rings a A7.",
+   "label": "Glaskugel, teal",
+   "action": "ring",
+   "note": "A7",
+   "hangable": true,
+   "region": "bauble_11"
+  },
+  "act_orn_bauble_20": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, fir green",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A smaller Lauscha bauble, fir green, 7 cm. It rings a B7.",
+   "label": "Glaskugel, fir green",
+   "action": "ring",
+   "note": "B7",
+   "hangable": true,
+   "region": "bauble_4"
+  },
+  "act_orn_bauble_21": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Glass bauble, ice blue",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A smaller Lauscha bauble, ice blue, 6 cm. It rings a C8.",
+   "label": "Glaskugel, ice blue",
+   "action": "ring",
+   "note": "C8",
+   "hangable": true,
+   "region": "bauble_9"
+  },
+  "act_orn_bird_0": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Clip-on glass bird",
+   "kind": "deco",
+   "pivot": "clip: the clip's foot on the rail; the bird sits above it",
+   "detail": "A clip-on glass bird with a spun-glass tail, sitting on the rail: it clips to a branch.",
+   "label": "Vogel mit Klammer",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_icicle_0": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Glass icicle",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A twisted clear-glass icicle with a gold cap: it catches every lamp in the shop.",
+   "label": "Eiszapfen aus Glas",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_icicle_1": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Glass icicle",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A twisted clear-glass icicle with a gold cap: it catches every lamp in the shop.",
+   "label": "Eiszapfen aus Glas",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_mushroom_0": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Glass mushroom",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A little glass fly agaric, red with white spots: a lucky charm on German trees.",
+   "label": "Fliegenpilz aus Glas",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_pickle": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Christmas pickle",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "The Weihnachtsgurke, a green glass gherkin hidden among the green baubles. The legend says whoever finds the pickle on the tree gets an extra present. You found it!",
+   "label": "Weihnachtsgurke · 6 €",
+   "action": "find",
+   "hangable": true,
+   "reward": true
+  },
+  "act_orn_pinecone_0": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Glass pine cone",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A blown-glass pine cone, brown with frosted gold tips, as the Thuringian glassblowers made them before the round bauble. Click to hang it on the display tree.",
+   "label": "Tannenzapfen aus Glas",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_strawstar_0": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Straw star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A Strohstern of split straw strips crossed and tied with red thread: the oldest of German tree ornaments, light enough for the thinnest twig.",
+   "label": "Strohstern · 1,50 €",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_strawstar_1": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Straw star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A Strohstern of split straw strips crossed and tied with red thread: the oldest of German tree ornaments, light enough for the thinnest twig.",
+   "label": "Strohstern · 1,50 €",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_strawstar_2": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Straw star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A Strohstern of split straw strips crossed and tied with red thread: the oldest of German tree ornaments, light enough for the thinnest twig.",
+   "label": "Strohstern · 1,50 €",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_strawstar_3": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Straw star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A Strohstern of split straw strips crossed and tied with red thread: the oldest of German tree ornaments, light enough for the thinnest twig.",
+   "label": "Strohstern · 1,50 €",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_woodstar_0": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Carved wooden star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A star carved from lime wood in the Erzgebirge, its edge painted gold.",
+   "label": "Holzstern, geschnitzt",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_woodstar_1": {
+   "set": "prop_schmuck_rail_2",
+   "stall": "deco-schmuck",
+   "name": "Carved wooden star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A star carved from lime wood in the Erzgebirge, its edge painted gold.",
+   "label": "Holzstern, geschnitzt",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_angel_2": {
+   "set": "prop_schmuck_rail_3",
+   "stall": "deco-schmuck",
+   "name": "Wooden angel",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A turned and painted Erzgebirge angel in a white gown with golden dots and gold wings.",
+   "label": "Engel aus dem Erzgebirge",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_icicle_2": {
+   "set": "prop_schmuck_rail_3",
+   "stall": "deco-schmuck",
+   "name": "Glass icicle",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A twisted clear-glass icicle with a gold cap: it catches every lamp in the shop.",
+   "label": "Eiszapfen aus Glas",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_strawstar_4": {
+   "set": "prop_schmuck_rail_3",
+   "stall": "deco-schmuck",
+   "name": "Straw star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A Strohstern of split straw strips crossed and tied with red thread: the oldest of German tree ornaments, light enough for the thinnest twig.",
+   "label": "Strohstern · 1,50 €",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_strawstar_5": {
+   "set": "prop_schmuck_rail_3",
+   "stall": "deco-schmuck",
+   "name": "Straw star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A Strohstern of split straw strips crossed and tied with red thread: the oldest of German tree ornaments, light enough for the thinnest twig.",
+   "label": "Strohstern · 1,50 €",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_woodstar_2": {
+   "set": "prop_schmuck_rail_3",
+   "stall": "deco-schmuck",
+   "name": "Carved wooden star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A star carved from lime wood in the Erzgebirge, its edge painted gold.",
+   "label": "Holzstern, geschnitzt",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_icicle_3": {
+   "set": "prop_schmuck_rail_4",
+   "stall": "deco-schmuck",
+   "name": "Glass icicle",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A twisted clear-glass icicle with a gold cap: it catches every lamp in the shop.",
+   "label": "Eiszapfen aus Glas",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_icicle_4": {
+   "set": "prop_schmuck_rail_4",
+   "stall": "deco-schmuck",
+   "name": "Glass icicle",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A twisted clear-glass icicle with a gold cap: it catches every lamp in the shop.",
+   "label": "Eiszapfen aus Glas",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_strawstar_6": {
+   "set": "prop_schmuck_rail_4",
+   "stall": "deco-schmuck",
+   "name": "Straw star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A Strohstern of split straw strips crossed and tied with red thread: the oldest of German tree ornaments, light enough for the thinnest twig.",
+   "label": "Strohstern · 1,50 €",
+   "action": "hang",
+   "hangable": true
+  },
+  "act_orn_woodstar_3": {
+   "set": "prop_schmuck_rail_4",
+   "stall": "deco-schmuck",
+   "name": "Carved wooden star",
+   "kind": "deco",
+   "pivot": "hang: the ribbon's knot or the clip; the ornament swings or turns about it",
+   "detail": "A star carved from lime wood in the Erzgebirge, its edge painted gold.",
+   "label": "Holzstern, geschnitzt",
+   "action": "hang",
+   "hangable": true
   },
   "act_grill": {
    "set": "prop_wurst_counter",

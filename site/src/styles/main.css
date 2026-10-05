@@ -78,7 +78,6 @@ mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-rad
 /* round 2: items, deco captions, the text fallback */
 .tip.item { background: #f3e9d2; color: #3a2a1c; font-weight: 600; font-size: 14px; font-style: italic; border-left: 3px solid var(--gold); border-radius: 3px; }
 .itemtag { white-space: normal; max-width: 260px; text-align: center; }
-.decocap { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); margin: 0; background: rgba(8, 11, 22, .78); color: var(--ink); padding: 6px 14px; border-radius: 999px; font-size: 14px; pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
 .plainfallback { position: absolute; inset: 0; overflow: auto; padding: 18px 22px 28px; background: var(--surface, #141827); }
 .plainfallback .lead { color: var(--muted); margin: 0 0 12px; }
 .plainfallback section { border-top: 1px solid var(--line); padding: 12px 0 4px; }
@@ -173,4 +172,3 @@ mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-rad
   box-shadow: 0 4px 14px rgba(0, 0, 0, .5); pointer-events: none; transition: opacity .35s; text-align: left; }
 .note em { color: #6b5a48; }
 .note b { color: #2a1d14; }
-.decocap { bottom: 64px; }

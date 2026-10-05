@@ -1,10 +1,10 @@
-"""The market signpost (Wegweiser): a tall weathered oak post on a granite plinth with seven painted
+"""The market signpost (Wegweiser): a tall weathered oak post on a granite plinth with eight painted
 finger boards, one per place of the guided stroll (docs/adr/0003-guided-stroll-navigation.md).
 
 Each board is its own clickable node `act_sign_<placeid>` (ids as in site/src/layout.json), with its
 origin on the post axis at the board's height so the engine can wiggle it on hover.  The boards are
 cream paint over oak, worn at the edges, with the German name in oxblood capitals and a small English
-label in italics under it; both faces carry the lettering (painted into one atlas, 14 cells: each board
+label in italics under it; both faces carry the lettering (painted into one atlas, 16 cells: each board
 pointing left and pointing right).  The iron clamps that hold a board are children of its node.  On
 top: a little shingled cap with a ball finial, an iron bracket with a lantern (bulbs_sign, bulb_warm,
 and the empty light_sign_0 where the engine may place a warm light so the boards read at night), a fir
@@ -36,42 +36,62 @@ scene = C.reset()
 col = C.collection("Signpost")
 
 # the boards, top to bottom: (place id, German, English, points right?, turn toward it in degrees)
+# Round 8 (docs/adr/0004): an eighth board for the ornament shop, act_sign_schmuck.  "Christbaumschmuck"
+# is a long word, so that board is longer (2.3 m) and takes a whole atlas row per face, which keeps its
+# letters about as tall as the others'.  Optional 6th field: the board's length.
 BOARDS = [
     ("riesenrad", "Riesenrad", "Big questions", False, 22),
     ("karussell", "Karussell", "Contact", True, 20),
     ("gluehwein", "Glühwein", "About", False, 12),
-    ("bandstand", "Musikpavillon", "Music", True, 8),
+    ("schmuck", "Christbaumschmuck", "Ornaments", True, 6, 2.3),
     ("bratwurst", "Bratwurst", "Writing", False, 6),
+    ("bandstand", "Musikpavillon", "Music", True, 8),
     ("bierstand", "Bierstand", "Projects", True, 14),
     ("buecherstand", "Bücherstand", "Reading", True, 4),
 ]
-LB, HB, TB = 1.6, 0.32, 0.04          # board length, height, thickness (m)
+LB, HB, TB = 1.6, 0.32, 0.04          # standard board length, height, thickness (m)
 TIP = 0.22                            # length of the pointed end
 NOTCH = 0.08                          # fishtail notch at the tail
 POST_R = 0.09                         # half-width of the post
-Z_TOP = 4.35                          # top edge of the highest board
-GAP = 0.07
+Z_TOP = 4.42                          # top edge of the highest board
+GAP = 0.06
 POST_H = 4.75
 
 # ------------------------------------------------------------------ the board atlas
 AN = 2048
 CW, CH = 1024, 204                    # cell: 1.6 m x 0.32 m at 640 px/m
 PXM = CW / LB
-WOOD_Y0 = 7 * CH                      # rows 7..9: bare weathered oak for the board edges
+def board_len(i):
+    return BOARDS[i][5] if len(BOARDS[i]) > 5 else LB
+
+
+# atlas cells: standard boards two to a row (one cell per face direction), long boards a row per face
+_short = [i for i in range(len(BOARDS)) if board_len(i) <= LB + 1e-6]
+_long = [i for i in range(len(BOARDS)) if board_len(i) > LB + 1e-6]
+_rows_short = len(_short)                       # 2 cells per board, 2 cells per row
+CELLS = {}
+for n, i in enumerate(_short):
+    for tl in (False, True):
+        c = 2 * n + (1 if tl else 0)
+        CELLS[(i, tl)] = ((c % 2) * CW, (c // 2) * CH)
+for n, i in enumerate(_long):
+    for tl in (False, True):
+        CELLS[(i, tl)] = (0, (_rows_short + 2 * n + (1 if tl else 0)) * CH)
+WOOD_Y0 = (_rows_short + 2 * len(_long)) * CH   # the rows below: bare weathered oak for the board edges
+assert WOOD_Y0 + 120 < AN
 TD = C.tex_dir("square")
 ATLAS = {k: os.path.join(TD, f"signpost_{k}.png") for k in ("color", "rough", "normal")}
 
 
 def cell_of(i, tip_left):
-    c = 2 * i + (1 if tip_left else 0)
-    return (c % 2) * CW, (c // 2) * CH            # pixel x0, y0 (image rows from the top)
+    return CELLS[(i, tip_left)]                   # pixel x0, y0 (image rows from the top)
 
 
-def outline_m(tip_left):
+def outline_m(tip_left, lb=LB):
     """Board outline in metres, x along the board from the tail, y up from the bottom edge."""
-    pts = [(0, HB), (LB - TIP, HB), (LB, HB / 2), (LB - TIP, 0), (0, 0), (NOTCH, HB / 2)]
+    pts = [(0, HB), (lb - TIP, HB), (lb, HB / 2), (lb - TIP, 0), (0, 0), (NOTCH, HB / 2)]
     if tip_left:
-        pts = [(LB - x, y) for x, y in pts]
+        pts = [(lb - x, y) for x, y in pts]
     return pts
 
 
@@ -95,22 +115,25 @@ def paint_atlas():
     red = np.array([0.30, 0.035, 0.03])
     ink = np.array([0.035, 0.05, 0.04])
     S = 3                                              # supersampling for the masks
-    for i, (pid, de, en, right, _) in enumerate(BOARDS):
+    for i, bd in enumerate(BOARDS):
+        pid, de, en, right = bd[:4]
+        lb = board_len(i)
+        cw = int(round(lb * PXM)) if lb > LB + 1e-6 else CW
         for tip_left in (False, True):
             x0, y0 = cell_of(i, tip_left)
-            sl = (slice(y0, y0 + CH), slice(x0, x0 + CW))
+            sl = (slice(y0, y0 + CH), slice(x0, x0 + cw))
             to_px = lambda p: (p[0] * PXM * S, (HB - p[1]) * PXM * S)
-            shape = Image.new("L", (CW * S, CH * S), 0)
-            ImageDraw.Draw(shape).polygon([to_px(p) for p in outline_m(tip_left)], fill=255)
-            shape_m = np.asarray(shape.resize((CW, CH), Image.LANCZOS), float) / 255
+            shape = Image.new("L", (cw * S, CH * S), 0)
+            ImageDraw.Draw(shape).polygon([to_px(p) for p in outline_m(tip_left, lb)], fill=255)
+            shape_m = np.asarray(shape.resize((cw, CH), Image.LANCZOS), float) / 255
             inside = ndimage.distance_transform_edt(shape_m > 0.5)          # px from the edge
             # the border line, 16 px in, following the outline
             ring = np.exp(-((inside - 15.0) / 2.3) ** 2) * (shape_m > 0.5)
             # lettering
-            txt = Image.new("L", (CW * S, CH * S), 0)
+            txt = Image.new("L", (cw * S, CH * S), 0)
             dr = ImageDraw.Draw(txt)
             tx0 = (0.13 if not tip_left else TIP + 0.05) * PXM * S
-            tx1 = (LB - TIP - 0.05 if not tip_left else LB - 0.13) * PXM * S
+            tx1 = (lb - TIP - 0.05 if not tip_left else lb - 0.13) * PXM * S
             size = int(0.2 * PXM * S * 1.42)
             while True:
                 fd = ImageFont.truetype(f_de, size)
@@ -120,7 +143,7 @@ def paint_atlas():
                 size -= 4
             cx = (tx0 + tx1) / 2
             dr.text((cx - (bb[0] + bb[2]) / 2, 0.032 * PXM * S - bb[1]), de, font=fd, fill=255)
-            txt_en = Image.new("L", (CW * S, CH * S), 0)
+            txt_en = Image.new("L", (cw * S, CH * S), 0)
             de2 = ImageDraw.Draw(txt_en)
             fe = ImageFont.truetype(f_en, int(0.062 * PXM * S * 1.5))
             be = de2.textbbox((0, 0), en, font=fe)
@@ -131,8 +154,8 @@ def paint_atlas():
             ay = (HB - 0.03) * PXM * S - 0.032 * PXM * S
             sgn = 1 if not tip_left else -1
             de2.polygon([(ax + sgn * ah, ay), (ax - sgn * ah * 0.4, ay - ah * 0.8), (ax - sgn * ah * 0.4, ay + ah * 0.8)], fill=255)
-            m_de = np.asarray(txt.resize((CW, CH), Image.LANCZOS), float) / 255
-            m_en = np.asarray(txt_en.resize((CW, CH), Image.LANCZOS), float) / 255
+            m_de = np.asarray(txt.resize((cw, CH), Image.LANCZOS), float) / 255
+            m_en = np.asarray(txt_en.resize((cw, CH), Image.LANCZOS), float) / 255
             # paint wear: chipped near the edges and in a few blotches, never across the letters' middles
             wear = np.clip((chips[sl] - 0.62) * 6, 0, 1) * np.clip(1.3 - inside / 22, 0, 1)
             wear = np.maximum(wear, np.clip((chips[sl] - 0.78) * 10, 0, 1) * np.clip((blot[sl] - 0.6) * 4, 0, 1) * 0.8)
@@ -208,11 +231,13 @@ def wood_uv(a, b):
 z = Z_TOP
 board_obs = []
 snow = C.Geo("snow_sign", M["snow"], (1, 1))
-for i, (pid, de, en, right, turn) in enumerate(BOARDS):
+for i, bd in enumerate(BOARDS):
+    pid, de, en, right, turn = bd[:5]
+    lb = board_len(i)
     zc = z - HB / 2
     g = C.Geo(f"act_sign_{pid}", M["board"], (1, 1))
     sgn = 1 if right else -1
-    base = [(0, HB), (LB - TIP, HB), (LB, HB / 2), (LB - TIP, 0), (0, 0), (NOTCH, HB / 2)]   # tip at +x
+    base = [(0, HB), (lb - TIP, HB), (lb, HB / 2), (lb - TIP, 0), (0, 0), (NOTCH, HB / 2)]   # tip at +x
     tris = [(1, 2, 3), (0, 1, 5), (5, 1, 3), (5, 3, 4)]
     X0 = POST_R + 0.015
 
@@ -234,7 +259,7 @@ for i, (pid, de, en, right, turn) in enumerate(BOARDS):
             uu = []
             for t in tri:
                 x, y = base[t]
-                xx = (LB - x) if tip_left_here else x
+                xx = (lb - x) if tip_left_here else x
                 uu.append(cell_uv(i, tip_left_here, xx, y))
             uvs.append(uu)
     # edges: bare oak
@@ -275,7 +300,7 @@ for i, (pid, de, en, right, turn) in enumerate(BOARDS):
     # snow along the top edge of the board (in its own frame, then placed like the board)
     F = Matrix.Translation((0, 0, zc)) @ Euler((0, 0, yaw)).to_matrix().to_4x4()
     snow.frame = F
-    L_s = LB - TIP - 0.05 - random.uniform(0.0, 0.25)
+    L_s = lb - TIP - 0.05 - random.uniform(0.0, 0.25)
     x_s = X0 + 0.05 + random.uniform(0, 0.15)
     snow.box((sgn * (x_s + L_s / 2), 0, HB / 2 + 0.012), (L_s, TB + 0.01, 0.026 + random.uniform(0, 0.012)), rand_off=False)
     snow.frame = Matrix.Identity(4)
@@ -401,4 +426,4 @@ if os.environ.get("PREVIEW") and not LITE:
     C.add_light("moon", "SUN", (0, 0, 10), 0.25, (0.6, 0.7, 1.0), rot=(math.radians(50), 0, math.radians(30)))
     C.camera((1.6, -5.2, 2.6), (0, 0, 3.05), lens=40)
     C.compositor_fog_glare(near=8, far=60, fog_amount=0.2)
-    C.render(os.path.join(C.REPO, "review", "round-5", "architect", "signpost.jpg"))
+    C.render(os.path.join(C.REPO, "review", "round-8", "architect", "signpost.jpg"))

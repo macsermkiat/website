@@ -30,13 +30,14 @@ import vstage  # noqa: E402
 import set_bier  # noqa: E402
 import set_bookopen  # noqa: E402
 import set_books  # noqa: E402
-import set_deco  # noqa: E402
-import set_decofill  # noqa: E402
+import set_decoscene  # noqa: E402
 import set_schmuck  # noqa: E402
 import set_gluehwein  # noqa: E402
 import set_wurst  # noqa: E402
 
-MODULES = [set_gluehwein, set_bier, set_wurst, set_books, set_deco, set_decofill, set_schmuck, set_bookopen]
+MODULES = [set_gluehwein, set_bier, set_wurst, set_books, set_decoscene, set_schmuck, set_bookopen]
+# round 8 (Mac, 2026-10-05): the deco stalls' goods are cheap scenery, one merged glb per stall (set_decoscene.py,
+# which reuses the set_deco / set_decofill builders); their old act_ goods and _shelf / _front sets are gone
 STALL_ASSET = {"gluehwein": "stall_gluehwein.glb", "bratwurst": "stall_bratwurst.glb",
                "bierstand": "stall_bier.glb", "buecherstand": "stall_buecher.glb",
                "deco-schmuck": "stall_schmuck.glb"}   # round 8: the ornament shop replaces deco_schmuck (ADR 0004)
@@ -45,10 +46,12 @@ REPORT = os.path.join(vlib.state.OUT_DIR, "props_report.json")
 WIDE_ELEV = {"counter": 0.42, "shelf": 0.1, "shelf2": 0.22, "section": 0.12}
 
 
-def all_sets():
+def all_sets(retired=False):
     out = {}
     for mod in MODULES:
         out.update(mod.SETS)
+    if retired:
+        out.update(set_decoscene.RETIRED)       # buildable with --only, never listed as placed
     return out
 
 
@@ -64,6 +67,7 @@ def args():
     ap.add_argument("--render-only", default=None, help="comma list: render previews only for these sets")
     ap.add_argument("--shots", default="wide,hero", help="section previews to render: wide, hero, stall (in the stall glb)")
     ap.add_argument("--sheet-only", action="store_true", help="only rebuild the deco contact sheet from the frames")
+    ap.add_argument("--json-only", action="store_true", help="only rewrite props.json and items.json from the report")
     a, _ = ap.parse_known_args(sys.argv[1:])
     return a
 
@@ -71,8 +75,9 @@ def args():
 def build_variant(name, d, lite, ao):
     vlib.reset(d.get("seed", 1), lite)
     ps = d["fn"]()
-    if ao:
-        vstage.bake_ao(name + (".lite" if lite else ""), vlib.AO_LITE if lite else vlib.AO_FULL,
+    if ao and not d.get("no_ao"):
+        full_px, lite_px = d.get("ao_size", (vlib.AO_FULL, vlib.AO_LITE))
+        vstage.bake_ao(name + (".lite" if lite else ""), lite_px if lite else full_px,
                        samples=16 if lite else 32)
     return ps, vlib.export_set(name, lite, ps.items)
 
@@ -142,9 +147,14 @@ def guard_paths():
 def main():
     guard_paths()
     a = args()
-    sets = all_sets()
+    sets = all_sets(retired=True)
     if a.sheet_only:
         deco_contact_sheet(sets)
+        return
+    if a.json_only:
+        placed = all_sets()
+        write_props_json(placed)
+        write_items_json(placed, load_report())
         return
     only = a.only.split(",") if a.only else None
     if only:
@@ -187,8 +197,9 @@ def main():
     if not a.no_render:
         deco_contact_sheet(sets)
     shrink_shared_textures()
-    write_props_json(sets)
-    write_items_json(sets, load_report())
+    placed = all_sets()
+    write_props_json(placed)
+    write_items_json(placed, load_report())
 
 
 def load_report():
@@ -265,18 +276,20 @@ def write_props_json(sets):
             e["seat"] = d["seat"]
         lst.append(e)
     retired = []
-    for name, d in getattr(set_deco, "RETIRED", {}).items():
+    for name, d in set_decoscene.RETIRED.items():
         if os.path.exists(os.path.join(vlib.MODELS, f"{name}.glb")):
             retired.append({"set": name, "stall": d["stall"], "slot": d["slot"], "model": f"{name}.glb",
                             "lite": f"{name}.lite.glb", "asset": "deco_schmuck.glb",
-                            "why": "round 8: the old Christbaumschmuck counter goods, superseded by the ornament "
-                                   "shop's prop_schmuck_* sets (ADR 0004). Not placed; kept on disk for reference."})
+                            "why": "round 8: the old Christbaumschmuck hut's scenery goods (no act_ nodes), superseded "
+                                   "by the ornament shop's prop_schmuck_* sets in stall_schmuck.glb (ADR 0004). Place "
+                                   "it only if deco_schmuck.glb is used instead of stall_schmuck.glb."})
     out = {"about": "Vendor prop sets. Each glb's root node is the set origin: parent it to the named slot_ empty "
                     "of the stall (layout.json id in 'stall', stall file in 'asset'). 'sets' is the list the engine "
                     "reads; 'by_set' is the same data keyed by set name ({set: {slot, stall, model, lite, asset}}). "
                     "'standalone' lists vendor models that are not placed at a slot (book_open.glb). "
-                    "Round 8: a deco stall has up to three sets (prop_deco_<key> at slot_counter, _shelf at "
-                    "slot_shelf_1 holding both shelves, _front at slot_front). The ornament shop's prop_schmuck_* "
+                    "Round 8: each deco stall has ONE scenery set, prop_deco_<key> at slot_counter: a single merged "
+                    "mesh holding the counter goods, the goods hung from slot_rail_1, both back shelves and the "
+                    "crate on the slot_crate bench (no act_ nodes, not clickable; Mac, 2026-10-05). The ornament shop's prop_schmuck_* "
                     "sets stand at stall_schmuck.glb's slots (rails, counter, shelf tiers, glass case, tree dais). "
                     "'seat' (when present) says how a set meets its stall: hang (from a rail), stand (on a dais it "
                     "overhangs), ground (in front of the hut); otherwise it stands on a counter or shelf board. "

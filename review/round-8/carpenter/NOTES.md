@@ -1,6 +1,6 @@
 # Carpenter: round 8 notes (ADR 0004: ornament shop, book cabinets, fuller deco stalls)
 
-This round ran on the cloud machine (CPU, `NM_THREADS=3`, `NM_ROUND=8`). I built the three ADR 0004 parts:
+This round ran on the cloud machine (CPU, `NM_THREADS=3`, `NM_ROUND=8`). I built the three ADR 0004 parts, then made the deco stalls cheaper as lane scenery after Mac's note (section 4):
 
 - the new ornament shop;
 - the Bücherstand cabinets;
@@ -113,6 +113,19 @@ It replaces `deco_schmuck.glb` at the `deco-schmuck` place. `deco_schmuck.glb` s
 
   The kit textures are unchanged (`deco_kit_*.webp`, still shared).
 
+## 4. Deco stalls as lane scenery (Mac, 2026-10-05)
+
+Mac: "There's no need to fully render object in side stores, because there will be no interaction to save the loading time." The deco stalls are no longer visited close up, so I rebuilt them as scenery for walking pace, seen from the lane:
+
+- **What stays.** Full-width planks with per-plank grain and tint, single shingles, the carved valances, the sign, the bulbs, the snow caps, the rail and crate bench, and every node (`cam_view`/`cam_target` stay because the node check and `layout.json` still read them).
+- **What goes.**
+  - Edge chamfers under 1 cm. A 4 mm chamfer cannot be seen from 4 m, and it triples a board's triangles. The new library switch `state.set_bevels(False)` does this; the counter's 12 mm worn front edge stays.
+  - A coarser snow grid: 10 columns on shingle roofs, 9 rows on board roofs.
+  - The embedded AO map is 320 px (it was 448), and 192 px in lite (it was 256).
+- **Result.** The full deco files dropped from 10.9k-13.4k triangles and 0.29-0.38 MB to 7.0k-9.6k triangles and 0.19-0.26 MB. Together the nine full files went from 3.1 MB to 2.1 MB. The shared kit textures (0.44 MB full, 0.18 MB lite) are unchanged and still download once. The lite files were already cheap, at 3.8k-5.0k triangles and 0.12-0.14 MB each.
+- **Switch.** `deco.SCENERY = True`. Setting it to False rebuilds the round-8 detail.
+- **For the engineer.** Under ADR 0004 a deco stall "never streams beyond its light file". `main.js` still loads `deco_<key>.glb` on the full market (`STREAMED` leaves out `kind: 'deco'`). Either way the cost is now small. If the deco entries point at the `.lite.glb` on both markets, as the ADR says, the market saves about 1 MB more of first load. Both levels have the same node tree.
+
 ## Triangles and file sizes (after `optimize.mjs`)
 
 | File | Triangles | Size | Lite triangles | Lite size |
@@ -122,24 +135,24 @@ It replaces `deco_schmuck.glb` at the `deco-schmuck` place. `deco_schmuck.glb` s
 | stall_gluehwein (unchanged) | 38,780 | 0.97 MB | 8,676 | 0.23 MB |
 | stall_bratwurst (unchanged) | 38,378 | 0.92 MB | 8,534 | 0.25 MB |
 | stall_bier (unchanged) | 41,453 | 1.08 MB | 11,171 | 0.30 MB |
-| deco_lebkuchen | 12,105 | 0.36 MB | 4,016 | 0.13 MB |
-| deco_mandeln | 12,830 | 0.36 MB | 4,631 | 0.13 MB |
-| deco_kerzen | 11,598 | 0.34 MB | 4,076 | 0.13 MB |
-| deco_spielzeug | 13,405 | 0.38 MB | 5,031 | 0.15 MB |
-| deco_schmuck | 12,704 | 0.36 MB | 4,369 | 0.13 MB |
-| deco_kaese | 11,097 | 0.29 MB | 4,356 | 0.13 MB |
-| deco_crepes | 10,857 | 0.32 MB | 3,765 | 0.12 MB |
-| deco_maroni | 11,460 | 0.29 MB | 5,003 | 0.14 MB |
-| deco_puffer | 12,315 | 0.35 MB | 4,573 | 0.14 MB |
+| deco_lebkuchen | 8,813 | 0.25 MB | 4,016 | 0.13 MB |
+| deco_mandeln | 9,098 | 0.24 MB | 4,631 | 0.13 MB |
+| deco_kerzen | 8,372 | 0.24 MB | 4,076 | 0.12 MB |
+| deco_spielzeug | 9,633 | 0.26 MB | 5,031 | 0.14 MB |
+| deco_schmuck | 9,132 | 0.25 MB | 4,369 | 0.12 MB |
+| deco_kaese | 7,023 | 0.19 MB | 4,356 | 0.13 MB |
+| deco_crepes | 7,507 | 0.22 MB | 3,765 | 0.12 MB |
+| deco_maroni | 7,336 | 0.19 MB | 5,003 | 0.14 MB |
+| deco_puffer | 8,921 | 0.24 MB | 4,573 | 0.13 MB |
 
-The deco files were 13,283-15,985 triangles in round 7.
+The deco files were 13,283-15,985 triangles in round 7, and 10,857-13,405 triangles (0.29-0.38 MB) earlier in this round, before the scenery pass in section 4.
 
 - **Bücherstand with all book props on disk now:**
   - Full: 62,334 triangles. That is 2.94 MB including the shared kit (0.46 MB) and book textures (0.52 MB).
   - Lite: 17,397 triangles and 1.00 MB.
   - Both are inside the 80k / 4 MB budget, and the vendor's new cabinet sets have about 17k triangles of room.
 - **Ornament shop.** The hut leaves about 12k triangles and 1.3 MB of the 40k / 2 MB budget for the goods. Its kit textures are the shared deco kit files.
-- **Deco stalls.** The huts leave 6.6k-9.1k triangles of the 20k for the goods. The vendor's current deco sets are 2.8k-5.1k.
+- **Deco stalls.** The huts now leave 10.4k-13k triangles of the 20k for the goods (the vendor's scenery cap is about 4k).
 - **Counter height.** `slot_counter` is at 1.050 m on every stall and the shop.
 - **Checks.**
   - `glb_tools.py check` passes on all 10 section-stall and shop files and all 18 deco files.
@@ -155,7 +168,7 @@ All renders are Cycles.
 - `stall_schmuck_preview.jpg`: 1280x720 at 48 samples, a 3/4 front view at night with stand-in ornaments.
 - `stall_buecher_preview.jpg`: 1280x720 at 48 samples, a 3/4 view with closed doors. It uses stand-in face-out covers in category colours and spines on the spine boards, because the vendor's cabinet sets are not finished yet.
 - `stall_buecher_cam_cat_{people,physics,lives,craft}.jpg`: 960x540 at 32 samples, the view from each `cam_cat_<key>` with that cabinet's door open. `stall_buecher_cam_cat_sheet.jpg` puts all four on one sheet.
-- `deco_contact_sheet.jpg`: the nine rebuilt deco variants, empty of goods. The rail shows as the bar under the header.
+- `deco_contact_sheet.jpg`: the nine deco variants at their scenery level, rendered at 840x600 and 32 samples from about 5.5 m (lane distance), with the vendor's current goods from `props.json` (`--goods`). The Christbaumschmuck variant is empty because the ornament shop takes its place in the market.
 
 ## Library (`blender/lib`, documented in `README.md`)
 
@@ -165,7 +178,8 @@ These are new, and no existing name or default changed:
 - `pipeline.vendor_sets(asset)`;
 - the `glass_clear` material;
 - `NM_OPEN_DOORS` for the Bücherstand preview;
-- the round-8 `glb_tools` checks.
+- the round-8 `glb_tools` checks;
+- `state.set_bevels(on)` / `state.bevels()` (scenery builds without small chamfers).
 
 ## For the other roles
 

@@ -704,8 +704,8 @@ class Figure:
             M = Matrix.Translation(e) @ Matrix.Rotation(k * 0.25, 4, "Z") @ Matrix.Rotation(-0.15, 4, "X")
             self.m.sphere((0, 0, 0), 1.0, "body", wv, seg=5 if L else 6, rings=3 if L else 4,
                           scale=(0.012 * s, 0.022 * s, 0.03 * s), M=M, col=mul(self.skin, 0.95))
-        # eyes, brows, mouth
-        if not L:
+        # eyes, brows, mouth (a lite figure keeps them with spec lite_face: the deco vendors, who are drawn lite only)
+        if not L or self.spec.get("lite_face"):
             eyec = lin(self.spec.get("eye_color", "#2a1d17"))
             fd = self.spec.get("face_detail")
             for k in (-1, 1):
@@ -726,7 +726,7 @@ class Figure:
             mth = self.head_pt(f, math.radians(-44), -0.001 * s)
             self.m.box(mth, (0.026 * s, 0.006 * s, 0.0045 * s), "body", wv,
                        col=lin(self.spec.get("lip", "#9b5a52")))
-        if self.spec.get("glasses") and not L:
+        if self.spec.get("glasses") and (not L or self.spec.get("lite_face")):
             gc = lin("#1c1a18")
             for k in (-1, 1):
                 e = self.head_pt(f + k * 0.42, math.radians(2), 0.014 * s)

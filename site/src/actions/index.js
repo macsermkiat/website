@@ -17,6 +17,11 @@ export function createActions(ctx) {
   const byPlace = {
     glueh: stalls.glueh, bier: stalls.bier, wurst: stalls.wurst, books: stalls.books,
     band: band.band, ferris: rides.ferris, carousel: rides.carousel,
+    // the ornament shop (ADR 0004): for play, its buttons are its ornaments' actions
+    get schmuck() {
+      const list = items.handlers.schmuckActs?.() || [];
+      return list.length ? { hint: 'Click a bauble to ring it, the star to light it, the nutcracker, the smoker or the candle arch; hang ornaments on the little tree, and look for the pickle.', acts: list } : null;
+    },
   };
   return {
     get: (id) => byPlace[id] || null,

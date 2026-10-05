@@ -40,7 +40,7 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
   root.updateMatrixWorld(true);
   // pivot -> its meshes (the pivot itself may be the mesh, or hold an act_x_mesh child)
   const pivots = [];
-  root.traverse((o) => { if (re.test(o.name || '') && !/_mesh(\.\d+)?$/i.test(o.name)) pivots.push(o); });
+  root.traverse((o) => { if (re.test(o.name || '') && !/_mesh(_\d+)?(\.\d+)?$/i.test(o.name)) pivots.push(o); });
   if (pivots.length < minCount) return null;
 
   // group by the set the pivot belongs to (its parent) and by what the material looks like: the vendor gives

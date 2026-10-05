@@ -21,6 +21,9 @@ const PUBLIC = path.join(SITE, 'public');
 const SAMPLES = path.join(REPO, 'prototype', 'samples.json');
 
 export const SECTION_ORDER = ['glueh', 'bier', 'wurst', 'books', 'band', 'ferris', 'carousel'];
+// Places for play (round 8, docs/adr/0004): a stop with a name and things to do but no section text. They follow
+// the sections in the walking order; the text page and the no-WebGL fallback leave them out (they hold no words).
+export const PLAY_ORDER = ['schmuck'];
 
 // Words that identify a section in a file name, a front-matter field or a heading.
 const ALIASES = {
@@ -31,6 +34,7 @@ const ALIASES = {
   band: ['band', 'bandstand', 'music'],
   ferris: ['ferris', 'riesenrad', 'big-questions', 'bigquestions', 'questions', 'big questions'],
   carousel: ['carousel', 'karussell', 'contact'],
+  schmuck: ['schmuck', 'christbaumschmuck', 'ornaments', 'ornament-shop', 'deco-schmuck'],
   site: ['site', 'home', 'index', 'intro', 'homepage', 'market', 'tagline'],
   phrases: ['phrases', 'crowd', 'chatter', 'crowd-phrases'],
 };
@@ -199,7 +203,7 @@ export function buildContent() {
   const fallback = loadSections(FALLBACK_DIR);
   const writer = loadSections(CONTENT_DIR);
   const sections = {};
-  for (const id of [...SECTION_ORDER, 'site', 'phrases']) {
+  for (const id of [...SECTION_ORDER, ...PLAY_ORDER, 'site', 'phrases']) {
     const w = writer[id];
     const f = fallback[id];
     if (!w && !f) continue;
@@ -228,9 +232,10 @@ export function buildContent() {
   }
   // the writer's `order:` (1-7) sets the order of the place buttons and the plain page, when every section has one
   const nums = SECTION_ORDER.map((id) => Number(sections[id]?.meta?.order));
-  const order = nums.every((n) => Number.isFinite(n))
+  const order = (nums.every((n) => Number.isFinite(n))
     ? [...SECTION_ORDER].sort((a, b) => nums[SECTION_ORDER.indexOf(a)] - nums[SECTION_ORDER.indexOf(b)])
-    : SECTION_ORDER;
+    : [...SECTION_ORDER]).concat(PLAY_ORDER.filter((id) => sections[id]));
+  for (const id of PLAY_ORDER) if (sections[id]) sections[id].play = true;
   return { order, sections, library };
 }
 
@@ -450,11 +455,11 @@ export function assetCredits(file = path.join(REPO, 'CREDITS.md')) {
 export function plainHtml(content) {
   const { sections, order } = content;
   const nav = order
-    .filter((id) => sections[id])
+    .filter((id) => sections[id] && !sections[id].play)
     .map((id) => `<li><a href="#${id}">${esc(sections[id].name)} <span>${esc(sections[id].sub)}</span></a></li>`)
     .join('\n        ');
   const body = order
-    .filter((id) => sections[id])
+    .filter((id) => sections[id] && !sections[id].play)
     .map((id) => {
       const s = sections[id];
       return `

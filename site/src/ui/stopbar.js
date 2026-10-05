@@ -60,8 +60,8 @@ export function createStopbar({ actionsFor, itemsFor, readsFor, onRead, onStep, 
         b.lang = 'de';
         b.dataset.view = v.key;
         b.textContent = v.label;
-        b.title = v.title && v.title !== v.label ? `Look along the ${v.title} shelf` : `Look along this shelf`;
-        b.setAttribute('aria-label', `Look along the shelf: ${v.label}${v.title && v.title !== v.label ? ` (${v.title})` : ''}`);
+        b.title = v.title && v.title !== v.label ? `Open the cabinet: ${v.title}` : 'Open this cabinet';
+        b.setAttribute('aria-label', `Open the cabinet: ${v.label}${v.title && v.title !== v.label ? ` (${v.title})` : ''}`);
         b.addEventListener('click', v.fn);
         acts.appendChild(b);
       }

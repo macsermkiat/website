@@ -74,16 +74,41 @@ if sign_p:
 clay = C.solid("standin_clay", (0.42, 0.40, 0.38), rough=0.8)
 glow = C.solid("standin_glow", (1, 0.7, 0.4), emit=(1.0, 0.6, 0.28), strength=4.0)
 REAL = not os.environ.get("STANDINS")
+import json
+_pj = os.path.join(C.MODELS, "props.json")
+PROPS = json.load(open(_pj)).get("sets", []) if os.path.exists(_pj) and not os.environ.get("NO_PROPS") else []
 n_real = 0
 for p in layout["places"]:
     kind = p["kind"]
     if kind == "scenery":
         continue
     x, y = p["pos"][0], -p["pos"][1]
-    path = decoded(p["asset"]) if REAL else None
+    # round 8 (Mac, ADR 0004): side stalls are cheap scenery and never stream beyond their lite file, so the
+    # preview places the lite file wherever layout.json marks an entry "stream": "lite", as the market does
+    asset = p["asset"]
+    if p.get("stream") == "lite" and os.path.exists(os.path.join(C.MODELS, asset.replace(".glb", ".lite.glb"))):
+        asset = asset.replace(".glb", ".lite.glb")
+    path = decoded(asset) if REAL else None
     if path:
-        objs += imp(path, (x, y, 0), p.get("rotY", 0))
+        placed = imp(path, (x, y, 0), p.get("rotY", 0))
+        objs += placed
         n_real += 1
+        # round 8: the vendor's prop sets (site/public/models/props.json), parented to their slot_ empties as
+        # the engine does, so the stocked stalls show; lite goods where the stall is lite scenery
+        bpy.context.view_layer.update()
+        for st in PROPS:
+            if st.get("stall") != p["id"]:
+                continue
+            slot = next((o for o in placed if o.type == "EMPTY" and o.name.split(".")[0] == st["slot"]), None)
+            f = st.get("lite") if p.get("stream") == "lite" else st.get("model")
+            dp = decoded(f) if f else None
+            if slot is None or not dp:
+                C.log("prop set skipped", st["set"]); continue
+            new_objs = imp(dp)
+            for o in new_objs:
+                if o.parent is None:
+                    o.matrix_world = slot.matrix_world @ o.matrix_world
+            objs += new_objs
         continue
     F = Matrix.Translation((x, y, 0)) @ Matrix.Rotation(p.get("rotY", 0), 4, "Z")
     g = C.Geo("standin_" + p["id"], clay); g.frame = F

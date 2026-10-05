@@ -127,19 +127,20 @@ D = {
 # Round 8 (ADR 0004): every cover is designed in-house on its category's colour and pattern, so a cabinet
 # reads as one family. cols: three shades the books of the category take in turn; ink: title and author;
 # panel: the solid title panel; accent: rules, emblem and pattern highlights; font: the category's typeface;
-# pattern: the background pattern (atlas_books._pattern).
+# pattern: the background pattern (atlas_books._pattern). Round 8 pass 2: the dark shades are lifted about a
+# third so the covers read under the cabinet's light (the judges found the left column too dim at cam_cat).
 CAT_STYLE = {
-    "physics": dict(cols=("14233f", "1b2f52", "0f1a30"), ink="f2e8d0", panel="0b1426", accent="e0a43a",
+    "physics": dict(cols=("1f3a66", "27467a", "1a3058"), ink="f2e8d0", panel="0b1426", accent="e0a43a",
                     font="josefin", pattern="orbits"),
-    "lives": dict(cols=("6a1c22", "7a2a20", "561820"), ink="f4ead2", panel="3e0f14", accent="d9b25e",
+    "lives": dict(cols=("862a32", "963a2c", "74222c"), ink="f4ead2", panel="3e0f14", accent="d9b25e",
                   font="playfair", pattern="lattice"),
-    "mind": dict(cols=("1e5a5e", "245e52", "19484f"), ink="f4efe4", panel="10363a", accent="f0a07a",
+    "mind": dict(cols=("267076", "2e7666", "225e66"), ink="f4efe4", panel="10363a", accent="f0a07a",
                  font="garamond", pattern="ripples"),
     "people": dict(cols=("d89a2a", "e0a83a", "c88a24"), ink="1c1a18", panel="f4ead2", accent="8a2a1a",
                    font="oswald", pattern="circles"),
-    "decisions": dict(cols=("1f4a32", "26553a", "183c2a"), ink="f2ead8", panel="0f2a1c", accent="e8b84a",
+    "decisions": dict(cols=("2a6244", "326e4c", "22543a"), ink="f2ead8", panel="0f2a1c", accent="e8b84a",
                       font="baskerville", pattern="branches"),
-    "craft": dict(cols=("a8482a", "b4562e", "963e24"), ink="f6efe0", panel="2a2522", accent="e8c070",
+    "craft": dict(cols=("b8522e", "c26034", "a8482a"), ink="f6efe0", panel="2a2522", accent="e8c070",
                   font="bebas", pattern="chevrons"),
 }
 

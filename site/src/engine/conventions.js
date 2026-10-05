@@ -35,7 +35,7 @@ export function scanNodes(root) {
     else if (/^cam_view/i.test(name)) n.camView ??= o;
     else if (/^cam_target/i.test(name)) n.camTarget ??= o;
     // act_x is the pivot; an act_x_mesh inside it is only its geometry (the vendor's and ride builder's export)
-    else if (/^act_/i.test(name) && !/_mesh(\.\d+)?$/i.test(name)) { const k = name.toLowerCase(); if (!n.acts[k]) n.acts[k] = o; }
+    else if (/^act_/i.test(name) && !/_mesh(_\d+)?(\.\d+)?$/i.test(name)) { const k = name.toLowerCase(); if (!n.acts[k]) n.acts[k] = o; }
     else if (/^rot_/i.test(name)) n.rots.push(o);
     else if (/^gondola_/i.test(name) && !hasPrefixUp(o.parent, root, /^gondola_/i)) n.gondolas.push(o);
     else if (/^horse_/i.test(name) && !hasPrefixUp(o.parent, root, /^horse_/i)) n.horses.push(o);

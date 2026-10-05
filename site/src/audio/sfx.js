@@ -1,4 +1,6 @@
-// Stall sounds, synthesised live as in the prototype: clink, pour, sizzle, page, chime, whoosh.
+// Stall sounds, synthesised live as in the prototype: clink, pour, sizzle, page, chime, whoosh; and the ornament shop's
+// (round 8): a glass bauble's note, the nutcracker's crack, a puff of incense, a match for the candles, the star's
+// paper and the pickle's reward.
 // They have their own bus straight to the output and are never faded with the music.
 import { audioContext, noiseBuffer, impulse, output } from './context.js';
 
@@ -97,6 +99,58 @@ const SFX = {
     const o = out(AC, (Math.random() - 0.5) * 0.5, 1.2), N = [79, 83, 84, 86, 88, 91], a = N[(Math.random() * N.length) | 0], b = N[(Math.random() * N.length) | 0];
     [[a, 0, 1], [b, 0.16, 0.7]].forEach(([m, dt, s]) => { const f = 440 * Math.pow(2, (m - 69) / 12), tt = t + dt; sTone(AC, tt, f, 0.035 * s, 1.6, o); sTone(AC, tt, f * 2, 0.008 * s, 0.5, o); sTone(AC, tt, f * 5.4, 0.004 * s, 0.12, o); });
   },
+  /**
+   * A glass bauble, tapped: a soft, warm note. A thin blown-glass shell rings with partials well above the
+   * harmonic series (about 2.3, 4.2 and 6.6 times the note), each fading faster than the one below; a tiny tick of
+   * the fingernail on glass starts it. Quiet, low-passed for warmth, and sent to the room.
+   */
+  glass(AC, t, { note = 'C5', pan = 0, gain = 1 } = {}) {
+    const f0 = noteHz(note);
+    const p = AC.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan));
+    const warm = AC.createBiquadFilter(); warm.type = 'lowpass'; warm.frequency.value = 4200; warm.Q.value = 0.4;
+    warm.connect(p); p.connect(bus);
+    const s = AC.createGain(); s.gain.value = 1.1; p.connect(s); s.connect(rev);
+    // higher notes are quieter, so a run up the rail does not get shrill
+    const a = 0.028 * gain * Math.min(1, Math.pow(523 / f0, 0.45));
+    [[1, 1, 2.6], [2.32, 0.32, 1.3], [4.25, 0.12, 0.6], [6.63, 0.05, 0.3]].forEach(([r, k, d], i) => {
+      const o = sTone(AC, t, f0 * r * (1 + (i ? (Math.random() - 0.5) * 0.004 : 0)), a * k, d * Math.min(1.2, Math.pow(880 / f0, 0.3)), warm, { att: 0.003 });
+      // a slow beat in the fundamental, as a real bauble's two near-degenerate modes give it
+      if (!i) { const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = 2.3 + Math.random(); lg.gain.value = f0 * 0.0012; lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + 3); }
+    });
+    const tick = sNoise(AC, t, 0.02, warm, { type: 'highpass', f: 5200, q: 0.6 });
+    tick.setValueAtTime(0, t); tick.linearRampToValueAtTime(0.012 * gain, t + 0.001); tick.exponentialRampToValueAtTime(0.0001, t + 0.015);
+  },
+  /** The nutcracker's jaw: a wooden knock and the crack of a shell. */
+  crack(AC, t) {
+    const o = out(AC, 0.1, 0.35);
+    const k1 = sNoise(AC, t, 0.05, o, { type: 'bandpass', f: 1400, q: 2.5 }); k1.setValueAtTime(0, t); k1.linearRampToValueAtTime(0.09, t + 0.002); k1.exponentialRampToValueAtTime(0.0002, t + 0.045);
+    sTone(AC, t, 190, 0.03, 0.09, o);
+    const t2 = t + 0.32;
+    const k2 = sNoise(AC, t2, 0.09, o, { type: 'highpass', f: 1800, q: 0.7, buf: crackle(AC) }); k2.setValueAtTime(0, t2); k2.linearRampToValueAtTime(0.16, t2 + 0.004); k2.exponentialRampToValueAtTime(0.0003, t2 + 0.08);
+    const k3 = sNoise(AC, t2, 0.06, o, { type: 'bandpass', f: 900, q: 1.8 }); k3.setValueAtTime(0, t2); k3.linearRampToValueAtTime(0.06, t2 + 0.002); k3.exponentialRampToValueAtTime(0.0002, t2 + 0.05);
+  },
+  /** A soft breath of incense smoke (and a candle blown out). */
+  puff(AC, t) {
+    const o = out(AC, 0, 0.3);
+    const b = sNoise(AC, t, 0.7, o, { type: 'lowpass', f: 700, f2: 300, q: 0.5 }); env(b, t, [[0.08, 0.05], [0.65, 0]]);
+  },
+  /** A match struck, and the small flame taking. */
+  match(AC, t) {
+    const o = out(AC, (Math.random() - 0.5) * 0.3, 0.3);
+    const s = sNoise(AC, t, 0.16, o, { type: 'highpass', f: 2400, q: 0.6, buf: crackle(AC) }); s.setValueAtTime(0, t); s.linearRampToValueAtTime(0.07, t + 0.01); s.exponentialRampToValueAtTime(0.0003, t + 0.15);
+    const f = sNoise(AC, t + 0.05, 0.4, o, { type: 'lowpass', f: 450, q: 0.6 }); f.setValueAtTime(0, t + 0.05); f.linearRampToValueAtTime(0.035, t + 0.12); f.exponentialRampToValueAtTime(0.0003, t + 0.45);
+  },
+  /** The paper star lit: a soft rustle and a warm hum swelling under it. */
+  lamp(AC, t) {
+    const o = out(AC, 0.05, 0.6);
+    const r = sNoise(AC, t, 0.3, o, { f: 2600, q: 0.9 }); env(r, t, [[0.05, 0.012], [0.28, 0]]);
+    sTone(AC, t, noteHz('G4'), 0.008, 1.4, o, { att: 0.35 });
+    sTone(AC, t, noteHz('D5'), 0.005, 1.2, o, { att: 0.4 });
+  },
+  /** The pickle found: a gentle run up four glass notes. */
+  reward(AC, t) {
+    ['C6', 'E6', 'G6', 'C7'].forEach((n, i) => SFX.glass(AC, t + i * 0.13, { note: n, pan: (i - 1.5) * 0.15, gain: 0.85 }));
+  },
   whoosh(AC, t) {
     const p = AC.createStereoPanner(); p.pan.setValueAtTime(-0.6, t); p.pan.linearRampToValueAtTime(0.6, t + 1.6); p.connect(bus);
     const s = AC.createGain(); s.gain.value = 0.5; p.connect(s); s.connect(rev);
@@ -105,15 +159,25 @@ const SFX = {
   },
 };
 
-/** Play a stall sound. Safe to call anywhere; it never throws. */
-export function sfx(name) {
+const NOTE_STEP = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+/** 'C5', 'F#4', 'Bb3' -> Hz (A4 = 440); a number passes through. */
+export function noteHz(note) {
+  if (typeof note === 'number') return note;
+  const m = /^([A-Ga-g])([#b]?)(-?\d)$/.exec(String(note).trim());
+  if (!m) return 523.25;
+  const midi = 12 * (+m[3] + 1) + NOTE_STEP[m[1].toUpperCase()] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+/** Play a stall sound (with options for those that take them: glass { note, pan }). Safe anywhere; never throws. */
+export function sfx(name, opts) {
   let AC;
   try { AC = ensure(); } catch { return; }
   const fn = SFX[name];
   if (!fn) return;
   const go = () => {
     const t = AC.currentTime + 0.02;
-    try { fn(AC, t); } catch { return; }
+    try { fn(AC, t, opts); } catch { return; }
     until = Math.max(until, t + 3.5);
     // let the context sleep again when neither music nor sounds need it
     if (!isMusicPlaying()) setTimeout(() => { if (!isMusicPlaying() && AC.state === 'running' && AC.currentTime > until) AC.suspend(); }, 4000);

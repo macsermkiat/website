@@ -13,7 +13,7 @@ MODELS_DIR = os.path.join(REPO, "site", "public", "models")
 FONTS_DIR = os.path.join(LIB_DIR, "fonts")
 
 rng = random.Random(1)
-_lod = {"level": 0}
+_lod = {"level": 0, "bevels": True}
 EXPORT_COLL = "Export"
 
 
@@ -39,6 +39,19 @@ def set_lite(on):
 
 def lite():
     return _lod["level"] > 0
+
+
+def set_bevels(on):
+    """Round 8: False turns off the edge chamfers under 1 cm of Part.box/mbox in a full build, as lite
+    does, while keeping full plank widths, shingles, text and the larger rounds (a counter's worn
+    front edge). For scenery seen only from a lane (the
+    deco stalls): a 4 mm chamfer is invisible from 4 m and triples a board's triangles. reset() turns
+    bevels back on."""
+    _lod["bevels"] = bool(on)
+
+
+def bevels():
+    return _lod["bevels"] and not lite()
 
 
 def export_collection():
@@ -89,6 +102,7 @@ def reset(seed_value=1, lite_mode=False):
     geo._fonts.clear()
     seed(seed_value)
     set_lite(lite_mode)
+    set_bevels(True)
     os.makedirs(OUT_DIR, exist_ok=True)
     os.makedirs(KIT_DIR, exist_ok=True)
     os.makedirs(MODELS_DIR, exist_ok=True)

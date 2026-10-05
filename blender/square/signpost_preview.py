@@ -12,7 +12,7 @@ import architect_common as C
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 samples = int(sys.argv[1]) if len(sys.argv) > 1 else 48
-out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(C.REPO, "review", "round-5", "architect", "signpost.jpg")
+out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(C.REPO, "review", "round-8", "architect", "signpost.jpg")
 src = os.path.join(C.MODELS, "signpost.glb")
 dec = os.path.join(HERE, "out", "signpost_decoded.glb")
 subprocess.run(["node", os.path.join(HERE, "decode_glb.mjs"), src, dec], check=True)
@@ -33,6 +33,6 @@ gpo.data.materials.append(C.solid("pv_cobble", (0.06, 0.055, 0.05), rough=0.35))
 C.add_light("lantern", "POINT", (lp.x, lp.y, lp.z), 60, (1.0, 0.72, 0.45), size=0.05)
 C.add_light("market_glow", "AREA", (-3, -6, 4), 400, (1.0, 0.7, 0.45), size=6, rot=(math.radians(60), 0, math.radians(-25)))
 C.add_light("moon", "SUN", (0, 0, 10), 0.25, (0.6, 0.7, 1.0), rot=(math.radians(50), 0, math.radians(30)))
-C.camera((1.6, -5.2, 2.6), (0, 0, 3.05), lens=40)
+C.camera((2.0, -6.6, 2.6), (0.4, 0, 2.8), lens=38)      # round 8: pulled back for the eighth, longer board
 C.compositor_fog_glare(near=8, far=60, fog_amount=0.2)
 C.render(out)

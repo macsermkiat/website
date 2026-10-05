@@ -91,10 +91,21 @@ def layout_places():
 # and 5 now hang from pole 10 on the left lane line [-17.5, 5], mirroring pole 13 on the right.  Its
 # old front swag to the right side (span 19) would now repeat span 22 (pole 10 to pole 13) and is
 # dropped (RETIRED_SPANS).
+# Round 8 (ADR 0004: the stroll's loop passes both deco lanes and the back row): the deco lanes moved out
+# to x = +-22.5 and the stroll walks between the lane-line poles and the deco counters, so the hub poles
+# 10 and 13 moved: pole 10 to [-16.9, 6.4], off the Bratwurst's back corner, and pole 13 to [18.2, 5.4], on
+# the inner edge of the right deco lane, clear of the people at the Bücherstand's flank, and poles 9 and 12 step in to x = -+16.6..16.9 out of the
+# lane.  The back row moved north of the tree and the stroll walks between them, so the back-row poles
+# 15, 16 and 17 moved behind the stall fronts (between Crêpes and Maroni, between Maroni and the
+# Kartoffelpuffer, and north of the Karussell), clear of the lane and the gap between tree and carousel.
+# Span 29 now hangs from pole 16 instead of pole 15 ([16, 5] for [15, 5]): from pole 15's new spot it
+# passed through the Riesenrad's footprint (check_clash.py).
+# Pole 3 moved from [7.5, 6.5] to [6.3, 8.4]: the round-8 Bücherstand's cam_view (6.25 m out) put the
+# stop's eye 0.95 m from it.
 TREE_THREE = (6.5, -15.0)
-POLES_THREE = [[-17.5, 5], [-7.8, 5.6], [0, 7.5], [7.5, 6.5], [17.5, 5], [-10.5, -6.5], [10.5, -6.5],
-               [-2.6, -9.6], [2.6, -9.6], [-17.5, -3], [-17.5, 5], [-17.5, 13], [17.5, -3], [17.5, 5],
-               [17.5, 13], [-7, -18], [0, -21], [12.4, -20.6]]
+POLES_THREE = [[-16.9, 6.4], [-7.8, 5.6], [0, 7.5], [6.3, 8.4], [18.2, 5.4], [-10.5, -6.5], [10.5, -6.5],
+               [-2.6, -9.6], [2.6, -9.6], [-16.6, -1.2], [-16.9, 6.4], [-17.5, 13], [16.9, -0.2], [18.2, 5.4],
+               [17.5, 13], [-6.9, -22.8], [0.8, -24.6], [14.5, -22.5]]
 # Round 1 pass 3: span 19 used to run 35 m from pole 9 to pole 12 across z = -3, 2 m in front of the
 # bandstand's axis, and sagged into its roof; it now swags across the front lane from pole 0 to pole 4
 # (z = 4, 4 m in front of the bandstand).  Spans 11 and 12 (pole 2 to poles 7 and 8) pass 1.9 m from
@@ -105,7 +116,7 @@ POLES_THREE = [[-17.5, 5], [-7.8, 5.6], [0, 7.5], [7.5, 6.5], [17.5, 5], [-10.5,
 # tree reaches 4.3 m from its axis at 5.5 m height.
 SPANS = [[10, 1], [1, 2], [2, 3], [3, 13], [10, 5], [13, 6], [5, 7], [7, 8], [8, 6], [1, 7], [3, 8], [2, 7],
          [2, 8], [1, 5], [3, 6], [9, 10], [10, 11], [12, 13], [13, 14], [0, 13], [11, 1], [14, 3],
-         [10, 13], [5, 9], [6, 12], [15, 16], [16, 17], [15, 7], [16, 7], [15, 5], [17, 6]]
+         [10, 13], [5, 9], [6, 12], [15, 16], [16, 17], [15, 7], [16, 7], [16, 5], [17, 6]]
 POLE_H = 6.4
 RETIRED_POLES = {0, 4}          # kept in the list so the indices (and span names) stay stable
 RETIRED_SPANS = {19}

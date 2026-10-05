@@ -34,6 +34,7 @@ SHELF_Y = (-0.115, 0.125)  # usable depth behind the lip, in front of the back w
 WIDTH = {"lebkuchen": 3.0, "mandeln": 3.4, "kerzen": 2.6, "spielzeug": 3.2, "schmuck": 3.4, "kaese": 2.8,
          "crepes": 2.8, "maroni": 2.6, "puffer": 3.2}
 STALL_ID = {k: "deco-" + ("kartoffelpuffer" if k == "puffer" else k) for k in WIDTH}
+SCENERY = {"on": False}    # set by set_decoscene while it builds the scenery versions
 
 
 # ------------------------------------------------------------------ naming, labels and actions
@@ -596,8 +597,9 @@ def crepes_rail(s, W):
         c = (a + b) / 2
         m.add([(a.x + 0.01, a.y, a.z), (b.x - 0.01, b.y, b.z), (c.x, c.y, c.z - 0.09)], [(0, 1, 2)],
               [[(0.0, 0.0), (1.0, 0.0), (0.5, 1.0)]], None, C(cols[i % 3]), "atlas")
-    for x in (-1.0, 1.0):
-        m.box((0.02, 0.02, 0.07), T(x, ROD_Y, ROD_Z + 0.035), vlib.RW("wood"), C("6a4a2c"))
+    if not SCENERY["on"]:          # set_decoscene: the bunting ties to the carpenter's rail, no brackets of its own
+        for x in (-1.0, 1.0):
+            m.box((0.02, 0.02, 0.07), T(x, ROD_Y, ROD_Z + 0.035), vlib.RW("wood"), C("6a4a2c"))
 
 
 def crepes_shelf(s, hw):

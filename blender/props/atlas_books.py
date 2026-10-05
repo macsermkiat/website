@@ -349,6 +349,8 @@ def g_cover(b):
         t.paint(em * 0.95, acc, 0.4)
         t.paint(((np.abs(yy - h * 0.755) < 1.0) & (np.abs(xx - w / 2) < w * 0.14)).astype(float), acc, 0.4)
         t.paint(((np.abs(yy - h * 0.9) < 1.0) & (xx > w * 0.08) & (xx < w * 0.92)).astype(float) * 0.8, acc, 0.4)
+        # round 8 pass 2: the author's name on its own solid band (panel colour), so it reads at cam_cat
+        t.paint(((yy > h * 0.778) & (yy < h * 0.874) & (xx > w * 0.06) & (xx < w * 0.94)).astype(float) * 0.9, panel, 0.5)
         title, author = b["title"], b["author"]
         tink = ink if b["panel"] != "f4ead2" else hexc("1c1a18")
         rows_t = _text_block(w, h, title.upper() if up else title, fn, wg, h * 0.105, (x1 - x0) * 0.84,
@@ -359,7 +361,7 @@ def g_cover(b):
         rows_l = [(lab, "oswald", min(h * 0.042, va.fit_size(lab, "oswald", h * 0.042, 500, w * 0.86)), 500,
                    (w / 2, h * 0.044), "mm")]
         t.paint(text_mask(w, h, rows_t), tink, 0.5, 0.0, 0.05)
-        t.paint(text_mask(w, h, rows_a), ink, 0.5, 0.0, 0.02)
+        t.paint(text_mask(w, h, rows_a), tink, 0.5, 0.0, 0.02)
         t.paint(text_mask(w, h, rows_l), acc, 0.45)
         return t
     return f

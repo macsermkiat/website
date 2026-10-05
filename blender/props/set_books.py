@@ -353,7 +353,7 @@ def counter():
     bookmark_tray(m, T(0.34, -0.14, 0, rz=0.1))
     lamp(m, 0.52, 0.1)
     cash_box(m, T(0.95, 0.12, 0, rz=-0.15))
-    price_card(m, T(0.6, -0.17, 0, rz=0.2), 0)
+    price_card(m, T(0.62, -0.05, 0, rz=0.2), 0)     # round 8: clear of the stall's new counter frame at the front
     s.finish()
     return s
 
@@ -447,7 +447,8 @@ def section_set(key):
     x0 = ox + 0.03
     x1 = ox + sb["width"] * rng.uniform(0.55, 0.7)
     bookend(m, T(x0 - 0.004, oy + SPINE_SET + 0.012, oz), side=1)
-    x, k = filler_run(m, x0, x1, oy + SPINE_SET + 0.012, oz, min(sb["clear_height"], 0.22), min(sb["depth"], 0.2), k)
+    # the cabinet's bulb strip runs about 0.19 m over the spine board: the filler stays under it
+    x, k = filler_run(m, x0, x1, oy + SPINE_SET + 0.012, oz, min(sb["clear_height"] - 0.06, 0.16), min(sb["depth"], 0.2), k)
     bookend(m, T(x + 0.003, oy + SPINE_SET + 0.012, oz), side=-1)
     s.finish()
     return s
@@ -471,7 +472,7 @@ def _section_def(key, seed):
                 seed=seed, width=W + 0.4, section_boards=None,
                 cam=((W / 2, -1.0, zc + 0.1), (W / 2, 0.05, zc), 32), cam_fixed=True,
                 hero=((W * 0.5, -0.75, top + 0.16), (W * 0.5, 0.05, top + 0.1), 40),
-                in_stall="stall_buecher.glb", stall_cams={"cam_cat": cam_cat},
+                in_stall="stall_buecher.glb", stall_cams={"cam_cat": cam_cat}, seat="lean",
                 label=f"{sec['label_de']} ({sec['books']} books)")
 
 

@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import inventory from 'virtual:market-inventory';
 import { chooseQuality, switchQuality } from './quality.js';
-import { buildMarket, viewFor } from './engine/market.js';
+import { buildMarket } from './engine/market.js';
 import { setupLighting } from './engine/lighting.js';
 import { placeLights } from './engine/lights.js';
 import { createSnowfall } from './engine/snowfall.js';
@@ -110,7 +110,9 @@ async function boot() {
     scene, lite, warn,
     // round 5, pass 2: the town ring comes just after the first frame too (the still covers the first frame, and
     // the town is the far backdrop), which is most of the lite market's margin under round 4
-    defer: deferOn ? (e) => e.kind === 'deco' || e.place === 'ferris' || e.place === 'carousel' || e.kind === 'town' : undefined,
+    // round 8: the ornament shop too (a stop at the far right, not in the home view's foreground): its goods are
+    // most of a megabyte, and the first frame does not need them
+    defer: deferOn ? (e) => e.kind === 'deco' || e.place === 'ferris' || e.place === 'carousel' || e.place === 'schmuck' || e.kind === 'town' : undefined,
     stream: streamOn ? STREAMED : undefined,
     onProgress: (f, e) => { bar.style.width = `${Math.round(f * 85)}%`; $('loadingText').textContent = `Setting up the market… ${e.label || e.id}`; },
   });
@@ -118,7 +120,7 @@ async function boot() {
   const focus = new THREE.Vector3().fromArray(home.target);
   const { lighting, source: lightingSource } = await setupLighting({ scene, renderer, camera, lite }, warn);
   const reserved = lite ? 0 : 2; // the bandstand's two spotlights (the lite market fakes its spot)
-  const heldForLater = !lite && market.deferred.some((id) => /riesenrad|karussell|ferris|carousel/.test(id)) ? DEFERRED_LIGHTS : 0;
+  const heldForLater = lite ? 0 : (market.deferred.some((id) => /riesenrad|karussell|ferris|carousel/.test(id)) ? DEFERRED_LIGHTS : 0) + (market.deferred.some((id) => /schmuck/.test(id)) ? SHOP_LIGHTS : 0);
   const fullBudget = Number(lighting.raw?.profile?.lightBudget) || 14;
   const lightInfo = placeMarketLights({ scene, lighting, lightingSource, spots: market.lightSpots, lite, focus, reserved, warn, budget: lite ? undefined : fullBudget - heldForLater });
   instancePools(lightInfo.pools, scene);
@@ -171,10 +173,11 @@ async function boot() {
   let guide = null;
   const note = createNote({ overlay, announce: announceEl, anchorFor: (id) => noteAnchor(market, id || guide?.here) });
   let world = null;
+  const sfxLog = [];
   const actions = createActions({
     market, scene, lite, motion, audio, rig, camera, overlay,
     books: bookPicks(),
-    sfx: (n) => audio.sfx(n),
+    sfx: (n, o) => { sfxLog.push({ name: n, note: o?.note || null }); if (sfxLog.length > 40) sfxLog.shift(); return audio.sfx(n, o); },
     say: (html) => note.say(html),
     crowdSay: (text, center, radius) => crowd.say(text, center, radius),
     togglePlay: () => togglePlay(),
@@ -182,6 +185,9 @@ async function boot() {
     keyAt: (center, facing) => (center ? key?.aim(center, facing) : key?.follow(market.places[guide?.here])),
     flyBack: (v) => { if (!rig.riding && v) { rig.flyTo(v); if (v.exact) guide?.markCloseUp(); } },
     world: () => world,
+    // the keyboard's focus on one item (a book in an open cabinet): outlined, and said
+    highlight: (node) => { if (outline) outline.selectedObjects = node ? [node] : []; },
+    announce: (t) => announce(t),
   });
 
   /** A click on a writing surface (or its probe in the tests): read it, turn its page, or park the wheel first. */
@@ -227,7 +233,8 @@ async function boot() {
   world = createWorldReader({
     camera, rig, motion, announce,
     sfx: (n) => audio.sfx(n === 'chalk' || n === 'card' ? 'page' : n),
-    stopView: () => guide?.stopView(),
+    // after reading a book from an open cabinet, the camera goes back to that cabinet
+    stopView: () => { const cv = actions.items.handlers.cabinetView?.(); if (cv) { const b = frameRegionView(cv); if (b) return b; } return guide?.stopView(); },
     els: { bar: $('readbar'), title: $('readTitle'), page: $('readPage'), prevBtn: $('readPrev'), nextBtn: $('readNext'), closeBtn: $('readClose'), flipBtn: $('readFlip'), copy: $('readCopy') },
     onOpen: () => { stopbarEl.hidden = true; picking?.refresh(); },
     onClose: () => { releaseWheel(); if (guide?.here && guide.arrived) stopbar.show(guide.here, { prevId: stroll.prev(guide.here), nextId: stroll.next(guide.here) }); },
@@ -358,7 +365,14 @@ async function boot() {
       actions.items.click(item);
       focusItem(item);
     },
-    onDeco: (id) => openDeco(id),
+    // a pick proxy: a Bücherstand cabinet (or its sign), opened by the books' handler
+    onProxy: (px) => {
+      const place = px.place && market.places[px.place];
+      if (place && (guide.here !== px.place || !guide.arrived)) { guide.walkTo(px.place); return; }
+      if (world.isOpen) world.close({ silent: true, keepCamera: true });
+      actions.items.proxyClick(px);
+    },
+    proxyLabel: (px) => px.label || '',
   });
 
   /** -1, 0 or +1: which half of a page a click landed on (for page turns). */
@@ -373,15 +387,6 @@ async function boot() {
     else location.href = href;
   }
 
-  // the deco stall's name under its close-up
-  const caption = document.createElement('p');
-  caption.className = 'decocap';
-  caption.hidden = true;
-  stage.appendChild(caption);
-  function decoCaption(d) {
-    caption.hidden = !d;
-    if (d) caption.textContent = `${d.entry.label || d.id}. Point at the goods to look closer; Escape steps back.`;
-  }
   const ITEM_NEAR = 1.7;
   function focusItem(item) {
     const at = actions.items.focusOf(item);
@@ -398,6 +403,17 @@ async function boot() {
     guide.markCloseUp();
   }
   /** Frame a box (centre, facing, half width and height in metres) square to its face, above the stop bar. */
+  /** The view frameRegion would fly to (position, target, near), without flying. */
+  function frameRegionView({ center, facing, halfW, halfH, depth = 0, lift = 0.25, margin = 1.25, near = 0.5 }) {
+    if (!center || !facing) return null;
+    const fx = 1, fy = 1 - Math.min(0.2, 70 / Math.max(300, stage.clientHeight));
+    const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+    const d = Math.max((halfH * margin) / (t * fy), (halfW * margin) / (t * camera.aspect * fx), near + 0.15) + depth / 2;
+    const dir = facing.clone().setY(0).normalize();
+    dir.y = lift;
+    dir.normalize();
+    return { pos: center.clone().addScaledVector(dir, d), target: center.clone(), near };
+  }
   function frameRegion({ center, facing, halfW, halfH, depth = 0, lift = 0.25, margin = 1.25, near = 0.5 }) {
     if (rig.riding || !center || !facing) return null;
     const fx = 1, fy = 1 - Math.min(0.2, 70 / Math.max(300, stage.clientHeight));
@@ -410,16 +426,6 @@ async function boot() {
     rig.flyTo({ pos: center.clone().addScaledVector(dir, d), target: center.clone(), near });
     return back;
   }
-  function openDeco(id) {
-    const d = market.decos[id];
-    if (!d) return;
-    if (actions.rides.riding) actions.rides.endRide(true);
-    if (world.isOpen) world.close({ silent: true, keepCamera: true });
-    rig.flyTo(viewFor(d));
-    decoCaption(d);
-    guide.markCloseUp();
-  }
-  rig.onArrive(() => { if (!guide.closeUp) decoCaption(null); });
 
   // ---------- fewer draw calls ----------
   const merges = { before: 0, after: 0, row: 0 };
@@ -474,16 +480,15 @@ async function boot() {
 
   function resetView() {
     actions.rides.endRide(true);
-    decoCaption(null);
     guide.home();
   }
   $('reset').addEventListener('click', resetView);
-  $('stepBack').addEventListener('click', () => { guide.back(); decoCaption(null); });
+  $('stepBack').addEventListener('click', () => { guide.back(); });
   setupMute($('mute'), audio);
   bindKeyboard({
     canvas: renderer.domElement, order: ORDER, rig,
     walkTo: (id) => { showStage(); guide.walkTo(id); },
-    home: () => { if (!guide.back()) resetView(); else decoCaption(null); },
+    home: () => { if (!guide.back()) resetView(); },
     step: (d) => guide.step(d),
     read: () => guide.read(),
     reading: () => world.isOpen,
@@ -491,6 +496,8 @@ async function boot() {
     closeRead: () => world.close(),
     endRide: () => actions.rides.endRide(false),
     isRiding: () => !!actions.rides.riding,
+    // at the Bücherstand the arrows move between its cabinets and their books first
+    localKey: (k) => guide.arrived && guide.here === 'books' && !rig.riding && !!actions.items.handlers.cabinetKey?.(k),
   });
 
   // ---------- size ----------
@@ -589,7 +596,8 @@ async function boot() {
 
   // ---------- after the first frame ----------
   const crowdReady = crowdFirst ? Promise.resolve(crowdNow) : new Promise((res) => requestAnimationFrame(() => res())).then(loadCrowd).then((c) => { report.crowd = c.count; report.lod = c.lod; return c; });
-  const lodReady = lite ? crowdReady.then(() => 0) : crowdReady.then(() => new Promise((res) => setTimeout(res, 300))).then(() => crowd.enableLod()).catch((e) => { warn(`crowd LOD: ${e?.message || e}`); return 0; });
+  // the far crowd (instanced, GPU-animated) on both markets, baked just after the crowd arrives
+  const lodReady = crowdReady.then(() => new Promise((res) => setTimeout(res, 300))).then(() => crowd.enableLod()).catch((e) => { warn(`crowd LOD: ${e?.message || e}`); return 0; });
   const deferredReady = !market.deferred.length ? Promise.resolve(null) : new Promise((res) => requestAnimationFrame(() => res())).then(() => market.loadDeferred()).then((added) => {
     const more = placeMarketLights({ scene, lighting, lightingSource, spots: added.spots, lite, focus, reserved: 0, warn, budget: heldForLater, second: true });
     lightInfo.pools.push(...more.pools);
@@ -773,6 +781,8 @@ async function boot() {
     settled: () => Promise.all([lodReady, deferredReady]).then(([lod, deferred]) => ({ lod, deferred })),
     featuredBooks: () => actions.featuredBooks.map((n) => n.name),
     note: () => note.text,
+    /** The last stall sounds asked for (tests): name and note. */
+    sfxLog: () => sfxLog.slice(),
     bookPicks: () => bookPicks().map((b) => [b[0], b[1]]),
     items: () => itemCounts(),
     clickItem(name, { focus = false } = {}) { const it = actions.items.all().find((i) => i.node.name === name); if (!it) throw new Error(`no item ${name}`); picking.setEnabled(true); const r = actions.items.click(it); if (focus) focusItem(it); return r; },
@@ -783,12 +793,24 @@ async function boot() {
     openedBook: () => actions.items.handlers.openedBook?.() || null,
     itemAt: (x, y) => picking.itemAt(x, y),
     pickAt: (x, y) => picking.full(x, y),
+    rawAt: (x, y) => picking.rawAt(x, y),
+    /** The deco stalls (scenery, tests): their ids, and where one is on screen (the middle of its front). */
+    decos: () => (market.blockRoots || []).map((h) => h.userData.entry?.id).filter(Boolean),
+    entryPoint(id) {
+      const h = (market.blockRoots || []).concat(market.hotRoots).find((o) => o.userData.entry?.id === id);
+      if (!h) return null;
+      const box = new THREE.Box3().setFromObject(h);
+      const c = box.getCenter(new THREE.Vector3());
+      c.y = box.min.y + (box.max.y - box.min.y) * 0.4;
+      const p = c.project(camera);
+      const r = renderer.domElement.getBoundingClientRect();
+      return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height, onScreen: Math.abs(p.x) < 1 && Math.abs(p.y) < 1 && p.z < 1 };
+    },
     tipAt: (x, y, text) => picking.tipAt(x, y, text),
     hoverAt(x, y) { renderer.domElement.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, pointerType: 'mouse', bubbles: true })); },
     get hoveredItem() { return actions.items.hovered?.node.name || null; },
     renderFrame() { composer.render(0.016); },
     muted: () => audio.muted,
-    openDeco,
     screenPoint(name) {
       const o = scene.getObjectByName(name);
       if (!o) return null;
@@ -797,6 +819,23 @@ async function boot() {
       const p = (box.isEmpty() ? o.getWorldPosition(new THREE.Vector3()) : box.getCenter(new THREE.Vector3())).project(camera);
       const r = renderer.domElement.getBoundingClientRect();
       return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height, onScreen: Math.abs(p.x) < 1 && Math.abs(p.y) < 1 && p.z < 1 };
+    },
+    /** The size on screen of a node's bounding box, in CSS pixels (tests: a book cover's tap target). */
+    screenBox(name) {
+      const o = scene.getObjectByName(name);
+      if (!o) return null;
+      o.updateWorldMatrix(true, true);
+      const box = new THREE.Box3();
+      o.traverse((m) => { if (m.isMesh && !m.isText) { m.geometry.computeBoundingBox(); box.union(m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld)); } });
+      if (box.isEmpty()) return null;
+      const r = renderer.domElement.getBoundingClientRect();
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let i = 0; i < 8; i++) {
+        const p = new THREE.Vector3(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(camera);
+        const x = r.left + ((p.x + 1) / 2) * r.width, y = r.top + ((1 - p.y) / 2) * r.height;
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      }
+      return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0, onScreen: x0 >= r.left - 1 && x1 <= r.right + 1 && y0 >= r.top - 1 && y1 <= r.bottom + 1 };
     },
     blockers(name) {
       const o = scene.getObjectByName(name);
@@ -831,6 +870,7 @@ const SIGN_POS = [-3.4, 0, 19.2];
 // the home view on a phone: closer and lower, between the front row's string-light poles
 const PHONE_HOME = { position: [3.75, 5.6, 16], target: [3.4, 2.4, -4] };
 const DEFERRED_LIGHTS = 2;
+const SHOP_LIGHTS = 2; // the ornament shop's two real-time lights, held for it when it comes after the first frame
 
 /** Where a note about a place is pinned: above its counter, or the middle of a landmark. */
 function noteAnchor(market, id) {
@@ -852,7 +892,7 @@ function createKeyLight(scene) {
   const INTENSITY = 22;
   return {
     follow(place) {
-      if (!place || !['glueh', 'bier', 'wurst', 'books'].includes(place.id)) { want = 0; placeId = null; return; }
+      if (!place || !['glueh', 'bier', 'wurst', 'books', 'schmuck'].includes(place.id)) { want = 0; placeId = null; return; }
       placeId = place.id;
       const c = counterLocal(place);
       const from = new THREE.Vector3(c.x, 2.35, c.z + 1.25);

@@ -59,7 +59,9 @@ export function gpuTier(renderer = '') {
  * The crowd's distance LOD for a GPU class (metres beyond which people draw their lite figure). Starting
  * points until real measurements replace them (NOTES.md); the frame-time governor lowers them at run time.
  */
-export const LOD_BY_TIER = { discrete: 18, unknown: 14, integrated: 12, weak: 8, software: 8 };
+// Round 8 (docs/adr/0004): the far crowd is instanced and animated on the GPU (crowdFar.js), so the switch can sit
+// at about 25 m on a real graphics card and still cost less than round 7's 18 m with a skinned figure each.
+export const LOD_BY_TIER = { discrete: 25, unknown: 20, integrated: 18, weak: 12, software: 12 };
 
 export function detectLite(info = gpuInfo(), env = globalThis) {
   const reasons = [];

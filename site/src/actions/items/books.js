@@ -4,7 +4,7 @@
 // or the bar's button) and it closes and goes back to its place. Which book a spine is comes from items.json (`slug`, `title`,
 // `author`, `category`), which the vendor keeps in line with content/books/categories.json.
 import * as THREE from 'three';
-import { boxOf, rest, restore, wrap, esc, UP } from './common.js';
+import { boxOf, rest, restore, wrap, esc, UP, worldDirToParent } from './common.js';
 import { viewFor } from '../../engine/market.js';
 import inventory from 'virtual:market-inventory';
 import { actionNote, LIBRARY } from '../../content.js';
@@ -61,8 +61,8 @@ export function createBooks(ctx) {
     if (open?.n === n) { close(); return; }
     if (item?.busy) return;
     if (open) close();
-    // the key light was turned to a shelf: back to the counter, where the book will stand open
-    if (shelfOpen) { shelfOpen = null; ctx.keyAt?.(null); }
+    // the key light was turned to a cabinet: back to the counter, where the book will stand open
+    if (openCab) ctx.keyAt?.(null);
     const d = describe(n);
     sfx('page');
     const text = d.mac
@@ -134,7 +134,13 @@ export function createBooks(ctx) {
     const { n, item, r0, pull, group: book } = o;
     const home = () => {
       n.visible = true;
-      anim.add(0.45, (k) => pull(1 - k), () => { restore(n, r0); if (item) { item.busy = false; item.keepOwn = false; items.settle(item); } });
+      anim.add(0.45, (k) => pull(1 - k), () => {
+        restore(n, r0);
+        // its cabinet was closed while it was out: home to its place in the closed cabinet, not the forward one
+        const cab = cabOf.get(n);
+        if (cab && !cab.open && n.userData.cabRest) restore(n, n.userData.cabRest);
+        if (item) { item.busy = false; item.keepOwn = !!cab?.open; if (!cab?.open) items.settle(item); }
+      });
     };
     if (!book) { home(); return; } // still sliding out: straight back
     const from = book.world();
@@ -149,56 +155,201 @@ export function createBooks(ctx) {
     });
   }
 
-  // ---------- looking along one category's shelf ----------
-  // A cam_cat_<key> empty in the stall (looking at cam_cat_<key>_target, or else at that section's books) frames a
-  // section exactly. Without one, the view is worked out from the section's own books: square to the shelf
-  // (its long axis is the spread of its spines), from the side the stall's close-up looks from, and far enough
-  // back that the section fills the part of the screen the panel leaves free.
+  // ---------- the six category cabinets (docs/adr/0004) ----------
+  // Picking a book takes two steps. At rest each glazed cabinet is one target (its glass, its books and its sign
+  // answer as the cabinet, through an invisible pick proxy round it). A tap on a cabinet moves the camera to its
+  // cam_cat_<key> view (fitted to the screen, so on a 390 px phone each cover is still a thumb's width), swings its
+  // door (act_cab_<key>) open and brings its face-out covers forward; only that cabinet's books answer the pointer
+  // then (never more than 14 targets). Escape or "Step back" closes it. Keys: ↓ / ↑ open a cabinet and move to the
+  // next / previous one, ← / → move between its books, Enter opens the book in focus.
   const shelves = LIBRARY.categories.map((c) => ({ key: c.key, label: c.labelDe || c.label, en: c.label })).filter((c) => c.key);
-  function spinesOf(key) { return nodes.filter((n) => libraryEntry(n)?.category === key); }
-  function shelfView(key) {
-    const cam = place.nodes.camCats?.[key];
-    const spines = spinesOf(key);
-    const box = new THREE.Box3();
-    for (const n of spines) box.union(boxOf(n));
+  const under = (n, anc) => { for (let o = n; o; o = o.parent) if (o === anc) return true; return false; };
+  /** A category's books: those standing in its cabinet (under slot_cat_<key>), else by their items.json category. */
+  function spinesOf(key) {
     const slot = place.nodes.slots[`slot_cat_${key}`];
-    if (box.isEmpty() && slot) box.setFromCenterAndSize(slot.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0.3, 0.12, 0)), new THREE.Vector3(0.6, 0.3, 0.25));
-    if (box.isEmpty()) return null;
-    const center = box.getCenter(new THREE.Vector3());
-    if (cam) {
-      const t = place.nodes.camCatTargets?.[key];
-      return { pos: cam.getWorldPosition(new THREE.Vector3()), target: t ? t.getWorldPosition(new THREE.Vector3()) : center, near: 0.5, exact: true };
-    }
-    // the shelf's long axis: the spread of its spines on the ground plane (or the slot's own X for one book)
-    let axis = new THREE.Vector3(1, 0, 0);
-    if (spines.length > 1) {
-      let sxx = 0, szz = 0, sxz = 0;
-      const ps = spines.map((n) => n.getWorldPosition(new THREE.Vector3()));
-      const m = ps.reduce((a, p) => a.add(p), new THREE.Vector3()).divideScalar(ps.length);
-      for (const p of ps) { const x = p.x - m.x, z = p.z - m.z; sxx += x * x; szz += z * z; sxz += x * z; }
-      const ang = 0.5 * Math.atan2(2 * sxz, sxx - szz);
-      axis.set(Math.cos(ang), 0, Math.sin(ang));
-    } else if (slot) axis.set(1, 0, 0).applyQuaternion(slot.getWorldQuaternion(new THREE.Quaternion())).setY(0).normalize();
-    const facing = new THREE.Vector3(-axis.z, 0, axis.x);
-    const front = viewFor(place).pos.clone().sub(center).setY(0);
-    if (facing.dot(front) < 0) facing.negate();
-    const size = box.getSize(new THREE.Vector3());
-    const halfW = (Math.abs(axis.x) * size.x + Math.abs(axis.z) * size.z) / 2 + 0.08;
-    return { center, facing, halfW, halfH: size.y / 2 + 0.08, depth: Math.abs(facing.x) * size.x + Math.abs(facing.z) * size.z };
+    const inSlot = slot ? nodes.filter((n) => under(n, slot)) : [];
+    return (inSlot.length ? inSlot : nodes.filter((n) => libraryEntry(n)?.category === key)).sort(byPos);
   }
-  let shelfOpen = null;
-  function showShelf(key) {
-    const v = shelfView(key);
-    if (!v) return false;
-    shelfOpen = key;
-    if (v.exact) ctx.flyBack?.(v);
-    else ctx.frame?.({ ...v, lift: 0.3, margin: 1.3, near: 0.5 });
-    // the lite market's close-up key light turns to the shelf (the full market's own lights reach it)
-    if (v.center) ctx.keyAt?.(v.center, v.facing || v.pos.clone().sub(v.target));
-    const c = shelves.find((x) => x.key === key);
-    const n = spinesOf(key).length;
-    say(`<b lang="de">${esc(c?.label || key)}</b>${c?.en && c.en !== c.label ? ` · ${esc(c.en)}` : ''}: ${n} book${n === 1 ? '' : 's'} on this shelf. <em>Click a spine to open it.</em>`);
+  // top row first, then left to right as the visitor sees it
+  function byPos(a, b) {
+    const pa = a.getWorldPosition(new THREE.Vector3()), pb = b.getWorldPosition(new THREE.Vector3());
+    if (Math.abs(pa.y - pb.y) > 0.08) return pb.y - pa.y;
+    const v = viewFor(place).pos;
+    const side = (p) => { const d = p.clone().sub(v); return Math.atan2(d.x, -d.z); };
+    return side(pa) - side(pb);
+  }
+  const cabinets = [];
+  const cabOf = new Map(); // book node -> cabinet
+  for (const c of shelves) {
+    const slot = place.nodes.slots[`slot_cat_${c.key}`];
+    const door = place.nodes.acts[`act_cab_${c.key}`] || null;
+    let sign = null;
+    place.root.traverse((o) => { if (!sign && new RegExp(`^sign_cat_${c.key}$`, 'i').test(o.name || '')) sign = o; });
+    const books = spinesOf(c.key);
+    if (!slot && !door && !books.length) continue;
+    const cab = { ...c, slot, door, sign, books, proxy: null, open: false, r0: door ? rest(door) : null, openAngle: 0, pushed: new Map() };
+    if (door) {
+      door.userData.live = true; // it swings: never merged into the stall
+      // the hinge is the door's origin: the door reaches along +X (left hinge, opens by -170°) or -X (right, +170°)
+      const bx = boxOf(door, door);
+      cab.openAngle = THREE.MathUtils.degToRad(bx.getCenter(new THREE.Vector3()).x >= 0 ? -170 : 170);
+    }
+    if (sign) sign.userData.live = true;
+    for (const n of books) cabOf.set(n, cab);
+    cabinets.push(cab);
+  }
+  // the pick proxies: an invisible box round each cabinet's glass, books and sign, in the cabinet's own frame
+  const PROXY_MAT = new THREE.MeshBasicMaterial({ visible: false });
+  for (const cab of cabinets) {
+    const frame = cab.slot || cab.door;
+    if (!frame) continue;
+    const box = new THREE.Box3();
+    for (const o of [cab.door, cab.sign, ...cab.books].filter(Boolean)) box.union(boxOf(o, frame));
+    if (box.isEmpty()) continue;
+    box.expandByScalar(0.025);
+    const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+    const m = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), PROXY_MAT);
+    m.name = `engine_cabinet_proxy_${cab.key}`;
+    m.position.copy(center);
+    m.visible = false; // never drawn; the raycaster still meets it
+    m.userData.pickProxy = { kind: 'cabinet', key: cab.key, place: 'books', label: `${cab.label}${cab.en && cab.en !== cab.label ? ` · ${cab.en}` : ''}: open the cabinet (${cab.books.length} book${cab.books.length === 1 ? '' : 's'})`, outline: cab.door || cab.sign || null, off: false };
+    frame.add(m);
+    cab.proxy = m;
+  }
+  let openCab = null, focusIdx = -1;
+
+  /** The cabinet's view, fitted to the screen: along its cam_cat_<key> sight line, far enough back for its covers. */
+  function cabinetView(cab) {
+    const box = new THREE.Box3();
+    for (const n of cab.books) box.union(boxOf(n));
+    const camN = place.nodes.camCats?.[cab.key], tgtN = place.nodes.camCatTargets?.[cab.key];
+    const target = tgtN ? tgtN.getWorldPosition(new THREE.Vector3()) : box.isEmpty() ? null : box.getCenter(new THREE.Vector3());
+    if (!target) return null;
+    const eye = camN ? camN.getWorldPosition(new THREE.Vector3()) : null;
+    const center = box.isEmpty() ? target : box.getCenter(new THREE.Vector3());
+    // the cabinet's normal (toward the visitor) and its width axis
+    let facing = eye ? eye.clone().sub(target) : null;
+    if (!facing && cab.slot) facing = new THREE.Vector3(0, 0, 1).applyQuaternion(cab.slot.getWorldQuaternion(new THREE.Quaternion()));
+    facing ||= viewFor(place).pos.sub(center);
+    const flat = facing.clone().setY(0).normalize();
+    const across = new THREE.Vector3(-flat.z, 0, flat.x);
+    let halfW = 0.3, halfH = 0.25;
+    if (!box.isEmpty()) {
+      const c = box.getCenter(new THREE.Vector3());
+      halfW = 0; halfH = 0;
+      for (const n of cab.books) {
+        const b = boxOf(n);
+        for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) {
+          const d = new THREE.Vector3(x, y, z).sub(c);
+          halfW = Math.max(halfW, Math.abs(d.dot(across)));
+          halfH = Math.max(halfH, Math.abs(d.y));
+        }
+      }
+    }
+    const lift = eye ? (eye.y - target.y) / Math.max(0.2, Math.hypot(eye.x - target.x, eye.z - target.z)) : 0.12;
+    return { center, facing: flat, halfW: halfW + 0.03, halfH: halfH + 0.03, lift, margin: 1.12, near: 0.25, eye, target };
+  }
+
+  function setProxies() { for (const c of cabinets) if (c.proxy) c.proxy.userData.pickProxy.off = c === openCab; }
+
+  function openCabinet(key, { focus = 0 } = {}) {
+    const cab = cabinets.find((c) => c.key === key);
+    if (!cab) return false;
+    if (open) close();
+    if (openCab && openCab !== cab) shutCabinet(openCab);
+    openCab = cab;
+    setProxies();
+    const v = cabinetView(cab);
+    if (v) {
+      const back = ctx.frame?.({ center: v.center, facing: v.facing, halfW: v.halfW, halfH: v.halfH, lift: v.lift, margin: v.margin, near: v.near });
+      if (!back && v.eye) ctx.flyBack?.({ pos: v.eye, target: v.target, near: 0.3, exact: true });
+      ctx.keyAt?.(v.center, v.facing);
+    }
+    if (!cab.open) {
+      cab.open = true;
+      sfx('page');
+      const door = cab.door, r0 = cab.r0, ang = cab.openAngle;
+      if (door) { const q = new THREE.Quaternion(); const ax = new THREE.Vector3(0, 1, 0); anim.add(0.8, (k) => door.quaternion.copy(r0.q).multiply(q.setFromAxisAngle(ax, ang * k))); }
+      // the covers come forward a little, out of the cabinet toward the visitor
+      const out = v?.facing ? v.facing.clone().multiplyScalar(0.045).setY(0.012) : new THREE.Vector3(0, 0.012, 0.045);
+      cab.books.forEach((n, i) => {
+        const item = itemOf.get(n);
+        if (item) { items.release(item); item.keepOwn = true; }
+        const r = rest(n);
+        cab.pushed.set(n, r);
+        n.userData.cabRest = r;
+        const d = worldDirToParent(n, out);
+        anim.add(0.5, (k) => n.position.copy(r.p).addScaledVector(d, k), null, 0.25 + i * 0.03);
+      });
+    }
+    focusIdx = Math.min(Math.max(0, focus), cab.books.length - 1);
+    if (focus < 0) focusIdx = -1;
+    showFocus();
+    document.documentElement.dataset.cabinet = cab.key;
+    const n = cab.books.length;
+    say(`<b lang="de">${esc(cab.label)}</b>${cab.en && cab.en !== cab.label ? ` · ${esc(cab.en)}` : ''}: ${n} book${n === 1 ? '' : 's'}. <em>Tap a cover to open it. ← → move between the books, ↑ ↓ between the cabinets, Escape steps back.</em>`);
     return true;
+  }
+
+  function shutCabinet(cab, { quick = false } = {}) {
+    if (!cab?.open) return;
+    cab.open = false;
+    const door = cab.door, r0 = cab.r0, ang = cab.openAngle;
+    if (door) {
+      const q = new THREE.Quaternion(), ax = new THREE.Vector3(0, 1, 0);
+      if (quick) door.quaternion.copy(r0.q);
+      else anim.add(0.7, (k) => door.quaternion.copy(r0.q).multiply(q.setFromAxisAngle(ax, ang * (1 - k))), () => door.quaternion.copy(r0.q), 0.2);
+    }
+    for (const [n, r] of cab.pushed) {
+      if (open?.n === n) continue; // out on the counter: it comes home by its own way
+      const item = itemOf.get(n);
+      const p0 = n.position.clone();
+      const done = () => { restore(n, r); if (item && !item.busy) { item.keepOwn = false; items.settle(item); } };
+      if (quick) done(); else anim.add(0.4, (k) => n.position.lerpVectors(p0, r.p, k), done);
+    }
+    cab.pushed.clear();
+  }
+
+  function closeCabinet({ quick = false } = {}) {
+    if (!openCab) return;
+    shutCabinet(openCab, { quick });
+    openCab = null;
+    focusIdx = -1;
+    setProxies();
+    ctx.highlight?.(null);
+    delete document.documentElement.dataset.cabinet;
+  }
+
+  function showFocus() {
+    const n = openCab && focusIdx >= 0 ? openCab.books[focusIdx] : null;
+    ctx.highlight?.(n || null);
+    if (n) { const d = describe(n); ctx.announce?.(`${d.title}${d.author ? `, ${d.author}` : ''}. Book ${focusIdx + 1} of ${openCab.books.length}; Enter opens it.`); }
+  }
+
+  /** The arrows at the Bücherstand (keyboard.js asks first). Returns true when the key was used. */
+  function cabinetKey(key) {
+    if (!cabinets.length) return false;
+    const i = openCab ? cabinets.indexOf(openCab) : -1;
+    if (key === 'ArrowDown' || key === 'ArrowUp') {
+      const d = key === 'ArrowDown' ? 1 : -1;
+      const next = i < 0 ? (d > 0 ? 0 : cabinets.length - 1) : (i + d + cabinets.length) % cabinets.length;
+      openCabinet(cabinets[next].key);
+      return true;
+    }
+    if (!openCab) return false;
+    if (key === 'ArrowLeft' || key === 'ArrowRight') {
+      const n = openCab.books.length;
+      if (!n) return true;
+      focusIdx = focusIdx < 0 ? (key === 'ArrowRight' ? 0 : n - 1) : (focusIdx + (key === 'ArrowRight' ? 1 : -1) + n) % n;
+      showFocus();
+      return true;
+    }
+    if (key === 'Enter') {
+      const n = focusIdx >= 0 ? openCab.books[focusIdx] : openCab.books[0];
+      if (n) openBook(n);
+      return true;
+    }
+    return false;
   }
 
   function pickForMe() {
@@ -220,11 +371,18 @@ export function createBooks(ctx) {
     kinds: { book: (item) => openBook(item.node) },
     api: {
       featuredBooks: featured,
-      /** The category shelves (key, German label) and a view along one of them. */
-      shelves: () => shelves.filter((c) => spinesOf(c.key).length || place.nodes.slots[`slot_cat_${c.key}`]),
-      showShelf,
-      shelfView: (key) => { const v = shelfView(key); return v && { exact: !!v.exact, center: v.center?.toArray?.(), halfW: v.halfW, halfH: v.halfH }; },
-      shownShelf: () => shelfOpen,
+      /** The six cabinets (key, German label, English label, number of books). */
+      cabinets: () => cabinets.map((c) => ({ key: c.key, label: c.label, en: c.en, books: c.books.length, door: !!c.door, sign: !!c.sign, proxy: !!c.proxy })),
+      openCabinet,
+      closeCabinet: () => closeCabinet(),
+      /** The open cabinet (tests): its key, door angle, its books and which of them the pointer may pick. */
+      cabinetState: () => (openCab ? { key: openCab.key, open: openCab.open, focus: focusIdx >= 0 ? openCab.books[focusIdx]?.name : null, books: openCab.books.map((n) => n.name), door: openCab.door ? +(2 * Math.acos(Math.min(1, Math.abs(openCab.door.quaternion.dot(openCab.r0.q))))).toFixed(3) : null } : null),
+      /** Where the camera should rest while a cabinet is open (the reading view comes back here). */
+      cabinetView: () => { if (!openCab) return null; const v = cabinetView(openCab); return v ? { center: v.center, facing: v.facing, halfW: v.halfW, halfH: v.halfH, lift: v.lift, margin: v.margin, near: v.near } : null; },
+      cabinetKey,
+      /** The old "look along a shelf" (round 3-7) now opens that cabinet. */
+      showShelf: (key) => openCabinet(key),
+      shownShelf: () => openCab?.key || null,
       pickBook: pickForMe,
       openBook: (n) => openBook(n),
       openBySlug,
@@ -236,7 +394,19 @@ export function createBooks(ctx) {
       /** The book standing open (for tests): its node name, title and state. */
       openedBook: () => (open ? { name: open.n.name, slug: open.d.slug, title: open.d.title, author: open.d.author, note: open.d.note, mac: !!open.d.mac, state: open.state, model: open.group?.fromModel ? 'book_open.glb' : open.group ? 'engine' : null } : null),
     },
-    retract: () => { shelfOpen = null; close({ retract: true }); },
+    retract: () => { close({ retract: true }); closeCabinet(); },
+    /** Books in a cabinet answer the pointer only while that cabinet is open; the rest only while none is. */
+    pickable(item) {
+      if (item.kind !== 'book' || !cabinets.length) return undefined;
+      const cab = cabOf.get(item.node);
+      return cab ? cab === openCab : !openCab;
+    },
+    proxyClick(px) {
+      if (px.kind !== 'cabinet') return false;
+      if (openCab?.key === px.key) return true;
+      openCabinet(px.key);
+      return true;
+    },
     update(dt) {
       if (open?.state === 'open' && world()?.current?.id !== 'books.book' && (open.left -= dt) <= 0) close();
     },
