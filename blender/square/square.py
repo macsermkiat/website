@@ -538,6 +538,8 @@ wood = C.Geo("poles_wood", M["pole"], (1.0, 1.0))
 wire = C.Geo("string_wire", M["wire"], (1, 1))
 poles = [C.three_to_blender(x, z) for x, z in P.POLES_THREE]
 for i, p in enumerate(poles):
+    if i in P.RETIRED_POLES:
+        continue
     z0 = ground_height(p.x, p.y)
     FURN["poles"].append([round(p.x, 3), round(-p.y, 3), 0.2])
     H = P.pole_h(i)
@@ -565,6 +567,8 @@ def catenary(a, b, sag, n):
 
 spacing = 0.55 if not LITE else 1.35
 for si, (i, j) in enumerate(P.SPANS):
+    if si in P.RETIRED_SPANS:
+        continue
     a = poles[i].copy(); b = poles[j].copy()
     a.z = ground_height(a.x, a.y) + P.pole_h(i) - 0.3; b.z = ground_height(b.x, b.y) + P.pole_h(j) - 0.3
     L = (b - a).length

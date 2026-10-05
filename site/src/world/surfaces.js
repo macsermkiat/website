@@ -412,19 +412,70 @@ function outward(mesh, g, P0, U, V, z, body) {
  * The write_ mesh's own material, copied so it can brighten a little while it is read (as a stand-in's does);
  * only a lit material with an emissive channel. Chalk slate stays dark.
  */
-function readGlow(node) {
+function readGlow(node, extra = []) {
   const out = [];
-  node.traverse((o) => {
+  // one glowing copy per source material: the write_ quad and its card_ backing sheet (the ride builder's margin
+  // cards share one paper) brighten together, so the writing area never shows as a lighter inset (round 6 rides)
+  const copies = new Map();
+  for (const n of [node, ...extra]) n?.traverse((o) => {
     if (!o.isMesh || Array.isArray(o.material) || !o.material?.emissive || /slate|chalk/i.test(o.material.name || '')) return;
-    const m = o.material.clone();
-    m.emissive.set(0xfff0d8);
-    m.emissiveMap = m.map || null;
-    m.emissiveIntensity = 0.04;
+    let m = copies.get(o.material);
+    if (!m) {
+      m = o.material.clone();
+      m.emissive.set(0xfff0d8);
+      m.emissiveMap = m.map || null;
+      m.emissiveIntensity = 0.04;
+      m.userData.readGlow = true;
+      if (m.vertexColors) tintGlow(m);
+      copies.set(o.material, m);
+      out.push(m);
+    }
     o.material = m;
-    out.push(m);
   });
   return out;
 }
+
+/**
+ * A glow copy whose paper is tinted by its vertex colours (the ride builder tints one paper: the Karussell ticket's
+ * orange stub) glows in that tint too, so a tinted strip does not read grey beside the glowing card (round 5 pass 4).
+ */
+function tintGlow(m) {
+  const prev = m.onBeforeCompile, key = m.customProgramCacheKey?.bind(m);
+  m.onBeforeCompile = (sh, r) => {
+    prev?.call(m, sh, r);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>',
+      '#include <emissivemap_fragment>\n#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )\n\ttotalEmissiveRadiance *= vColor.rgb;\n#endif');
+  };
+  m.customProgramCacheKey = () => `${key ? key() : ''}|glowTint`;
+}
+
+/**
+ * The card_<name> backing sheet a write_<name> quad sits on (the ride builder's margin cards), if it is there, and
+ * any other paper of the model that touches that sheet (the ticket's stub, a separate strip of the booth's paper):
+ * they brighten with the words, so no part of the sheet stays dark and cold under the night light while it is read.
+ */
+function backingOf(root, name) {
+  const c = root.getObjectByName(`card_${name}`);
+  if (!c) return [];
+  c.userData.keep = true;
+  const out = [c];
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(c).expandByScalar(0.004);
+  const v = new THREE.Vector3(), mb = new THREE.Box3();
+  root.traverse((o) => {
+    if (!o.isMesh || o === c || out.includes(o) || Array.isArray(o.material) || !/paper|card/i.test(o.material?.name || '')) return;
+    if (WRITE_NAME.test(o.name || '') || /^card_/i.test(o.name || '')) return;
+    for (let p = o; p && p !== root; p = p.parent) if (/^(rot_|gondola_|horse_|act_)/i.test(p.name || '')) return;
+    if (!mb.setFromObject(o).intersectsBox(box)) return;
+    const pos = o.geometry?.attributes?.position;
+    if (!pos) return;
+    for (let i = 0; i < pos.count; i++) {
+      if (box.containsPoint(v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld))) { o.userData.keep = true; out.push(o); return; }
+    }
+  });
+  return out;
+}
+const WRITE_NAME = /^(write_|cam_read_)/i;
 
 /** The act_ pivot a write_ node belongs to (its nearest act_ ancestor), or the node itself. */
 function actOf(node, stop) {
@@ -459,7 +510,7 @@ function buildSurface(place, spec, camera, warn, stopView) {
     // the model's own surface: its area from its UVs, no stand-in; the whole act_ object it is printed on reads
     const act = actOf(own, place.root);
     const a = areaFromWriteMesh(own, act !== own ? act : null);
-    if (a) { root = act; faces = { main: a }; built = { glow: readGlow(own) }; root.traverse((o) => { o.userData.readable = id; }); }
+    if (a) { root = act; faces = { main: a }; built = { glow: readGlow(own, backingOf(place.root, ownRole)) }; root.traverse((o) => { o.userData.readable = id; }); }
     else warn(`${place.entry.id}: write_${ownRole} has no usable UVs; using a stand-in`);
   }
   if (!root) {
@@ -724,7 +775,7 @@ export function placeCoasters(place, n, camera) {
 }
 
 /** Placards with the big questions, hung on the first gondolas of the Riesenrad. */
-export function hangPlacards(place, n) {
+export function hangPlacards(place, n, camera = null) {
   const out = [];
   // the ride builder's own placards (write_question_<k> on the gondolas), when the wheel has them
   const nodes = writeNodes(place.root);
@@ -736,7 +787,16 @@ export function hangPlacards(place, n) {
       if (!a) return;
       const id = `ferris.placard_${i}`;
       node.traverse((o) => { o.userData.readable = id; });
-      out.push({ id, placeId: 'ferris', role: `placard_${i}`, kind: 'placard', label: 'a placard', root: node, faces: { main: a }, theme: 'print', align: 'center', base: a.h / 4.2, fit: [a.h / 9, a.h / 3.2], glow: readGlow(node), rough: false, fromModel: true, readView: null });
+      // the ride builder's reading camera (cam_read_question_<k>, in the gondola, so it rides with it): the wheel
+      // is parked first (holdsWheel, main.js), so the gondola hangs at the bottom while its placard is read
+      const camRead = place.root.getObjectByName(`cam_read_${k}`), camReadT = place.root.getObjectByName(`cam_read_${k}_target`);
+      const readView = camRead && camera ? () => {
+        const fitted = readViewFor(a.area, a.w, a.h, camera, { fill: 0.7 });
+        const dir = camRead.getWorldPosition(new THREE.Vector3()).sub((camReadT || node).getWorldPosition(new THREE.Vector3()));
+        const d = Math.max(dir.length(), fitted.distance * 1.04);
+        return { pos: fitted.target.clone().addScaledVector(dir.normalize(), d), target: fitted.target, near: 0.02 };
+      } : null;
+      out.push({ id, placeId: 'ferris', role: `placard_${i}`, kind: 'placard', label: 'a placard', root: node, faces: { main: a }, theme: 'print', align: 'center', base: a.h / 4.2, fit: [a.h / 9, a.h / 3.2], glow: readGlow(node, backingOf(place.root, k)), rough: false, fromModel: true, readView, holdsWheel: !!camRead });
     });
     if (out.length) return out;
   }

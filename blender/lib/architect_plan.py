@@ -80,8 +80,19 @@ def layout_places():
 # Round 5 pass 2: pole 1 moved from [-7.5, 6.5] to [-7.8, 5.6], 0.95 m toward the Glühwein, to widen
 # the front lane between it and the people round the signpost, where the guided stroll walks.  Pole 4
 # moved from [15, 4] to [15.1, 5.2]: the round-4 Bücherstand roof's eave came within 0.35 m of its axis.
+# Round 5 pass 3: pole 4 is retired.  After the organizer's crowd re-plan a group stands at [16.3, 7.2],
+# and the only lane from the front to the Karussell then ran between that group, pole 4 and the
+# Bücherstand's flank with 0.2 m too little room.  Its three spans (to poles 0, 3 and 6) now hang from
+# pole 13 on the right lane line [17.5, 5], 2.4 m further out, so the lane past the Bücherstand is open.
+# Its entry keeps pole 13's position (crowd_plan.py reads this list, so nothing phantom stands in the
+# lane) and square.py builds no pole for it.
+# Pole 0 is retired the same way: the round-6 Bratwurst is 0.7 m wider on its left (its bounding box
+# reaches x = -3.34 m) and pole 0 at [-15, 4] stood inside it (check_clash.py).  Its spans to poles 1
+# and 5 now hang from pole 10 on the left lane line [-17.5, 5], mirroring pole 13 on the right.  Its
+# old front swag to the right side (span 19) would now repeat span 22 (pole 10 to pole 13) and is
+# dropped (RETIRED_SPANS).
 TREE_THREE = (6.5, -15.0)
-POLES_THREE = [[-15, 4], [-7.8, 5.6], [0, 7.5], [7.5, 6.5], [15.1, 5.2], [-10.5, -6.5], [10.5, -6.5],
+POLES_THREE = [[-17.5, 5], [-7.8, 5.6], [0, 7.5], [7.5, 6.5], [17.5, 5], [-10.5, -6.5], [10.5, -6.5],
                [-2.6, -9.6], [2.6, -9.6], [-17.5, -3], [-17.5, 5], [-17.5, 13], [17.5, -3], [17.5, 5],
                [17.5, 13], [-7, -18], [0, -21], [12.4, -20.6]]
 # Round 1 pass 3: span 19 used to run 35 m from pole 9 to pole 12 across z = -3, 2 m in front of the
@@ -92,10 +103,12 @@ POLES_THREE = [[-15, 4], [-7.8, 5.6], [0, 7.5], [7.5, 6.5], [15.1, 5.2], [-10.5,
 # (blender/square/check_clash.py tests every wire and bulb against the bandstand's own mesh).  The back-row
 # poles 16 and 17 moved another metre back (to z = -21 and -20.6): the denser upper crown of the pass-3
 # tree reaches 4.3 m from its axis at 5.5 m height.
-SPANS = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [4, 6], [5, 7], [7, 8], [8, 6], [1, 7], [3, 8], [2, 7],
-         [2, 8], [1, 5], [3, 6], [9, 10], [10, 11], [12, 13], [13, 14], [0, 4], [11, 1], [14, 3],
+SPANS = [[10, 1], [1, 2], [2, 3], [3, 13], [10, 5], [13, 6], [5, 7], [7, 8], [8, 6], [1, 7], [3, 8], [2, 7],
+         [2, 8], [1, 5], [3, 6], [9, 10], [10, 11], [12, 13], [13, 14], [0, 13], [11, 1], [14, 3],
          [10, 13], [5, 9], [6, 12], [15, 16], [16, 17], [15, 7], [16, 7], [15, 5], [17, 6]]
 POLE_H = 6.4
+RETIRED_POLES = {0, 4}          # kept in the list so the indices (and span names) stay stable
+RETIRED_SPANS = {19}
 POLE_H_OF = {7: 9.2, 8: 9.2}      # the two poles behind the bandstand carry the wires over its roof
 
 

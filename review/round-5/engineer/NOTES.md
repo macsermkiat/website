@@ -5,6 +5,132 @@ text as a separate component windows from the market. It should be in the enviro
 the book, it show the book with written text inside. Same as wineshop, beer shop."* The work follows ADR 0003.
 Nothing is committed by me; the session that started me commits.
 
+## Pass 4: the panel's five fixes
+
+1. **Smoke run on a fresh build with the architect's latest work.** The build used the architect's `layout.json`
+   (22:53) and `square.glb` / `signpost.glb` (22:55 / 22:50), and the home still recaptured from that build (fix 5).
+   The run served a copy of that `dist` (`--dist`), so nothing could change under it. Results:
+   - `smoke.log`: **210/210 checks passed with no console errors**, across every phase (unit, stroll, reading,
+     interact, lite, phone, plain, missing, audio).
+   - The stroll ran on the architect's stops and legs in their order, and on the carpenter's signpost.
+   - The browser fetched 7.15 MB before the full market opened, and 5.07 MB before the lite market opened.
+   - Every screenshot in this folder was re-taken from this run, except `read_ferris_placard_question.jpg` (a
+     `CONTENT_NOTES=show` build) and `test_books_own_reading_card.jpg` (a test build).
+2. **Placard questions: still waiting on Mac.** This needs Mac, and I could not reach him from this session.
+   The questions are the writer's text in `content/questions.md`. The writer's note there asks Mac to confirm
+   "the intro and the three topics below". Until he does, a production build leaves the questions out, so the
+   placards fall back to the noticeboard. I did not write stand-in questions in the engine: that would put words on
+   the wheel that Mac has not approved, which is exactly what the gate is there to stop.
+   - **What unblocks it:** Mac confirms (or replaces) the three questions and their lines in `content/questions.md`,
+     and the writer removes the `[[Mac: ...]]` notes and `<!-- check -->` markers.
+   - **What happens then:** with no engine change, each placard carries its question and is read in its gondola,
+     at the foot of the parked wheel. `read_ferris_placard_question.jpg` (from a `CONTENT_NOTES=show` build) shows
+     this.
+   - **Checks:** `npm run content:check` lists the lines. The smoke run takes the in-place path as soon as the
+     placards carry questions.
+3. **The wheel parks forward, never backwards** (`engine/conventions.js` `makeRides().park`).
+   - It always goes on the way it turns, to the next whole turn ahead, where the placard gondolas hang at the
+     bottom.
+   - It moves on a cubic Hermite curve that starts at the wheel's own pace, speeds up gently and slows to a stop.
+     The curve is monotonic, so the wheel cannot overshoot or turn back.
+   - Timing: a short way takes 2 s, a nearly full turn takes 8.3 s, and the top speed is 1.13 rad/s.
+   - After reading, the wheel takes up its pace again over 1.5 s instead of jumping to it.
+   - Reduced motion still parks at once. The slow-machine fallback now waits for the time the parking takes plus
+     4 s, instead of a fixed 6 s (`main.js`).
+   - Checks: a unit check (`tests/unit.mjs`) parks the wheel from ten start angles in both turning directions and
+     finds no backward step and a stop on a whole turn every time. A smoke check (`__market.parkWheel`) samples the
+     angle as the real wheel parks.
+4. **The Bücherstand reading card.** The carpenter has not shipped `write_reading_card` yet: no glb in
+   `site/public/models` has the node, so the stand-in card stays.
+   - The engine takes the node the moment it lands, with no code change: the card's surface spec lists
+     `reading_card` among its names.
+   - To prove it, I added a `write_reading_card` quad and `cam_read_reading_card` to a copy of `stall_buecher.glb`
+     in a test build (not shipped).
+   - Result: the engine reported `books.card` as `fromModel: true`, drew the words on the model's quad, and drew
+     no stand-in. See `test_books_own_reading_card.jpg`. The quad is a rough test placement; the carpenter's will
+     sit properly on the counter.
+5. **The Karussell ticket stub at night, and the home still.**
+   - **Cause.** The stub is not on the ticket's `card_contact` sheet. It is a strip of the booth's own paper
+     (`booth_paper`), tinted by vertex colour. While the card was read it took the reading glow and the stub did
+     not, so the stub stayed dark under the cool night light and read grey-purple.
+   - **Engine fix.** The paper touching a `card_` backing now glows with it (`world/surfaces.js` `backingOf`). A
+     vertex-tinted glow copy glows in its own tint (`tintGlow`, emissive times `vColor`). The stub now reads warm
+     ticket peach next to the card (`read_carousel_ticket.jpg`). The little ticket roll is the same paper strip and
+     glows with it. On a streamed model the glow copy keeps the vertex-colour flag (`engine/stream.js`).
+   - **For the ride builder.** The ride builder's tint (1.05, 0.62, 0.45) is pale in linear colour, so the stub is
+     peach rather than orange. `rides_ticket_stub.patch` in this folder suggests (1.0, 0.40, 0.14) for the stub and
+     the roll in `blender/rides/carousel.py`. It is their file, so I have not applied it; neither the ride builder
+     nor the lighting designer was running in this pass.
+   - **Home still.** Recaptured with `npm run still` from the fresh build: 83 KB, with the architect's new square
+     and signpost. The site was rebuilt with it.
+
+Budget after pass 4 (`npm run budget`, `budget.txt`): full first load **8.19 MB**, lite **6.11 MB** (round 4:
+19.70 / 7.44 MB). `npm run budget -- --strict` passes.
+
+## Pass 3: the round-6 judges' points for the engineer (after a machine restart)
+
+The machine restarted after pass 2; everything from pass 2 was on disk and is kept. This pass takes the open
+engineer points from `review/round-6/*/JUDGES.md`.
+
+1. **A gondola's placard is read where it hangs, and the wheel waits** (rides judges; their
+   `engine_placards.patch`, applied and taken further).
+   - The ride builder's placards (`write_question_<k>`) now use their own reading camera
+     (`cam_read_question_<k>`, a child of the gondola) instead of sending the visitor to the noticeboard
+     (`world/surfaces.js` `hangPlacards`).
+   - Before reading, the wheel **parks**: it turns, the nearer way round and at no more than 0.9 rad/s with an ease
+     at the end, until every gondola hangs where the model put it. The three placard gondolas are then at the
+     bottom, and the camera comes up to the placard (`engine/conventions.js` `makeRides().park`, `main.js`
+     `readOnParkedWheel`). Reduced motion parks at once. If frames come too slowly to bring it down within 6 s,
+     the gondola is set down at once.
+   - The wheel stands still while the placard is read and turns again on Escape or close.
+   - A placard with no question written on it yet (only "?" or "Große Fragen") still opens the noticeboard. This is
+     what a production build shows today, because the writer's three questions carry review notes for Mac, so the
+     content gate leaves them off the page. `read_ferris_placard_question.jpg` is from a `CONTENT_NOTES=show` build,
+     where the questions appear: *"Is time something the brain makes?"* on the placard, read in its gondola at the
+     foot of the parked wheel.
+2. **No lighter inset on the ride builder's sheets** (rides judges). Their sheet music, ticket, noticeboard and
+   placards are a `card_<name>` sheet with a smaller `write_<name>` quad of the same paper on it. Only the quad took
+   the reading glow, so it showed as a lighter panel. Now the quad and its card share one glowing copy of the
+   paper (`readGlow` with `backingOf`), so they brighten together (`read_band_sheet.jpg`,
+   `read_carousel_ticket.jpg`, `read_ferris_notice.jpg`).
+   - `card_` nodes stay out of the static merge, and a writing surface on a gondola keeps its own mesh when the
+     gondolas are instanced (`engine/merge.js`), so the glow and the words stay on them.
+   - When a streamed stall's full model is grafted on, a writing surface's glow copy now stays the same object
+     and takes the full model's textures (`engine/stream.js`). Before, the graft replaced it, and that surface lost
+     its reading glow on the full market.
+3. **Already done in pass 2, confirmed:** the boards use the models' own `write_about` / `write_projects_board` /
+   `write_writing_menu` with a single header (carpenter judges). `write_*_mesh` children are skipped as items and
+   `book_open.glb` is the book that opens (vendor judges).
+4. **Tests.** The smoke run's reading phase checks that each `card_` backing brightens with its `write_` quad. It
+   also checks the placard: parked and read in place when it carries a question, the noticeboard when it does not,
+   and the wheel turning again afterwards. `__market.wheel()` and `__market.backing(name)` are the probes.
+   `tests/dev-r5.mjs` can serve another build (`DIST=`).
+
+Budget after pass 3 (`npm run budget`): full first load **8.18 MB**, lite **6.11 MB** (round 4: 19.70 / 7.44 MB).
+Smoke run on the pass-3 build (`smoke.log`, at the end):
+- Full run: 120/120 passed (unit, stroll and the start of reading). It then stopped on a test probe that I had
+  added to the keyboard's option object by mistake instead of `__market`.
+- With that fixed, reading, interact, lite, phone, plain, missing and audio were rerun: **113/113 passed, no
+  console errors.**
+- New checks that passed: the three `card_` backings brighten with their quads (glow 0.24, one material); a
+  placard with no question opens the noticeboard; the wheel turns again after reading.
+- The placard read in place (parked wheel, camera in the gondola) was checked by hand with `tests/dev-r5.mjs` on a
+  `CONTENT_NOTES=show` build: wheel angle 2.87 → 0, parked, reading "Is time something the brain makes?", no
+  console errors.
+- Re-taken from this run: every `read_*.jpg` and the stroll, home, phone, plain and missing-model shots.
+
+Still open after pass 4:
+- The placard questions wait on Mac's confirmation (fix 2 above).
+- `write_reading_card` waits on the carpenter. The engine is ready for it (fix 4).
+- The stub's own tint is the ride builder's to strengthen (`rides_ticket_stub.patch`).
+- The home still must be recaptured (`npm run still`, then `npm run build`) after the next lighting or layout change.
+
+Still open after pass 3 (the last two are dealt with in pass 4):
+- The Karussell ticket's stub reads grey-purple at night (`read_carousel_ticket.jpg`). That is the stub's
+  material under the night lighting (ride builder or lighting), not the engine's glow, which now covers only the
+  paper.
+- The wheel parks the nearer way round, so it sometimes turns backwards for a few seconds.
+
 ## Pass 2: the panel's fixes
 
 All five are done. Previews re-rendered; the old ones are replaced.

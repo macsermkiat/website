@@ -174,7 +174,12 @@ if LITE:
     T_GRAN = C.lite_texture_set(T_GRAN, 256, keep=("color", "rough"))
 
 M = {}
-M["board"] = C.pbr("sign_boards", tex=T_BOARD, normal_strength=1.0)
+# Round 5 pass 3: in the browser the engine's light budget leaves light_sign_0 (kind "other", lowest
+# priority) unlit, and the boards read as dark planks from home.  The lantern's spill is carried as a
+# faint emissive of the boards' own paint (the atlas as emissive map, as the lighting designer's
+# bulbBounce does for the Ferris wheel), so the names read at night with or without the real light.
+SPILL = 0.22
+M["board"] = C.pbr("sign_boards", tex=T_BOARD, normal_strength=1.0, emit_tex=T_BOARD["color"], emit_strength=SPILL)
 M["post"] = C.pbr("sign_oak", tex=T_WOOD, factor=(0.95, 0.92, 0.9), rough=0.75, normal_strength=1.0)
 M["stone"] = C.pbr("sign_granite", tex=T_GRAN, factor=(0.85, 0.85, 0.85), rough=0.7)
 M["iron"] = C.solid("sign_iron", (0.035, 0.033, 0.03), rough=0.55, metal=0.85)

@@ -13,7 +13,7 @@ mkdirSync(OUT, { recursive: true });
 const PORT = +(process.env.PORT || 4521);
 const QS = process.env.QS || '?quality=full';
 const VW = +(process.env.VW || 1280), VH = +(process.env.VH || 760);
-const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort'], { stdio: ['ignore', 'pipe', 'pipe'] });
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(PORT), '--strictPort', ...(process.env.DIST ? ['--outDir', path.resolve(process.env.DIST)] : [])], { stdio: ['ignore', 'pipe', 'pipe'] });
 await new Promise((res, rej) => { const t = setTimeout(() => rej(new Error('preview did not start')), 30000); server.stdout.on('data', (d) => { if (String(d).includes('localhost')) { clearTimeout(t); res(); } }); });
 process.on('exit', () => server.kill());
 process.on('uncaughtException', (e) => { console.error(e); server.kill(); process.exit(1); });

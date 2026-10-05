@@ -1,0 +1,20 @@
+--- a/blender/rides/carousel.py	2026-10-04 23:41:15.118845736 +0000
++++ b/blender/rides/carousel.py	2026-10-04 23:41:15.121502613 +0000
+@@ -593,7 +593,7 @@
+     brass.cyl(arm[-1] + Vector((0, 0, -0.022)), 0.05, 0.018, 0.05, seg=8 if lite else 12, caps=False)
+     rc.bulb(bulbs, arm[-1] + Vector((0, 0, -0.045)), 0.022)
+     paper.cyl(P(0.33, -hd + 0.16, ws + 0.06), 0.055, 0.055, 0.06, seg=10 if lite else 16, rot=(0, math.pi / 2, 0),
+-              tint=(1.05, 0.62, 0.45))
++              tint=(1.0, 0.40, 0.14))
+     paper.cyl(P(0.33, -hd + 0.16, ws + 0.06), 0.02, 0.02, 0.062, seg=6, rot=(0, math.pi / 2, 0), tint=(0.5, 0.4, 0.3))
+     brass.sphere(P(-0.42, -hd - 0.10, ws + 0.035), 0.035, seg=8 if lite else 12, rings=4 if lite else 6,
+                  scale=(1, 1, 0.75))
+@@ -606,7 +606,7 @@
+         Euler((math.pi / 2, 0, 0)).to_matrix().to_4x4()
+     rwrite.local_box(paper, F, 0, 0, -0.0012, TICKET_W + 0.004, TICKET_H + 0.004, 0.0016, tint=(0.95, 0.90, 0.80))
+     rwrite.local_box(paper, F, -TICKET_W / 2 - 0.035, 0, -0.0012, 0.066, TICKET_H + 0.004, 0.0016,
+-                     tint=(1.05, 0.62, 0.45))                                    # the stub, in ticket orange
++                     tint=(1.0, 0.40, 0.14))                                      # the stub, in ticket orange
+     if not lite:
+         for k in range(9):                                                      # perforation
+             yy = -TICKET_H / 2 + TICKET_H * (k + 0.5) / 9

@@ -88,6 +88,14 @@ def world(p, local):
     return [p["pos"][0] + dx, y, p["pos"][1] + dz]
 
 
+def ride_source(p, n, eye, tgt):
+    """Round 6: the ride builder moved the rides' cam_view / cam_target onto the stroll stops."""
+    ok = all(k in n and max(abs(a - b) for a, b in zip(n[k], v)) < 0.05
+             for k, v in (("cam_view", eye), ("cam_target", tgt)))
+    return (f"cam_view / cam_target of {p['asset']} (moved onto the stroll stop by the ride builder)" if ok
+            else f"architect (differs from {p['asset']}'s cam_view)")
+
+
 def stops_from(L, places, nodes):
     out = []
     for sid in ORDER:
@@ -107,14 +115,14 @@ def stops_from(L, places, nodes):
             top = world(p, (0.0, 23.0, 1.2))
             out.append({"id": sid, "label": de, "label_en": en, "eye": eye, "target": tgt,
                         "overview": {"eye": top, "target": [1.0, 1.5, -1.0]},
-                        "source": "architect (ferris.glb cam_view is a wide view from mid-market)"})
+                        "source": ride_source(p, n, (0.0, 1.7, 12.5), (0.0, 9.0, 0.0))})
             continue
         if sid == "karussell":
             # carousel.glb's cam_view sits 13.5 m out, squeezed between the bandstand and the Bierstand;
             # the stroll stops 10.5 m in front of the carousel, beside the children watching it.
             eye, tgt = world(p, (2.0, 1.75, 10.5)), world(p, (0.0, 2.3, 0.0))
             out.append({"id": sid, "label": de, "label_en": en, "eye": eye, "target": tgt,
-                        "source": "architect (carousel.glb cam_view is boxed in by the bandstand and Bierstand)"})
+                        "source": ride_source(p, n, (2.0, 1.75, 10.5), (0.0, 2.3, 0.0))})
             continue
         eye, tgt = world(p, n["cam_view"]), world(p, n["cam_target"])
         out.append({"id": sid, "label": de, "label_en": en, "eye": eye, "target": tgt,

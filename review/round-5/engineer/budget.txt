@@ -1,6 +1,10 @@
+
+> nachtmarkt-site@0.1.0 budget
+> node scripts/budget.mjs
+
 Per asset (full glb + props + own textures; lite in brackets; textures shared with other assets are in the last row,
   and each asset is judged on its own bytes plus an equal part of every shared texture it uses)
-  square                     39.5k tris   2.20 MB (lite 12.7k, 0.68 MB)  budget 40.0k / 3.00 MB
+  square                     38.7k tris   2.18 MB (lite 12.2k, 0.66 MB)  budget 40.0k / 3.00 MB
   town                      134.0k tris   4.41 MB (lite 32.3k, 1.20 MB) [deferred]  budget 150.0k / 5.00 MB
   tree                       39.9k tris   1.05 MB (lite 9.7k, 0.33 MB)
   signpost                    2.2k tris   0.43 MB (lite 1.2k, 0.17 MB)
@@ -38,6 +42,6 @@ Per asset (full glb + props + own textures; lite in brackets; textures shared wi
   people_band_drums           4.6k tris   0.12 MB (lite 1.5k, 0.04 MB)  budget 5.0k / 0.40 MB
   people_anims                0.0k tris   0.07 MB (lite 0.0k, 0.07 MB)
   shared textures               40 files   1.57 MB (each charged once)
-Site code, styles and fonts: 1.47 MB first, 0.34 MB after the first frame (3D text); home still: 0.08 MB
-full market: first load 8.20 MB (aim 25.00 MB; round 4 19.70 MB, margin 11.50 MB); deferred 11.79 MB; full detail on demand 13.58 MB; everything 33.56 MB
-lite market: first load 6.12 MB (aim 8.00 MB; round 4 7.44 MB, margin 1.32 MB); deferred 5.20 MB; everything 11.32 MB
+Site code, styles and fonts: 1.48 MB first, 0.34 MB after the first frame (3D text); home still: 0.08 MB
+full market: first load 8.19 MB (aim 25.00 MB; round 4 19.70 MB, margin 11.51 MB); deferred 11.79 MB; full detail on demand 13.58 MB; everything 33.55 MB
+lite market: first load 6.11 MB (aim 8.00 MB; round 4 7.44 MB, margin 1.33 MB); deferred 5.20 MB; everything 11.31 MB

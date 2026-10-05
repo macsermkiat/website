@@ -184,13 +184,53 @@ async function boot() {
     world: () => world,
   });
 
+  /** A click on a writing surface (or its probe in the tests): read it, turn its page, or park the wheel first. */
+  function readSurface(sid, p = null) {
+    const piece = world.pieceFor(sid);
+    if (!piece) return;
+    // reading already: a click on the page turns it (the right half on, the left half back)
+    if (world.isOpen && world.current.surface === sid) {
+      const half = clickHalf(sid, p);
+      if (half !== 0) world.goTo(world.current.view + half);
+      return;
+    }
+    const surf = world.surface(sid);
+    // the engine's own placards open the noticeboard; the ride builder's (with a reading camera in the gondola)
+    // are read where they hang: the wheel turns that gondola down to the visitor and waits there (round 6 rides)
+    // (a placard with no question written on it yet, only '?', opens the noticeboard too)
+    if (piece.decorative && !(surf?.readView && surf.holdsWheel && piece.question)) { guide.read('ferris.notice'); return; }
+    if (surf?.holdsWheel) { readOnParkedWheel(piece.id); return; }
+    guide.read(piece.id);
+  }
+  // a placard on a gondola: park the wheel (its gondola back where the model hung it, at the bottom), then read
+  const wheelRide = () => market.rides.find((r) => r.wheel && r.gondolas?.length) || null;
+  let parkWait = 0;
+  function readOnParkedWheel(id) {
+    const r = wheelRide();
+    if (!r || actions.rides.riding) { guide.read(id); return; }
+    // the wheel goes on the way it turns, never back, and eases to a stop with the gondola at the bottom
+    const T = r.park(true, { snap: motion.reduced });
+    const ticket = ++parkWait;
+    const t0 = performance.now(), from = guide.here;
+    const wait = () => {
+      if (ticket !== parkWait) return;
+      if (guide.here !== from) { releaseWheel(); return; }
+      // (a slow machine whose frames come too rarely to bring it down in time: the gondola is set down at once)
+      if (!r.parked && performance.now() - t0 > T * 1000 + 4000) r.park(true, { snap: true });
+      if (r.parked) { guide.read(id); return; }
+      requestAnimationFrame(wait);
+    };
+    wait();
+  }
+  function releaseWheel() { parkWait++; wheelRide()?.park(false); }
+
   world = createWorldReader({
     camera, rig, motion, announce,
     sfx: (n) => audio.sfx(n === 'chalk' || n === 'card' ? 'page' : n),
     stopView: () => guide?.stopView(),
     els: { bar: $('readbar'), title: $('readTitle'), page: $('readPage'), prevBtn: $('readPrev'), nextBtn: $('readNext'), closeBtn: $('readClose'), flipBtn: $('readFlip'), copy: $('readCopy') },
     onOpen: () => { stopbarEl.hidden = true; picking?.refresh(); },
-    onClose: () => { if (guide?.here && guide.arrived) stopbar.show(guide.here, { prevId: stroll.prev(guide.here), nextId: stroll.next(guide.here) }); },
+    onClose: () => { releaseWheel(); if (guide?.here && guide.arrived) stopbar.show(guide.here, { prevId: stroll.prev(guide.here), nextId: stroll.next(guide.here) }); },
   });
   const stopbarEl = $('stopbar');
   // the writing surfaces (stand-ins until the carpenter's and vendor's write_ props arrive) and their words
@@ -206,10 +246,10 @@ async function boot() {
   }
   const hang = (place) => {
     const qs = pieces['ferris.notice']?.questions || [];
-    hangPlacards(place, Math.max(qs.length, 3)).forEach((s, i) => {
+    hangPlacards(place, Math.max(qs.length, 3), camera).forEach((s, i) => {
       world.addSurface(s);
       // a placard carries its question (or, before any is written, the wheel's own name)
-      world.addPiece({ id: s.id, placeId: 'ferris', surface: s.id, title: qs[i] || 'Big questions', html: pieces['ferris.notice'].html, faces: { main: [{ kind: 'h', level: 1, runs: [{ text: qs[i] || (i === 1 ? 'Große Fragen' : '?') }], size: qs[i] ? 1 : 1.6 }] }, decorative: true });
+      world.addPiece({ id: s.id, placeId: 'ferris', surface: s.id, title: qs[i] || 'Big questions', html: pieces['ferris.notice'].html, faces: { main: [{ kind: 'h', level: 1, runs: [{ text: qs[i] || (i === 1 ? 'Große Fragen' : '?') }], size: qs[i] ? 1 : 1.6 }] }, decorative: true, question: !!qs[i] });
     });
   };
   if (market.places.ferris) hang(market.places.ferris); else market.whenPlace?.('ferris').then((p) => p && hang(p));
@@ -304,18 +344,7 @@ async function boot() {
     readLabel: (sid) => { const s = world.surface(sid); const p = world.pieceFor(sid); return p?.decorative ? p.title : `Read ${s?.label || 'this'}${p?.title && s?.kind === 'coaster' ? `: ${p.title}` : ''}`; },
     signLabel: (id) => `${ARM_NAMES[id] || id}: walk to the ${SECTIONS[id]?.name || id} · ${SECTIONS[id]?.sub || ''}`,
     onSign: (id) => guide.walkTo(id),
-    onRead: (sid, p) => {
-      const piece = world.pieceFor(sid);
-      if (!piece) return;
-      // reading already: a click on the page turns it (the right half on, the left half back)
-      if (world.isOpen && world.current.surface === sid) {
-        const half = clickHalf(sid, p);
-        if (half !== 0) world.goTo(world.current.view + half);
-        return;
-      }
-      if (piece.decorative) { guide.read('ferris.notice'); return; }
-      guide.read(piece.id);
-    },
+    onRead: (sid, p) => readSurface(sid, p),
     onLink: (href) => openLink(href),
     onPick: (id) => {
       if (actions.rides.riding?.place?.id === id) return;
@@ -658,6 +687,22 @@ async function boot() {
     // reading
     read: (id) => guide.read(id),
     readPage: (d) => world.goTo((world.current?.view ?? 0) + d),
+    /** As a click on a writing surface does (a gondola's placard parks the wheel first). */
+    readSurface: (sid) => readSurface(sid),
+    /** For tests: a write_<name> quad and its card_<name> backing sheet glow as one (the same material). */
+    backing(name) {
+      const m = (n) => { const o = scene.getObjectByName(n); return o?.isMesh ? o.material : o?.children.find((c) => c.isMesh)?.material || null; };
+      const w = m(`write_${name}`), c = m(`card_${name}`);
+      return { card: !!c, same: !!c && c === w, glow: w?.emissiveIntensity ?? null };
+    },
+    /** For tests: park the wheel (or let it go) as a placard does; returns the seconds the parking takes. */
+    parkWheel: (on = true) => wheelRide()?.park(on) ?? null,
+    wheel() {
+      const r = wheelRide();
+      if (!r) return null;
+      const vis = (n) => { const o = scene.getObjectByName(n); let v = !!o; for (let q = o; q && v; q = q.parent) v = q.visible; const m = o?.isMesh ? o : o?.children.find((c) => c.isMesh); return { visible: v, glow: m?.material?.emissiveIntensity ?? null }; };
+      return { angle: +r.wheel.angle.toFixed(4), dir: Math.sign(r.wheel.speed) || 1, parkTo: r.wheel.parkTo, parking: r.wheel.parkTo != null, parked: r.parked, card: vis('card_question_1'), write: vis('write_question_1') };
+    },
     closeRead: () => world.close(),
     reading: () => { const c = world.current; return c ? { open: true, ...c, title: world.piece(c.id)?.title || '' } : { open: false }; },
     textOn: (sid) => world.textOn(sid),

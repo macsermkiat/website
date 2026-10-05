@@ -318,6 +318,11 @@ try {
         const u2 = await page.evaluate(() => window.__market.snapshot());
         writeFileSync(path.join(OUT, 'read_bier_coaster_back.jpg'), Buffer.from(u2.split(',')[1], 'base64'));
       }
+      const backingName = { 'band.sheet': 'music', 'ferris.notice': 'questions_board', 'carousel.ticket': 'contact' }[id];
+      if (backingName) {
+        const b = await page.evaluate((n) => window.__market.backing(n), backingName);
+        if (b.card) check(`${id}: the sheet's card_ backing brightens with its write_ quad (no lighter inset)`, b.same && b.glow > 0.1, JSON.stringify(b));
+      }
       if (id === 'bier.vomfass') check('the projects board carries clickable links (GitHub)', r.copy.links.some((h) => /github\.com/.test(h)), r.copy.links.join(' '));
       if (r.reading.views > 1 && id !== 'bier.coaster_0') {
         const t0 = r.text;
@@ -331,6 +336,42 @@ try {
       await page.keyboard.press('Escape');
       await settle();
       check(`${id}: Escape stops reading and steps back to the stop`, !(await page.evaluate(() => window.__market.reading().open)));
+    }
+    // a gondola's placard: with a question on it, the wheel brings that gondola down and it is read where it hangs;
+    // with none written yet (a production build before Mac confirms them) it opens the noticeboard
+    {
+      const pl = await page.evaluate(() => window.__market.pieces().find((p) => p.id === 'ferris.placard_0') || null);
+      if (pl) {
+        await page.evaluate(() => window.__market.walkTo('ferris'));
+        await settle();
+        // the wheel parks going forward, the way it turns, never backwards (angles sampled as it comes down)
+        const asked = await page.evaluate(() => {
+          const m = window.__market; m.advance(20); m.readSurface('ferris.placard_0');
+          const w0 = m.wheel(), seen = [w0?.angle];
+          for (let i = 0; i < 48 && !m.wheel()?.parked; i++) { m.advance(0.25); seen.push(m.wheel().angle); }
+          const back = seen.slice(1).filter((a, i) => (a - seen[i]) * (w0?.dir || 1) < -1e-4).length;
+          return { ...m.wheel(), seen: seen.length, back };
+        });
+        // (a production build's placards carry no question yet and open the noticeboard: park the wheel directly)
+        const parkRun = asked?.parking ? asked : await page.evaluate(() => {
+          const m = window.__market; m.advance(7); const w0 = m.wheel(), T = m.parkWheel(true), seen = [w0.angle];
+          for (let i = 0; i < 48 && !m.wheel().parked; i++) { m.advance(0.25); seen.push(m.wheel().angle); }
+          const back = seen.slice(1).filter((a, i) => (a - seen[i]) * w0.dir < -1e-4).length;
+          const out = { ...m.wheel(), T, from: w0.angle, seen: seen.length, back }; m.parkWheel(false); return out;
+        });
+        check('the wheel parks forward, the way it turns, never backwards, and eases to a stop on a whole turn', parkRun.back === 0 && parkRun.parked && Math.abs(parkRun.angle / (2 * Math.PI) - Math.round(parkRun.angle / (2 * Math.PI))) < 1e-3, JSON.stringify(parkRun));
+        await page.waitForFunction(() => window.__market.reading().open, null, { timeout: 60000 }).catch(() => {});
+        await settle();
+        const r = await page.evaluate(() => ({ reading: window.__market.reading(), wheel: window.__market.wheel(), cam: window.__market.cam() }));
+        const hasQuestion = pl.title && pl.title !== 'Big questions';
+        if (hasQuestion && asked?.parking) {
+          check('a gondola\'s placard: the wheel parks that gondola at the bottom and the placard is read where it hangs', r.reading.id === 'ferris.placard_0' && r.wheel.parked && r.cam.pos[1] < 6, JSON.stringify([r.reading.id, r.wheel, r.cam.pos]));
+          const u = await page.evaluate(() => window.__market.snapshot()); writeFileSync(path.join(OUT, 'read_ferris_placard.jpg'), Buffer.from(u.split(',')[1], 'base64'));
+        } else check('a gondola\'s placard with no question written yet opens the noticeboard', r.reading.id === 'ferris.notice', JSON.stringify([pl.title, r.reading.id, asked]));
+        await page.keyboard.press('Escape');
+        await settle();
+        check('after reading, the wheel turns again', !(await page.evaluate(() => window.__market.wheel()?.parking)));
+      }
     }
     // a book: pulled from the shelf, opened, its words on its pages
     await page.evaluate(() => window.__market.walkTo('books'));

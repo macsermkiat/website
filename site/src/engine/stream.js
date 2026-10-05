@@ -42,7 +42,15 @@ export function graft(lite, full) {
       for (let i = 0; i < n; i++) {
         const x = pa[i], y = pb[i];
         x.geometry = y.geometry;
-        if (!keepMaterial(x.material)) x.material = y.material;
+        if (x.material?.userData?.readGlow && y.material && !Array.isArray(y.material)) {
+          // a writing surface's reading-glow copy (world/surfaces.js readGlow) stays the same object, which the
+          // reader brightens, and takes the full model's textures
+          const g = x.material;
+          for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap']) if (k in y.material) g[k] = y.material[k];
+          g.emissiveMap = g.map || null;
+          g.vertexColors = !!y.material.vertexColors;
+          g.needsUpdate = true;
+        } else if (!keepMaterial(x.material)) x.material = y.material;
         if (x !== a) { x.position.copy(y.position); x.quaternion.copy(y.quaternion); x.scale.copy(y.scale); }
         meshes++;
       }

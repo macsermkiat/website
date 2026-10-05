@@ -51,24 +51,26 @@
   ok   unit: production content: all 55 books from categories.json, each with its reading page (55 books,  without a page) 
   ok   unit: budget: a glb's external textures are counted with it (deco_kit_wood_normal.webp deco_kit_wood_color.webp deco_kit_wood_rm.webp deco_kit_oak_normal.webp deco_kit_oak_color.webp deco_kit_oak_rm.webp deco_kit_paint_normal.webp deco_kit_paint_color.webp deco_kit_paint_rm.webp deco_kit_iron_normal.webp deco_kit_iron_color.webp deco_kit_iron_rm.webp) 
   ok   unit: budget: a texture several assets share is charged once (deco_kit_wood_color.webp: 16 users) 
-  ok   unit: budget: deferred assets and the crowd's distance level are counted ({"firstLoad":8200211,"deferred":11786164,"onDemand":13577522,"everything":33563897,"aim":25000000,"round4":19700000,"over":false,"grew":false}) 
-  ok   unit: budget: the full market's full-detail stalls are counted on demand, not in the first load ({"full":{"firstLoad":8200211,"deferred":11786164,"onDemand":13577522,"everything":33563897,"aim":25000000,"round4":19700000,"over":false,"grew":false},"lite":{"firstLoad":6116419,"deferred":5202992,"onDemand":0,"everything":11319411,"aim":8000000,"round4":7440000,"over":false,"grew":false}}) 
-  ok   unit: budget: both first loads are smaller than round 4 (19.70 MB full, 7.44 MB lite) (8.20 / 6.12 MB) 
+  ok   unit: budget: deferred assets and the crowd's distance level are counted ({"firstLoad":8185544,"deferred":11786164,"onDemand":13577522,"everything":33549230,"aim":25000000,"round4":19700000,"over":false,"grew":false}) 
+  ok   unit: budget: the full market's full-detail stalls are counted on demand, not in the first load ({"full":{"firstLoad":8185544,"deferred":11786164,"onDemand":13577522,"everything":33549230,"aim":25000000,"round4":19700000,"over":false,"grew":false},"lite":{"firstLoad":6108752,"deferred":5202992,"onDemand":0,"everything":11311744,"aim":8000000,"round4":7440000,"over":false,"grew":false}}) 
+  ok   unit: budget: both first loads are smaller than round 4 (19.70 MB full, 7.44 MB lite) (8.19 / 6.11 MB) 
   ok   unit: budget: the shared clips (people_anims.glb) are counted  
   ok   unit: budget: the bandstand is charged with its instruments, its four players as person variants (people_band_sax people_band_piano people_band_bass people_band_drums) 
   ok   unit: budget: a shared texture is charged to each user in equal parts (67635.92307692308 of 928650) 
   ok   unit: budget: it reports a missing dist (the CLI then exits 1)  
-  ok   unit: budget: both first loads are under their aims (8.20 / 6.12 MB) 
+  ok   unit: budget: both first loads are under their aims (8.19 / 6.11 MB) 
   ok   unit: streaming: each streamed stall's lite and full glbs have the same node tree (the graft's precondition)  
   ok   unit: stroll: a leg joins every pair of stops (a signpost choice walks straight there)  
   ok   unit: stroll: every stop has an eye and a target, and the Riesenrad its overview  
   ok   unit: in-world text: the engine knows a write_ name for every writing surface (board/about vomfass/projects_board menu/writing_menu paper/writing_paper card/reading_card/books_card sheet/music notice/questions_board ticket/contact) 
   ok   unit: book_open.glb has the pages, the leaf and the reading camera the engine uses  
+  ok   unit: Riesenrad: parking always turns forward, the way the wheel turns, and never backwards (0 backward steps) 
+  ok   unit: Riesenrad: parking eases to a stop on a whole turn, in the time it said (longest 8.3 s, top speed 1.13 rad/s) 
 · full market, 1280 px: the still, the signpost, a walk, the stops, streaming, no orbit and no side panel
   ok   a still of the home view shows before the market is ready 
-· ready in 19.7 s
-· full: 7.16 MB downloaded when the market opens
-  ok   full: the first load is smaller than round 4 (19.70 MB) (7.16 MB)
+· ready in 12.0 s
+· full: 7.15 MB downloaded when the market opens
+  ok   full: the first load is smaller than round 4 (19.70 MB) (7.15 MB)
   ok   full market chosen with ?quality=full 
   ok   the still fades out once the market is drawn 
   ok   no side panel or reading aside on the 3D page 
@@ -76,15 +78,17 @@
   ok   the stroll's loop is the architect's order (["glueh","ferris","wurst","band","bier","carousel","books"])
   ok   the signpost in the market is the carpenter's (act_sign_ boards) (act_sign_ nodes (signpost.glb))
   ok   the on-screen signpost has seven arms and an overview 
-  FAIL streaming: the section stalls, bandstand, town and tree open at lite detail ({"square":"full","gluehwein":"lite","bierstand":"lite","bratwurst":"lite","buecherstand":"lite","bandstand":"lite","tree":"lite","signpost":)
-  ok   no orbit: a long drag turns the head at most 15°, and the camera stays where it is ({"c0":[3.098,9.248,32.992],"c1":[3.389,9.241,32.968],"look":{"yaw":0.2617977792481168,"pitch":0,"zoom":1}})
+  ok   streaming: the section stalls and the bandstand open at lite detail ({"square":"full","gluehwein":"lite","bierstand":"lite","bratwurst":"lite","buecherstand":"lite","bandstand":"lite","tree":"lite","signpost":)
+  ok   streaming: the town ring comes just after the first frame, with the rides (["riesenrad","karussell","town","deco-lebkuchen","deco-mandeln","deco-kerzen","deco-spielzeug","deco-schmuck","deco-kaese","deco-crepes","de)
+  ok   no orbit: a long drag turns the head at most 15°, and the camera stays where it is ({"c0":[3.086,9.247,32.993],"c1":[3.377,9.242,32.969],"look":{"yaw":0.2617977792481168,"pitch":0,"zoom":1}})
   ok   zoom stays in its small band (1.1199992626945177)
 · screenshot ../review/round-5/engineer/home_signpost.jpg
-  ok   the signpost's hover label stays inside the canvas ({"tip":[506,543,783,578],"canvas":[17,119,1263,709],"text":"Bücher: walk to the Bücherstand · Reading","hidden":false})
-  ok   clicking the signpost's Glühwein board walks to the Glühwein stall ({"x":562.1358155654594,"y":538.2494093693865})
-  ok   the camera walks (not flies) to the stop ({"kind":"walk","t":0.008416666666666666,"dur":12,"length":38.599110331646145})
+  ok   the signpost's hover label stays inside the canvas ({"tip":[507,544,784,578],"canvas":[17,119,1263,709],"text":"Bücher: walk to the Bücherstand · Reading","hidden":false})
+  ok   the hover label stays inside the canvas at every edge and corner ([{"at":[1244,296],"inside":true},{"at":[2,296],"inside":true},{"at":[1244,4],"inside":true},{"at":[2,4],"inside":true},{"at":[623,3],"inside)
+  ok   clicking the signpost's Glühwein board walks to the Glühwein stall ({"x":562.4098090965365,"y":538.3935275308755})
+  ok   the camera walks (not flies) to the stop ({"kind":"walk","t":0,"dur":12,"length":38.58252192064418})
   ok   walking pace (about 3 m/s; never a dash) (3.22 m/s over 38.6 m)
-  ok   mid-stroll the camera is on its way, down at eye level and off the straight line ([1.62,3.121,21.715])
+  ok   mid-stroll the camera is on its way, down at eye level and off the straight line ([1.664,3.34,22.074])
   ok   arrived at the Glühwein stop, with its bar of things to do ({"arrived":true,"cam":{"mode":"stop","moving":false,"progress":null,"look":{"yaw":0,"pitch":0,"zoom":1},"pos":[-5.422,1.8,3.028],"target":[-)
   ok   at a stop the head turns at most 15° 
   ok   streaming: the stall at the stop comes in at full detail ({"square":"full","gluehwein":"full","bierstand":"lite","bratwurst":"lite","buecherstand":"lite","bandstand":"lite","tree":"full","signpost":)
@@ -97,7 +101,7 @@
   ok   streaming: walking to a stall brings it in at full detail 
   ok   0 goes back to the overview of the square 
 · reading on the writing surfaces (lite market, 1280 px)
-· ready in 12.7 s
+· ready in 6.7 s
 · writing surfaces on the models' own write_ nodes: glueh.board bier.vomfass wurst.menu wurst.paper band.sheet ferris.notice carousel.ticket; stand-ins: books.card
   ok   the carpenter's, vendor's and ride builder's write_ props carry the words where they exist (Glühwein board, vom Fass board, menu, Marktblatt, sheet music, noticeboard, ticket) ([{"id":"glueh.board","kind":"chalk","fromModel":true},{"id":"bier.vomfass","kind":"chalk","fromModel":true},{"id":"wurst.menu","kind":"chalk)
   ok   a writing surface for each section (board, coasters, menu, paper, card, sheet, noticeboard, ticket) (glueh.board bier.vomfass bier.coaster_0 bier.coaster_1 bier.coaster_2 wurst.menu wurst.paper books.card band.sheet ferris.notice carousel.ti)
@@ -111,8 +115,8 @@
   ok   bier.coaster_0: the words are drawn on it in 3D, the camera close in front (ProtoCol Helles · always on tap)
   ok   bier.coaster_0: a visually hidden copy for screen readers, and the page bar (ProtoColHelles · always on tapA chatbot that helps researche)
   ok   a Bierdeckel flips over to its back ([{"open":true,"id":"bier.coaster_0","surface":"bier.coaster_0","view":0,"views":2,"face":"front","title":"ProtoCol"},{"open":true,"id":"bier)
-  ok   a Bierdeckel's words are printed on its own round face: no card under them (front in the print, back a round card face) ({"fromModel":true,"frontPrinted":true,"backCardHidden":true,"roundBack":true,"reach":{"front":0.611,"back":114.429}})
-  FAIL a Bierdeckel's words stay inside its edge, front and back ({"front":0.611,"back":114.429})
+  ok   a Bierdeckel's words are printed on its own round face: no card under them (front in the print, back a round card face) ({"fromModel":true,"frontPrinted":true,"backCardHidden":true,"roundBack":true,"reach":{"front":0.598,"back":0.788}})
+  ok   a Bierdeckel's words stay inside its edge, front and back ({"front":0.598,"back":0.788})
   ok   bier.coaster_0: Escape stops reading and steps back to the stop 
   ok   wurst.menu: the words are drawn on it in 3D, the camera close in front (Off the grill Noch nichts vom Grill. This is where short essays on research, music and ide)
   ok   wurst.menu: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
@@ -125,20 +129,26 @@
   ok   books.card: Escape stops reading and steps back to the stop 
   ok   band.sheet: the words are drawn on it in 3D, the camera close in front (The Nachtmarkt Quartett The band on the bandstand is a quartet: tenor sax, piano, double b)
   ok   band.sheet: a visually hidden copy for screen readers, and the page bar (The Nachtmarkt QuartettBandstand · MusicThe band on the band)
+  ok   band.sheet: the sheet's card_ backing brightens with its write_ quad (no lighter inset) ({"card":true,"same":true,"glow":0.24})
   ok   band.sheet: Escape stops reading and steps back to the stop 
   ok   ferris.notice: the words are drawn on it in 3D, the camera close in front (View from the top Nothing is written up here yet.)
   ok   ferris.notice: a visually hidden copy for screen readers, and the page bar (View from the topRiesenrad · Big questionsNothing is written)
+  ok   ferris.notice: the sheet's card_ backing brightens with its write_ quad (no lighter inset) ({"card":true,"same":true,"glow":0.24})
   ok   ferris.notice: Escape stops reading and steps back to the stop 
   ok   carousel.ticket: the words are drawn on it in 3D, the camera close in front (Come round again My code is on GitHub: github.com/macsermkiat . If you have something to s)
   ok   carousel.ticket: a visually hidden copy for screen readers, and the page bar (Come round againKarussell · ContactMy code is on GitHub: git)
+  ok   carousel.ticket: the sheet's card_ backing brightens with its write_ quad (no lighter inset) ({"card":true,"same":true,"glow":0.24})
   ok   carousel.ticket: Escape stops reading and steps back to the stop 
+  ok   the wheel parks forward, the way it turns, never backwards, and eases to a stop on a whole turn ({"angle":12.5664,"dir":1,"parkTo":12.566370614359172,"parking":true,"parked":true,"card":{"visible":true,"glow":0.04},"write":{"visible":tru)
+  ok   a gondola's placard with no question written yet opens the noticeboard (["Big questions","ferris.notice",{"angle":8.425,"dir":1,"parkTo":null,"parking":false,"parked":false,"card":{"visible":true,"glow":0.04},"wr)
+  ok   after reading, the wheel turns again 
   ok   the book that opens is the vendor's hardback (book_open.glb), its pages printed on its paper (["book_open.glb",{"model":true,"material":"vendor_print"}])
-  FAIL a clicked book opens with its words on its own 3D pages ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
+  ok   a clicked book opens with its words on its own 3D pages ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
   ok   the book's page turns (a leaf turns over) (time, free will and ethics. Summary Carroll opens with a question that sounds li)
   ok   Escape closes the book and puts it back 
   ok   Enter at a stop reads its main piece (the Karussell ticket) 
 · every action, both rides, snow, the overview, the keyboard and a click in 3D (lite market, small viewport)
-· ready in 12.0 s
+· ready in 6.0 s
   ok   the crowd streams in after the first frame 
   ok   the on-screen signpost walks to the Glühwein stall 
   ok   the stop bar offers the actions as buttons 
@@ -171,15 +181,15 @@
   ok   Escape at a stop goes back to the overview 
   ok   Enter on a signpost arm walks there 
 · lite market, auto-detected
-· ready in 11.3 s
-· lite: 5.08 MB downloaded when the market opens
-  ok   lite: the first load is smaller than round 4 (7.44 MB) (5.08 MB)
+· ready in 6.5 s
+· lite: 5.07 MB downloaded when the market opens
+  ok   lite: the first load is smaller than round 4 (7.44 MB) (5.07 MB)
   ok   lite market detected on a weak GPU (software GPU: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver))
   ok   lite: no shadows 
   ok   lite: fewer lights ({"realtime":4,"pools":24,"cap":4,"places":["bierstand","gluehwein","bratwurst","buecherstand"]})
 · screenshot ../review/round-5/engineer/home_lite_stage.jpg
 · phone, reduced motion, touch
-· ready in 9.3 s
+· ready in 5.0 s
   ok   lite market on a phone-sized screen 
   ok   reduced motion: the home view holds still 
   ok   phone: the signpost folds into one button 
@@ -208,316 +218,28 @@ The shelves hold books from my A)
   ok   the canvas has an accessible name 
   ok   mute covers the band and the stall sounds 
 · every model missing and layout.json ignored: the BUILD.md layout with labelled stand-ins
-· ready in 33.2 s
+· ready in 18.4 s
   ok   missing glbs: every place is a stand-in ([])
   ok   missing layout.json: the BUILD.md layout (BUILD.md fallback)
   ok   missing glbs are reported as bindings that did not resolve (nothing guessed) ([])
   ok   stand-ins keep the actions working (Mugs poured tonight: 1. Red wine, cinnamon, clove and orange. Careful, it's hot.)
   ok   stand-ins keep the writing surfaces (the chalkboard is still read in 3D) 
 · screenshot ../review/round-5/engineer/missing_models_standins.jpg
-· ready in 11.7 s
+· ready in 6.9 s
   ok   ?perf shows the frame-time meter with its Tour button 
   ok   two missing glbs: just those two are stand-ins ([{"id":"bierstand","place":"bier","kind":"section","source":"standin","file":null},{"id":"riesenrad","place":"ferris","kind":"landmark","sou)
 · recorded stems on the full market
-· ready in 19.4 s
+· ready in 11.2 s
   ok   play starts at once (mix)
   ok   the mix bridges the wait for the stems (mix)
   ok   the stems take over from the mix (stems)
-  FAIL stem levels reach the stage ({"sax":0.00003918121383378813,"piano":0.000015365235254560603,"bass":0.00000495023706170592,"drums":0.00004123286665153069})
-  ok   last pass: the stems play on into the out head instead of looping ({"pos":221.35,"pass":3,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
-  ok   earlier passes: the loop goes round again ({"pos":46.8,"pass":2,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
-  ok   pass 2 plays the second tenor chorus (alternate stems) ({"pos":121.46,"pass":2,"alt":true,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
+  ok   stem levels reach the stage ({"sax":0,"piano":0.021618136261809216,"bass":0.01911483123007869,"drums":0.061907705721645515})
+  ok   last pass: the stems play on into the out head instead of looping ({"pos":221.32,"pass":3,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
+  ok   earlier passes: the loop goes round again ({"pos":46.78,"pass":2,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
+  ok   pass 2 plays the second tenor chorus (alternate stems) ({"pos":121.44,"pass":2,"alt":true,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
   ok   pass 3 is back on the main chorus 
   ok   the band stops (full) 
 
-196/200 checks passed
-No console errors.
-exit 1
-
-===== rerun: stroll, reading, audio (after the streaming check was updated for the deferred town) =====
-· full market, 1280 px: the still, the signpost, a walk, the stops, streaming, no orbit and no side panel
-  ok   a still of the home view shows before the market is ready 
-· ready in 22.1 s
-· full: 7.16 MB downloaded when the market opens
-  ok   full: the first load is smaller than round 4 (19.70 MB) (7.16 MB)
-  ok   full market chosen with ?quality=full 
-  ok   the still fades out once the market is drawn 
-  ok   no side panel or reading aside on the 3D page 
-  ok   the stroll runs on the architect's stops and legs (layout.json stroll (stops and legs))
-  ok   the stroll's loop is the architect's order (["glueh","ferris","wurst","band","bier","carousel","books"])
-  ok   the signpost in the market is the carpenter's (act_sign_ boards) (act_sign_ nodes (signpost.glb))
-  ok   the on-screen signpost has seven arms and an overview 
-  ok   streaming: the section stalls and the bandstand open at lite detail ({"square":"full","gluehwein":"lite","bierstand":"lite","bratwurst":"lite","buecherstand":"lite","bandstand":"lite","tree":"lite","signpost":)
-  ok   streaming: the town ring comes just after the first frame, with the rides (["riesenrad","karussell","town","deco-lebkuchen","deco-mandeln","deco-kerzen","deco-spielzeug","deco-schmuck","deco-kaese","deco-crepes","de)
-  ok   no orbit: a long drag turns the head at most 15°, and the camera stays where it is ({"c0":[3.1,9.248,32.992],"c1":[3.391,9.241,32.967],"look":{"yaw":0.2617977792481168,"pitch":0,"zoom":1}})
-  ok   zoom stays in its small band (1.1199992626945177)
-· screenshot ../review/round-5/engineer/home_signpost.jpg
-  ok   the signpost's hover label stays inside the canvas ({"tip":[507,544,784,578],"canvas":[17,119,1263,709],"text":"Bücher: walk to the Bücherstand · Reading","hidden":false})
-  ok   the hover label stays inside the canvas at every edge and corner ([{"at":[1244,296],"inside":true},{"at":[2,296],"inside":true},{"at":[1244,4],"inside":true},{"at":[2,4],"inside":true},{"at":[623,3],"inside)
-  ok   clicking the signpost's Glühwein board walks to the Glühwein stall ({"x":562.7734894507475,"y":538.5797906381288})
-  ok   the camera walks (not flies) to the stop ({"kind":"walk","t":0,"dur":12,"length":38.5988035723338})
-  ok   walking pace (about 3 m/s; never a dash) (3.22 m/s over 38.6 m)
-  ok   mid-stroll the camera is on its way, down at eye level and off the straight line ([1.664,3.337,22.068])
-  ok   arrived at the Glühwein stop, with its bar of things to do ({"arrived":true,"cam":{"mode":"stop","moving":false,"progress":null,"look":{"yaw":0,"pitch":0,"zoom":1},"pos":[-5.422,1.8,3.028],"target":[-)
-  ok   at a stop the head turns at most 15° 
-  ok   streaming: the stall at the stop comes in at full detail ({"square":"full","gluehwein":"full","bierstand":"lite","bratwurst":"lite","buecherstand":"lite","bandstand":"lite","tree":"full","signpost":)
-  ok   streaming: the swap kept every action's nodes (no graft errors) ([{"id":"gluehwein","files":["stall_gluehwein.glb","prop_gluehwein_counter.glb","prop_gluehwein_shelf.glb","prop_gluehwein_wine.glb"],"meshes)
-  ok   → walks on to the next stop (the Riesenrad) 
-  ok   the Riesenrad stop is the overview, high on the wheel ([-18.362,20.189,-14.078])
-· screenshot ../review/round-5/engineer/stop_riesenrad_overview.jpg
-  ok   ← walks back to the stop before 
-  ok   key 4 walks to the Bücherstand 
-  ok   streaming: walking to a stall brings it in at full detail 
-  ok   0 goes back to the overview of the square 
-· reading on the writing surfaces (lite market, 1280 px)
-· ready in 12.6 s
-· writing surfaces on the models' own write_ nodes: glueh.board bier.vomfass wurst.menu wurst.paper band.sheet ferris.notice carousel.ticket; stand-ins: books.card
-  ok   the carpenter's, vendor's and ride builder's write_ props carry the words where they exist (Glühwein board, vom Fass board, menu, Marktblatt, sheet music, noticeboard, ticket) ([{"id":"glueh.board","kind":"chalk","fromModel":true},{"id":"bier.vomfass","kind":"chalk","fromModel":true},{"id":"wurst.menu","kind":"chalk)
-  ok   a writing surface for each section (board, coasters, menu, paper, card, sheet, noticeboard, ticket) (glueh.board bier.vomfass bier.coaster_0 bier.coaster_1 bier.coaster_2 wurst.menu wurst.paper books.card band.sheet ferris.notice carousel.ti)
-  ok   glueh.board: the words are drawn on it in 3D, the camera close in front (A warm cup with Mac I'm Mac, a physician at Chulalongkorn University in Bangkok who builds)
-  ok   glueh.board: a visually hidden copy for screen readers, and the page bar (A warm cup with MacGlühwein · About meI'm Mac, a physician a)
-  ok   glueh.board: Escape stops reading and steps back to the stop 
-  ok   bier.vomfass: the words are drawn on it in 3D, the camera close in front (On tap Three things are on tap: two pieces of software and a course. -  ProtoCol · Helles )
-  ok   bier.vomfass: a visually hidden copy for screen readers, and the page bar (On tapBierstand · ProjectsThree things are on tap: two piece)
-  ok   the projects board carries clickable links (GitHub) (https://github.com/macsermkiat)
-  ok   bier.vomfass: Escape stops reading and steps back to the stop 
-  ok   bier.coaster_0: the words are drawn on it in 3D, the camera close in front (ProtoCol Helles · always on tap)
-  ok   bier.coaster_0: a visually hidden copy for screen readers, and the page bar (ProtoColHelles · always on tapA chatbot that helps researche)
-  ok   a Bierdeckel flips over to its back ([{"open":true,"id":"bier.coaster_0","surface":"bier.coaster_0","view":0,"views":2,"face":"front","title":"ProtoCol"},{"open":true,"id":"bier)
-  ok   a Bierdeckel's words are printed on its own round face: no card under them (front in the print, back a round card face) ({"fromModel":true,"frontPrinted":true,"backCardHidden":true,"roundBack":true,"reach":{"front":0.611,"back":114.429}})
-  FAIL a Bierdeckel's words stay inside its edge, front and back ({"front":0.611,"back":114.429})
-  ok   bier.coaster_0: Escape stops reading and steps back to the stop 
-  ok   wurst.menu: the words are drawn on it in 3D, the camera close in front (Off the grill Noch nichts vom Grill. This is where short essays on research, music and ide)
-  ok   wurst.menu: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
-  ok   wurst.menu: Escape stops reading and steps back to the stop 
-  ok   wurst.paper: the words are drawn on it in 3D, the camera close in front (Off the grill This is where short essays on research, music and ideas will go. Nothing is )
-  ok   wurst.paper: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
-  ok   wurst.paper: Escape stops reading and steps back to the stop 
-  ok   books.card: the words are drawn on it in 3D, the camera close in front (The bookshop I read physics, philosophy and books about the brain. The shelves hold books )
-  ok   books.card: a visually hidden copy for screen readers, and the page bar (The bookshopBücherstand · ReadingI read physics, philosophy )
-  ok   books.card: Escape stops reading and steps back to the stop 
-  ok   band.sheet: the words are drawn on it in 3D, the camera close in front (The Nachtmarkt Quartett The band on the bandstand is a quartet: tenor sax, piano, double b)
-  ok   band.sheet: a visually hidden copy for screen readers, and the page bar (The Nachtmarkt QuartettBandstand · MusicThe band on the band)
-  ok   band.sheet: Escape stops reading and steps back to the stop 
-  ok   ferris.notice: the words are drawn on it in 3D, the camera close in front (View from the top Nothing is written up here yet.)
-  ok   ferris.notice: a visually hidden copy for screen readers, and the page bar (View from the topRiesenrad · Big questionsNothing is written)
-  ok   ferris.notice: Escape stops reading and steps back to the stop 
-  ok   carousel.ticket: the words are drawn on it in 3D, the camera close in front (Come round again My code is on GitHub: github.com/macsermkiat . If you have something to s)
-  ok   carousel.ticket: a visually hidden copy for screen readers, and the page bar (Come round againKarussell · ContactMy code is on GitHub: git)
-  ok   carousel.ticket: Escape stops reading and steps back to the stop 
-  ok   the book that opens is the vendor's hardback (book_open.glb), its pages printed on its paper (["book_open.glb",{"model":true,"material":"vendor_print"}])
-  ok   a clicked book opens with its words on its own 3D pages ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
-  ok   the book's page turns (a leaf turns over) (time, free will and ethics. Summary Carroll opens with a question that sounds li)
-  ok   Escape closes the book and puts it back 
-  ok   Enter at a stop reads its main piece (the Karussell ticket) 
-· recorded stems on the full market
-· ready in 19.2 s
-  ok   play starts at once (mix)
-  ok   the mix bridges the wait for the stems (mix)
-  ok   the stems take over from the mix (stems)
-  FAIL stem levels reach the stage ({"sax":0.006498817905755116,"piano":0.0022487072233184245,"bass":0.002718548762177716,"drums":0.006678366525576495})
-  ok   last pass: the stems play on into the out head instead of looping ({"pos":221.35,"pass":3,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
-  ok   earlier passes: the loop goes round again ({"pos":46.8,"pass":2,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
-  ok   pass 2 plays the second tenor chorus (alternate stems) ({"pos":121.46,"pass":2,"alt":true,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
-  ok   pass 3 is back on the main chorus 
-  ok   the band stops (full) 
-
-74/76 checks passed
-No console errors.
-exit 1
-
-===== rerun: reading, audio (coaster probe fixed) =====
-· reading on the writing surfaces (lite market, 1280 px)
-· ready in 12.5 s
-· writing surfaces on the models' own write_ nodes: glueh.board bier.vomfass wurst.menu wurst.paper band.sheet ferris.notice carousel.ticket; stand-ins: books.card
-  ok   the carpenter's, vendor's and ride builder's write_ props carry the words where they exist (Glühwein board, vom Fass board, menu, Marktblatt, sheet music, noticeboard, ticket) ([{"id":"glueh.board","kind":"chalk","fromModel":true},{"id":"bier.vomfass","kind":"chalk","fromModel":true},{"id":"wurst.menu","kind":"chalk)
-  ok   a writing surface for each section (board, coasters, menu, paper, card, sheet, noticeboard, ticket) (glueh.board bier.vomfass bier.coaster_0 bier.coaster_1 bier.coaster_2 wurst.menu wurst.paper books.card band.sheet ferris.notice carousel.ti)
-  ok   glueh.board: the words are drawn on it in 3D, the camera close in front (A warm cup with Mac I'm Mac, a physician at Chulalongkorn University in Bangkok who builds)
-  ok   glueh.board: a visually hidden copy for screen readers, and the page bar (A warm cup with MacGlühwein · About meI'm Mac, a physician a)
-  ok   glueh.board: Escape stops reading and steps back to the stop 
-  ok   bier.vomfass: the words are drawn on it in 3D, the camera close in front (On tap Three things are on tap: two pieces of software and a course. -  ProtoCol · Helles )
-  ok   bier.vomfass: a visually hidden copy for screen readers, and the page bar (On tapBierstand · ProjectsThree things are on tap: two piece)
-  ok   the projects board carries clickable links (GitHub) (https://github.com/macsermkiat)
-  ok   bier.vomfass: Escape stops reading and steps back to the stop 
-  ok   bier.coaster_0: the words are drawn on it in 3D, the camera close in front (ProtoCol Helles · always on tap)
-  ok   bier.coaster_0: a visually hidden copy for screen readers, and the page bar (ProtoColHelles · always on tapA chatbot that helps researche)
-  ok   a Bierdeckel flips over to its back ([{"open":true,"id":"bier.coaster_0","surface":"bier.coaster_0","view":0,"views":2,"face":"front","title":"ProtoCol"},{"open":true,"id":"bier)
-  ok   a Bierdeckel's words are printed on its own round face: no card under them (front in the print, back a round card face) ({"fromModel":true,"frontPrinted":true,"backCardHidden":true,"roundBack":true,"reach":{"front":0.598,"back":114.429}})
-  FAIL a Bierdeckel's words stay inside its edge, front and back ({"front":0.598,"back":114.429})
-  ok   bier.coaster_0: Escape stops reading and steps back to the stop 
-  ok   wurst.menu: the words are drawn on it in 3D, the camera close in front (Off the grill Noch nichts vom Grill. This is where short essays on research, music and ide)
-  ok   wurst.menu: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
-  ok   wurst.menu: Escape stops reading and steps back to the stop 
-  ok   wurst.paper: the words are drawn on it in 3D, the camera close in front (Off the grill This is where short essays on research, music and ideas will go. Nothing is )
-  ok   wurst.paper: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
-  ok   wurst.paper: Escape stops reading and steps back to the stop 
-  ok   books.card: the words are drawn on it in 3D, the camera close in front (The bookshop I read physics, philosophy and books about the brain. The shelves hold books )
-  ok   books.card: a visually hidden copy for screen readers, and the page bar (The bookshopBücherstand · ReadingI read physics, philosophy )
-  ok   books.card: Escape stops reading and steps back to the stop 
-  ok   band.sheet: the words are drawn on it in 3D, the camera close in front (The Nachtmarkt Quartett The band on the bandstand is a quartet: tenor sax, piano, double b)
-  ok   band.sheet: a visually hidden copy for screen readers, and the page bar (The Nachtmarkt QuartettBandstand · MusicThe band on the band)
-  ok   band.sheet: Escape stops reading and steps back to the stop 
-  ok   ferris.notice: the words are drawn on it in 3D, the camera close in front (View from the top Nothing is written up here yet.)
-  ok   ferris.notice: a visually hidden copy for screen readers, and the page bar (View from the topRiesenrad · Big questionsNothing is written)
-  ok   ferris.notice: Escape stops reading and steps back to the stop 
-  ok   carousel.ticket: the words are drawn on it in 3D, the camera close in front (Come round again My code is on GitHub: github.com/macsermkiat . If you have something to s)
-  ok   carousel.ticket: a visually hidden copy for screen readers, and the page bar (Come round againKarussell · ContactMy code is on GitHub: git)
-  ok   carousel.ticket: Escape stops reading and steps back to the stop 
-  ok   the book that opens is the vendor's hardback (book_open.glb), its pages printed on its paper (["book_open.glb",{"model":true,"material":"vendor_print"}])
-  ok   a clicked book opens with its words on its own 3D pages ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
-  ok   the book's page turns (a leaf turns over) (time, free will and ethics. Summary Carroll opens with a question that sounds li)
-  ok   Escape closes the book and puts it back 
-  ok   Enter at a stop reads its main piece (the Karussell ticket) 
-· recorded stems on the full market
-· ready in 21.0 s
-  ok   play starts at once (mix)
-  ok   the mix bridges the wait for the stems (mix)
-  ok   the stems take over from the mix (stems)
-  FAIL stem levels reach the stage ({"sax":0,"piano":0,"bass":0,"drums":0})
-  ok   last pass: the stems play on into the out head instead of looping ({"pos":221.34,"pass":3,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
-  ok   earlier passes: the loop goes round again ({"pos":46.8,"pass":2,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
-  ok   pass 2 plays the second tenor chorus (alternate stems) ({"pos":121.46,"pass":2,"alt":true,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
-  ok   pass 3 is back on the main chorus 
-  ok   the band stops (full) 
-
-45/47 checks passed
-No console errors.
-exit 1
-
-===== rerun: reading, audio (probe reads the lines' own matrices; audio sampled over time) =====
-· reading on the writing surfaces (lite market, 1280 px)
-· ready in 13.7 s
-· writing surfaces on the models' own write_ nodes: glueh.board bier.vomfass wurst.menu wurst.paper band.sheet ferris.notice carousel.ticket; stand-ins: books.card
-  ok   the carpenter's, vendor's and ride builder's write_ props carry the words where they exist (Glühwein board, vom Fass board, menu, Marktblatt, sheet music, noticeboard, ticket) ([{"id":"glueh.board","kind":"chalk","fromModel":true},{"id":"bier.vomfass","kind":"chalk","fromModel":true},{"id":"wurst.menu","kind":"chalk)
-  ok   a writing surface for each section (board, coasters, menu, paper, card, sheet, noticeboard, ticket) (glueh.board bier.vomfass bier.coaster_0 bier.coaster_1 bier.coaster_2 wurst.menu wurst.paper books.card band.sheet ferris.notice carousel.ti)
-  ok   glueh.board: the words are drawn on it in 3D, the camera close in front (A warm cup with Mac I'm Mac, a physician at Chulalongkorn University in Bangkok who builds)
-  ok   glueh.board: a visually hidden copy for screen readers, and the page bar (A warm cup with MacGlühwein · About meI'm Mac, a physician a)
-  ok   glueh.board: Escape stops reading and steps back to the stop 
-  ok   bier.vomfass: the words are drawn on it in 3D, the camera close in front (On tap Three things are on tap: two pieces of software and a course. -  ProtoCol · Helles )
-  ok   bier.vomfass: a visually hidden copy for screen readers, and the page bar (On tapBierstand · ProjectsThree things are on tap: two piece)
-  ok   the projects board carries clickable links (GitHub) (https://github.com/macsermkiat)
-  ok   bier.vomfass: Escape stops reading and steps back to the stop 
-  ok   bier.coaster_0: the words are drawn on it in 3D, the camera close in front (ProtoCol Helles · always on tap)
-  ok   bier.coaster_0: a visually hidden copy for screen readers, and the page bar (ProtoColHelles · always on tapA chatbot that helps researche)
-  ok   a Bierdeckel flips over to its back ([{"open":true,"id":"bier.coaster_0","surface":"bier.coaster_0","view":0,"views":2,"face":"front","title":"ProtoCol"},{"open":true,"id":"bier)
-  ok   a Bierdeckel's words are printed on its own round face: no card under them (front in the print, back a round card face) ({"fromModel":true,"frontPrinted":true,"backCardHidden":true,"roundBack":true,"reach":{"front":0.598,"back":0.788}})
-  ok   a Bierdeckel's words stay inside its edge, front and back ({"front":0.598,"back":0.788})
-  ok   bier.coaster_0: Escape stops reading and steps back to the stop 
-  ok   wurst.menu: the words are drawn on it in 3D, the camera close in front (Off the grill Noch nichts vom Grill. This is where short essays on research, music and ide)
-  ok   wurst.menu: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
-  ok   wurst.menu: Escape stops reading and steps back to the stop 
-  ok   wurst.paper: the words are drawn on it in 3D, the camera close in front (Off the grill This is where short essays on research, music and ideas will go. Nothing is )
-  ok   wurst.paper: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
-  ok   wurst.paper: Escape stops reading and steps back to the stop 
-  ok   books.card: the words are drawn on it in 3D, the camera close in front (The bookshop I read physics, philosophy and books about the brain. The shelves hold books )
-  ok   books.card: a visually hidden copy for screen readers, and the page bar (The bookshopBücherstand · ReadingI read physics, philosophy )
-  ok   books.card: Escape stops reading and steps back to the stop 
-  ok   band.sheet: the words are drawn on it in 3D, the camera close in front (The Nachtmarkt Quartett The band on the bandstand is a quartet: tenor sax, piano, double b)
-  ok   band.sheet: a visually hidden copy for screen readers, and the page bar (The Nachtmarkt QuartettBandstand · MusicThe band on the band)
-  ok   band.sheet: Escape stops reading and steps back to the stop 
-  ok   ferris.notice: the words are drawn on it in 3D, the camera close in front (View from the top Nothing is written up here yet.)
-  ok   ferris.notice: a visually hidden copy for screen readers, and the page bar (View from the topRiesenrad · Big questionsNothing is written)
-  ok   ferris.notice: Escape stops reading and steps back to the stop 
-  ok   carousel.ticket: the words are drawn on it in 3D, the camera close in front (Come round again My code is on GitHub: github.com/macsermkiat . If you have something to s)
-  ok   carousel.ticket: a visually hidden copy for screen readers, and the page bar (Come round againKarussell · ContactMy code is on GitHub: git)
-  ok   carousel.ticket: Escape stops reading and steps back to the stop 
-  ok   the book that opens is the vendor's hardback (book_open.glb), its pages printed on its paper (["book_open.glb",{"model":true,"material":"vendor_print"}])
-  ok   a clicked book opens with its words on its own 3D pages ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
-  ok   the book's page turns (a leaf turns over) (time, free will and ethics. Summary Carroll opens with a question that sounds li)
-  ok   Escape closes the book and puts it back 
-  ok   Enter at a stop reads its main piece (the Karussell ticket) 
-· recorded stems on the full market
-· ready in 19.2 s
-  ok   play starts at once (mix)
-  ok   the mix bridges the wait for the stems (mix)
-  ok   the stems take over from the mix (stems)
-  ok   stem levels reach the stage ({"sax":0.1308498147992703,"piano":0.02878458810867027,"bass":0.1388036880571751,"drums":0.06342598874963025})
-  ok   last pass: the stems play on into the out head instead of looping ({"pos":221.35,"pass":3,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
-  ok   earlier passes: the loop goes round again ({"pos":46.8,"pass":2,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
-  ok   pass 2 plays the second tenor chorus (alternate stems) ({"pos":121.46,"pass":2,"alt":true,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
-  ok   pass 3 is back on the main chorus 
-  ok   the band stops (full) 
-
-47/47 checks passed
-No console errors.
-exit 0
-
-===== rerun: reading, interact (final build: book pages take the paper's vertex colours) =====
-· reading on the writing surfaces (lite market, 1280 px)
-· ready in 10.3 s
-· writing surfaces on the models' own write_ nodes: glueh.board bier.vomfass wurst.menu wurst.paper band.sheet ferris.notice carousel.ticket; stand-ins: books.card
-  ok   the carpenter's, vendor's and ride builder's write_ props carry the words where they exist (Glühwein board, vom Fass board, menu, Marktblatt, sheet music, noticeboard, ticket) ([{"id":"glueh.board","kind":"chalk","fromModel":true},{"id":"bier.vomfass","kind":"chalk","fromModel":true},{"id":"wurst.menu","kind":"chalk)
-  ok   a writing surface for each section (board, coasters, menu, paper, card, sheet, noticeboard, ticket) (glueh.board bier.vomfass bier.coaster_0 bier.coaster_1 bier.coaster_2 wurst.menu wurst.paper books.card band.sheet ferris.notice carousel.ti)
-  ok   glueh.board: the words are drawn on it in 3D, the camera close in front (A warm cup with Mac I'm Mac, a physician at Chulalongkorn University in Bangkok who builds)
-  ok   glueh.board: a visually hidden copy for screen readers, and the page bar (A warm cup with MacGlühwein · About meI'm Mac, a physician a)
-  ok   glueh.board: Escape stops reading and steps back to the stop 
-  ok   bier.vomfass: the words are drawn on it in 3D, the camera close in front (On tap Three things are on tap: two pieces of software and a course. -  ProtoCol · Helles )
-  ok   bier.vomfass: a visually hidden copy for screen readers, and the page bar (On tapBierstand · ProjectsThree things are on tap: two piece)
-  ok   the projects board carries clickable links (GitHub) (https://github.com/macsermkiat)
-  ok   bier.vomfass: Escape stops reading and steps back to the stop 
-  ok   bier.coaster_0: the words are drawn on it in 3D, the camera close in front (ProtoCol Helles · always on tap)
-  ok   bier.coaster_0: a visually hidden copy for screen readers, and the page bar (ProtoColHelles · always on tapA chatbot that helps researche)
-  ok   a Bierdeckel flips over to its back ([{"open":true,"id":"bier.coaster_0","surface":"bier.coaster_0","view":0,"views":2,"face":"front","title":"ProtoCol"},{"open":true,"id":"bier)
-  ok   a Bierdeckel's words are printed on its own round face: no card under them (front in the print, back a round card face) ({"fromModel":true,"frontPrinted":true,"backCardHidden":true,"roundBack":true,"reach":{"front":0.598,"back":0.788}})
-  ok   a Bierdeckel's words stay inside its edge, front and back ({"front":0.598,"back":0.788})
-  ok   bier.coaster_0: Escape stops reading and steps back to the stop 
-  ok   wurst.menu: the words are drawn on it in 3D, the camera close in front (Off the grill Noch nichts vom Grill. This is where short essays on research, music and ide)
-  ok   wurst.menu: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
-  ok   wurst.menu: Escape stops reading and steps back to the stop 
-  ok   wurst.paper: the words are drawn on it in 3D, the camera close in front (Off the grill This is where short essays on research, music and ideas will go. Nothing is )
-  ok   wurst.paper: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
-  ok   wurst.paper: Escape stops reading and steps back to the stop 
-  ok   books.card: the words are drawn on it in 3D, the camera close in front (The bookshop I read physics, philosophy and books about the brain. The shelves hold books )
-  ok   books.card: a visually hidden copy for screen readers, and the page bar (The bookshopBücherstand · ReadingI read physics, philosophy )
-  ok   books.card: Escape stops reading and steps back to the stop 
-  ok   band.sheet: the words are drawn on it in 3D, the camera close in front (The Nachtmarkt Quartett The band on the bandstand is a quartet: tenor sax, piano, double b)
-  ok   band.sheet: a visually hidden copy for screen readers, and the page bar (The Nachtmarkt QuartettBandstand · MusicThe band on the band)
-  ok   band.sheet: Escape stops reading and steps back to the stop 
-  ok   ferris.notice: the words are drawn on it in 3D, the camera close in front (View from the top Nothing is written up here yet.)
-  ok   ferris.notice: a visually hidden copy for screen readers, and the page bar (View from the topRiesenrad · Big questionsNothing is written)
-  ok   ferris.notice: Escape stops reading and steps back to the stop 
-  ok   carousel.ticket: the words are drawn on it in 3D, the camera close in front (Come round again My code is on GitHub: github.com/macsermkiat . If you have something to s)
-  ok   carousel.ticket: a visually hidden copy for screen readers, and the page bar (Come round againKarussell · ContactMy code is on GitHub: git)
-  ok   carousel.ticket: Escape stops reading and steps back to the stop 
-  ok   the book that opens is the vendor's hardback (book_open.glb), its pages printed on its paper (["book_open.glb",{"model":true,"material":"vendor_print"}])
-  ok   a clicked book opens with its words on its own 3D pages ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
-  ok   the book's page turns (a leaf turns over) (time, free will and ethics. Summary Carroll opens with a question that sounds li)
-  ok   Escape closes the book and puts it back 
-  ok   Enter at a stop reads its main piece (the Karussell ticket) 
-· every action, both rides, snow, the overview, the keyboard and a click in 3D (lite market, small viewport)
-· ready in 9.7 s
-  ok   the crowd streams in after the first frame 
-  ok   the on-screen signpost walks to the Glühwein stall 
-  ok   the stop bar offers the actions as buttons 
-  ok   pour a mug (the ladle fills one of the stall's own mugs) (Blue mug with white snowflakes, filled. Mugs poured tonight: 1. Red wine, cinnamon, clove and orange. Careful, it's hot.)
-  ok   Prost: the crowd raises a glass (2 speaking)
-  ok   pull a pint (starts) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
-  ok   pull a pint (finishes) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
-  ok   turn the sausages (Turned. Nicely browned on this side.)
-  ok   a sausage in a bun (One Bratwurst im Brötchen with mustard. That will be 4 euros.)
-  ok   a sausage in a bun: one sits in a roll, with mustard 
-  ok   clicking one sausage in 3D turns that sausage (its node rotates) (0.9239,0,-0.3827,0 -> 0,0.3827,0,0.9239)
-  ok   pull a book: the bookseller picks one and it opens ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
-  ok   lite: the player buttons say they move the spotlight 
-  ok   feature a band member (The spotlight is on the tenor sax. The lite market plays the band as one mix, so this light is only for the eyes. Switch to the full market )
-  ok   the band plays (Now playing: Lanterns After Closing · the Nachtmarkt Quartett)
-  ok   featuring while playing 
-  ok   the band stops 
-  ok   lite: rides and deco stalls arrive after the first frame ({"lod":0,"deferred":12})
-  ok   Riesenrad ride 
-  ok   Riesenrad: the ride stops at the top for the view ({"t":13.5,"stage":"top","cam":24.42754762996355})
-· screenshot ../review/round-5/engineer/ride_riesenrad.jpg
-  ok   get off the wheel 
-  ok   carousel ride 
-  ok   Escape ends the ride 
-  ok   snow on 
-  ok   snow off 
-  ok   Overview (reset) goes back to the view over the square 
-  ok   key 3 walks to the Bratwurst stand 
-  ok   → walks on along the loop (the bandstand after the Bratwurst) 
-  ok   Escape at a stop goes back to the overview 
-  ok   Enter on a signpost arm walks there 
-
-68/68 checks passed
+210/210 checks passed
 No console errors.
 exit 0

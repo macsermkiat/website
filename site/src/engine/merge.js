@@ -131,9 +131,10 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
 // Emissive materials (windows, embers) are only merged with the very same material object, because the
 // lighting module and the actions change those materials while the market runs.
 
-const SKIP = /^(snow_|bulbs_|musician_|lighting_|engine_|action_|effect_|item_|open_|band_pick_|pool_|merged_|act_sign_|write_|cam_read_)/i;
+const SKIP = /^(snow_|bulbs_|musician_|lighting_|engine_|action_|effect_|item_|open_|band_pick_|pool_|merged_|act_sign_|write_|card_|cam_read_)/i;
 const skipNode = (o) => SKIP.test(o.name || '') || o.userData.live || o.userData.pickProxy || o.userData.readable || o.userData.sign;
 const ANCHOR = /^(rot_|gondola_|horse_|instrument_)/i;
+const WRITING = /^(write_|card_|cam_read_)/i;
 const ATTRS = ['position', 'normal', 'uv', 'uv1', 'uv2', 'tangent', 'color'];
 const defaultBeforeRender = THREE.Object3D.prototype.onBeforeRender;
 
@@ -282,6 +283,9 @@ export function instanceRiders(riders, frame) {
     r.traverse((m) => {
       if (!m.isMesh || !m.visible || m.isSkinnedMesh || m.isInstancedMesh || Array.isArray(m.material) || m.morphTargetInfluences) return;
       for (let p = m.parent; p && p !== r; p = p.parent) if (p.userData.live || !p.visible) return;
+      // a writing surface on a rider (a gondola's placard and its backing card) keeps its own mesh, so its words
+      // and its reading glow stay on it; the rest of that gondola is instanced with the others
+      for (let p = m; p && p !== r; p = p.parent) if (WRITING.test(p.name || '') || p.userData.readable || p.userData.keep) return;
       const local = new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld);
       const g = m.geometry;
       if (!g.boundingBox) g.computeBoundingBox();

@@ -1,6 +1,69 @@
 # Architect, round 5: guided stroll, signpost, round-1 leftovers
 
-## Pass 2 (judges' fixes), read this first
+## Pass 3 (after the round-6 crowd, stall and ride changes), read this first
+
+Since pass 2 the organizer re-planned the crowd (`crowd.json`, 15:13), the carpenter rebuilt the Glühwein, Bratwurst and Bierstand, and the ride builder rebuilt the Riesenrad and Karussell. Re-running the official check against what is on disk now found **29 failures**. All 29 were standing people on the lanes: `group_square_9` on the front lane, `group_bratwurst_4` in front of the Bratwurst and `group_buecherstand_7` beside the Bücherstand. No stall, ride or furniture failed, which agrees with what the ride builder reported. The round-6 rides judges asked for this re-run.
+
+| Problem | What I did | Result |
+|---|---|---|
+| People standing on the stroll lanes | Re-planned all 28 legs with `stroll.py` around the current crowd. | Planning around the crowd alone left 17 failures. Once the right side cleared the people, its only way to the Karussell went between pole 4, the Bücherstand's flank and `group_buecherstand_7`, with 0.2 m too little room. |
+| Pole 4 in the lane past the Bücherstand | **Retired pole 4.** Its three spans (to poles 0, 3 and 6) now hang from pole 13 on the right lane line at [17.5, 5]. Pole 13 is 2.4 m further out, so the lane beside the Bücherstand is open. Its entry in `POLES_THREE` now holds pole 13's position. `crowd_plan.py` reads that list, so it sees no phantom pole in the lane. `square.py` skips the poles listed in `RETIRED_POLES`. | That lane now has 0.4 m or more to spare. |
+| `check_clash.py` FAIL: pole 0 inside the round-6 Bratwurst | The new Bratwurst's bounding box is 0.7 m wider on its left (x = −3.34 m), so pole 0 at [−15, 4] stood inside it (20 pole and 50 iron vertices). **Retired pole 0** in the same way: its spans to poles 1 and 5 now hang from pole 10 at [−17.5, 5], mirroring pole 13 on the right. Its old front swag, span 19, would only have repeated span 22 (pole 10 to pole 13), so I dropped it (`RETIRED_SPANS`). | `check_clash.py` **OK**. Nothing stands inside a stall or ride, and every wire and bulb keeps at least 0.15 m from each stall, ride and bandstand surface. The wires over the bandstand roof have 0.92 m to spare. |
+| Signpost boards dark in the browser (`review/round-5/engineer/home_signpost.jpg`) | The engine's light budget gives `light_sign_0` (kind `other`, the lowest priority) no light, so from home the boards read as dark planks. The boards' material `sign_boards` now has a faint emissive (factor 0.22) that uses the board atlas as its emissive map. It stands in for the lantern's spill, the way the lighting designer's `bulbBounce` lights the Ferris wheel. The emissive map is the same image as the base colour, so the file stays the same size (+0.4 KB). | The cream boards now show without a real light, and the oxblood letters stay dark on them. This is checked in Cycles only (see open issues). |
+| Ride `cam_view`s (pass 2's request to the ride builder) | The ride builder has done it: `ferris.glb` and `carousel.glb` now carry exactly the stroll stops' `cam_view` / `cam_target`. `stroll.py` checks this, and each stop's `source` now says so. | All seven stops now match their glb's `cam_view`, so the lighting designer's place focus finds the rides as well. |
+
+**Stroll after pass 3:** **0 failures** on all 28 legs, checked on centripetal, uniform and chordal Catmull-Rom curves.
+- Every leg has at least **0.36 m** to spare on top of the clearances (0.7 m from stall, ride and tree surfaces, 0.5 m from furniture, 0.6 m from a standing person). The tightest point is Bratwurst→Bücherstand at (8.0, 7.3).
+- The nearest standing person is **0.92 m** from any leg (0.6 m required).
+- One loop leg, Bratwurst→Musikpavillon, has `group_square_12` 0.92 m away. That is 0.03 m under the 0.95 m reserve target, so it carries the only WARN.
+- Loop order is unchanged. The loop is now 193.9 m (pass 2: 179.9 m), because the front legs bend round the re-planned groups. The longest loop leg is 34.0 m.
+- `square.glb` and `square.lite.glb` were rebuilt with `path_000`–`path_096` (97 empties, max error against `layout.json` 0.000 m in both files). The ground AO was **re-baked** with the final poles, so the faint AO left at the old pole spots after pass 2 is gone.
+- `layout.json` changed only in its `stroll` key. All `places` and the camera are unchanged.
+
+| Asset | Triangles | File | Budget |
+|---|---|---|---|
+| square.glb | 38,724 | 2.18 MB | 40k / 3 MB |
+| square.lite.glb | 12,220 | 0.66 MB | |
+| town.glb | 133,979 | 4.41 MB | 150k / 5 MB |
+| town.lite.glb | 32,261 | 1.20 MB | |
+| tree.glb | 39,944 | 1.05 MB | proposed 40k / 1.5 MB |
+| tree.lite.glb | 9,684 | 0.33 MB | |
+| signpost.glb | 2,228 | 0.43 MB | proposed 5k / 0.5 MB |
+| signpost.lite.glb | 1,152 | 0.17 MB | |
+
+(These are from `site/scripts/budget.mjs`. Desktop total for my files: 8.07 MB. Lite total: 2.36 MB.)
+
+**Node checks (pass 3):**
+- `square.glb`: 25 `light_`, 49 `bulbs_*` on `bulb_warm`, `snow_ground`, `snow_props` and 97 `path_`.
+- `square.lite.glb`: 15 `light_`, 42 `bulbs_*` and 97 `path_`.
+- `signpost.glb` and its lite file: 7 `act_sign_*`, `light_sign_0`, `bulbs_sign` and `snow_sign`.
+- The town and tree files are unchanged (`window_warm`, `snow_roofs` / `snow_skyline`, and the tree's `bulbs_` and `snow_`).
+
+**Previews this pass (Cycles, CPU, 1280x720, 48 samples):**
+- `home.jpg`: re-rendered with the rebuilt square and signpost and the round-6 stalls and rides. Pole 4 no longer stands in front of the Bücherstand. All seven boards read in the lower left.
+- `street.jpg`: a street of houses in the town ring. `tree.jpg`: the decorated tree. These two are fresh renders of the unchanged town and tree, so this folder holds all three required views.
+- `stroll_topdown.jpg`: re-drawn from the new legs. All the people rings and grey footprints are clear of the red and green paths.
+- `signpost.jpg` and `stroll_eye.jpg` are from pass 2 and pass 1. The signpost is the same apart from the faint board emissive.
+
+**Changed scripts:**
+- `blender/lib/architect_plan.py`: poles 0 and 4 retired, spans re-hung, `RETIRED_POLES` and `RETIRED_SPANS`.
+- `blender/square/square.py`: skips the retired poles and spans.
+- `blender/square/stroll.py`: `ride_source()` checks the rides' `cam_view`.
+- `blender/square/signpost.py`: `SPILL` emissive on the boards.
+
+**For other roles (pass 3):**
+- **Organizer.** Poles 0 and 4 are gone from the ground. Nothing new stands anywhere: pole 13 at [17.5, 5] and pole 10 at [−17.5, 5] were already there. If `crowd_plan.py` runs again, keep people 0.95 m off `layout.stroll.legs`. `group_square_12` (0.92 m) is the only one under that now. Then run `CHECK_ONLY=1 python3 blender/square/stroll.py`, which must exit 0.
+- **Lighting designer.** You can now leave `light_sign_0` without a real light: the boards carry their own faint spill. If you do give the signpost a light, it may look slightly over-bright up close, so lower `SPILL` in `signpost.py` or tell me.
+- **Engineer.** The stroll format is unchanged, and so are all the stop eyes and targets. Only the leg points changed. About folding your `OVERVIEW_OUT` (4.5 m) into `stroll.py`: I left the `overview` eye where it was, so your offset is not applied twice. If you would rather `layout.json` carried the final eye, tell me and drop the offset in `stroll.js` at the same time.
+
+**Open after pass 3:**
+- The signpost emissive is checked in Cycles only. It still needs a browser home still on a quiet machine, cropped to the signpost.
+- Walkers still cross every leg. Making them yield is the organizer's job.
+- The middle of the back is still closed (bandstand, tree and people), so the Riesenrad and the Karussell stay spurs.
+
+---
+
+## Pass 2 (judges' fixes)
 
 | Judges' fix | What I did | Result |
 |---|---|---|

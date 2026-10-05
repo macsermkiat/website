@@ -162,5 +162,32 @@ check('the song is about ten minutes before it rests and starts again', plan.len
   if (book) check('book_open.glb has the pages, the leaf and the reading camera the engine uses', ['write_page_left', 'write_page_right', 'act_page_turn', 'write_page_turn_front', 'write_page_turn_back', 'cam_read_book', 'book_open_cover'].every((n) => book.includes(n)));
 }
 
+
+// ---------- the Riesenrad parks forward ----------
+{
+  const THREE = await import('three');
+  const { makeRides } = await import('../src/engine/conventions.js');
+  let worst = 0, back = 0, late = 0, notStill = 0, maxV = 0;
+  for (const start of [0, 0.01, 0.5, 1.7, Math.PI, 4.4, 6.2, 6.28, 9.9, -0.3]) {
+    for (const speed of [0.05, -0.05]) {
+      const rot = new THREE.Object3D(); rot.name = 'rot_wheel'; rot.userData.speed = speed;
+      rot.add(new THREE.Mesh(new THREE.BoxGeometry(10, 10, 0.3)));
+      const r = makeRides({ rots: [rot], gondolas: [], horses: [] });
+      r.wheel.angle = start;
+      const T = r.park(true);
+      let prev = r.wheel.angle, t = 0, v = 0;
+      while (!r.parked && t < 20) { r.update(1 / 60, t); const d = (r.wheel.angle - prev) * Math.sign(speed); if (d < -1e-9) back++; v = d * 60; maxV = Math.max(maxV, v); prev = r.wheel.angle; t += 1 / 60; }
+      if (t > T + 0.05) late++;
+      if (v > 0.02) notStill++;
+      worst = Math.max(worst, t);
+      const rest = Math.abs(r.wheel.angle / (2 * Math.PI) - Math.round(r.wheel.angle / (2 * Math.PI)));
+      if (rest > 1e-6) late++;
+      r.park(false);
+    }
+  }
+  check('Riesenrad: parking always turns forward, the way the wheel turns, and never backwards', back === 0, `${back} backward steps`);
+  check('Riesenrad: parking eases to a stop on a whole turn, in the time it said', late === 0 && notStill === 0, `longest ${worst.toFixed(1)} s, top speed ${maxV.toFixed(2)} rad/s`);
+}
+
 console.log(failed ? `\n${failed} unit checks failed` : '\nall unit checks passed');
 process.exit(failed ? 1 : 0);
