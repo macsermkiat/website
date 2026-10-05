@@ -1,3 +1,27 @@
 
 full market on ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0
   first load 7.26 MB (fetched before the market opened)
+  MISS home         median  2657.5 ms  p95 48282.3 ms  1372 draws  1326k tris
+  MISS Glühwein     median 34979.1 ms  p95 67239.6 ms  1362 draws  1388k tris
+  MISS bandstand    median 33374.2 ms  p95 50787.2 ms  1581 draws  1796k tris
+  MISS Bücherstand  median   35798 ms  p95 71612.8 ms  1224 draws  1523k tris
+  MISS Riesenrad    median 39356.9 ms  p95 53609.8 ms  1132 draws  1597k tris
+  MISS home again   median 39376.9 ms  p95 40957.4 ms  1430 draws  2027k tris
+  triangle count: finite on every frame
+  crowd 87 people: 69 drawn as far instances in 14 draws (14 figures baked in 5445 ms); mixers ran 7, throttled 11; crowd update 0.345 ms/frame
+  software GL: these numbers are not a GPU measurement
+
+lite market on ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0
+  first load 5.10 MB (fetched before the market opened)
+  MISS home         median  4417.6 ms  p95 18219.5 ms  633 draws  304k tris
+  MISS Glühwein     median  7929.2 ms  p95   18996 ms  617 draws  304k tris
+  MISS bandstand    median  7916.9 ms  p95  8626.7 ms  610 draws  300k tris
+  MISS Bücherstand  median  7995.7 ms  p95  8651.4 ms  610 draws  300k tris
+  MISS Riesenrad    median  8299.7 ms  p95  8621.4 ms  609 draws  300k tris
+  MISS home again   median  8430.6 ms  p95 16324.9 ms  618 draws  304k tris
+  triangle count: finite on every frame
+  crowd 40 people: 40 drawn as far instances in 11 draws (11 figures baked in 3623 ms); mixers ran 0, throttled 0; crowd update 0.199 ms/frame
+  software GL: these numbers are not a GPU measurement
+
+not a real GPU; written to ../review/round-9/engineer/perf/2026-10-05-11-55.json
+(lines rebuilt from that JSON: the run's own stdout was cut off by process.exit, fixed in tests/perf.mjs)

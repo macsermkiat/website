@@ -1,0 +1,108 @@
+· unit checks
+  ok   unit: GPU class: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE) (software (want software)) 
+  ok   unit: GPU class: llvmpipe (LLVM 15.0.7, 256 bits) (software (want software)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) UHD Graphics 620 (0x00005917) Direct3D11 vs_5_0 (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) UHD Graphics 630 (0x00003E9B) Direct3D11 vs_5_0 (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) UHD Graphics (0x00009A78) Direct3D11 vs_5_0 ps_ (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_ (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 655, OpenGL 4.1) (integrated (want integrated)) 
+  ok   unit: GPU class: Mesa Intel(R) UHD Graphics 620 (KBL GT2) (integrated (want integrated)) 
+  ok   unit: GPU class: Mesa Intel(R) Xe Graphics (TGL GT2) (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001638) Direct3D11 vs_5_0 ps_ (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version) (integrated (want integrated)) 
+  ok   unit: GPU class: Apple GPU (integrated (want integrated)) 
+  ok   unit: GPU class: ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU Direct3D11 vs_5_0 ps (discrete (want discrete)) 
+  ok   unit: GPU class: ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0, D3D11) (discrete (want discrete)) 
+  ok   unit: GPU class: ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Pro, Unspecified Version) (discrete (want discrete)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) HD Graphics 4000 Direct3D11 vs_5_0 ps_5_0, D3D1 (weak (want weak)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) HD Graphics 520 (0x00001916) Direct3D11 vs_5_0  (weak (want weak)) 
+  ok   unit: GPU class: Intel HD Graphics 5000 (weak (want weak)) 
+  ok   unit: GPU class: ANGLE (Intel, Intel(R) UHD Graphics 600 (0x00003185) Direct3D11 vs_5_0 (weak (want weak)) 
+  ok   unit: GPU class: Mesa Intel(R) UHD Graphics 605 (GLK 3) (weak (want weak)) 
+  ok   unit: GPU class: Mali-T860 (weak (want weak)) 
+  ok   unit: GPU class: Mali-G52 (weak (want weak)) 
+  ok   unit: GPU class: Mali-G78 (integrated (want integrated)) 
+  ok   unit: GPU class: Adreno (TM) 506 (weak (want weak)) 
+  ok   unit: GPU class: Adreno (TM) 660 (integrated (want integrated)) 
+  ok   unit: GPU class: PowerVR Rogue GE8320 (weak (want weak)) 
+  ok   unit: a UHD 620 laptop gets the full market  
+  ok   unit: an Iris Xe laptop gets the full market  
+  ok   unit: an HD 4000 laptop gets the lite market  
+  ok   unit: a phone gets the lite market  
+  ok   unit: a 4 GB laptop gets the lite market  
+  ok   unit: the head runs into the loop  
+  ok   unit: the loop plays 3 passes  
+  ok   unit: the last stretch is the written ending, past loopEnd to the fermata ({"from":219.390907,"to":268.822,"pass":3,"alt":false}) 
+  ok   unit: pass 2 plays the second tenor chorus from the alternates ([{"from":88.231814,"to":180.959093,"pass":2,"alt":true}]) 
+  ok   unit: pass 1 and pass 3 play the main chorus  
+  ok   unit: segments join up with no gap  
+  ok   unit: the song is about ten minutes before it rests and starts again (618 s) 
+  ok   unit: the strict content gate counts <!-- check --> comments and [check] tags (content still waiting for Mac: a.md: 2 check markers) 
+  ok   unit: the strict content gate counts a book page still marked review: check (content still waiting for Mac: a.md: 2 check markers; books/: 1 book page still marked review: check) 
+  ok   unit: npm run content:check lists each marker the gate counts, with its line ([{"file":"a.md","line":1,"kind":"check","text":"<!-- check -->"},{"file":"a.md","line":3,"kind":"check","text":"[check: the year]"},{"file":"books/chaos.md","line":5,"kind":"review","text":"review: \"check\""}]) 
+  ok   unit: Mac's bookshelf comes from categories.json, with the one-line summary where the writer has one ([{"title":"Chaos","author":"James Gleick","slug":"chaos","category":"physics","categoryDe":"Physik & Kosmos","oneLine":"Order in disorder.","page":true},{"title":"Grit","author":"Angela Duckworth","slug":"grit","category":"physics","categoryDe":"Physik & Kosmos","oneLine":"","page":false}]) 
+  ok   unit: Mac's bookshelf renders as a list whose titles link to their reading pages  
+  ok   unit: a book's reading page is its markdown body under the title (In short as an h3)  
+  ok   unit: the text page carries every book's reading page with an anchor  
+  ok   unit: no categories file: an empty library, no error  
+  ok   unit: asset credits from CREDITS.md carry source URLs and licences  
+  ok   unit: production content: the unconfirmed book list is not reinstated in the bookshop panel  
+  ok   unit: production content: the 3D shelf keeps only books on Mac's own shelf  
+  ok   unit: production content: all 55 books from categories.json, each with its reading page (55 books,  without a page) 
+  ok   unit: budget: a glb's external textures are counted with it (deco_kit_wood_normal.webp deco_kit_wood_color.webp deco_kit_wood_rm.webp deco_kit_oak_normal.webp deco_kit_oak_color.webp deco_kit_oak_rm.webp deco_kit_paint_normal.webp deco_kit_paint_color.webp deco_kit_paint_rm.webp deco_kit_iron_normal.webp deco_kit_iron_color.webp deco_kit_iron_rm.webp) 
+  ok   unit: budget: a texture several assets share is charged once (deco_kit_wood_color.webp: 8 users) 
+  ok   unit: budget: deferred assets and the crowd's distance level are counted ({"firstLoad":8347194,"deferred":9074818,"onDemand":16195938,"everything":33617950,"aim":25000000,"round4":19700000,"over":false,"grew":false}) 
+  ok   unit: budget: the full market's full-detail stalls are counted on demand, not in the first load ({"full":{"firstLoad":8347194,"deferred":9074818,"onDemand":16195938,"everything":33617950,"aim":25000000,"round4":19700000,"over":false,"grew":false},"lite":{"firstLoad":6244182,"deferred":5585118,"onDemand":0,"everything":11829300,"aim":8000000,"round4":7440000,"over":false,"grew":false}}) 
+  ok   unit: budget: both first loads are smaller than round 4 (19.70 MB full, 7.44 MB lite) (8.35 / 6.24 MB) 
+  ok   unit: budget: the shared clips (people_anims.glb) are counted  
+  ok   unit: budget: the bandstand is charged with its instruments, its four players as person variants (people_band_sax people_band_piano people_band_bass people_band_drums) 
+  ok   unit: budget: a shared texture is charged to each user in equal parts (19444.477564102566 of 256214) 
+  ok   unit: budget: it reports a missing dist (the CLI then exits 1)  
+  ok   unit: budget: both first loads are under their aims (8.35 / 6.24 MB) 
+  ok   unit: streaming: each streamed stall's lite and full glbs have the same node tree (the graft's precondition)  
+  ok   unit: stroll: a leg joins every pair of stops (a signpost choice walks straight there)  
+  ok   unit: stroll: every stop has an eye and a target, and the Riesenrad its overview  
+  ok   unit: in-world text: the engine knows a write_ name for every writing surface (board/about vomfass/projects_board menu/writing_menu paper/writing_paper card/reading_card/books_card sheet/music notice/questions_board ticket/contact) 
+  ok   unit: book_open.glb has the pages, the leaf and the reading camera the engine uses  
+  ok   unit: Riesenrad: parking always turns forward, the way the wheel turns, and never backwards (0 backward steps) 
+  ok   unit: Riesenrad: parking eases to a stop on a whole turn, in the time it said (longest 8.3 s, top speed 1.13 rad/s) 
+· full market, 1280 px: the still, the signpost, a walk, the stops, streaming, no orbit and no side panel
+  ok   a still of the home view shows before the market is ready 
+· ready in 13.4 s
+· full: 7.26 MB downloaded when the market opens
+  ok   full: the first load stays near 8 MB (round 9: under 9 MB; the deco stalls are their lite files, the rest streams in at the stops) (7.26 MB)
+  ok   full market chosen with ?quality=full 
+  ok   the still fades out once the market is drawn 
+  ok   no side panel or reading aside on the 3D page 
+  ok   the stroll runs on the architect's stops and legs (layout.json stroll (stops and legs))
+  ok   the stroll's loop is the architect's order (["glueh","band","bier","books","schmuck","carousel","ferris","wurst"])
+  ok   the signpost in the market is the carpenter's (act_sign_ boards) (act_sign_ nodes (signpost.glb))
+  ok   the on-screen signpost has eight arms (the ornament shop too) and an overview 
+  ok   streaming: the section stalls and the bandstand open at lite detail ({"square":"full","gluehwein":"lite","bierstand":"lite","bratwurst":"lite","buecherstand":"lite","bandstand":"lite","tree":"lite","signpost":)
+  ok   streaming: the town ring comes just after the first frame, with the rides (["riesenrad","karussell","deco-schmuck","town","deco-lebkuchen","deco-mandeln","deco-kerzen","deco-spielzeug","deco-kaese","deco-crepes","de)
+  ok   no orbit: a long drag turns the head at most 15°, and the camera stays where it is ({"c0":[3.258,9.249,32.978],"c1":[3.536,9.221,32.955],"look":{"yaw":0.2617977792481168,"pitch":0,"zoom":1}})
+  ok   zoom stays in its small band (1.1199992626945177)
+· screenshot ../review/round-9/engineer/home_signpost.jpg
+  ok   deco stalls: every one is in the market, at its lite file only (no full-detail download, nothing streams) ({"ids":["deco-lebkuchen","deco-mandeln","deco-kerzen","deco-spielzeug","deco-kaese","deco-crepes","deco-maroni","deco-kartoffelpuffer"],"fil)
+  ok   deco stalls are not clickable: a click on deco-lebkuchen picks nothing, shows no label, and the view stays home (no close-up) ({"hit":{"id":"deco-lebkuchen","x":479.54855624653754,"y":427.5993051000263,"pick":null},"tip":null,"after":{"stop":null,"mode":"home","readi)
+  ok   no deco stops in the stroll and no deco fly-to 
+  ok   the signpost's hover label stays inside the canvas ({"tip":[439,490,861,525],"canvas":[17,119,1263,709],"text":"Christbaumschmuck: walk to the Christbaumschmuck · Ornaments","hidden":false})
+  ok   the hover label stays inside the canvas at every edge and corner ([{"at":[1244,296],"inside":true},{"at":[2,296],"inside":true},{"at":[1244,4],"inside":true},{"at":[2,4],"inside":true},{"at":[623,3],"inside)
+  ok   clicking the signpost's Glühwein board walks to the Glühwein stall ({"x":555.4782996171197,"y":529.8343281124261})
+  ok   the camera walks (not flies) to the stop ({"kind":"walk","t":0,"dur":11.986481154454557,"length":38.356739694254586})
+  ok   walking pace (about 3 m/s; never a dash) (3.20 m/s over 38.4 m)
+  ok   mid-stroll the camera is on its way, down at eye level and off the straight line ([1.668,3.531,22.345])
+  ok   arrived at the Glühwein stop, with its bar of things to do ({"arrived":true,"cam":{"mode":"stop","moving":false,"progress":null,"look":{"yaw":0,"pitch":0,"zoom":1},"pos":[-5.422,1.8,3.028],"target":[-)
+  ok   at a stop the head turns at most 15° 
+  ok   streaming: the stall at the stop comes in at full detail ({"square":"full","gluehwein":"full","bierstand":"lite","bratwurst":"lite","buecherstand":"lite","bandstand":"full","tree":"full","signpost":)
+  ok   streaming: the swap kept every action's nodes (no graft errors) ([{"id":"gluehwein","files":["stall_gluehwein.glb","prop_gluehwein_counter.glb","prop_gluehwein_shelf.glb","prop_gluehwein_wine.glb"],"meshes)
+  ok   → walks on to the next stop (the bandstand) 
+  ok   ← walks back to the stop before 
+  ok   key 6 walks to the Riesenrad 
+  ok   the Riesenrad stop is the overview, high on the wheel ([-18.362,20.189,-14.078])
+· screenshot ../review/round-9/engineer/stop_riesenrad_overview.jpg
+  ok   key 4 walks to the Bücherstand 
+  ok   streaming: walking to a stall brings it in at full detail 
+  ok   0 goes back to the overview of the square 
+· reading on the writing surfaces (lite market, 1280 px)
+· ready in 7.9 s

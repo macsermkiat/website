@@ -91,4 +91,5 @@ mkdirSync(OUT, { recursive: true });
 const file = path.join(OUT, `${report.at.slice(0, 16).replace(/[:T]/g, '-')}.json`);
 writeFileSync(file, JSON.stringify(report, null, 2));
 console.log(`\n${verdict === 0 ? 'every view meets its target' : verdict === 1 ? 'a view misses its target' : 'not a real GPU'}; written to ${path.relative(process.cwd(), file)}`);
-process.exit(verdict);
+// let stdout drain first (piped to a file, process.exit() could cut the per-view lines off)
+process.exitCode = verdict;

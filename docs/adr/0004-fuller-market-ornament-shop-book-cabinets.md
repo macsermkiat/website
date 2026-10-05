@@ -59,3 +59,12 @@ Interactions (Mac said "ok" to the recommended set on 2026-10-05; three only, ea
 1. Hero: the Schwibbogen wakes the town. Its candles light one by one from the outside in; with each flame more windows in the old town turn warm, a low chord builds, and the last flame sends a slow wave of light across the market before it settles.
 2. Glass harmonica: the baubles on the front rail are tuned to the ballad's melody. Brushing across them (drag or tap in order) plays it with long glassy decays; after a pause the next bauble glows faintly so visitors find the tune.
 3. Reflection dive: tapping the big mercury-glass bauble moves the camera in until the curved, live reflection of the lit market fills the view, then crossfades into the market seen from inside the glass, hushed like a snow globe, and back out.
+
+## Revision: Bratwurst plate instead of many sausages
+
+Mac (2026-10-05): "There are too much interaction in sausages, no need to able to flip that lots sausages, just few different kind is enough. But if it's able to mix on plate and put on sauce must be nice."
+
+- The rows of 24 clickable sausages and 16 clickable rolls become scenery (merged, no `act_`, no `items.json` entry). The grill still smokes and the Marktblatt still carries the Writing section.
+- Four kinds stay clickable, one of each on the counter: a Thüringer Rostbratwurst, three small Nürnberger, a Krakauer and a sliced Currywurst. Tapping one puts a fresh one on a paper plate on the counter with a short arc.
+- Three sauce bottles: Senf (mustard), Ketchup and Currysauce. Tapping one squeezes a glossy squiggle over what is on the plate; the curry shaker dusts curry powder. A Brötchen can join the plate too.
+- Tapping the plate when it has something on it clears it ("Guten Appetit") so a visitor can start again. The plate holds at most four items.
