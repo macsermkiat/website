@@ -20,9 +20,11 @@ Sparkle, in three tiers with dark wood left between the clusters:
     hero     the harmonica row, the mirror ball, the turning Erzgebirge candle pyramid (prop_schmuck_pyramid at
              slot_pyramid; its turning part is rot_pyramid; flames are the emissive `flame` material)
     medium   mercury-glass (metallic, roughness 0.05) and high-gloss baubles in silver, gold, copper and deep
-             teal in five sizes, twisted glass icicles, glass pine cones, three Lametta swags (tinsel_0..2,
-             thin metal-foil ribbon meshes), glass bead garlands sagging across the front rail and the back
-             wall, four Rauschgoldengel on the top shelf and a large one on the display tree
+             teal in five sizes, twisted glass icicles, glass pine cones, three Lametta swags (tinsel_0..2:
+             two crinkled foil strips twisted round each other with a fringe of kinked loose strands; the tree's
+             are kinked strands), glass bead garlands sagging across the front rail and the back
+             wall, four Rauschgoldengel (crinkled vendor_foil) on plinths on the top shelf and a large one on the
+             display tree, warm fairy lights in loops under the shelf lips
     subtle   four snow globes, spun-glass birds with fine tails, three lit Herrnhut stars at different heights
 Repeated baubles are instanced: one mesh per size and colour, placed as inst_* copies that instance.mjs folds
 into EXT_mesh_gpu_instancing nodes (vlib.PropSet.proto / inst).
@@ -196,34 +198,62 @@ def beads(m, pts, step=0.027, r=0.0064, cols=("gold", "clear")):
         m.add([tuple(v) for v in V], Fc, [[(0, 0)] * 3] * 8, None, col, mat, False)
 
 
-def tinsel(m, pts, col, seed, step=0.03, strands=2, drip_every=4, reach=(0.016, 0.03), drip=(0.035, 0.085)):
-    """A Lametta swag: a thin foil core with radial foil strands round it and longer strands dripping down,
-    every strand a narrow twisted quad (double-sided, metallic `tinsel` material) whose own tilt catches the
-    light differently. Built along polyline `pts`."""
+def tinsel(m, pts, col, seed, step=0.012, ribbons=2, width=0.022, pitch=0.075, fringe=0.017, drip=(0.04, 0.11),
+           fw=0.0022):
+    """A Lametta swag (round 9 pass 2: denser, twisted, crinkled). Two strips of metal foil twisted round each
+    other along polyline `pts` (each strip's width turns about the swag's line once every `pitch` metres, the two
+    a quarter turn apart, so the section is a four-bladed spiral) and crinkled: every station kinks the strip by
+    a few tens of degrees and nudges it off the line, so neighbouring facets face different ways and the foil
+    glints in flecks instead of reading as one straw. Under it hangs a fringe of loose Lametta strands every
+    `fringe` metres, each kinked twice and twisted between its three facets. All double-sided `tinsel`.
+    Lite: one strip at twice the step; the fringe is drawn from the same seeded list in both builds and lite keeps
+    every second strand plus the ones that set the bounds (full / lite bounds parity)."""
+    lite = vlib.lite()
+    # ---- twisted crinkled strips
+    st = along(pts, step * lv(1, 2))
+    st.append((pts[-1], (pts[-1] - pts[-2]).normalized()))
+    for k in range(lv(ribbons, 1)):
+        rk = random.Random(seed * 31 + k)
+        V, Fc = [], []
+        ph = math.pi / 2 * k
+        for i, (p, t) in enumerate(st):
+            n1, n2 = frame(t)
+            dist = i * step * lv(1, 2)
+            th = ph + TWO_PI * dist / pitch + (0.7 if i % 2 else -0.7) * rk.uniform(0.5, 1.0)
+            wd = n1 * math.cos(th) + n2 * math.sin(th)
+            off = (n1 * math.cos(th + 1.7) + n2 * math.sin(th + 1.7)) * rk.uniform(0.0, 0.003)
+            half = width / 2 * rk.uniform(0.75, 1.0)
+            c = p + off
+            V += [tuple(c - wd * half), tuple(c + wd * half)]
+            if i:
+                o = 2 * i
+                Fc.append((o - 2, o - 1, o + 1, o))
+        m.add(V, Fc, [[(0, 0)] * 4] * len(Fc), None, vlib.jit(col, 0.08), "tinsel", False)
+    # ---- the fringe: loose strands hanging under the swag, each kinked twice and twisted between its three
+    # facets, so no strand catches the light along its whole length (pass 1's read as straws)
     rnd = random.Random(seed)
-    st = along(pts, step * lv(1, 1.8))
-    m.tube([tuple(p) for p in pts], 0.0022, 3, "sw_satin", None, col, "tinsel")
-    w = 0.0032
-    for i, (p, t) in enumerate(st):
-        n1, n2 = frame(t)
-        k = strands if not vlib.lite() else 1
-        for _ in range(k):
-            a = rnd.uniform(0, TWO_PI)
-            d = (n1 * math.cos(a) + n2 * math.sin(a))
-            d.z -= 0.35
-            d.normalize()
-            L = rnd.uniform(*reach)
-            e = d.cross(Vector((rnd.uniform(-1, 1), rnd.uniform(-1, 1), rnd.uniform(-1, 1)))).normalized() * w / 2
-            tip = p + d * L
-            q = [p - e, p + e, tip + e * 0.7, tip - e * 0.7]
-            m.add([tuple(v) for v in q], [(0, 1, 2, 3)], [[(0, 0)] * 4], None, vlib.jit(col, 0.12), "tinsel", False)
-        if i % drip_every == 0:
-            L = rnd.uniform(*drip)
-            lean = Vector((rnd.uniform(-0.15, 0.15), rnd.uniform(-0.1, 0.1), -1)).normalized()
-            e = Vector((math.cos(i), math.sin(i), 0)) * (w * 0.4)
-            tip = p + lean * L
-            q = [p - e, p + e, tip + e, tip - e]
-            m.add([tuple(v) for v in q], [(0, 1, 2, 3)], [[(0, 0)] * 4], None, vlib.jit(col, 0.12), "tinsel", False)
+    strands = []
+    for i, (p, t) in enumerate(along(pts, fringe, fringe / 2)):
+        L = rnd.uniform(*drip) * (1.0 if i % 3 else 0.6)
+        lean = Vector((rnd.uniform(-0.18, 0.18), rnd.uniform(-0.12, 0.12), -1)).normalized()
+        a0 = rnd.uniform(0, TWO_PI)
+        es = [Vector((math.cos(a0 + 1.05 * j), math.sin(a0 + 1.05 * j), 0)) * (fw / 2 * (1.0 - 0.1 * j)) for j in range(4)]
+        k1 = Vector((rnd.uniform(-0.008, 0.008), rnd.uniform(-0.008, 0.008), 0))
+        k2 = Vector((rnd.uniform(-0.008, 0.008), rnd.uniform(-0.008, 0.008), 0))
+        cs = [p, p + lean * (L * 0.33) + k1, p + lean * (L * 0.67) + k2, p + lean * L + (k1 + k2) * 0.5]
+        f = rnd.uniform(0.7, 1.0)
+        V = []
+        for c, e in zip(cs, es):
+            V += [c - e, c + e]
+        strands.append((V, vlib.jit(tuple(c * f for c in col), 0.12)))
+    keep = set(range(0, len(strands), 2)) if lite else set(range(len(strands)))
+    for ax in range(3):
+        keep.add(min(range(len(strands)), key=lambda j: min(v[ax] for v in strands[j][0])))
+        keep.add(max(range(len(strands)), key=lambda j: max(v[ax] for v in strands[j][0])))
+    for j in sorted(keep):
+        q, c = strands[j]
+        m.add([tuple(v) for v in q], [(0, 1, 3, 2), (2, 3, 5, 4), (4, 5, 7, 6)], [[(0, 0)] * 4] * 3, None, c,
+              "tinsel", False)
 
 
 def icicle(m, top, L=0.13, mat="mercury", col=None):
@@ -345,10 +375,10 @@ def rauschgold(m, M, s=1.0):
     for z, r in ((0.0, 0.058), (0.07, 0.042), (0.13, 0.02)):
         rings.append([((r * (1.0 if j % 2 == 0 else 0.84)) * math.cos(math.pi * j / P),
                        (r * (1.0 if j % 2 == 0 else 0.84)) * math.sin(math.pi * j / P), z) for j in range(2 * P)])
-    m.loft(rings, "sw_metal", S, gold, "atlas", closed=True, smooth=False)
-    m.lathe([(0.02, 0.13), (0.015, 0.155), (0.009, 0.165)], lv(6, 5), "sw_metal", S, pale, "atlas")
+    m.loft(rings, "sw_metal", S, gold, "foil", closed=True, smooth=False)
+    m.lathe([(0.02, 0.13), (0.015, 0.155), (0.009, 0.165)], lv(6, 5), "sw_metal", S, pale, "foil")
     m.sphere(0.017, lv(6, 5), lv(4, 3), "sw_satin", S @ T(0, 0, 0.183), C("f4dcc6"), "glaze")
-    m.sphere(0.019, lv(5, 4), 3, "sw_metal", S @ T(0, 0.006, 0.188), C("d8a848"), "atlas", scale=(1.0, 0.9, 0.95))
+    m.sphere(0.019, lv(5, 4), 3, "sw_metal", S @ T(0, 0.006, 0.188), C("d8a848"), "foil", scale=(1.0, 0.9, 0.95))
     cr = 10
     band = [(0.012 * math.cos(TWO_PI * j / cr), 0.012 * math.sin(TWO_PI * j / cr)) for j in range(cr)]
     for j in range(cr):
@@ -356,10 +386,10 @@ def rauschgold(m, M, s=1.0):
         z0 = 0.2
         ztip = z0 + (0.014 if j % 2 == 0 else 0.006)
         m.add([(a[0], a[1], z0), (b[0], b[1], z0), (b[0], b[1], z0 + 0.008), (a[0], a[1], ztip)], [(0, 1, 2, 3)],
-              [[(0, 0)] * 4], S, gold, "atlas", False)
+              [[(0, 0)] * 4], S, gold, "foil", False)
     for sx in (-1, 1):
         m.tube([(sx * 0.016, 0.0, 0.15), (sx * 0.02, -0.012, 0.12), (sx * 0.006, -0.026, 0.11)], 0.0055, 4, "sw_metal",
-               S, pale, "atlas")
+               S, pale, "foil")
         k = lv(6, 3)
         hinge = Vector((sx * 0.006, 0.014, 0.15))
         fan = [hinge]
@@ -368,8 +398,7 @@ def rauschgold(m, M, s=1.0):
             L = 0.105 * (1 - 0.25 * (i / k - 0.6) ** 2)
             fan.append(Vector((sx * L * math.cos(a) * 0.95, 0.018 + 0.012 * (i % 2), 0.15 + L * math.sin(a) * 0.9 - 0.03)))
         faces = [(0, i, i + 1) if sx > 0 else (0, i + 1, i) for i in range(1, k + 1)]
-        m.add([tuple(v) for v in fan], faces, [[(0, 0)] * 3] * len(faces), S, gold, "atlas", False)
-        # (atlas uv 0,0 is the first swatch: the foil reads as plain gold metal)
+        m.add([tuple(v) for v in fan], faces, [[(0, 0)] * 3] * len(faces), S, gold, "foil", False)
     m.cyl(0.0012, 0.0012, 0.05, 4, "sw_metal", S @ T(0.0, -0.03, 0.09, rx=0.3), pale)
 
 
@@ -649,7 +678,8 @@ def _anchors(slot_name, fallback):
     return [Vector(a) - p for a in sl["anchors"]], sl.get("sag", 0.08)
 
 
-def swag_set(name, slot_name, n, colour, seed, fallback, label, off=(0.0, -0.035, -0.012), **kw):
+def swag_set(name, slot_name, n, colour, seed, fallback, label, off=(0.0, -0.035, -0.012), rosette=0.012,
+             rosette_seg=(8, 5), **kw):
     """A Lametta swag tinsel_<n> hung between the carpenter's anchors (slot_tinsel_<k>), sagging as the slot says,
     with a small gilt rosette at each anchor."""
     s = vlib.PropSet(name, slot_name, STALL, footprint=(2.6, 0.1))
@@ -657,9 +687,9 @@ def swag_set(name, slot_name, n, colour, seed, fallback, label, off=(0.0, -0.035
     anchors = [a + Vector(off) for a in anchors]       # hung just in front of the beam or valance it is pinned to
     with plain(s, f"tinsel_{n}", (0.0, 0.0, 0.0)) as tm:
         for a, b in zip(anchors[:-1], anchors[1:]):
-            tinsel(tm, sag(a, b, sg, 10), colour, seed + int(a.x * 10), **kw)
+            tinsel(tm, sag(a, b, sg, 16), colour, seed + int(a.x * 10), **kw)
     for a in anchors:
-        s.static.sphere(0.012, lv(8, 6), lv(5, 4), "sw_satin", T(a.x, a.y, a.z + 0.004), MERC["gold"], "mercury")
+        s.static.sphere(rosette, lv(rosette_seg[0], 6), lv(rosette_seg[1], 4), "sw_satin", T(a.x, a.y, a.z + 0.004), MERC["gold"], "mercury")
     s.finish()
     return s
 
@@ -668,13 +698,15 @@ def tinsel_canopy():
     """tinsel_0: gold Lametta under the scalloped valance across the counter bay (slot_tinsel_1)."""
     return swag_set("prop_schmuck_tinsel_1", "slot_tinsel_1", 0, MERC["gold"], 11,
                     ([Vector((0, 0, 0)), Vector((1.28, 0, 0)), Vector((2.56, 0, 0))], 0.13), "canopy",
-                    step=0.022, drip_every=2, drip=(0.05, 0.13))
+                    step=0.015, width=0.016, pitch=0.045, fringe=0.024, drip=(0.035, 0.11))
 
 
 def tinsel_beam():
     """tinsel_1: silver Lametta along the tie beam inside the canopy (slot_tinsel_3), doubled in the mirror."""
     return swag_set("prop_schmuck_tinsel_3", "slot_tinsel_3", 1, MERC["silver"], 23,
-                    ([Vector((0.95 * k, 0, 0)) for k in range(5)], 0.07), "beam", off=(0.0, -0.05, -0.02), step=0.036)
+                    ([Vector((0.95 * k, 0, 0)) for k in range(5)], 0.07), "beam", off=(0.0, -0.05, -0.02),
+                    rosette=0.01, rosette_seg=(6, 4), step=0.024, width=0.018, pitch=0.06, fringe=0.045,
+                    drip=(0.04, 0.09))
 
 
 def garland():
@@ -697,19 +729,20 @@ def garland():
 
 def rail_2():
     """The inner rail over the counter's back edge (slot_rail_2, 0.31 m clear drop): four clusters of mercury and
-    high-gloss baubles with bare rail between them, two lit Herrnhut stars at different heights (red, 22 cm, and
+    high-gloss baubles with bare rail between them (the gaps line up with the four top-shelf angels seen from the
+    close-up camera, so the angels show between the clusters), two lit Herrnhut stars at different heights (red, 22 cm, and
     yellow, 16 cm), two spun-glass birds clipped on the rail, icicles, a pine cone, and the pickle hidden among
     the teal baubles (decoration)."""
     L = SLOTS["slot_rail_2"]["length"]
     s = vlib.PropSet("prop_schmuck_rail_2", "slot_rail_2", STALL, footprint=(L, 0.12))
     m = s.static
     clusters = [
-        (0.16, [("merc", "silver", "l", 0.12), ("gloss", "teal", "m", 0.2), ("icicle", 0, 0, 0.04),
+        (0.2, [("merc", "silver", "l", 0.12), ("gloss", "teal", "m", 0.2), ("icicle", 0, 0, 0.04),
                 ("merc", "copper", "s", 0.17)]),
-        (0.98, [("gloss", "teal", "m", 0.1), ("merc", "teal", "s", 0.19), ("pickle", 0, 0, 0.09),
+        (1.33, [("gloss", "teal", "m", 0.1), ("merc", "teal", "s", 0.19), ("pickle", 0, 0, 0.09),
                 ("merc", "teal", "l", 0.14), ("gloss", "teal", "s", 0.05)]),
-        (1.42, [("merc", "copper", "m", 0.08), ("pine", 0, 0, 0.13), ("merc", "silver", "xl", 0.12)]),
-        (2.08, [("merc", "gold", "m", 0.17), ("icicle", 0, 0, 0.03), ("merc", "silver", "m", 0.08)]),
+        (0.935, [("merc", "copper", "m", 0.08), ("pine", 0, 0, 0.13), ("merc", "silver", "xl", 0.12)]),
+        (2.17, [("merc", "gold", "m", 0.17), ("icicle", 0, 0, 0.03), ("merc", "silver", "m", 0.08)]),
     ]
     for cx, items in clusters:
         n = len(items)
@@ -725,9 +758,9 @@ def rail_2():
                 pinecone(m, ribbon(m, knot, drop, C("b0282a")))
             elif kind == "pickle":
                 pickle(m, ribbon(m, knot, drop, C("2a6a3a")))
-    hang_herrnhut(m, (0.6, 0.0, KNOT_Z), 0.03, 0.105)
-    hang_herrnhut(m, (1.76, 0.0, KNOT_Z), 0.1, 0.075, "sw_satin", C("f2c64a"))
-    for x, f in ((0.4, 0.3), (1.92, math.pi - 0.3)):
+    hang_herrnhut(m, (0.5, 0.0, KNOT_Z), 0.03, 0.105)
+    hang_herrnhut(m, (1.72, 0.0, KNOT_Z), 0.1, 0.075, "sw_satin", C("f2c64a"))
+    for x, f in ((0.36, 0.3), (1.9, math.pi - 0.3)):
         bird(m, (x, 0.0, RAIL_R + 0.001), facing=f)
     s.finish()
     return s
@@ -827,37 +860,67 @@ def bauble_stand(s, m, x, y, z, cols, h=0.26):
             k += 1
 
 
+def fairy_loops(m, x0, x1, y, z, spans, depth, bulb_step=0.07):
+    """A string of warm fairy lights pinned under a shelf's front lip at `spans` + 1 points from x0 to x1, sagging
+    `depth` between pins: a fine dark wire (a flat strip facing the lane) with a small faceted bulb_warm bulb every
+    `bulb_step` metres, the bulbs glowing among the goods (bloom in the engine). Lite: half the bulbs."""
+    pins = [Vector((x0 + (x1 - x0) * k / spans, y, z)) for k in range(spans + 1)]
+    pts = []
+    for a, b in zip(pins[:-1], pins[1:]):
+        pts += sag(a, b, depth, lv(4, 3))[(1 if pts else 0):]
+    V, Fc = [], []
+    for i, p in enumerate(pts):
+        V += [(p.x, p.y, p.z + 0.0009), (p.x, p.y, p.z - 0.0009)]
+        if i:
+            o = 2 * i
+            Fc.append((o - 2, o, o + 1, o - 1))
+    m.add(V, Fc, [[(0, 0)] * 4] * len(Fc), None, C("1c2418"), "atlas", False)
+    r = 0.0045
+    for i, (p, t) in enumerate(along(pts, bulb_step * lv(1, 2), bulb_step / 2)):
+        c = p + Vector((0, -0.002, -0.0055))
+        ex, ey, ez = Vector((r, 0, 0)), Vector((0, r, 0)), Vector((0, 0, r * 1.3))
+        Vb = [c + ex, c + ey, c - ex, c - ey, c + ez, c - ez]
+        Fb = [(0, 1, 4), (1, 2, 4), (2, 3, 4), (3, 0, 4), (1, 0, 5), (2, 1, 5), (3, 2, 5), (0, 3, 5)]
+        m.add([tuple(v) for v in Vb], Fb, [[(0, 0)] * 3] * 8, None, C("ffd89a"), "bulb_warm", False)
+
+
 def shelf():
     """The three tiers behind the counter (one set at slot_shelf_1; tiers 2 and 3 by their offsets), dressed in
-    clusters with dark wood between, the middle brace (x 0) and the end brackets kept clear:
-      tier 1: two open boxes of four mercury baubles with their lids leaning behind, two footed glass bowls
-              heaped with baubles, the big snow globe
-      tier 2: two spun-glass birds on a birch log, three large mercury baubles on brass rings, glass pine cones
-              lying on a velvet runner
-      tier 3: three Rauschgoldengel (gold-foil angels) and the menu board; a glass bead garland sags across the
-              back-wall mirror above in three curves, so the mirror doubles it."""
+    dense clusters with dark wood between, so each tier reads as a band of glints against the carpenter's foxed
+    mirror rather than as a few silhouettes (round 9 pass 2):
+      tier 1: two open boxes of six mercury baubles with their lids leaning behind, two footed glass bowls heaped
+              with six baubles each, the big snow globe
+      tier 2: two spun-glass birds on a birch log, five large mercury baubles on brass rings, glass pine cones and
+              two baubles lying on a velvet runner, the menu board under tier 3 at the right end
+      tier 3: four Rauschgoldengel (gold-foil angels, 31 cm) raised on turned walnut plinths so they stand clear
+              above the harmonica row and between the inner rail's clusters from the lane; a glass bead garland
+              sags across the back-wall mirror above in three curves, so the mirror doubles it.
+    Warm fairy lights hang in shallow loops under the front lips of tiers 2 and 3, glowing among the goods of the
+    tier below."""
     L = SLOTS["slot_shelf_1"]["length"]
     s = vlib.PropSet("prop_schmuck_shelf", "slot_shelf_1", STALL, footprint=(L, SLOTS["slot_shelf_1"]["depth"]))
     m = s.static
     hw = L / 2 - 0.12
     # ---- tier 1
     _, y1, _ = _tier(1)
-    for bx, cols in ((-hw + 0.13, ("silver", "gold", "copper", "teal", "gold", "silver")),
-                     (hw - 0.13, ("teal", "silver", "gold", "silver", "copper", "gold"))):
-        m.box((0.17, 0.15, 0.03), T(bx, y1 + 0.02, 0.015), "kraft", C("d8c8a8"), skip=("nz",))
-        m.box((0.15, 0.13, 0.002), T(bx, y1 + 0.02, 0.031), "sw_matte", C("7a1820"))
-        F.carton(m, T(bx, y1 + 0.12, 0.0, rx=-0.25), 0.17, 0.02, 0.16, "bx_schmuck")
-        for k in range(4):
-            cx, cy = bx - 0.04 + (k % 2) * 0.08, y1 - 0.012 + (k // 2) * 0.064
+    for bx, cols in ((-hw + 0.14, ("silver", "gold", "copper", "teal", "gold", "silver")),
+                     (hw - 0.14, ("teal", "silver", "gold", "silver", "copper", "gold"))):
+        m.box((0.23, 0.15, 0.03), T(bx, y1 + 0.02, 0.015), "kraft", C("d8c8a8"), skip=("nz",))
+        m.box((0.21, 0.13, 0.002), T(bx, y1 + 0.02, 0.031), "sw_matte", C("7a1820"))
+        F.carton(m, T(bx, y1 + 0.12, 0.0, rx=-0.25), 0.23, 0.02, 0.16, "bx_schmuck")
+        for k in range(6):
+            cx, cy = bx - 0.068 + (k % 3) * 0.068, y1 - 0.012 + (k // 3) * 0.064
             place_bauble(s, "merc", cols[k], "s", (cx, cy, 0.032 + 0.026), rx=math.radians(80), rz=k * 1.1)
-    for gx, cols in ((-0.52, ("gold", "silver", "teal", "copper", "gold", "silver", "teal")),
-                     (0.6, ("silver", "copper", "gold", "teal", "silver", "gold", "copper"))):
+    for gx, cols in ((-0.54, ("gold", "silver", "teal", "copper", "gold", "silver")),
+                     (0.6, ("silver", "copper", "gold", "teal", "silver", "gold"))):
         gy = y1 + 0.03
         m.lathe([(0.05, 0.0), (0.044, 0.006), (0.009, 0.014), (0.008, 0.07), (0.035, 0.085), (0.085, 0.125), (0.09, 0.131)],
                 lv(10, 7), "sw_satin", T(gx, gy, 0), C("f4f2ec"), "glass", cap0=True)
-        heap = [(0.042, 0.02, 0.127), (-0.042, 0.025, 0.127), (0.0, -0.04, 0.127), (0.0, 0.0, 0.15)]
+        heap = [(0.05 * math.cos(TWO_PI * j / 5 + 0.3), 0.05 * math.sin(TWO_PI * j / 5 + 0.3), 0.124) for j in range(5)]
+        heap.append((0.004, -0.006, 0.158))
         for k, (hx, hy, hz) in enumerate(heap):
-            place_bauble(s, "merc", cols[k], "s", (gx + hx, gy + hy, hz), rx=1.0 + k, rz=k * 1.7)
+            place_bauble(s, "merc" if k != 2 else "gloss", cols[k] if k != 2 else "teal", "s", (gx + hx, gy + hy, hz),
+                         rx=1.0 + k, rz=k * 1.7)
     snow_globe(m, T(-0.2, y1 - 0.02, 0.0, rz=0.2), 1, 1.35)
     # ---- tier 2
     x2, y2, z2 = _tier(2)
@@ -865,22 +928,31 @@ def shelf():
     for k, x in enumerate((-1.0, -0.84)):
         bird(m, (x, y2 - 0.04 + 0.006 * k, z2 + 0.052), facing=-math.pi / 2 + 0.35 * (k - 1),
              body=(MERC["silver"], MERC["gold"], C("cfe6f0"))[k], wing=(C("d8b048"), C("b8242a"), C("1e5a8a"))[k])
-    for k, x in enumerate((-0.42, -0.28, -0.14)):
+    for k, x in enumerate((-0.6, -0.48, -0.355, -0.23, -0.11)):
         m.torus(0.016, 0.003, lv(10, 6), 3, "sw_metal", T(x, y2 - 0.02, z2 + 0.003), CAP)
-        size = ("l", "xl", "l")[k]
+        size = ("l", "m", "xl", "m", "l")[k]
         r = SIZES[size]
-        place_bauble(s, "merc", ("teal", "silver", "copper")[k], size, (x, y2 - 0.02, z2 + 0.003 + r * 0.92),
-                     rx=-0.25, rz=0.3 * k)
-    m.box((0.34, 0.1, 0.004), T(0.66, y2 - 0.03, z2 + 0.002), "sw_matte", C("123a44"))
-    for k in range(2):
-        pinecone_lying(m, (0.58 + k * 0.09, y2 - 0.04 + 0.015 * (k % 2), z2 + 0.004), 0.4 * k - 0.4,
-                       (MERC["gold"], MERC["copper"], MERC["gold"])[k])
-    # ---- tier 3
+        place_bauble(s, "merc" if k != 3 else "gloss", ("teal", "gold", "silver", "copper", "copper")[k], size,
+                     (x, y2 - 0.02, z2 + 0.003 + r * 0.92), rx=-0.25, rz=0.3 * k)
+    m.box((0.42, 0.1, 0.004), T(0.66, y2 - 0.03, z2 + 0.002), "sw_matte", C("123a44"))
+    for k, x in enumerate((0.5, 0.74)):
+        pinecone_lying(m, (x, y2 - 0.04 + 0.015 * (k % 2), z2 + 0.004), 0.4 * k - 0.4, (MERC["gold"], MERC["copper"])[k])
+    for k, x in enumerate((0.62, 0.84)):
+        r = SIZES["m"]
+        place_bauble(s, ("gloss", "merc")[k], ("teal", "silver")[k], "m", (x, y2 - 0.035, z2 + 0.004 + r * 0.97),
+                     rx=math.radians(84), rz=(1.2, -2.0)[k])
+    F.menu_board(m, T(1.08, y2 + 0.03, z2), 0.26, 0.2, "mn_schmuck", lean=0.08)
+    # ---- tier 3: four large gold-foil angels on plinths
     x3, y3, z3 = _tier(3)
-    for k, x in enumerate((-1.06, -0.62, 1.0)):
-        m.cyl(0.04, 0.04, 0.012, lv(10, 6), vlib.RW("wood"), T(x, y3, z3), C("4a2c1a"))
-        rauschgold(m, T(x, y3, z3 + 0.012, rz=0.15 * (1 if x < 0 else -1)), 1.0 + 0.08 * (k % 2))
-    F.menu_board(m, T(0.62, y3 - 0.03, z3), 0.3, 0.22, "mn_schmuck", lean=0.08)
+    for k, x in enumerate((-1.0, -0.36, 0.36, 1.0)):
+        m.lathe([(0.05, 0.0), (0.046, 0.045), (0.0, 0.045)], lv(8, 6), vlib.RW("wood"), T(x, y3 - 0.005, z3), C("4a2c1a"))
+        m.cyl(0.047, 0.047, 0.004, lv(8, 6), "sw_metal", T(x, y3 - 0.005, z3 + 0.045), CAP, caps=False)
+        rauschgold(m, T(x, y3 - 0.005, z3 + 0.049, rz=0.12 * (1 if x < 0 else -1)), 1.36 + 0.06 * (k % 2))
+    # ---- warm fairy lights in loops under the front lips of tiers 2 and 3 (the lip's bottom edge; just in front
+    # of its gold bead)
+    for (tx, ty, tz), n in ((_tier(2), 2), (_tier(3), 3)):
+        dpt = SLOTS[f"slot_shelf_{n}"]["depth"]
+        fairy_loops(m, -L / 2 + 0.04, L / 2 - 0.04, ty - dpt / 2 - 0.026, tz - 0.036, 8, 0.03, 0.095)
     # the back garland hangs in front of the mirror (mirror_0) from its frame and its two glazing bars, so the
     # mirror doubles it; it stays under the canopy's sight line from the lane
     mir = SLOTS.get("mirror_0", {}).get("glass", [[-1.5, 1.234, 1.1], [1.5, 1.234, 2.62]])
@@ -986,15 +1058,20 @@ def tree():
     # the strands are drawn from one seeded list; lite keeps every third plus the ones that set the bounds
     strands = []
     for ti, (r, z0, z1) in enumerate([(0.34, 0.3, 0.56), (0.29, 0.48, 0.74), (0.23, 0.64, 0.9), (0.16, 0.8, 1.04)]):
-        k = (40, 34, 26, 18)[ti]
+        k = (44, 36, 28, 18)[ti]
         for j in range(k):
             a = -math.pi / 2 + (j / k - 0.5) * 4.4 + rnd.uniform(-0.05, 0.05)    # the front 250 degrees
             rr = r * rnd.uniform(0.86, 1.04)
             p = Vector((rr * math.cos(a), rr * math.sin(a), z0 + rnd.uniform(0.0, 0.03)))
             L = rnd.uniform(0.05, 0.11)
             tip = p + Vector((rnd.uniform(-0.01, 0.01), rnd.uniform(-0.01, 0.01), -L))
-            e = Vector((-math.sin(a + rnd.uniform(-1, 1)), math.cos(a), 0)).normalized() * 0.0014
-            strands.append(([p - e, p + e, tip + e, tip - e], vlib.jit(MERC["silver"], 0.1)))
+            e = Vector((-math.sin(a + rnd.uniform(-1, 1)), math.cos(a), 0)).normalized() * 0.0016
+            # kinked once and twisted between its two facets, so the strand glints in flecks (round 9 pass 2)
+            tw = rnd.uniform(0.7, 1.4)
+            e2 = Vector((e.x * math.cos(tw) - e.y * math.sin(tw), e.x * math.sin(tw) + e.y * math.cos(tw), 0))
+            mid = p.lerp(tip, 0.5) + Vector((rnd.uniform(-0.005, 0.005), rnd.uniform(-0.005, 0.005), 0))
+            strands.append(([p - e, p + e, mid + e2, mid - e2, tip + e * 0.8, tip - e * 0.8],
+                            vlib.jit(MERC["silver"], 0.12)))
     keep = set(range(0, len(strands), 3)) if vlib.lite() else set(range(len(strands)))
     for ax in range(3):
         keep.add(min(range(len(strands)), key=lambda i: min(v[ax] for v in strands[i][0])))
@@ -1002,7 +1079,7 @@ def tree():
     with plain(s, "tinsel_2", (0.0, 0.0, 0.0)) as tm:
         for i in sorted(keep):
             q, col = strands[i]
-            tm.add([tuple(v) for v in q], [(0, 1, 2, 3)], [[(0, 0)] * 4], None, col, "tinsel", False)
+            tm.add([tuple(v) for v in q], [(0, 1, 2, 3), (3, 2, 4, 5)], [[(0, 0)] * 4] * 2, None, col, "tinsel", False)
     s.report_extra = {"hooks": len(hooks)}
     s.finish()
     return s

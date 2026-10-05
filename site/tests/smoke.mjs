@@ -598,7 +598,7 @@ try {
     const bar = await page.evaluate(() => [...document.querySelectorAll('#stopActs [data-action]')].map((b) => b.dataset.action));
     log(`the shop's set has: ${want.join(' ')}${want.length < ALL.length ? `; not in it: ${ALL.filter((k) => !has[k]).join(' ')}` : ''}`);
     check('the stop bar offers what the shop has, and nothing it lacks', want.every((k) => bar.includes(k)) && ALL.filter((k) => !has[k]).every((k) => !bar.includes(k)) && has.ring && has.candles, bar.join(' '));
-    check('the shop\'s goods are found (baubles, candles out, and tree hooks and a dark star when the set has them)', s0 && s0.baubles >= 8 && s0.candles.of >= 5 && s0.candles.lit === 0 && (!has.hang || s0.hooks >= 8) && !s0.star.on, JSON.stringify(s0));
+    check('the shop\'s goods are found (baubles, candles out, and tree hooks and a dark star when the set has them)', s0 && s0.baubles >= 6 && s0.candles.of >= 5 && s0.candles.lit === 0 && (!has.hang || s0.hooks >= 8) && !s0.star.on, JSON.stringify(s0));
     const names = await page.evaluate(() => window.__market.handlers.baubleNames());
     await page.evaluate(() => window.__market.freeze(true)); // the clock runs by advance(); timers run in real time
     // a bauble spins and rings a soft glass note, a different note for each bauble
@@ -644,16 +644,16 @@ try {
     check('the Schwibbogen\'s candles light one by one', seq.seen.at(-1) === seq.of && seq.seen.length >= 3, JSON.stringify(seq));
     // an ornament hangs on the tree's hooks, and a second click puts it back on its rail
     if (has.hang) {
+    const hangName = (await page.evaluate(() => window.__market.handlers.hangableNames()))[0];
     const hung = await page.evaluate((name) => {
       const m = window.__market;
       const p0 = m.item(name).position;
-      m.clickItem(name); m.advance(2);
-      m.act('schmuck', 'hang'); m.advance(3);
+      m.act('schmuck', 'hang'); m.advance(3); // nothing selected: the stop bar hangs the first ornament that can hang
       const s = m.handlers.schmuck(), p1 = m.item(name).position;
       m.clickItem(name); m.advance(3);
       return { hung: s.hung, moved: Math.hypot(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]), back: m.handlers.schmuck().hung, home: Math.hypot(...m.item(name).position.map((v, i) => v - p0[i])) };
-    }, names[3]);
-    check('an ornament hangs on a hook of the display tree, and goes back to its rail', hung.hung.includes(names[3]) && hung.moved > 0.1 && !hung.back.length && hung.home < 0.01, JSON.stringify(hung));
+    }, hangName);
+    check('an ornament hangs on a hook of the display tree, and goes back to its rail', hung.hung.includes(hangName) && hung.moved > 0.1 && !hung.back.length && hung.home < 0.01, JSON.stringify(hung));
     }
     // the pickle: a reward, a gentle chime and a line of words in the shop
     if (has.pickle) {

@@ -1,0 +1,26 @@
+· the ornament shop: a stroll stop with a signpost arm, and every interaction (lite market, 960 px)
+· ready in 8.5 s
+  ok   the ornament shop is a stop on the stroll, between the Bücherstand and the Karussell (glueh,band,bier,books,schmuck,carousel,ferris,wurst)
+  ok   the signpost has an arm for it, in the market (act_sign_schmuck) and on screen 
+  ok   the signpost arm walks to the ornament shop ({"stop":"schmuck","arrived":true,"here":"Christbaumschmuck"})
+  ok   the shop is the vendor's stall_schmuck.glb, not a deco stall ([{"id":"deco-schmuck","place":"schmuck","kind":"section","source":"lite","file":"stall_schmuck.lite.glb","deferred":true}])
+  ok   small screen: the shop's stop bar keeps off the stall (under 15 % of the view) ({"folded":true,"fold":true,"h":50,"vh":640,"expanded":"false"})
+  ok   small screen: with the shop's many things to do, the bar starts folded ({"folded":true,"fold":true,"h":50,"vh":640,"expanded":"false","nActs":6})
+  ok   "Things to do" opens the bar with every button ({"folded":false,"first":true,"expanded":"true"})
+· the shop's set has: ring nut smoke candles hang pickle; not in it: star
+  ok   the stop bar offers what the shop has, and nothing it lacks (ring nut smoke candles hang pickle)
+  ok   the shop's goods are found (baubles, candles out, and tree hooks and a dark star when the set has them) ({"baubles":6,"hooks":13,"hung":[],"star":{"on":false,"glow":0},"candles":{"lit":0,"of":7},"smoke":{"left":0,"opacity":0},"jaw":{"busy":false)
+  ok   every bauble has its own note (C5 D5 E5 F5 G5 A5)
+  ok   a clicked bauble spins and rings its own glass note ([{"name":"act_orn_bauble_16","spun":true,"note":"C5","want":"C5"},{"name":"act_orn_bauble_21","spun":true,"note":"A5","want":"A5"}])
+  ok   the nutcracker's jaw opens (and a nut cracks) ({"mid":{"busy":true,"angle":0.284},"after":{"busy":false,"angle":0},"crack":true})
+  ok   the Räuchermännchen puffs smoke ({"left":4.8,"opacity":0.403})
+  ok   the Schwibbogen's candles light one by one ({"seen":[0,1,2,3,4,5,6,7],"of":7})
+  ok   an ornament hangs on a hook of the display tree, and goes back to its rail ({"hung":["act_orn_angel_0"],"moved":2.7863308741066635,"back":[],"home":0})
+  ok   finding the pickle gives a reward: a chime and a line of words in the scene ({"s":{"found":true,"reward":true,"text":"Du hast die Weihnachtsgurke gefunden! Ein Extrageschenk für dich."},"chime":true,"flag":"found","te)
+  ok   "Things to do" folds the bar away again 
+· screenshot ../../../../tmp/claude-0/-home-claude-website/1be5eec7-c481-5143-a957-0d64882788ad/scratchpad/r8set/stop_schmuck.jpg
+  ok   the reward's words go after a few seconds 
+  ok   a click in 3D on an ornament does its thing (a sound, a movement) ({"name":"act_orn_nutcracker","sounds":1})
+
+19/19 checks passed
+No console errors.

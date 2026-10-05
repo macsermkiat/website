@@ -367,6 +367,8 @@ export function createSchmuck(ctx) {
       ornamentNote: (name) => { const it = S?.all.find((i) => i.node.name === name); return it ? noteOf(it) : null; },
       /** For tests: the baubles' node names, in order along the row. */
       baubleNames: () => (S ? S.baubles.map((b) => b.node.name) : []),
+      /** For tests: the ornaments that can hang on the tree (a click selects one, the stop bar hangs it). */
+      hangableNames: () => (S ? S.all.filter((i) => (i.info?.hangable || ornamentAction(i) === 'hang')).map((i) => i.node.name) : []),
     },
     retract() {
       if (!S) return;

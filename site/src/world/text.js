@@ -32,6 +32,14 @@ export function loadText() {
   }
   return troikaLoading;
 }
+/** A troika Text. Its glyph geometry is an InstancedBufferGeometry whose instanceCount starts at Infinity until its
+ *  first glyph sync; three draws it before then (no instance attributes yet, so no _maxInstanceCount cap) and adds
+ *  Infinity to renderer.info.render.triangles. Nothing is drawn: start the count at 0 (each sync sets the real one). */
+function newText() {
+  const t = new troika.Text();
+  t.geometry.instanceCount = 0;
+  return t;
+}
 const whenText = (f) => (troika ? f() : waitingForText.push(f));
 
 /** The faces, by role: the URL troika draws with and the family the canvas measures with. */
@@ -361,12 +369,8 @@ export function renderPage(page, { theme: themeKey = 'print', glow = 0.12, z = 0
   const ready = new Promise((done) => whenText(() => {
     if (disposed) { done(); return; }
     for (const { s, line, dx } of specs) {
-      const t = new troika.Text();
+      const t = newText();
       t.isText = true;
-      // troika's glyph geometry is an InstancedBufferGeometry whose instanceCount starts at Infinity until its first
-      // glyph sync; three draws it once before then (no instance attributes, so no _maxInstanceCount cap) and adds
-      // Infinity to renderer.info.render.triangles. Nothing is drawn: start the count at 0 (the sync sets it).
-      t.geometry.instanceCount = 0;
       t.text = s.text;
       t.font = FONTS[s.font].url;
       t.fontSize = s.size;
@@ -406,7 +410,7 @@ export function label(text, { font = 'sans', size = 0.05, color = '#2a1d14', glo
   g.name = 'engine_text_label';
   g.userData.text = sanitize(text);
   whenText(() => {
-    const t = new troika.Text();
+    const t = newText();
     t.text = g.userData.text;
     t.font = FONTS[font].url;
     t.fontSize = size;

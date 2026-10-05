@@ -70,7 +70,7 @@ SCHMUCK_TRIS, SCHMUCK_MB = 60000, 3.0         # BUILD.md round 9: the ornament s
 # their own column and not charged to every stall (the ornament shop still counts them, the stricter reading)
 DECO_MB = 1.0
 NO_AO = ("vendor_glass", "flame", "lamp_glow", "bulb_warm", "coal_glow", "vendor_beer", "vendor_liquid", "vendor_lamp_shade",
-         "write_", "vendor_mercury", "vendor_gloss", "tinsel")
+         "write_", "vendor_mercury", "vendor_gloss", "tinsel", "vendor_foil")
 BASE_PIVOT = re.compile(r"^act_(mug|glass|bottle|wineglass|book|roll|tap|served|sausage|coaster)_\d+$|^act_grill$"
                         r"|^act_writing_paper$")
 # round 6 pass 2 (judges): back to 2k of headroom under each section stall's 60k, after trimming the props

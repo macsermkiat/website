@@ -630,17 +630,20 @@ def material(key):
         b.inputs["Coat Roughness"].default_value = 0.02
         _MATS[key] = m
         return m
-    if key in ("mercury", "tinsel"):
+    if key in ("mercury", "tinsel", "foil"):
         # round 9 (ADR 0004 revision): mercury glass (silvered inside, so it reads as a near-perfect metal
         # mirror tinted by its lacquer: silver, gold, copper, deep teal from COLOR_0) and Lametta tinsel (thin
         # metal foil strips, double-sided; the engine swaps in its glint shader on tinsel_<n> meshes). No texture:
         # flat factors, so they cost no bytes; no baked AO (vstage.AO_SKIP), which would dull the reflections.
-        m = bpy.data.materials.new("vendor_mercury" if key == "mercury" else "tinsel")
+        # round 9 pass 2: tinsel roughness 0.24 (crinkled facets glint instead of reading as plain straws) and
+        # vendor_foil, the Rauschgoldengel's crinkled gold foil, a little rougher (0.3) so its pleats catch the
+        # hut's lamp as broad gold highlights instead of mirroring the dark interior
+        m = bpy.data.materials.new({"mercury": "vendor_mercury", "tinsel": "tinsel", "foil": "vendor_foil"}[key])
         m.use_nodes = True
         b = m.node_tree.nodes["Principled BSDF"]
         _vcol_mult(m.node_tree, (1.0, 1.0, 1.0), b)
         b.inputs["Metallic"].default_value = 1.0
-        b.inputs["Roughness"].default_value = 0.05 if key == "mercury" else 0.2
+        b.inputs["Roughness"].default_value = {"mercury": 0.05, "tinsel": 0.24, "foil": 0.3}[key]
         m.use_backface_culling = False
         _MATS[key] = m
         return m
@@ -772,7 +775,7 @@ class PropSet:
         self.protos = {}             # round 9: key -> Mesh, a repeated piece built once
         self.insts = []              # (key, Matrix): where each copy of a proto stands (set frame)
 
-    INST_MATS = ("mercury", "gloss", "tinsel", "glass", "flame", "bulb_warm")   # no baked AO: safe to share one mesh
+    INST_MATS = ("mercury", "gloss", "tinsel", "foil", "glass", "flame", "bulb_warm")   # no baked AO: safe to share one mesh
 
     def proto(self, key, build):
         """Round 9: a repeated piece (a bauble of one size and colour, a bead): `build(mesh)` fills it once in
