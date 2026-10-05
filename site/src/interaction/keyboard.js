@@ -13,6 +13,7 @@ export function bindKeyboard({ canvas, order, walkTo, home, step, read, reading,
   canvas.setAttribute('aria-label', `Mac's Nachtmarkt: a 3D Christmas market at night, seen on a guided stroll. Keys 1 to ${order.length} walk to a place, the arrow keys walk to the previous or next stop, Enter reads what is written there, Escape steps back, 0 returns to the overview. At the book stall the up and down arrows open its cabinets and the left and right arrows move between the books. The signpost in the top left corner lists the places too.`);
   addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (document.querySelector('dialog[open]')) return;   // the How to visit dialog has the keys (Escape closes it)
     const t = e.target;
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     const onControl = t && t !== canvas && /^(BUTTON|A|SUMMARY)$/.test(t.tagName);

@@ -23,6 +23,7 @@
         <button class="btn" id="snow" type="button" aria-pressed="false">❄ Snow: off</button>
         <button class="btn" id="reset" type="button" title="Back to the view over the whole square (0)">Overview</button>
         <button class="btn" id="quality" type="button" aria-pressed="false" title="Switch between the full and the lite market">Lite market: off</button>
+        <button class="btn" id="aboutOpen" type="button" aria-haspopup="dialog" aria-controls="about" title="How to walk around, and the credits">ⓘ How to visit</button>
       </div>
     </header>
 
@@ -64,15 +65,21 @@
       <div class="nowplaying" id="nowplaying" hidden></div>
       <p class="sr-only" id="announce" aria-live="polite"></p>
     </div>
-    <p class="hint" id="hint">A guided stroll: choose a place on the signpost (or press 1–8) and walk there; the arrows walk on to the next stall. Every stall's words are written in it: on the Glühwein chalkboard, the Bierdeckel, the Bratwurst menu, the pages of a book, the sheet music, the Riesenrad noticeboard and the Karussell ticket. Click them, or press Enter, to read. At the Bücherstand, tap a cabinet and then a book. The ornament shop is for play: light the candle arch to wake the town, brush the glass baubles to play the ballad, and look into the mercury-glass ball. Sound starts only when you press play.</p>
-
-    <footer>
-      <a href="plain.html">Text version of every section</a>
-      <span aria-hidden="true">·</span>
-      <span id="footnote">Text marked as an example is placeholder for Mac to replace.</span>
+    <dialog class="about" id="about" aria-labelledby="aboutTitle">
+      <form method="dialog" class="about-close"><button class="btn small" type="submit" aria-label="Close">✕</button></form>
+      <h2 id="aboutTitle">How to visit</h2>
+      <ul class="howto">
+        <li>Pick a place on the signpost, or press 1 to 8. The arrows walk you to the next stall.</li>
+        <li>Each stall's words are written on something in it: a chalkboard, a beer mat, a menu, a book, sheet music, a noticeboard, a ticket. Click it, or press Enter, to read.</li>
+        <li>At the Bücherstand, tap a cabinet, then a book.</li>
+        <li>The ornament shop is for play: light the candle arch, brush the glass baubles, look into the mirror ball.</li>
+        <li>Sound starts only when you press play.</li>
+      </ul>
+      <p><a href="plain.html">Read every section as plain text</a></p>
+      <h2>Credits</h2>
       <p class="credits" id="credits"><!--AUDIO_CREDIT--></p>
     <!--ASSET_CREDITS-->
-    </footer>
+    </dialog>
   </div>
 
 

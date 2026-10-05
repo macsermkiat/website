@@ -40,17 +40,12 @@ h1 span { color: var(--gold); }
 .bar i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .3s; }
 .nowplaying { position: absolute; left: 14px; bottom: 12px; font-size: 13px; color: var(--muted); background: rgba(8, 11, 22, .72); padding: 5px 10px; border-radius: 8px; }
 .badge { position: absolute; right: 14px; bottom: 12px; font-size: 12px; color: var(--muted); background: rgba(8, 11, 22, .72); padding: 4px 9px; border-radius: 8px; }
-.hint { margin: 0; color: var(--muted); font-size: 15px; }
 .places { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
 .places button { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--line); color: var(--ink); padding: 10px 14px; border-radius: 10px; cursor: pointer; display: grid; gap: 1px; }
 .places button:hover, .places button[aria-current="true"] { border-color: var(--gold); }
 .places b { font-family: var(--display); font-size: 18px; font-weight: 700; }
 .places span { color: var(--muted); font-size: 14px; }
 .places kbd { font: inherit; font-size: 12px; color: var(--muted); float: right; }
-footer { color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
-footer .credits { flex-basis: 100%; margin: 4px 0 0; font-size: 13px; line-height: 1.45; max-width: 110ch; }
-footer .credits:empty { display: none; }
-footer .credits a { color: inherit; text-decoration-color: var(--line); }
 
 .prose { display: grid; gap: 12px; }
 .prose > * { margin: 0; }
@@ -191,3 +186,15 @@ html[data-moment] .momentcap { display: block; animation: capin 1.2s ease 1.5s b
   box-shadow: 0 4px 14px rgba(0, 0, 0, .5); pointer-events: none; transition: opacity .35s; text-align: left; }
 .note em { color: #6b5a48; }
 .note b { color: #2a1d14; }
+
+/* How to visit: the walking tips and the credits, in a dialog opened from the header */
+.about { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow: auto; background: var(--surface, #141827); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px 24px; font-size: 18px; line-height: 1.55; }
+.about::backdrop { background: rgba(3, 5, 12, .66); }
+.about h2 { font-family: var(--display, inherit); font-size: 24px; margin: 0 0 10px; color: var(--gold); }
+.about h2 + p, .about ul + p { margin-top: 0; }
+.about ul.howto { margin: 0 0 14px; padding-left: 1.1em; display: grid; gap: 8px; }
+.about-close { float: right; margin: -6px -8px 0 8px; }
+.about .credits { font-size: 15px; color: var(--muted); margin: 0 0 8px; }
+.about .credits:empty { display: none; }
+.about .credits a { color: inherit; text-decoration-color: var(--line); }
+.about .credits-all { font-size: 15px; }

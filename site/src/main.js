@@ -499,6 +499,10 @@ async function boot() {
     guide.home();
   }
   $('reset').addEventListener('click', resetView);
+  // How to visit: the walking tips and the credits live in a dialog, not under the market
+  const about = $('about');
+  $('aboutOpen').addEventListener('click', () => { if (about.showModal) about.showModal(); else about.setAttribute('open', ''); });
+  about.addEventListener('click', (e) => { if (e.target === about) about.close(); });   // a click on the backdrop closes it
   // Step back: out of a shop moment first (the view over the Schwibbogen, the dive into the mirror ball)
   $('stepBack').addEventListener('click', () => { if (actions.shop?.end()) return; guide.back(); });
   $('cabTurnL').addEventListener('click', () => actions.items.handlers.turnCabinets?.(-1));

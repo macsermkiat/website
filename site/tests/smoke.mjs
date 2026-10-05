@@ -1079,12 +1079,17 @@ try {
     await c3.close();
     const { ctx: c2, page: p2 } = await openPage(`${BASE}?quality=lite`);
     check('the 3D page links to plain.html', (await p2.locator('a[href="plain.html"]').count()) > 0);
-    check('the 3D page credits the music in its footer', credit.test(await p2.textContent('footer #credits')), await p2.textContent('footer #credits'));
+    check('nothing but the market sits under the market window (no hint, no footer)', await p2.evaluate(() => !document.querySelector('.stage ~ p, .stage ~ footer')));
+    check('the 3D page credits the music in its How to visit dialog', credit.test(await p2.textContent('#about #credits')), await p2.textContent('#about #credits'));
     const named = (want.match(/CC BY(-SA)? \d\.\d|CC0/g) || []).length;
     check('the credit links every licence it names', named > 0 && (await p2.locator('#credits a[rel="license"]').count()) >= named, `${named} named`);
     check('the 3D page lists every third-party asset with its source URL', (await p2.locator('.credits-all a[href^="https://github.com/"]').count()) > 5);
     check('the canvas has an accessible name', !!(await p2.locator('canvas').getAttribute('aria-label')));
     await p2.waitForFunction(() => document.documentElement.dataset.ready === 'true', null, { timeout: LONG });
+    await p2.click('#aboutOpen');
+    check('How to visit opens a dialog with the tips and the credits, in text of 15 px or more', await p2.evaluate(() => { const d = document.getElementById('about'); return d.open && parseFloat(getComputedStyle(d.querySelector('.howto li')).fontSize) >= 17 && parseFloat(getComputedStyle(d.querySelector('#credits')).fontSize) >= 15; }));
+    await p2.keyboard.press('Escape');
+    check('Escape closes How to visit', await p2.evaluate(() => !document.getElementById('about').open));
     await p2.click('#mute');
     check('mute covers the band and the stall sounds', await p2.evaluate(() => window.__market.muted()) && (await p2.getAttribute('#mute', 'aria-pressed')) === 'true');
     await p2.click('#mute');
