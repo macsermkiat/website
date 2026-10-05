@@ -69,6 +69,7 @@ export function createSchmuck(ctx) {
         sfxLog: (e) => ctx.sfxLog?.(e),
         canPlay: () => here() && !driving && !ctx.reading?.(),
         say: (h) => ctx.say(h),
+        place: p, stopView, onDrive,
       }) : null,
       schwibbogen: arch && candles.length ? createSchwibbogen({
         place: p, arch, candles, town, wave, rig: ctx.rig, camera, motion,
@@ -115,6 +116,7 @@ export function createSchmuck(ctx) {
   function end() {
     if (S?.dive?.active) { S.dive.end(); return true; }
     if (S?.schwibbogen?.driving) { S.schwibbogen.stepBack(); return true; }
+    if (S?.harmonica?.leaning || S?.harmonica?.playing) { S.harmonica.stop(); return true; }
     return false;
   }
 
@@ -124,7 +126,7 @@ export function createSchmuck(ctx) {
     /** The stop bar's three buttons at the ornament shop. */
     actsList: () => [
       { key: 'candles', label: candleLabel(), fn: candles, has: () => !!S?.schwibbogen },
-      { key: 'harmonica', label: 'Play the glass harmonica', fn: () => S?.harmonica?.play(), has: () => !!S?.harmonica },
+      { key: 'harmonica', label: 'Play the glass harmonica', fn: () => { if (!S?.dive?.active) S?.harmonica?.play(); }, has: () => !!S?.harmonica },
       { key: 'dive', label: 'Look into the mirror ball', fn: diveIn, has: () => !!S?.dive },
     ].filter((a) => !S || a.has()),
     get busy() { return driving; },

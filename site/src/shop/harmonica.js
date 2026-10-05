@@ -36,7 +36,7 @@ function halo() {
   return haloTex;
 }
 
-export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPlay, say, onBusy }) {
+export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPlay, say, onBusy, place = null, stopView = null, onDrive = null }) {
   const baubles = items.slice().sort((a, b) => indexOf(a) - indexOf(b)).map((item, i) => setupBauble(item, i));
   let idle = 0, expect = 0, claimed = null, auto = null, ripple = -1;
   const log = []; // strikes, for the tests: { i, note, v, t }
@@ -70,13 +70,18 @@ export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPl
     });
     const box = new THREE.Box3().setFromObject(node);
     const sphere = box.getBoundingSphere(new THREE.Sphere());
-    const local = node.worldToLocal(sphere.center.clone());
+    // the halo sits on the glass itself (the node's box takes in the ribbon and the cap too)
+    const gbox = new THREE.Box3();
+    node.updateWorldMatrix(true, true);
+    node.traverse((o) => { if (o.isMesh && !o.userData.itemFx && [].concat(o.material).some((m) => mats.includes(m))) gbox.expandByObject(o); });
+    const gs = (gbox.isEmpty() ? box : gbox).getBoundingSphere(new THREE.Sphere());
+    const local = node.worldToLocal(gs.center.clone());
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo(), color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
     sp.name = `engine_harmonica_halo_${i}`;
     sp.userData.itemFx = true;
     sp.position.copy(local);
     const ws = node.getWorldScale(new THREE.Vector3()).x || 1;
-    sp.scale.setScalar((sphere.radius * 6.5) / ws);
+    sp.scale.setScalar((gs.radius * 4.2) / ws);
     sp.visible = false;
     node.add(sp);
     const q0 = node.quaternion.clone();
@@ -96,6 +101,7 @@ export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPl
   function screen() {
     const r = dom.getBoundingClientRect();
     const out = [];
+    camera.updateMatrixWorld();
     const tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
     for (const B of baubles) {
       B.node.localToWorld(_w.copy(B.local));
@@ -193,15 +199,78 @@ export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPl
     onBusy?.(false);
   }
   rig.claim(claim);
+  // a tap while the camera leans in to the played phrase ends it
+  dom.addEventListener('pointerup', (e) => { if (lean && lean.phase !== 'out' && e.button <= 0 && performance.now() - lean.startedAt > 400) stop(); });
   dom.addEventListener('pointermove', move);
   dom.addEventListener('pointerup', up);
   dom.addEventListener('pointercancel', up);
 
   // ---------- the phrase, played for the visitor ----------
+  // "Play the glass harmonica": the camera leans in to the row (it fills the view; on a narrow screen it follows
+  // the note along the row), the phrase rings in its own rhythm, and the camera eases back to the stop.
+  const UP = new THREE.Vector3(0, 1, 0);
+  const ease = (x) => { const k = THREE.MathUtils.clamp(x, 0, 1); return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
+  let lean = null; // { phase: 'in'|'hold'|'out', t, from, back }
+  const worldOf = (B) => B.node.localToWorld(B.local.clone());
+  function leanPose(k) {
+    const ends = [worldOf(baubles[0]), worldOf(baubles[baubles.length - 1])];
+    const mid = ends[0].clone().add(ends[1]).multiplyScalar(0.5);
+    const F = new THREE.Vector3(0, 0, 1).transformDirection(place.holder.matrixWorld).setY(0).normalize();
+    const hw = ends[0].distanceTo(ends[1]) / 2 + 0.16;
+    const tanV = Math.tan(THREE.MathUtils.degToRad(50) / 2), tanH = tanV * camera.aspect;
+    const d = THREE.MathUtils.clamp(hw / tanH, 0.95, 2.4);
+    const pos = mid.clone().addScaledVector(F, d).addScaledVector(UP, -0.16);
+    const fit = Math.min(1, (d * tanH) / hw);
+    const now = auto ? baubles[Math.max(0, Math.min(baubles.length - 1, auto.k - 1))] : null;
+    const target = mid.clone().addScaledVector(UP, -0.02);
+    if (fit < 1 && now) target.lerp(worldOf(now), (1 - fit) * 1.1);
+    return { pos, target, fov: 50, k };
+  }
+  function leanFn(dt) {
+    if (!lean) return null;
+    lean.t += dt;
+    const IN = motion.reduced ? 0 : 1.5, OUT = motion.reduced ? 0 : 1.5;
+    if (lean.phase === 'in') {
+      const k = IN ? ease(lean.t / IN) : 1;
+      const P = leanPose(1);
+      if (lean.t >= IN) { lean.phase = 'hold'; lean.t = 0; if (!auto) auto = { t: 0, k: 0 }; }
+      lean.cur = P.target.clone();
+      return { pos: lean.from.pos.clone().lerp(P.pos, k), target: lean.from.target.clone().lerp(P.target, k), fov: THREE.MathUtils.lerp(lean.from.fov, P.fov, k) };
+    }
+    if (lean.phase === 'hold') {
+      const P = leanPose(1);
+      lean.cur.lerp(P.target, Math.min(1, dt * 2.2));
+      if (!auto && lean.t > 0.2) { lean.done = (lean.done || 0) + dt; if (lean.done > (motion.reduced ? 0.8 : 1.8)) leanOut(); }
+      return { pos: P.pos, target: lean.cur.clone(), fov: P.fov };
+    }
+    if (lean.phase === 'out') {
+      const k = OUT ? ease(lean.t / OUT) : 1;
+      if (lean.t >= OUT) { const b = lean.back; leanEnd(); rig.release(b, { cut: true }); return { pos: b.pos, target: b.target }; }
+      return { pos: lean.at.pos.clone().lerp(lean.back.pos, k), target: lean.at.target.clone().lerp(lean.back.target, k), fov: THREE.MathUtils.lerp(lean.at.fov, lean.from.fov, k) };
+    }
+    return null;
+  }
+  function leanOut() {
+    if (!lean || lean.phase === 'out') return;
+    lean.at = { pos: camera.position.clone(), target: lean.cur ? lean.cur.clone() : rig.controls.target.clone(), fov: camera.fov };
+    lean.back = stopView();
+    lean.phase = 'out'; lean.t = 0;
+  }
+  function leanEnd() { lean = null; onDrive?.(false); }
   function play() {
-    if (auto) { auto = null; return; }
-    auto = { t: 0, k: 0 };
+    if (auto || lean) { stop(); return; }
     idle = 0;
+    if (!place || !stopView || !onDrive) { auto = { t: 0, k: 0 }; return; }
+    lean = { phase: 'in', t: 0, from: { pos: camera.position.clone(), target: rig.controls.target.clone(), fov: camera.fov } };
+    rig.drive('harmonica', leanFn, { onCancel: () => { auto = null; if (lean) leanEnd(); } });
+    onDrive(true, 'harmonica');
+    lean.startedAt = performance.now();
+    if (motion.reduced) leanFn(0);
+  }
+  /** Escape, Step back or a tap: the phrase stops and the camera eases back. */
+  function stop() {
+    auto = null;
+    if (lean) leanOut();
   }
 
   /** A click on a bauble (or its button in the goods list): ring it, unless the brush already did. */
@@ -221,6 +290,8 @@ export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPl
     play,
     strike: (i, o) => baubles[i] && strike(baubles[i], o),
     get playing() { return !!auto; },
+    get leaning() { return lean ? lean.phase : null; },
+    stop,
     /** Where the brush is: a pointer on the row. */
     get brushing() { return !!claimed; },
     update(dt, t, { here, still }) {
@@ -246,9 +317,9 @@ export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPl
         let rip = 0;
         if (ripple >= 0) { const x = ripple * 6 - B.i; rip = x > 0 && x < 3 ? Math.sin((x / 3) * Math.PI) * 0.5 : 0; }
         const g = Math.min(1.4, B.glow + B.hint + rip);
-        for (const m of B.mats) m.emissiveIntensity = g * 2.4;
+        for (const m of B.mats) m.emissiveIntensity = g * 2.8;
         B.sp.visible = g > 0.01;
-        B.sp.material.opacity = Math.min(1, g * 0.85);
+        B.sp.material.opacity = Math.min(1, g * 1.05);
         // swing: a damped pendulum on each axis
         if (!still && !motion.reduced) {
           B.va += (-w * w * B.a - 2 * z * w * B.va) * dt; B.a += B.va * dt;
@@ -269,10 +340,10 @@ export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPl
       glow: baubles.map((b) => +(b.glow + b.hint).toFixed(3)),
       swing: baubles.map((b) => +Math.hypot(b.a, b.b).toFixed(4)),
       hint: baubles.find((b) => b.hint > 0.05)?.i ?? null,
-      expect, idle: +idle.toFixed(2), playing: !!auto, brushing: !!claimed,
+      expect, idle: +idle.toFixed(2), playing: !!auto, brushing: !!claimed, lean: lean ? lean.phase : null,
     }),
     /** Screen points of the baubles (tests aim a brush with them). */
     points: () => { const { pts, rect } = screen(); return pts.map((p) => ({ i: p.B.i, x: +(p.x + rect.left).toFixed(1), y: +(p.y + rect.top).toFixed(1), r: +p.rpx.toFixed(1), front: p.front })); },
-    reset() { expect = 0; idle = 0; auto = null; },
+    reset() { expect = 0; idle = 0; auto = null; if (lean) leanOut(); },
   };
 }

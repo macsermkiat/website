@@ -32,7 +32,7 @@ vec3 warped( vec2 uv ) {
   float k = 0.24 * uWarp;
   vec2 q = p / ( 1.0 + k * r2 ) * ( 1.0 - 0.06 * uWarp );
   // the glass splits the colours a hair at the edge
-  float ca = 0.006 * uWarp * r2;
+  float ca = 0.0022 * uWarp * r2;
   vec2 s = q / vec2( uAspect, 1.0 ) + 0.5;
   vec2 d = normalize( p + 1e-5 ) * ca / vec2( uAspect, 1.0 );
   vec3 c;

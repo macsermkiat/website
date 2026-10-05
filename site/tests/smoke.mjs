@@ -11,10 +11,15 @@
 // 3. lite market auto-detected on a weak GPU (first-load size); 4. a phone with reduced motion and touch
 // 5. plain.html and the credits; 6. every model missing: stand-ins, no errors; 7. recorded stems on the full market
 // 8. (round 8) deco stalls are scenery: not clickable, no close-up, never more than their lite file (in the stroll
-//    phase); the ornament shop (schmuck): a stroll stop with every interaction; the Bücherstand cabinets on a 390 px
-//    phone (cabinet): tap, open, only its books pickable, covers at least 44 px, arrows, a clear way back
+//    phase); the Bücherstand cabinets on a 390 px phone (cabinet): tap, open, only its books pickable, covers at
+//    least 44 px, arrows, a clear way back
+// 9. (round 9) the ornament shop (schmuck): three moments and nothing else to click: the glass harmonica (mouse and
+//    touch brushes, taps, the hint, the tune), the Schwibbogen (outside-in candles, the town's windows, the chord,
+//    the wave of light, the view over the arch and back), the reflection dive (cube env, in, inside, Escape and a
+//    tap), the sparkle (mirror, tinsel, pyramid, smoke); (moments) the same at their peaks on the full market, as
+//    screenshots; the phone section runs the reduced-motion versions
 // Fails on any console error, failed request or HTTP error.
-// Usage: npm run build && node tests/smoke.mjs [--out ../review/round-5/engineer] [--port 4317] [--only unit,stroll,reading,interact,schmuck,cabinet,lite,phone,plain,missing,audio]
+// Usage: npm run build && node tests/smoke.mjs [--out ../review/round-5/engineer] [--port 4317] [--only unit,stroll,reading,interact,schmuck,moments,cabinet,lite,phone,plain,missing,audio]
 import { spawn } from 'node:child_process';
 import { mkdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -25,7 +30,7 @@ const { chromium } = pw.default || pw;
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
-const OUT = path.resolve(opt('--out', '../review/round-8/engineer'));
+const OUT = path.resolve(opt('--out', '../review/round-9/engineer'));
 const PORT = +opt('--port', 4317);
 const ONLY = opt('--only', 'all');
 const READY_S = +opt('--ready', 300); // seconds a market may take to open (a loaded machine needs more)
@@ -564,9 +569,10 @@ try {
   }
 
   if (run('schmuck')) {
-    log('the ornament shop: a stroll stop with a signpost arm, and every interaction (lite market, 960 px)');
+    log('the ornament shop (round 9): a stroll stop with three moments and nothing else to click (lite market, 960 px)');
     const { ctx, page } = await openPage(`${BASE}?quality=lite&snow=0`, { viewport: { width: 960, height: 640 } });
     await waitReady(page);
+    await page.evaluate(() => window.__market.settled());
     const report = await page.evaluate(() => window.__market.report);
     const settle = () => page.evaluate(() => { const m = window.__market; for (let i = 0; i < 60 && m.cam().moving; i++) m.advance(0.5); m.advance(0.5); });
     check('the ornament shop is a stop on the stroll, between the Bücherstand and the Karussell', report.stroll.stops.join() === 'glueh,band,bier,books,schmuck,carousel,ferris,wurst', report.stroll.stops.join());
@@ -575,118 +581,236 @@ try {
     await settle();
     const at = await page.evaluate(() => ({ stop: window.__market.stop, arrived: window.__market.arrived, here: document.getElementById('hereName').textContent }));
     check('the signpost arm walks to the ornament shop', at.stop === 'schmuck' && at.arrived && /Christbaumschmuck/.test(at.here), JSON.stringify(at));
-    // (the shop may be one of the models placed just after the market opens: read the report once there)
     const models = await page.evaluate(() => window.__market.report.models.filter((m) => m.place === 'schmuck'));
     check('the shop is the vendor\'s stall_schmuck.glb, not a deco stall', models.some((m) => /stall_schmuck/.test(m.file || '') && m.kind !== 'deco'), JSON.stringify(models));
-    // on a small screen the shop's seven things to do fold into one button, so the bar keeps off the stall
+    // small screen (judge note, round 8): the shop's bar folds away, as it does at an open cabinet
     const fb = await page.evaluate(() => { const b = document.getElementById('stopbar'), f = document.getElementById('stopFold'); return { folded: b.classList.contains('folded'), fold: !f.hidden, h: b.getBoundingClientRect().height, vh: innerHeight, expanded: f.getAttribute('aria-expanded') }; });
-    const nActs = await page.evaluate(() => document.querySelectorAll('#stopActs button').length);
-    check('small screen: the shop\'s stop bar keeps off the stall (under 15 % of the view)', fb.h < 0.15 * fb.vh, JSON.stringify(fb));
-    if (nActs >= 6) {
-      check('small screen: with the shop\'s many things to do, the bar starts folded', fb.folded && fb.fold && fb.expanded === 'false', JSON.stringify({ ...fb, nActs }));
-      await page.click('#stopFold');
-      const fo = await page.evaluate(() => ({ folded: document.getElementById('stopbar').classList.contains('folded'), first: document.querySelector('#stopActs [data-action]')?.offsetParent !== null, expanded: document.getElementById('stopFold').getAttribute('aria-expanded') }));
-      check('"Things to do" opens the bar with every button', !fo.folded && fo.first && fo.expanded === 'true', JSON.stringify(fo));
-    } else log(`the shop's bar has ${nActs} buttons: one row, no need to fold`);
+    check('small screen: the shop\'s stop bar starts folded and keeps off the stall (under 15 % of the view)', fb.folded && fb.fold && fb.expanded === 'false' && fb.h < 0.15 * fb.vh, JSON.stringify(fb));
+    await page.click('#stopFold');
+    const bar = await page.evaluate(() => [...document.querySelectorAll('#stopActs [data-action]')].map((b) => b.dataset.action));
+    check('"Things to do" opens the bar: exactly the three moments (candles, harmonica, dive)', bar.join() === 'candles,harmonica,dive', bar.join());
+    await page.click('#stopFold');
+    check('"Things to do" folds the bar away again', await page.evaluate(() => document.getElementById('stopbar').classList.contains('folded')));
     const S = () => page.evaluate(() => window.__market.handlers.schmuck());
     const s0 = await S();
-    // the seven round-8 interactions; the vendor's round-9 set (ADR 0004 revision) keeps only the bauble row (as a
-    // glass harmonica), the mirror ball and the Schwibbogen. Each runs when the shop's set has its parts.
-    const ALL = ['ring', 'star', 'nut', 'smoke', 'candles', 'hang', 'pickle'];
-    const has = s0?.has || {};
-    const want = ALL.filter((k) => has[k]);
-    const bar = await page.evaluate(() => [...document.querySelectorAll('#stopActs [data-action]')].map((b) => b.dataset.action));
-    log(`the shop's set has: ${want.join(' ')}${want.length < ALL.length ? `; not in it: ${ALL.filter((k) => !has[k]).join(' ')}` : ''}`);
-    check('the stop bar offers what the shop has, and nothing it lacks', want.every((k) => bar.includes(k)) && ALL.filter((k) => !has[k]).every((k) => !bar.includes(k)) && has.ring && has.candles, bar.join(' '));
-    check('the shop\'s goods are found (baubles, candles out, and tree hooks and a dark star when the set has them)', s0 && s0.baubles >= 6 && s0.candles.of >= 5 && s0.candles.lit === 0 && (!has.hang || s0.hooks >= 8) && !s0.star.on, JSON.stringify(s0));
-    const names = await page.evaluate(() => window.__market.handlers.baubleNames());
-    await page.evaluate(() => window.__market.freeze(true)); // the clock runs by advance(); timers run in real time
-    // a bauble spins and rings a soft glass note, a different note for each bauble
-    const notes = await page.evaluate((names) => names.map((n) => window.__market.handlers.ornamentNote(n)), names);
-    check('every bauble has its own note', notes.every(Boolean) && new Set(notes).size === notes.length, notes.join(' '));
-    const rung = await page.evaluate((pair) => {
-      const m = window.__market, out = [];
-      for (const name of pair) {
-        const q0 = m.item(name).quaternion;
-        m.clickItem(name);
-        m.advance(0.3);
-        const q1 = m.item(name).quaternion;
-        const log = m.sfxLog().filter((x) => x.name === 'glass');
-        out.push({ name, spun: q0.some((v, i) => Math.abs(v - q1[i]) > 0.02), note: log.at(-1)?.note, want: m.handlers.ornamentNote(name) });
-        m.advance(3);
-      }
-      return out;
-    }, [names[0], names[5]]);
-    check('a clicked bauble spins and rings its own glass note', rung.every((r) => r.spun && r.note && r.note === r.want) && rung[0].note !== rung[1].note, JSON.stringify(rung));
-    // the Herrnhut star lights
-    if (has.star) {
-    await tapAct(page, '#stopActs [data-action="star"]');
-    await page.evaluate(() => window.__market.advance(2.5));
-    const s1 = await S();
-    check('the Herrnhut star lights', s1.star.on && s1.star.glow > s0.star.glow + 0.3, JSON.stringify([s0.star, s1.star]));
+    // the round-8 interactions are gone: no spinning baubles, star, nutcracker, smoker puff, tree hanging or pickle
+    {
+      const gone = await page.evaluate(() => ({ api: ['baubleNames', 'hangableNames', 'ornamentNote'].filter((k) => k in window.__market.handlers), clickable: window.__market.handlers.schmuck().clickable }));
+      const odd = gone.clickable.filter((n) => !/^act_orn_(harmonica_\d+|mirrorball|schwibbogen|candle_\d+)$/.test(n));
+      check('the round-8 ornament interactions are gone (only the harmonica, the mirror ball and the Schwibbogen answer a click)', !gone.api.length && !odd.length && gone.clickable.filter((n) => /harmonica/.test(n)).length === 12 && gone.clickable.includes('act_orn_mirrorball') && gone.clickable.includes('act_orn_schwibbogen'), JSON.stringify({ api: gone.api, odd, n: gone.clickable.length }));
+      const deco = await page.evaluate(() => { const out = {}; for (const n of ['nutcracker', 'smoker', 'act_orn_pickle', 'act_orn_herrnhut', 'act_orn_nutcracker', 'act_orn_smoker']) { const o = window.__market.scene.getObjectByName(n); out[n] = o ? !!window.__market.item(n) : null; } return out; });
+      check('the nutcracker and the smoker are decoration (in the shop, not items)', deco.nutcracker === false && deco.smoker === false && !Object.entries(deco).some(([k, v]) => /^act_/.test(k) && v), JSON.stringify(deco));
     }
-    // the nutcracker's jaw opens
-    if (has.nut) {
-    const jaw = await page.evaluate(() => { const m = window.__market; m.act('schmuck', 'nut'); m.advance(0.12); const a = m.handlers.schmuck().jaw; m.advance(2); return { mid: a, after: m.handlers.schmuck().jaw, crack: m.sfxLog().some((x) => x.name === 'crack') }; });
-    check('the nutcracker\'s jaw opens (and a nut cracks)', jaw.mid?.angle > 0.15 && jaw.after.angle < 0.05 && jaw.crack, JSON.stringify(jaw));
-    }
-    // the Räuchermännchen puffs smoke
-    if (has.smoke) {
-    const sm = await page.evaluate(() => { const m = window.__market; m.act('schmuck', 'smoke'); m.advance(1.2); return m.handlers.schmuck().smoke; });
-    check('the Räuchermännchen puffs smoke', sm.left > 0 && sm.opacity > 0, JSON.stringify(sm));
-    }
-    // the Schwibbogen's candles light one by one
-    const seq = await page.evaluate(() => new Promise((res) => {
-      const m = window.__market; m.act('schmuck', 'candles');
-      const seen = [m.handlers.schmuck().candles.lit], t0 = performance.now();
-      const id = setInterval(() => { const c = m.handlers.schmuck().candles; if (seen.at(-1) !== c.lit) seen.push(c.lit); if (c.lit === c.of || performance.now() - t0 > 8000) { clearInterval(id); res({ seen, of: c.of }); } }, 50);
-    }));
-    check('the Schwibbogen\'s candles light one by one', seq.seen.at(-1) === seq.of && seq.seen.length >= 3, JSON.stringify(seq));
-    // an ornament hangs on the tree's hooks, and a second click puts it back on its rail
-    if (has.hang) {
-    const hangName = (await page.evaluate(() => window.__market.handlers.hangableNames()))[0];
-    const hung = await page.evaluate((name) => {
+    // ---- the glass harmonica ----
+    const PHRASE = ['D5', 'Bb5', 'A5', 'G5', 'A5', 'C6', 'Eb6', 'D6', 'F#5', 'G5', 'F5', 'Ab5'];
+    check('the harmonica\'s twelve baubles are tuned to the opening of the ballad (D Bb A G A C Eb D F# G F Ab)', JSON.stringify(s0.harmonica?.notes) === JSON.stringify(PHRASE), JSON.stringify(s0.harmonica?.notes));
+    await page.evaluate(() => { const st = document.getElementById('stage'); st.scrollIntoView({ block: 'nearest', behavior: 'instant' }); window.__market.freeze(true); window.__market.advance(0.5); });
+    const brush = async (from, to, steps, wait) => {
+      const pts = await page.evaluate(() => window.__market.handlers.harmonicaPoints());
+      const a = pts[from], b = pts[to];
+      const y = (a.y + b.y) / 2;
+      const yaw0 = (await page.evaluate(() => window.__market.cam())).look.yaw;
+      const n0 = (await S()).harmonica.log.length;
+      const sx = Math.sign(b.x - a.x), x0 = a.x - a.r * 1.6 * sx, x1 = b.x + b.r * 1.6 * sx;
+      await page.mouse.move(x0, y);
+      await page.mouse.down();
+      // a slow stroke: real time between the moves (the brush reads its speed from the events' time stamps)
+      for (let k = 1; k <= steps; k++) { await page.mouse.move(x0 + ((x1 - x0) * k) / steps, y); if (wait) await page.waitForTimeout(wait); }
+      await page.mouse.up();
+      await page.evaluate(() => window.__market.advance(0.3));
+      const h = (await S()).harmonica;
+      return { strikes: h.log.slice(n0), yaw: (await page.evaluate(() => window.__market.cam())).look.yaw - yaw0, glow: h.glow, swing: h.swing, onCanvas: await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.tagName, [a.x, y]) };
+    };
+    const slow = await brush(0, 11, 48, 30);
+    const order = slow.strikes.map((x) => x.i);
+    check('a mouse brush across the row rings the baubles left to right (the tune)', order.length >= 10 && order.every((v, i) => i === 0 || v > order[i - 1]), JSON.stringify({ order, onCanvas: slow.onCanvas }));
+    check('brushing does not turn the head (the row claims the pointer from the look-around)', Math.abs(slow.yaw) < 1e-3, String(slow.yaw));
+    check('each bauble glows on its note and swings on its ribbon', slow.glow.filter((g) => g > 0.2).length >= 8 && slow.swing.filter((w) => w > 0.003).length >= 8, JSON.stringify({ glow: slow.glow, swing: slow.swing }));
+    await page.evaluate(() => window.__market.advance(4));
+    const fast = await brush(11, 0, 5, 0);
+    const mean = (a) => a.reduce((x, y) => x + y.v, 0) / Math.max(1, a.length);
+    check('velocity follows the brush: a fast stroke rings louder than a slow one', fast.strikes.length >= 6 && mean(fast.strikes) > mean(slow.strikes) + 0.1, JSON.stringify({ slow: +mean(slow.strikes).toFixed(2), fast: +mean(fast.strikes).toFixed(2), n: fast.strikes.length }));
+    // tapping in order: the first five notes, then a pause: the sixth glows faintly
+    const tapped = await page.evaluate(async () => {
       const m = window.__market;
-      const p0 = m.item(name).position;
-      m.act('schmuck', 'hang'); m.advance(3); // nothing selected: the stop bar hangs the first ornament that can hang
-      const s = m.handlers.schmuck(), p1 = m.item(name).position;
-      m.clickItem(name); m.advance(3);
-      return { hung: s.hung, moved: Math.hypot(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]), back: m.handlers.schmuck().hung, home: Math.hypot(...m.item(name).position.map((v, i) => v - p0[i])) };
-    }, hangName);
-    check('an ornament hangs on a hook of the display tree, and goes back to its rail', hung.hung.includes(hangName) && hung.moved > 0.1 && !hung.back.length && hung.home < 0.01, JSON.stringify(hung));
-    }
-    // the pickle: a reward, a gentle chime and a line of words in the shop
-    if (has.pickle) {
-    await tapAct(page, '#stopActs [data-action="pickle"]');
-    await tapAct(page, '#stopActs [data-action="pickle"]');
-    await page.evaluate(() => window.__market.advance(1.2));
-    const pk = await page.evaluate(() => ({ s: window.__market.handlers.schmuck().pickle, chime: window.__market.sfxLog().some((x) => x.name === 'reward'), flag: document.documentElement.dataset.pickle, text: window.__market.textOn ? null : null }));
-    check('finding the pickle gives a reward: a chime and a line of words in the scene', pk.s.found && pk.s.reward && /Weihnachtsgurke/.test(pk.s.text || '') && pk.chime && pk.flag === 'found', JSON.stringify(pk));
-    }
-    if (nActs >= 6) {
-      await page.click('#stopFold'); // fold it away again for the picture
-      check('"Things to do" folds the bar away again', await page.evaluate(() => document.getElementById('stopbar').classList.contains('folded')));
-    }
+      m.advance(5);
+      const pts = m.handlers.harmonicaPoints();
+      const c = document.querySelector('#stage canvas');
+      for (let i = 0; i < 5; i++) {
+        const p = pts[i];
+        const o = { clientX: p.x, clientY: p.y, pointerId: 7, pointerType: 'mouse', bubbles: true, buttons: 1, button: 0 };
+        c.dispatchEvent(new PointerEvent('pointerdown', o));
+        c.dispatchEvent(new PointerEvent('pointerup', { ...o, buttons: 0 }));
+        m.advance(0.4);
+      }
+      const after = m.handlers.schmuck().harmonica;
+      m.advance(4.5);
+      return { log: after.log.slice(-5).map((x) => x.i), expect: after.expect, hint: m.handlers.schmuck().harmonica.hint };
+    });
+    check('tapping the baubles in order plays the phrase, and after a pause the next bauble glows faintly', tapped.log.join() === '0,1,2,3,4' && tapped.hint === 5, JSON.stringify(tapped));
+    // touch: a finger drag brushes too (synthetic touch pointers: Playwright's touchscreen only taps)
+    const touch = await page.evaluate(() => {
+      const m = window.__market, c = document.querySelector('#stage canvas');
+      const pts = m.handlers.harmonicaPoints();
+      const yaw0 = m.cam().look.yaw, n0 = m.handlers.schmuck().harmonica.log.length;
+      const ev = (type, x, y, t) => c.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerId: 31, pointerType: 'touch', isPrimary: true, bubbles: true, cancelable: true, buttons: type === 'pointerup' ? 0 : 1 }));
+      const a = pts[2], b = pts[9];
+      ev('pointerdown', a.x, a.y);
+      for (let k = 1; k <= 24; k++) ev('pointermove', a.x + ((b.x - a.x) * k) / 24, a.y + ((b.y - a.y) * k) / 24);
+      ev('pointerup', b.x, b.y);
+      m.advance(0.5);
+      const log = m.handlers.schmuck().harmonica.log.slice(n0).map((x) => x.i);
+      return { log, yaw: m.cam().look.yaw - yaw0 };
+    });
+    check('touch: a finger drag across the row plays it and leaves the look-around alone', touch.log.length >= 6 && Math.abs(touch.yaw) < 1e-3, JSON.stringify(touch));
+    const tune = await page.evaluate(() => { const m = window.__market; m.advance(5); for (let i = 0; i < 12; i++) { m.handlers.harmonicaStrike(i, 0.6); m.advance(0.3); } m.advance(0.4); return { note: m.note(), glow: m.handlers.schmuck().harmonica.glow }; });
+    check('played through, the row answers (a ripple of light, and a word about the ballad)', /Lanterns After Closing/.test(tune.note || ''), tune.note);
+    await page.evaluate(() => window.__market.act('schmuck', 'harmonica'));
+    const auto = await page.evaluate(() => {
+      const m = window.__market; const n0 = m.handlers.schmuck().harmonica.log.length;
+      m.advance(1.6);
+      const lean = { busy: m.handlers.schmuck().busy, mode: m.cam().mode, phase: m.handlers.schmuck().harmonica.lean, moment: document.documentElement.dataset.moment || null };
+      const pts = m.handlers.harmonicaPoints(), r = document.querySelector('#stage canvas').getBoundingClientRect();
+      lean.span = +((Math.max(...pts.map((p) => p.x)) - Math.min(...pts.map((p) => p.x))) / r.width).toFixed(2);
+      m.advance(12);
+      const log = m.handlers.schmuck().harmonica.log.slice(n0).map((x) => `${x.i}:${x.source}`);
+      for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.25) m.advance(0.25);
+      m.advance(0.3);
+      return { log, lean, after: { busy: m.handlers.schmuck().busy, mode: m.cam().mode, stop: m.stop } };
+    });
+    check('"Play the glass harmonica": the camera leans in until the row fills the view', auto.lean.busy === 'harmonica' && auto.lean.mode === 'drive' && auto.lean.phase === 'hold' && auto.lean.span > 0.6, JSON.stringify(auto.lean));
+    check('... it plays the phrase in its own rhythm, and eases back to the stop', auto.log.length === 12 && auto.log.every((x, i) => x === `${i}:auto`) && !auto.after.busy && auto.after.mode === 'stop' && auto.after.stop === 'schmuck', JSON.stringify(auto));
+    // ---- the Schwibbogen ----
+    await page.evaluate(() => window.__market.advance(3));
+    const sw = await page.evaluate(() => {
+      const m = window.__market;
+      m.act('schmuck', 'candles');
+      const seen = [];
+      for (let t = 0; t < 24; t += 0.25) {
+        m.advance(0.25);
+        const s = m.handlers.schmuck().schwibbogen;
+        seen.push({ t, burning: s.burning, lit: s.windows.lit, wake: s.wake, chord: s.chord, wave: s.wave.running, bloom: s.wave.bloom, cam: s.cam, gain: +m.handlers.waveGainAt(12).toFixed(2) });
+      }
+      const s = m.handlers.schmuck().schwibbogen;
+      const cam = m.cam();
+      return { seen, s, cam, busy: m.handlers.schmuck().busy, moment: document.documentElement.dataset.moment || null, barShown: getComputedStyle(document.getElementById('stopbar')).display !== 'none' };
+    });
+    const lit = sw.seen.map((x) => x.burning);
+    check('Schwibbogen: the candles light one by one', lit.at(-1) === sw.s.of && sw.s.of === 7 && new Set(lit).size >= 7 && lit.every((v, i) => i === 0 || v >= lit[i - 1]), lit.join(''));
+    check('Schwibbogen: from the outside in (the vendor\'s order)', sw.s.lit.join() === 'act_orn_candle_0,act_orn_candle_6,act_orn_candle_1,act_orn_candle_5,act_orn_candle_2,act_orn_candle_4,act_orn_candle_3', sw.s.lit.join());
+    const win = sw.seen.map((x) => x.lit);
+    const half = sw.seen.find((x) => x.burning === 4);
+    check('Schwibbogen: with each flame a share of the town\'s dark windows turns warm, until most are lit', sw.s.windows.candidates > 100 && half && half.lit > 0 && half.lit < sw.s.windows.lit && sw.s.windows.lit >= 0.9 * sw.s.windows.candidates && win.every((v, i) => i === 0 || v >= win[i - 1]), JSON.stringify({ windows: sw.s.windows, half: half && half.lit }));
+    check('Schwibbogen: a low warm chord builds, one voice per flame', sw.s.chord === 7 && sw.seen.find((x) => x.burning === 3)?.chord === 3, JSON.stringify(sw.seen.filter((x, i) => i % 6 === 0).map((x) => x.chord)));
+    const crest = Math.max(...sw.seen.map((x) => x.gain)), bloomPeak = Math.max(...sw.seen.map((x) => x.bloom));
+    const firstWave = sw.seen.findIndex((x) => x.wave), lastLight = sw.seen.findIndex((x) => x.burning === 7);
+    check('Schwibbogen: after the last flame a wave of light runs across the market (bulbs flare in turn, the bloom swells and settles)', firstWave > lastLight && crest > 1.8 && bloomPeak > 1.5 && sw.seen.at(-1).bloom < 1.25, JSON.stringify({ firstWave, lastLight, crest, bloomPeak, end: sw.seen.at(-1).bloom }));
+    check('Schwibbogen: the camera stands behind the arch looking out over the candles, the bar steps aside', sw.cam.mode === 'drive' && sw.s.cam === 'hold' && sw.busy === 'schwibbogen' && sw.moment === 'schwibbogen' && !sw.barShown, JSON.stringify({ cam: sw.cam, phase: sw.s.cam, busy: sw.busy, bar: sw.barShown }));
+    await page.keyboard.press('Escape');
+    const back = await page.evaluate(() => { const m = window.__market; for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.25) m.advance(0.25); m.advance(0.5); return { busy: m.handlers.schmuck().busy, mode: m.cam().mode, stop: m.stop, burning: m.handlers.schmuck().schwibbogen.burning, moment: document.documentElement.dataset.moment || null }; });
+    check('Escape steps back round the arch to the stop; the candles keep burning', !back.busy && back.mode === 'stop' && back.stop === 'schmuck' && back.burning === 7 && !back.moment, JSON.stringify(back));
+    const out = await page.evaluate(() => { const m = window.__market; m.clickItem('act_orn_schwibbogen'); for (let t = 0; t < 10; t += 0.5) m.advance(0.5); const s = m.handlers.schmuck().schwibbogen; return { phase: s.phase, burning: s.burning, wake: s.wake, chord: s.chord, settle: s.wave.settle, label: document.querySelector('#stopActs [data-action="candles"]')?.textContent }; });
+    check('a click on the arch again lets it fade back (candles out, the town asleep, the glow gone)', out.phase === 'off' && out.burning === 0 && out.wake === 0 && out.chord === 0 && out.settle < 0.05 && /Light the Schwibbogen/.test(out.label || ''), JSON.stringify(out));
+    // ---- the reflection dive ----
+    const dv = await page.evaluate(() => {
+      const m = window.__market;
+      m.act('schmuck', 'dive');
+      const seen = [];
+      let close = 9, inside = null;
+      for (let t = 0; t < 6.5; t += 0.1) {
+        m.advance(0.1);
+        const d = m.handlers.schmuck().dive;
+        if (seen.at(-1) !== d.phase) seen.push(d.phase);
+        if (d.phase === 'gaze') close = Math.min(close, d.dist);
+        if (d.phase === 'inside' && !inside) inside = d;
+      }
+      return { seen, close, inside, env: m.handlers.schmuck().dive.env, glass: m.handlers.schmuck().dive.glass, fov: m.camera.fov };
+    });
+    check('dive: a cube camera renders the market into the ball once at the tap (256 px on the lite market), with a clear coat\'s Fresnel', dv.env?.size === 256 && dv.env.captures >= 1 && dv.glass === 'engine_mirrorball_glass', JSON.stringify({ env: dv.env, glass: dv.glass }));
+    check('dive: the camera eases in until the reflection fills the view (within 2 ball radii of its centre)', dv.seen.slice(0, 3).join() === 'approach,gaze,into' && dv.close < 0.2, JSON.stringify({ seen: dv.seen, close: dv.close }));
+    check('dive: it crossfades into the market seen from inside the glass (the warped, hushed pass; the ball itself hidden)', !!dv.inside && dv.inside.pass.enabled && dv.inside.pass.warp === 1 && dv.inside.pass.captures >= 1 && !dv.inside.ballVisible && dv.inside.dist < 0.02 && dv.fov > 70, JSON.stringify({ inside: dv.inside, fov: dv.fov }));
+    await page.keyboard.press('Escape');
+    const dout = await page.evaluate(() => { const m = window.__market; const seen = []; for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.1) { m.advance(0.1); const p = m.handlers.schmuck().dive.phase; if (seen.at(-1) !== p) seen.push(p); } m.advance(0.3); const d = m.handlers.schmuck().dive; return { seen, d, mode: m.cam().mode, fov: m.camera.fov, near: m.camera.near }; });
+    check('dive: Escape eases back out to the stop (pass off, ball back, the camera\'s near plane and lens restored)', dout.seen.includes('outof') && dout.seen.includes('back') && !dout.d.phase && !dout.d.pass.enabled && dout.d.ballVisible && dout.mode === 'stop' && dout.near === 0.1 && dout.fov < 60, JSON.stringify(dout));
+    const tap = await page.evaluate(async () => {
+      const m = window.__market, c = document.querySelector('#stage canvas');
+      m.act('schmuck', 'dive');
+      for (let t = 0; t < 5.5; t += 0.1) m.advance(0.1);
+      await new Promise((r) => setTimeout(r, 450));
+      const before = m.handlers.schmuck().dive.phase;
+      const r = c.getBoundingClientRect();
+      const o = { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, pointerId: 9, pointerType: 'mouse', bubbles: true, button: 0 };
+      c.dispatchEvent(new PointerEvent('pointerdown', o)); c.dispatchEvent(new PointerEvent('pointerup', o));
+      for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.1) m.advance(0.1);
+      return { before, after: m.handlers.schmuck().dive.phase, mode: m.cam().mode };
+    });
+    check('dive: a tap ends it too', tap.before === 'inside' && tap.after === null && tap.mode === 'stop', JSON.stringify(tap));
+    // ---- the sparkle ----
+    const sp = await page.evaluate(() => { const m = window.__market; const a = m.handlers.schmuck(); m.advance(1.3); m.renderFrame(); const b = m.handlers.schmuck(); return { a: a.sparkle, b: b.sparkle, p0: a.pyramid, p1: b.pyramid }; });
+    check('sparkle: the foxed mirror gets a reflection (mirror_0, rendered while the visitor is near)', sp.b.mirrors >= 1 && sp.b.mirrorRenders > 0, JSON.stringify(sp.b));
+    check('sparkle: the tinsel swags carry the glint shader', sp.b.tinsels >= 2 && sp.b.glintMaterials === sp.b.tinsels, JSON.stringify(sp.b));
+    check('sparkle: the candle pyramid turns slowly about its upright axis, its flames flicker', sp.p0?.axis === 'y' && Math.abs(sp.p1.angle - sp.p0.angle) > 0.2 && Math.abs(sp.p1.angle - sp.p0.angle) < 1.0 && sp.b.flames >= 1 && sp.a.flameGlow !== sp.b.flameGlow, JSON.stringify({ p0: sp.p0, p1: sp.p1, f0: sp.a.flameGlow, f1: sp.b.flameGlow }));
+    check('sparkle: the Räuchermännchen smokes on his own (fx_smoke_1)', sp.b.smoke > 0.1, JSON.stringify(sp.b));
     await page.evaluate(() => window.__market.freeze(false));
     await shot(page, 'stop_schmuck.jpg', '#stage');
-    await page.evaluate(() => window.__market.freeze(true));
-    await page.evaluate(() => window.__market.advance(9));
-    if (has.pickle) check('the reward\'s words go after a few seconds', !(await S()).pickle.reward);
-    // a click in 3D on one of the shop's pieces does its thing
+    // a click in 3D on a harmonica bauble rings it
     {
-      let done = null;
-      for (const name of ['act_orn_nutcracker', 'act_orn_smoker', 'act_orn_schwibbogen', 'act_orn_herrnhut', 'act_orn_mirrorball', names[8], names[2]]) {
-        const aim = await aimAt(page, name);
-        if (!aim) continue;
-        const n0 = (await page.evaluate(() => window.__market.sfxLog().length));
-        await page.mouse.click(aim.x, aim.y);
-        await page.evaluate(() => window.__market.advance(1));
-        const n1 = (await page.evaluate(() => window.__market.sfxLog().length));
-        done = { name, sounds: n1 - n0 };
-        break;
-      }
-      check('a click in 3D on an ornament does its thing (a sound, a movement)', done?.sounds > 0, JSON.stringify(done));
+      await page.evaluate(() => { window.__market.freeze(true); window.__market.advance(4); });
+      const pts = await page.evaluate(() => window.__market.handlers.harmonicaPoints());
+      const p = pts[6];
+      const n0 = (await S()).harmonica.log.length;
+      await page.mouse.click(p.x, p.y);
+      await page.evaluate(() => window.__market.advance(0.5));
+      const h = (await S()).harmonica;
+      check('a click in 3D on a harmonica bauble rings that bauble once', h.log.length - n0 === 1 && h.log.at(-1).i === 6, JSON.stringify(h.log.slice(n0)));
+      await page.evaluate(() => window.__market.freeze(false));
     }
+    await ctx.close();
+  }
+
+  if (run('moments')) {
+    log('the ornament shop\'s three moments at their peaks (full market, 1280 px): screenshots');
+    const { ctx, page } = await openPage(`${BASE}?quality=full&snow=0`, { viewport: { width: 1280, height: 720 } });
+    await waitReady(page);
+    await page.evaluate(() => window.__market.settled());
+    await page.evaluate(() => window.__market.walkTo('schmuck'));
+    await page.evaluate(() => { const m = window.__market; m.freeze(true); for (let i = 0; i < 80 && !m.arrived; i++) m.advance(0.5); m.advance(0.5); m.freeze(false); });
+    const full = await page.waitForFunction(() => window.__market.streaming().state['deco-schmuck'] === 'full', null, { timeout: LONG }).then(() => true, () => false);
+    check('full market: the shop streams in at full detail at its stop', full, JSON.stringify(await page.evaluate(() => window.__market.streaming().state['deco-schmuck'])));
+    await page.evaluate(() => { window.__market.freeze(true); window.__market.advance(1); });
+    const snapTo = async (name) => {
+      const d = await page.evaluate(() => window.__market.snapshot('image/jpeg', 0.88));
+      writeFileSync(path.join(OUT, name), Buffer.from(d.split(',')[1], 'base64'));
+      log('screenshot', path.relative(process.cwd(), path.join(OUT, name)));
+    };
+    const S = () => page.evaluate(() => window.__market.handlers.schmuck());
+    await snapTo('shop_stop.jpg');
+    const spF = (await S()).sparkle;
+    check('full market: the mirror reflection is 640 px wide and drawn every frame at the shop', spF.mirrorSize?.[0] === 640 && spF.mirrorRenders > 0, JSON.stringify(spF));
+    // the Schwibbogen: first flames, the town half awake, the wave at its height
+    await page.evaluate(() => window.__market.act('schmuck', 'candles'));
+    const times = [[3.4, 'schwib_1_first_flames.jpg'], [5.6, 'schwib_2_town_waking.jpg'], [9.8, 'schwib_3_light_wave.jpg'], [15, 'schwib_4_settled.jpg']];
+    let at = 0;
+    for (const [t, name] of times) { await page.evaluate((d) => window.__market.advance(d), t - at); at = t; await snapTo(name); }
+    const swF = (await S()).schwibbogen;
+    check('full market: the Schwibbogen sequence ran (seven flames, windows warm, the wave)', swF.burning === 7 && swF.windows.lit > 0.9 * swF.windows.candidates && swF.wave.settle > 0.1, JSON.stringify(swF));
+    await page.evaluate(() => { const m = window.__market; m.handlers.shopEnd(); for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.25) m.advance(0.25); m.advance(1); });
+    // the harmonica mid-phrase: five notes in, the fifth glowing
+    await page.evaluate(() => { const m = window.__market; m.act('schmuck', 'harmonica'); m.advance(1.6 + (6.5 / 72) * 60 + 0.12); });
+    await snapTo('harmonica_mid_phrase.jpg');
+    const hF = (await S()).harmonica;
+    check('full market: a bauble glows mid-phrase on the harmonica (the camera leaned in to the row)', hF.glow[4] > 0.5 && hF.glow[4] > hF.glow[0] && hF.lean === 'hold', JSON.stringify(hF.glow));
+    await page.evaluate(() => { const m = window.__market; m.handlers.shopEnd(); for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.25) m.advance(0.25); m.advance(0.5); });
+    // the dive: in close, through the glass, inside
+    await page.evaluate(() => { const m = window.__market; m.clickItem('act_orn_schwibbogen'); m.advance(8); });
+    await page.evaluate(() => window.__market.act('schmuck', 'dive'));
+    const dt = [[1.6, 'dive_1_approach.jpg'], [3.0, 'dive_2_reflection.jpg'], [3.85, 'dive_3_into_glass.jpg'], [6.6, 'dive_4_inside.jpg']];
+    at = 0;
+    for (const [t, name] of dt) { await page.evaluate((d) => window.__market.advance(d), t - at); at = t; await snapTo(name); }
+    const dF = (await S()).dive;
+    check('full market: the dive reaches the inside of the glass (512 px cube)', dF.phase === 'inside' && dF.env?.size === 512, JSON.stringify(dF));
+    await page.evaluate(() => { const m = window.__market; m.handlers.shopEnd(); for (let t = 0; t < 8 && m.handlers.schmuck().busy; t += 0.1) m.advance(0.1); });
+    check('full market: the dive comes back out', !(await S()).busy);
     await page.evaluate(() => window.__market.freeze(false));
     await ctx.close();
   }
@@ -832,6 +956,33 @@ try {
     await page.waitForFunction(() => window.__market.textOn('wurst.menu').length > 10, null, { timeout: LONG }).catch(() => {});
     check('phone: reading the menu board fills the screen with it', (await page.evaluate(() => window.__market.reading().id)) === 'wurst.menu');
     await shot(page, 'phone_reading_menu.jpg', null, { keepScroll: true });
+    // the ornament shop on a phone, reduced motion: the bar folds away, and the moments are short and calm
+    await page.evaluate(() => { window.__market.closeRead?.(); window.__market.walkTo('schmuck'); window.__market.advance(0.5); });
+    const pf = await page.evaluate(() => ({ stop: window.__market.stop, folded: document.getElementById('stopbar').classList.contains('folded') }));
+    check('phone: at the ornament shop the stop bar folds away (judge note, round 8)', pf.stop === 'schmuck' && pf.folded, JSON.stringify(pf));
+    const rm = await page.evaluate(() => {
+      const m = window.__market, H = () => m.handlers.schmuck();
+      m.freeze(true);
+      m.act('schmuck', 'candles');
+      m.advance(0.05);
+      const cut = { mode: m.cam().mode, cam: H().schwibbogen.cam };
+      m.advance(3.2);
+      const sw = H().schwibbogen;
+      m.handlers.shopEnd(); m.advance(0.2);
+      const back = { busy: H().busy, mode: m.cam().mode };
+      m.clickItem('act_orn_schwibbogen'); m.advance(4);
+      m.handlers.harmonicaStrike(3, 0.9); m.advance(0.4);
+      const swing = Math.max(...H().harmonica.swing);
+      m.act('schmuck', 'dive'); m.advance(0.05);
+      const d0 = H().dive.phase; m.advance(1.2);
+      const d1 = H().dive.phase; m.handlers.shopEnd(); m.advance(0.6); m.advance(0.1);
+      const d2 = { phase: H().dive.phase, mode: m.cam().mode, busy: H().busy };
+      m.freeze(false);
+      return { cut, sw: { burning: sw.burning, wave: sw.wave.settle > 0 || sw.wave.running, phase: sw.phase }, back, swing, d0, d1, d2 };
+    });
+    check('reduced motion: the Schwibbogen cuts to the view over the arch, its seven candles light in about three seconds, Escape cuts back', rm.cut.mode === 'drive' && rm.cut.cam === 'hold' && rm.sw.burning === 7 && rm.sw.phase === 'lit' && !rm.back.busy && rm.back.mode === 'stop', JSON.stringify(rm));
+    check('reduced motion: the harmonica\'s baubles ring and glow without swinging', rm.swing === 0, String(rm.swing));
+    check('reduced motion: the dive cuts in (no glide) and out', ['into', 'inside'].includes(rm.d0) && rm.d1 === 'inside' && !rm.d2.phase && rm.d2.mode === 'stop' && !rm.d2.busy, JSON.stringify(rm));
     await ctx.close();
   }
   if (run('plain')) {

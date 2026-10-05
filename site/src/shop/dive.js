@@ -13,6 +13,7 @@ import { shimmer } from '../audio/glass.js';
 
 const easeInOut = (x) => { const k = THREE.MathUtils.clamp(x, 0, 1); return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
 const UP = new THREE.Vector3(0, 1, 0);
+const GAZE_FOV = 36;
 
 export function createDive({ place, ball, scene, camera, renderer, composer, rig, lite, motion, stopView, renderNow, onDrive, announce, dom }) {
   const node = ball.node;
@@ -101,11 +102,12 @@ export function createDive({ place, ball, scene, camera, renderer, composer, rig
       const pos = S.curve.getPoint(k);
       const target = S.from.target.clone().lerp(P.C, easeInOut(Math.min(1, (S.t / T.approach) * 1.6)));
       if (S.t >= T.approach) go('gaze');
-      return { pos, target };
+      // the lens narrows a little on the way in, so the ball's reflection fills the frame at the end
+      return { pos, target, fov: THREE.MathUtils.lerp(S.from.fov, GAZE_FOV, k) };
     }
     if (S.phase === 'gaze') {
       if (S.t >= T.gaze) go('into');
-      return { pos: P.dive, target: P.C };
+      return { pos: P.dive, target: P.C, fov: GAZE_FOV };
     }
     if (S.phase === 'into') {
       const k = easeInOut(S.t / T.into);
@@ -127,14 +129,14 @@ export function createDive({ place, ball, scene, camera, renderer, composer, rig
         if (k >= 0.5 && !S.cut) { S.cut = true; pass.uniforms.uWarp.value = 0; node.visible = true; setHush(0, 1.2); }
       }
       if (S.t >= T.outof) go('back');
-      return S.cut ? { pos: P.dive, target: P.C } : insidePose(P, T.into + T.inside + S.t);
+      return S.cut ? { pos: P.dive, target: P.C, fov: GAZE_FOV } : insidePose(P, T.into + T.inside + S.t);
     }
     if (S.phase === 'back') {
       const k = easeInOut(S.t / T.back);
       const pos = S.backCurve.getPoint(k);
       const target = P.C.clone().lerp(S.back.target, easeInOut(Math.min(1, (S.t / T.back) * 1.3)));
       if (S.t >= T.back) { const b = S.back; finish(); rig.release(b, { cut: true }); return { pos: b.pos, target: b.target }; }
-      return { pos, target };
+      return { pos, target, fov: THREE.MathUtils.lerp(GAZE_FOV, S.from.fov, k) };
     }
     return null;
   }
@@ -182,7 +184,7 @@ export function createDive({ place, ball, scene, camera, renderer, composer, rig
     if (S) return false;
     captureEnv();
     const P = poses();
-    S = { phase: 'approach', t: 0, P, from: { pos: camera.position.clone(), target: rig.controls.target.clone() }, startedAt: performance.now() };
+    S = { phase: 'approach', t: 0, P, from: { pos: camera.position.clone(), target: rig.controls.target.clone(), fov: camera.fov }, startedAt: performance.now() };
     S.curve = new THREE.CatmullRomCurve3([S.from.pos, P.approach, P.dive], false, 'centripetal');
     rig.drive('dive', poseFn, { near: 0.012, onCancel: () => { if (S) finish(); } });
     onDrive?.(true, 'dive');

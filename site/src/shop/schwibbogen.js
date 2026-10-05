@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { createChord } from '../audio/glass.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
+const EYE = 0.035; // the eye above the candle tips, behind the arch
 const GAP = 0.72; // seconds between flames
 const OUT_GAP = 0.22;
 
@@ -74,28 +75,33 @@ export function createSchwibbogen({ place, arch, candles, town, wave, rig, camer
   // ---------- geometry of the view ----------
   function frame() {
     const A = arch.node.getWorldPosition(new THREE.Vector3());
-    const box = new THREE.Box3().setFromObject(arch.node);
-    const h = Math.max(0.2, box.max.y - A.y);
+    // the height of the candle tips (the arch's own meshes, not the glow sprites round the flames)
+    const box = new THREE.Box3();
+    arch.node.updateWorldMatrix(true, true);
+    arch.node.traverse((o) => { if (o.isMesh && !o.userData.itemFx) box.expandByObject(o); });
+    const h = THREE.MathUtils.clamp(box.isEmpty() ? 0.3 : box.max.y - A.y, 0.12, 0.8);
     const F = new THREE.Vector3(0, 0, 1).transformDirection(place.holder.matrixWorld).setY(0).normalize(); // the shop's front
     const X = new THREE.Vector3(1, 0, 0).transformDirection(place.holder.matrixWorld).setY(0).normalize(); // the visitor's right
     // round the arch on the side away from the shop's middle (the vendor stands there)
     const side = X.dot(new THREE.Vector3().subVectors(A, place.holder.position)) < 0 ? -1 : 1;
     const look = A.clone().addScaledVector(UP, h * 0.55);
-    const out = A.clone().addScaledVector(F, 14).addScaledVector(UP, 1.05);
+    const out = A.clone().addScaledVector(F, 14).addScaledVector(UP, h + EYE + 1.0);
     return { A, F, X, side, h, look, out };
   }
   /** The camera on its way round the arch: u 0 (in front) .. 1 (behind, looking out over the candles). */
   function orbit(G, u) {
     const th = Math.PI * easeInOut(u);
-    const rho = THREE.MathUtils.lerp(0.95, 0.72, u);
-    const lift = THREE.MathUtils.lerp(0.62, 0.47, u) + Math.sin(th) * 0.12;
+    const rho = THREE.MathUtils.lerp(0.95, 0.5, u);
+    // behind the arch the eye sits just above the candle tips: the flames stand along the lower third, the market
+    // and the town fill the rest
+    const lift = THREE.MathUtils.lerp(0.62, G.h + EYE, u) + Math.sin(th) * 0.14;
     const pos = G.A.clone().addScaledVector(G.F, Math.cos(th) * rho).addScaledVector(G.X, G.side * Math.sin(th) * rho).addScaledVector(UP, lift);
     return pos;
   }
   function holdPose(G, k) {
     // behind the arch, a touch to its outer side; through the wave the camera rises a little to see further
-    const pos = orbit(G, 1).addScaledVector(UP, 0.18 * k).addScaledVector(G.F, -0.12 * k);
-    const target = G.out.clone().addScaledVector(UP, 0.6 * k);
+    const pos = orbit(G, 1).addScaledVector(UP, 0.12 * k).addScaledVector(G.F, -0.1 * k);
+    const target = G.out.clone().addScaledVector(UP, 0.35 * k);
     return { pos, target };
   }
 
