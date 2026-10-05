@@ -184,6 +184,9 @@ async function boot() {
     frame: (o) => { const b = frameRegion(o); if (b) guide?.markCloseUp(); return b; },
     keyAt: (center, facing) => (center ? key?.aim(center, facing) : key?.follow(market.places[guide?.here])),
     flyBack: (v) => { if (!rig.riding && v) { rig.flyTo(v); if (v.exact) guide?.markCloseUp(); } },
+    // where the visitor stands at this stop, and a turn of the head from there (null: back to the stop's own view)
+    stopEye: () => (guide?.here && guide.arrived ? guide.stopView() : null),
+    turnTo: (target) => { const v = guide?.here && guide.arrived ? guide.stopView() : null; if (!v || rig.riding) return; rig.flyTo(target ? { pos: v.pos, target, near: 0.5 } : v); },
     world: () => world,
     // the keyboard's focus on one item (a book in an open cabinet): outlined, and said
     highlight: (node) => { if (outline) outline.selectedObjects = node ? [node] : []; },
@@ -484,6 +487,8 @@ async function boot() {
   }
   $('reset').addEventListener('click', resetView);
   $('stepBack').addEventListener('click', () => { guide.back(); });
+  $('cabTurnL').addEventListener('click', () => actions.items.handlers.turnCabinets?.(-1));
+  $('cabTurnR').addEventListener('click', () => actions.items.handlers.turnCabinets?.(1));
   setupMute($('mute'), audio);
   bindKeyboard({
     canvas: renderer.domElement, order: ORDER, rig,

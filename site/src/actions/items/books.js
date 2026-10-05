@@ -252,7 +252,7 @@ export function createBooks(ctx) {
 
   function setProxies() { for (const c of cabinets) if (c.proxy) c.proxy.userData.pickProxy.off = c === openCab; }
 
-  function openCabinet(key, { focus = 0 } = {}) {
+  function openCabinet(key, { focus = -1 } = {}) {
     const cab = cabinets.find((c) => c.key === key);
     if (!cab) return false;
     if (open) close();
@@ -326,6 +326,46 @@ export function createBooks(ctx) {
     if (n) { const d = describe(n); ctx.announce?.(`${d.title}${d.author ? `, ${d.author}` : ''}. Book ${focusIdx + 1} of ${openCab.books.length}; Enter opens it.`); }
   }
 
+  // ---------- turning toward the cabinets (a narrow screen) ----------
+  // On a 390 px phone the stall's front is wider than the screen: from the stop only the counter shows, and the
+  // cabinets stand off either edge. The visitor turns to them (the ‹ › buttons beside the stall, or a swipe),
+  // from where they stand, one cabinet at a time, left to right; then a tap on the cabinet (or its sign) opens it.
+  let faced = -1;
+  const centreOf = (cab) => { const b = new THREE.Box3(); for (const o of [cab.proxy, cab.door, cab.sign, ...cab.books].filter(Boolean)) b.union(boxOf(o)); return b.isEmpty() ? null : b.getCenter(new THREE.Vector3()); };
+  /** The cabinets as the visitor sees them from the stop, left to right (angle from the view's centre line). */
+  function cabinetsLeftToRight() {
+    const v = ctx.stopEye?.();
+    if (!v) return cabinets.slice();
+    const fwd = v.target.clone().sub(v.pos).setY(0).normalize();
+    const ang = (cab) => { const c = centreOf(cab); if (!c) return 0; const d = c.sub(v.pos).setY(0).normalize(); return Math.atan2(fwd.x * d.z - fwd.z * d.x, fwd.dot(d)); };
+    return cabinets.map((c) => [c, ang(c)]).sort((a, b) => a[1] - b[1]).map((x) => x[0]);
+  }
+  /** Turn to face the next (d = 1) or previous (-1) cabinet; 0 turns back to the stall's own view. */
+  function turnCabinets(d) {
+    if (!cabinets.length) return null;
+    if (openCab) closeCabinet();
+    const row = cabinetsLeftToRight();
+    const v = ctx.stopEye?.();
+    if (!v) return null;
+    if (d === 0 || (faced >= 0 && (faced + d >= row.length || faced + d < 0))) { faced = -1; ctx.turnTo?.(null); return null; }
+    // from the stall's own view: › turns to the first cabinet right of centre, ‹ to the first one left of it
+    if (faced < 0) {
+      const fwd = v.target.clone().sub(v.pos).setY(0).normalize();
+      const side = row.map((c) => { const p = centreOf(c); return p ? Math.sign(fwd.x * (p.z - v.pos.z) - fwd.z * (p.x - v.pos.x)) : 0; });
+      faced = d > 0 ? Math.max(0, side.findIndex((s) => s > 0)) : Math.max(0, side.map((s, i) => (s < 0 ? i : -1)).filter((i) => i >= 0).pop() ?? 0);
+    } else faced += d;
+    const cab = row[faced];
+    const c = centreOf(cab);
+    if (!c) return null;
+    // the cabinet sits in the upper part of the screen, above the bar of things to do
+    const dist = c.distanceTo(v.pos);
+    const t = Math.tan(THREE.MathUtils.degToRad((ctx.camera?.fov || 55) / 2));
+    const target = c.clone().addScaledVector(UP, -dist * t * 0.3);
+    ctx.turnTo?.(target);
+    say(`<b lang="de">${esc(cab.label)}</b>${cab.en && cab.en !== cab.label ? ` · ${esc(cab.en)}` : ''}. <em>Tap the cabinet to open it.</em>`);
+    return cab.key;
+  }
+
   /** The arrows at the Bücherstand (keyboard.js asks first). Returns true when the key was used. */
   function cabinetKey(key) {
     if (!cabinets.length) return false;
@@ -333,7 +373,7 @@ export function createBooks(ctx) {
     if (key === 'ArrowDown' || key === 'ArrowUp') {
       const d = key === 'ArrowDown' ? 1 : -1;
       const next = i < 0 ? (d > 0 ? 0 : cabinets.length - 1) : (i + d + cabinets.length) % cabinets.length;
-      openCabinet(cabinets[next].key);
+      openCabinet(cabinets[next].key, { focus: 0 });
       return true;
     }
     if (!openCab) return false;
@@ -375,6 +415,9 @@ export function createBooks(ctx) {
       cabinets: () => cabinets.map((c) => ({ key: c.key, label: c.label, en: c.en, books: c.books.length, door: !!c.door, sign: !!c.sign, proxy: !!c.proxy })),
       openCabinet,
       closeCabinet: () => closeCabinet(),
+      /** Turn toward the next (1) or previous (-1) cabinet from the stop (a narrow screen); 0 turns back. */
+      turnCabinets,
+      facedCabinet: () => (faced >= 0 ? cabinetsLeftToRight()[faced]?.key || null : null),
       /** The open cabinet (tests): its key, door angle, its books and which of them the pointer may pick. */
       cabinetState: () => (openCab ? { key: openCab.key, open: openCab.open, focus: focusIdx >= 0 ? openCab.books[focusIdx]?.name : null, books: openCab.books.map((n) => n.name), door: openCab.door ? +(2 * Math.acos(Math.min(1, Math.abs(openCab.door.quaternion.dot(openCab.r0.q))))).toFixed(3) : null } : null),
       /** Where the camera should rest while a cabinet is open (the reading view comes back here). */
@@ -394,7 +437,7 @@ export function createBooks(ctx) {
       /** The book standing open (for tests): its node name, title and state. */
       openedBook: () => (open ? { name: open.n.name, slug: open.d.slug, title: open.d.title, author: open.d.author, note: open.d.note, mac: !!open.d.mac, state: open.state, model: open.group?.fromModel ? 'book_open.glb' : open.group ? 'engine' : null } : null),
     },
-    retract: () => { close({ retract: true }); closeCabinet(); },
+    retract: () => { close({ retract: true }); closeCabinet(); faced = -1; },
     /** Books in a cabinet answer the pointer only while that cabinet is open; the rest only while none is. */
     pickable(item) {
       if (item.kind !== 'book' || !cabinets.length) return undefined;

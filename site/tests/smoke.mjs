@@ -565,11 +565,13 @@ try {
     const settle = () => page.evaluate(() => { const m = window.__market; for (let i = 0; i < 60 && m.cam().moving; i++) m.advance(0.5); m.advance(0.5); });
     check('the ornament shop is a stop on the stroll, between the Bücherstand and the Karussell', report.stroll.stops.join() === 'glueh,band,bier,books,schmuck,carousel,ferris,wurst', report.stroll.stops.join());
     check('the signpost has an arm for it, in the market (act_sign_schmuck) and on screen', !!(await page.evaluate(() => window.__market.screenPoint('act_sign_schmuck'))) && (await page.locator('#signboard .sb-arm[data-place="schmuck"]').count()) === 1);
-    check('the shop is the vendor\'s stall_schmuck.glb, not a deco stall', report.models.some((m) => m.place === 'schmuck' && /stall_schmuck/.test(m.file || '') && m.kind !== 'deco'), JSON.stringify(report.models.filter((m) => m.place === 'schmuck')));
     await page.click('#signboard .sb-arm[data-place="schmuck"]');
     await settle();
     const at = await page.evaluate(() => ({ stop: window.__market.stop, arrived: window.__market.arrived, here: document.getElementById('hereName').textContent }));
     check('the signpost arm walks to the ornament shop', at.stop === 'schmuck' && at.arrived && /Christbaumschmuck/.test(at.here), JSON.stringify(at));
+    // (the shop may be one of the models placed just after the market opens: read the report once there)
+    const models = await page.evaluate(() => window.__market.report.models.filter((m) => m.place === 'schmuck'));
+    check('the shop is the vendor\'s stall_schmuck.glb, not a deco stall', models.some((m) => /stall_schmuck/.test(m.file || '') && m.kind !== 'deco'), JSON.stringify(models));
     const want = ['ring', 'star', 'nut', 'smoke', 'candles', 'hang', 'pickle'];
     const bar = await page.evaluate(() => [...document.querySelectorAll('#stopActs [data-action]')].map((b) => b.dataset.action));
     check('the stop bar offers the shop\'s seven things to do', want.every((k) => bar.includes(k)), bar.join(' '));
@@ -663,15 +665,26 @@ try {
     check('phone: the signpost walks to the Bücherstand', (await state(page, 'stop')) === 'books' && (await page.evaluate(() => window.__market.arrived)));
     const cabs = await page.evaluate(() => window.__market.handlers.cabinets());
     check('the Bücherstand has its six cabinets, each with a door (act_cab_), a sign (sign_cat_) and a tap target', cabs.length === 6 && cabs.every((c) => c.door && c.sign && c.proxy && c.books > 0), JSON.stringify(cabs));
-    // before any cabinet is open, a tap on a cabinet's door or sign is a tap on the cabinet, never on one book
-    const key = cabs[0].key;
+    // on a 390 px phone the stall's front is wider than the screen: the cabinets stand off either edge, and the
+    // ‹ › buttons beside the stall turn the visitor to them, one at a time
+    check('phone: ‹ › buttons beside the stall turn to the cabinets', (await page.locator('#cabTurnR').isVisible()) && (await page.locator('#cabTurnL').isVisible()));
+    await page.tap('#cabTurnR');
+    await frames(page, 2);
+    await page.evaluate(() => window.__market.advance(2));
+    await stillCamera(page);
+    const key = (await page.evaluate(() => window.__market.handlers.facedCabinet())) || cabs[0].key;
+    const kIdx = cabs.findIndex((c) => c.key === key);
+    const faced = await page.evaluate((key) => { const b = window.__market.screenBox(`engine_cabinet_proxy_${key}`); return b && { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.w), h: Math.round(b.h), onScreen: b.onScreen }; }, key);
+    check('› turns to a cabinet, now in view (and big enough to tap)', !!faced && faced.x > 20 && faced.x < 370 && Math.min(faced.w, faced.h) >= 44, JSON.stringify({ key, faced }));
+    // a tap on a cabinet's door or sign is a tap on the cabinet, never on one book (and on the canvas, not the bar)
     const tapAt = await page.evaluate((key) => {
-      const m = window.__market;
+      const m = window.__market, cv = document.querySelector('#stage canvas');
       for (const name of [`engine_cabinet_proxy_${key}`, `sign_cat_${key}`, `act_cab_${key}`]) {
         const c = m.screenPoint(name);
         if (!c?.onScreen) continue;
-        for (let r = 0; r <= 30; r += 3) for (let a = 0; a < 12; a++) {
+        for (let r = 0; r <= 60; r += 4) for (let a = 0; a < 12; a++) {
           const x = c.x + Math.cos(a * Math.PI / 6) * r, y = c.y + Math.sin(a * Math.PI / 6) * r;
+          if (document.elementFromPoint(x, y) !== cv) continue;
           if (m.pickAt(x, y)?.proxy === `cabinet:${key}`) return { x, y, via: name };
         }
       }
@@ -707,7 +720,7 @@ try {
     await page.keyboard.press('ArrowDown');
     await frames(page, 2);
     const nextCab = await page.evaluate(() => window.__market.handlers.cabinetState());
-    check('↓ opens the next cabinet (the first one shuts)', nextCab?.key === cabs[1].key && nextCab.open, JSON.stringify(nextCab));
+    check('↓ opens the next cabinet (the first one shuts)', nextCab?.key === cabs[(kIdx + 1) % cabs.length].key && nextCab.open, JSON.stringify(nextCab));
     await page.keyboard.press('ArrowUp');
     await frames(page, 2);
     check('↑ goes back to the cabinet before', (await page.evaluate(() => window.__market.handlers.cabinetState()?.key)) === key);

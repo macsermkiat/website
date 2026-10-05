@@ -153,6 +153,12 @@ mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-rad
 .stopbar .goods[open] .goodslist { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: min(560px, 86vw); max-height: 190px; overflow: auto; background: rgba(10, 12, 22, .92); border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
 .stepback { position: absolute; right: 12px; top: 12px; z-index: 4; display: none; min-height: 36px; font-size: 14px; }
 .closeup .stepback { display: inline-block; }
+/* a narrow screen at the Bücherstand: turn to the cabinets off either edge (hidden in a close-up, while reading) */
+.cabturn { position: absolute; top: 42%; z-index: 4; display: none; min-width: 44px; min-height: 56px; padding: 0 10px; font-size: 26px; line-height: 1; background: rgba(10, 12, 22, .72); }
+.cabturn.left { left: 8px; } .cabturn.right { right: 8px; }
+@media (max-width: 640px) {
+  html[data-stop="books"][data-walking="false"]:not(.closeup):not(.reading) .cabturn { display: inline-block; }
+}
 .reading .stepback, .reading .stopbar { display: none; }
 .readbar .readtitle { font-size: 13.5px; color: var(--ink); padding: 0 6px; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; }
 .readbar .readtitle:focus-visible { outline: 2px solid var(--gold); border-radius: 4px; }
