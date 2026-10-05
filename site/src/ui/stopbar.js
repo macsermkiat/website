@@ -12,8 +12,8 @@ export function createStopbar({ actionsFor, itemsFor, readsFor, onRead, onStep, 
   const prev = $('prevStop'), next = $('nextStop'), fold = $('stopFold');
   let current = null;
   let steps = { prev: null, next: null };
-  // On a small screen a busy stop (the ornament shop's seven things to do) would cover the lower third of the
-  // stall, so its buttons fold into one "Things to do" button. A visitor who opens it keeps it open.
+  // On a small screen a busy stop would cover the lower third of the stall, so its buttons fold into one "Things to
+  // do" button; the ornament shop always folds there. A visitor who opens it keeps it open.
   const small = window.matchMedia?.('(max-width: 640px), (max-height: 720px)');
   let userOpen = false;
 
@@ -27,7 +27,9 @@ export function createStopbar({ actionsFor, itemsFor, readsFor, onRead, onStep, 
     fold.hidden = true;
     const count = acts.children.length + (goods.hidden ? 0 : 1);
     const tall = bar.offsetHeight > 0.2 * window.innerHeight;
-    const can = !!small?.matches && count > 3 && tall;
+    // the ornament shop (round 9) always folds on a small screen: its moments want the whole stall in view, as an
+    // open Bücherstand cabinet does
+    const can = !!small?.matches && ((count > 3 && tall) || (current === 'schmuck' && count > 1));
     fold.hidden = !can;
     fold.textContent = `Things to do (${acts.children.length})`;
     if (can && !userOpen) setFolded(true);

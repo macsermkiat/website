@@ -50,7 +50,8 @@ export function createItems(ctx) {
   for (const place of Object.values(market.places)) scanPlace(place);
 
   const sub = { ...ctx, items: { of: (id, kind) => (byPlace[id] || []).filter((i) => !kind || i.kind === kind), add, own, release, settle } };
-  const handlers = [createBeer(sub), createGluehwein(sub), createWurst(sub), createBooks(sub), createSchmuck(sub)];
+  const shop = createSchmuck(sub);
+  const handlers = [createBeer(sub), createGluehwein(sub), createWurst(sub), createBooks(sub), shop];
   const onClick = {};
   for (const h of handlers) Object.assign(onClick, h.kinds || {});
 
@@ -149,6 +150,8 @@ export function createItems(ctx) {
       return boxOf(item.node).getCenter(new THREE.Vector3());
     },
     all: () => [...byNode.values()],
+    /** The ornament shop's moments (round 9): the main loop calls its pre/post/beforeRender hooks. */
+    shop,
     of: (id, kind) => (byPlace[id] || []).filter((i) => !kind || i.kind === kind),
     handlers: Object.assign({}, ...handlers.map((h) => h.api || {})),
     /** A place was closed or the view went home: put everything that stands out back. */

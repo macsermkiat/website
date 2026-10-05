@@ -463,6 +463,9 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
     return person;
   });
   const vendors = crowd.filter((p) => p.vendor);
+  // stalls whose vendor has stepped back out of a camera moment (round 9: the view over the Schwibbogen stands
+  // where the ornament seller does)
+  const away = new Set();
   let lodOn = false;
   let frameNo = 0, updateMs = 0;
   const mixStats = { ran: 0, throttled: 0, far: 0 };
@@ -675,6 +678,8 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
     },
     /** For tests: the people stepped out of the current shot. */
     hiddenIds: () => crowd.filter((p) => !p.g.visible).map((p) => p.g.name),
+    /** A stall's vendor steps out of view (on) or back (off). */
+    stepOut(stall, on) { if (on) away.add(stall); else away.delete(stall); for (const p of vendors) if (p.plan.stall === stall) p.g.visible = !on; },
     /** For tests: everyone's name, feet position, visibility and whether they are a vendor. */
     people: () => crowd.map((p) => ({ name: p.g.name, pos: p.g.position.toArray(), visible: p.g.visible, vendor: p.vendor, stall: p.plan.stall || null })),
     speak,
@@ -707,6 +712,7 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
         // vendor in view (the queue at the counter), steps out of the shot.
         const wasVisible = p.g.visible;
         if (look) p.g.visible = p.vendor || !(seg < 20 && (blocks(p.g.position, camera.position, segDir, seg) || blocksVendor(p.g.position, camera.position) || inCloseUp(p.g.position, camera.position, segDir, seg)));
+        if (p.vendor && away.size && away.has(p.plan.stall)) p.g.visible = false;
         if (p.far) {
           if (!p.g.visible) { if (p.far.on) { p.far.fig.hide(p.far.slot); p.far.on = false; p.levels[0].root.visible = true; } }
           else applyLod(p, _cp);

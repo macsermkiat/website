@@ -12,7 +12,7 @@ export function infoOf(node) {
 /** Kind of an act_ node: items.json's `kind`, else the word after act_ (act_glass_3 -> glass). */
 export function kindOf(node) {
   // the ornament shop's goods (act_orn_<kind>_<n>, ADR 0004) are one kind for the clicks; their own action is in
-  // items.json (`action`: ring, light, jaw, smoke, candles, hang, find)
+  // items.json (`action`: harmonica, dive, candles; round 9 left only these three)
   if (/^act_orn_/i.test(node.name || '')) return /_mesh(_\d+)?(\.\d+)?$/i.test(node.name) ? null : 'orn';
   const k = infoOf(node).kind;
   if (k) return String(k).toLowerCase();

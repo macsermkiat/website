@@ -35,7 +35,7 @@ CROWD = os.path.join(REPO, "site", "src", "crowd.json")
 MODELS = os.path.join(REPO, "site", "public", "models")
 FURN = os.path.join(HERE, "out", "furniture.json")
 NODES = os.path.join(HERE, "out", "stroll_nodes.json")
-REVIEW = os.path.join(REPO, "review", "round-8", "architect")
+REVIEW = os.path.join(REPO, "review", "round-9", "architect")
 
 EYE = 1.6               # walking eye height (m)
 CLEAR_M = 0.7           # from a stall's, ride's or the tree's surface in the walking band (0.05-2.2 m)
@@ -795,7 +795,7 @@ def draw_map(stops, legs, solid, ppl, movers, places, furn, dp=None, named=None,
             bbox=dict(boxstyle="round", fc="#111", ec="#555", alpha=0.9))
     ax.set_xlim(-34, 34); ax.set_ylim(36, -32)        # +z toward the bottom: the home camera is at the bottom
     ax.set_aspect("equal")
-    ax.set_title("Guided stroll, round 8: top-down check (three.js x right, z down; home camera at the bottom)",
+    ax.set_title("Guided stroll, round 9: top-down check (three.js x right, z down; home camera at the bottom)",
                  color="w", fontsize=11)
     fig.patch.set_facecolor("#111")
     ax.tick_params(colors="#aaa")

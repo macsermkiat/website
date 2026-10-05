@@ -15,14 +15,32 @@ export function audioContext() {
 // button silences all of it at once.
 let out = null;
 let muted = false;
+let hushFilter = null, hushGain = null;
 export function output() {
   const ac = audioContext();
   if (!out) {
     out = ac.createGain();
     out.gain.value = muted ? 0 : 1;
-    out.connect(ac.destination);
+    // the hush (round 9: inside the mirror ball the market sounds as through glass): a low-pass and a small dip,
+    // wide open the rest of the time
+    hushFilter = ac.createBiquadFilter();
+    hushFilter.type = 'lowpass';
+    hushFilter.frequency.value = 20000;
+    hushFilter.Q.value = 0.5;
+    hushGain = ac.createGain();
+    out.connect(hushFilter); hushFilter.connect(hushGain); hushGain.connect(ac.destination);
   }
   return out;
+}
+
+/** Hush every sound (0 open .. 1 as if heard through a glass ball) over `seconds`. Does nothing before sound starts. */
+export function setHush(amount, seconds = 1) {
+  if (!out || !hushFilter) return;
+  const t = out.context.currentTime, k = Math.max(0, Math.min(1, amount));
+  hushFilter.frequency.cancelScheduledValues(t);
+  hushFilter.frequency.setTargetAtTime(20000 * Math.pow(900 / 20000, k), t, seconds / 3);
+  hushGain.gain.cancelScheduledValues(t);
+  hushGain.gain.setTargetAtTime(1 - 0.35 * k, t, seconds / 3);
 }
 
 /** Mute or unmute every sound (band and stall sounds). Works before the context exists. */

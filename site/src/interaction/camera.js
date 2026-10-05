@@ -31,6 +31,8 @@ export function createCameraRig({ camera, dom, home, motion }) {
   let mode = 'home';
   let move = null; // walk or fly in progress
   let ride = null;
+  let drive = null; // a moment (the ornament shop's) steering the camera itself: { poseFn, onCancel, near, fov }
+  const claims = []; // pointer claims: f(pointerdownEvent) -> true when a gesture (the glass harmonica) takes it
   let T = 0, idle = 0;
   const listeners = { arrive: [] };
   camera.position.copy(HOME.pos);
@@ -41,6 +43,7 @@ export function createCameraRig({ camera, dom, home, motion }) {
   /** Start a move along `points` (Vector3[], camera positions) to `view`. Direct when points has two entries. */
   function start(kind, points, view, { onArrive, duration } = {}) {
     if (ride) { camera.near = 0.1; camera.updateProjectionMatrix(); ride = null; }
+    if (drive) endDrive(true);
     const fromT = controls.target.clone();
     const pts = points.map((p) => p.clone());
     const curve = pts.length > 2 ? new THREE.CatmullRomCurve3(pts, false, 'centripetal', 0.5) : null;
@@ -66,6 +69,17 @@ export function createCameraRig({ camera, dom, home, motion }) {
     listeners.arrive.forEach((f) => f(m?.kind));
   }
 
+  /** Stop a drive: the camera's near plane and field of view come back; a cancelled drive tells its owner. */
+  function endDrive(cancelled) {
+    const d = drive;
+    drive = null;
+    camera.near = d.near0;
+    camera.fov = d.fov0;
+    camera.up.set(0, 1, 0);
+    camera.updateProjectionMatrix();
+    if (cancelled) d.onCancel?.();
+  }
+
   const _p = new THREE.Vector3(), _t = new THREE.Vector3(), _a = new THREE.Vector3(), _d = new THREE.Vector3();
 
   const rig = {
@@ -74,6 +88,8 @@ export function createCameraRig({ camera, dom, home, motion }) {
     get mode() { return mode; },
     get moving() { return !!move; },
     get riding() { return ride; },
+    /** A moment is steering the camera (the Schwibbogen's view over the arch, the mirror ball's dive). */
+    get driving() { return drive ? drive.type : null; },
     get rest() { return { pos: rest.pos.clone(), target: rest.target.clone() }; },
     get look() { return { yaw: look.yaw, pitch: look.pitch, zoom: look.zoom }; },
     get progress() { return move ? { kind: move.kind, t: move.t, dur: move.dur, length: move.len } : null; },
@@ -102,6 +118,32 @@ export function createCameraRig({ camera, dom, home, motion }) {
       mode = 'stop';
       if (view) { controls.target.copy(view.target); start('fly', [camera.position.clone(), view.pos.clone()], view); }
     },
+    /**
+     * Let a moment steer the camera: poseFn(dt) -> { pos, target, fov? } every frame until release() (or until a
+     * walk, a fly or a ride takes over, when onCancel runs). `near` sets the near plane (the dive comes within
+     * centimetres of the glass).
+     */
+    drive(type, poseFn, { near = 0.1, onCancel = null } = {}) {
+      if (drive) endDrive(true);
+      if (ride) rig.endRide(null);
+      move = null;
+      drive = { type, poseFn, onCancel, near0: camera.near, fov0: camera.fov };
+      camera.near = near;
+      camera.updateProjectionMatrix();
+      mode = 'drive';
+    },
+    /** End a drive: fly to `view` (the stop's), or cut there with `cut`; null rests where the camera is. */
+    release(view, { cut = false, duration } = {}) {
+      if (!drive) return;
+      endDrive(false);
+      mode = 'stop';
+      if (!view) { rest.pos.copy(camera.position); rest.target.copy(controls.target); return; }
+      rest.home = false;
+      if (cut) { rest.pos.copy(view.pos); rest.target.copy(view.target); move = { onArrive: null }; finish(); return; }
+      start('fly', [camera.position.clone(), view.pos.clone()], view, { duration });
+    },
+    /** A gesture that takes a pointer before the look-around does: f(pointerdown) -> true to claim it. */
+    claim(f) { claims.push(f); },
     /** Turn the head (radians) and zoom (fraction) within the stop's small band. */
     nudge(dYaw, dZoom = 0, dPitch = 0) {
       if (mode !== 'stop' && mode !== 'home') return;
@@ -115,6 +157,17 @@ export function createCameraRig({ camera, dom, home, motion }) {
     update(dt) {
       T += dt;
       idle += dt;
+      if (drive) {
+        const pose = drive.poseFn(dt);
+        if (pose) {
+          camera.position.copy(pose.pos);
+          controls.target.copy(pose.target);
+          if (pose.fov && Math.abs(camera.fov - pose.fov) > 1e-3) { camera.fov = pose.fov; camera.updateProjectionMatrix(); }
+          if (pose.up) camera.up.copy(pose.up); else camera.up.set(0, 1, 0);
+          camera.lookAt(controls.target);
+        }
+        return;
+      }
       if (ride) {
         ride.ease = Math.min(1, ride.ease + dt * (motion.reduced ? 10 : 0.7));
         const pose = ride.poseFn();
@@ -188,6 +241,8 @@ export function createCameraRig({ camera, dom, home, motion }) {
   let drag = null;
   const pinch = new Map();
   dom.addEventListener('pointerdown', (e) => {
+    // a gesture that claims the pointer (brushing the glass harmonica) keeps the head still
+    if (!drive && claims.some((f) => { try { return f(e); } catch { return false; } })) { drag = null; return; }
     if (e.pointerType === 'touch') pinch.set(e.pointerId, [e.clientX, e.clientY]);
     drag = { x: e.clientX, y: e.clientY, id: e.pointerId };
   });

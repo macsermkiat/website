@@ -191,6 +191,18 @@ async function boot() {
     // the keyboard's focus on one item (a book in an open cabinet): outlined, and said
     highlight: (node) => { if (outline) outline.selectedObjects = node ? [node] : []; },
     announce: (t) => announce(t),
+    // the ornament shop's moments (round 9) drive the camera, draw a reflection and a post pass, and step the
+    // shop's vendor out of the view over the counter
+    renderer, dom: renderer.domElement,
+    composer: () => composer,
+    lights: () => lightInfo.lights,
+    bloom: () => lighting.raw?.bloom || composer.passes?.find((p) => p.highPassUniforms || /bloom/i.test(p.constructor?.name || '')) || null,
+    renderNow: () => renderMarket(0),
+    guide: () => guide,
+    picking: () => picking,
+    reading: () => world?.isOpen,
+    stepOut: (on) => crowd.stepOut?.('deco-schmuck', on),
+    sfxLog: (e) => { sfxLog.push(e); if (sfxLog.length > 40) sfxLog.shift(); },
   });
 
   /** A click on a writing surface (or its probe in the tests): read it, turn its page, or park the wheel first. */
@@ -300,6 +312,7 @@ async function boot() {
       compact([rec]);
       const place = rec.entry.place && market.places[rec.entry.place];
       if (place) market.mergeGoods(place);
+      if (place?.id === 'schmuck' || rec.entry.kind === 'town') actions.shop?.refresh();
       market.snow.forEach((o) => (o.visible = snowOn));
       if (renderer.shadowMap.autoUpdate === false) renderer.shadowMap.needsUpdate = true;
       picking?.refresh();
@@ -486,7 +499,8 @@ async function boot() {
     guide.home();
   }
   $('reset').addEventListener('click', resetView);
-  $('stepBack').addEventListener('click', () => { guide.back(); });
+  // Step back: out of a shop moment first (the view over the Schwibbogen, the dive into the mirror ball)
+  $('stepBack').addEventListener('click', () => { if (actions.shop?.end()) return; guide.back(); });
   $('cabTurnL').addEventListener('click', () => actions.items.handlers.turnCabinets?.(-1));
   $('cabTurnR').addEventListener('click', () => actions.items.handlers.turnCabinets?.(1));
   setupMute($('mute'), audio);
@@ -499,8 +513,8 @@ async function boot() {
     reading: () => world.isOpen,
     readPage: (d) => world.goTo((world.current?.view ?? 0) + d),
     closeRead: () => world.close(),
-    endRide: () => actions.rides.endRide(false),
-    isRiding: () => !!actions.rides.riding,
+    endRide: () => { if (actions.shop?.end()) return; actions.rides.endRide(false); },
+    isRiding: () => !!actions.rides.riding || !!actions.shop?.busy,
     // at the Bücherstand the arrows move between its cabinets and their books first
     localKey: (k) => guide.arrived && guide.here === 'books' && !rig.riding && !!actions.items.handlers.cabinetKey?.(k),
   });
@@ -553,7 +567,14 @@ async function boot() {
     w0.w = stage.clientWidth; w0.h = stage.clientHeight;
     crowd.update(dt, T, camera, w0.w, w0.h, { still, look: rig.controls.target });
     note.update(dt, camera);
+    actions.shop?.pre();
     try { lighting.update(dt, T); } catch { /* the lighting module's own business */ }
+    actions.shop?.post(dt);
+  }
+  /** Draw the market: the shop's mirror reflection first (when it is in view), then the composer. */
+  function renderMarket(dt) {
+    try { actions.shop?.beforeRender(); } catch (e) { warn(`shop reflection: ${e?.message || e}`); }
+    composer.render(dt);
   }
   function frame() {
     if (frozen) { requestAnimationFrame(frame); return; }
@@ -561,7 +582,7 @@ async function boot() {
     const rawDt = timer.getDelta();
     const dt = Math.min(rawDt, 0.1);
     step(dt);
-    composer.render(dt);
+    renderMarket(dt);
     perf?.frame(rawDt);
     governor?.frame(rawDt);
     frames++;
@@ -639,6 +660,7 @@ async function boot() {
   function goodsList(id) {
     const featured = new Set(actions.featuredBooks);
     const list = actions.items.of(id).filter((it) => it.clickable && !['tap', 'lid', 'kettle', 'pot', 'served'].includes(it.kind))
+      .filter((it) => !/^act_orn_candle_/i.test(it.node.name)) // the Schwibbogen's candles light with the arch
       .filter((it) => it.kind !== 'book' || featured.has(it.node) || !!it.info.slug || /counter/i.test(it.info.where || ''));
     const seen = {};
     const total = {};
@@ -771,7 +793,7 @@ async function boot() {
     freeze(on = true) { frozen = !!on; if (!frozen) timer.reset?.(); },
     advance(seconds) { for (let t = 0; t < seconds; t += 0.05) step(0.05); },
     /** For tests: draw a frame now and return the canvas as a data URL (the market only, no page around it). */
-    snapshot(type = 'image/jpeg', quality = 0.86) { composer.render(0); return renderer.domElement.toDataURL(type, quality); },
+    snapshot(type = 'image/jpeg', quality = 0.86) { renderMarket(0); return renderer.domElement.toDataURL(type, quality); },
     get audio() { return { playing: audio.playing, mode: audio.mode, phase: audio.phase, levels: { ...audio.levels }, where: audio.where(), endings: audio.endings, alternatesReady: audio.alternatesReady }; },
     seekSong: (pos, pass) => audio.seek(pos, pass),
     get rideStage() { return actions.rides.stage; },
@@ -814,7 +836,7 @@ async function boot() {
     tipAt: (x, y, text) => picking.tipAt(x, y, text),
     hoverAt(x, y) { renderer.domElement.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, pointerType: 'mouse', bubbles: true })); },
     get hoveredItem() { return actions.items.hovered?.node.name || null; },
-    renderFrame() { composer.render(0.016); },
+    renderFrame() { renderMarket(0.016); },
     muted: () => audio.muted,
     screenPoint(name) {
       const o = scene.getObjectByName(name);

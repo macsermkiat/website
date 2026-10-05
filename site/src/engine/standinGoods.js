@@ -121,87 +121,55 @@ export function addStandinGoods(place, { warn }) {
     }
     added = n > 0;
   }
-  // the ornament shop without the vendor's goods (ADR 0004): a rail of baubles, the pickle among the green ones, a
-  // Herrnhut star, a nutcracker, a smoker, a candle arch and a little tree with hooks, under the usual act_orn_ names
+  // the ornament shop without the vendor's goods (ADR 0004, round-9 revision): its three interactive pieces under
+  // the vendor's names, a glass-harmonica row of twelve baubles, the mercury-glass ball with its dive cameras, and
+  // the Schwibbogen with seven candles
   if (id === 'schmuck' && !has(nodes, 'act_orn_')) { addStandinOrnaments(counter, M); added = true; }
   if (added) warn?.(`${place.entry.id}: no act_ props yet; added stand-in goods for the panel actions.`);
   return added;
 }
 
-const NOTE_ROW = ['C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5', 'C6'];
 function addStandinOrnaments(counter, M) {
   const g = under(counter, 'standin_goods_schmuck');
-  const glass = (hex) => new THREE.MeshStandardMaterial({ color: hex, roughness: 0.18, metalness: 0.35 });
+  const glass = (hex, name = 'vendor_mercury') => new THREE.MeshStandardMaterial({ name, color: hex, roughness: 0.12, metalness: 0.8 });
   const item = (o, info) => { o.userData.item = info; return o; };
-  // a brass rail over the counter, the baubles hanging from it (each pivot at its ribbon's top)
-  const rail = mesh(new THREE.CylinderGeometry(0.008, 0.008, 1.9, 8), M.metal, 0, 0.62, -0.05);
+  // the glass harmonica: a brass rail over the counter's front, twelve baubles hanging from it, left to right
+  const rail = mesh(new THREE.CylinderGeometry(0.008, 0.008, 2.1, 8), M.metal, 0, 0.95, 0.2);
   rail.rotation.z = Math.PI / 2;
   g.add(rail);
-  const cols = [0xa3162c, 0xc9a13a, 0x1f4f8a, 0xa3162c, 0x2e6b3a, 0xc9a13a, 0x6a2a7a, 0xe8e2d4];
-  NOTE_ROW.forEach((note, i) => {
-    const b = item(new THREE.Group(), { action: 'ring', note, hangable: true, label: `Glaskugel · ${note}` });
-    b.name = `act_orn_bauble_${i}`;
-    b.position.set(-0.85 + i * 0.2, 0.62, -0.05);
-    const ball = mesh(new THREE.SphereGeometry(0.035, 16, 12), glass(cols[i]), 0, -0.1, 0);
-    const string = mesh(new THREE.CylinderGeometry(0.0015, 0.0015, 0.065, 4), M.metal, 0, -0.032, 0);
+  const cols = [0xd8d8dc, 0xd9b26a];
+  for (let i = 0; i < 12; i++) {
+    const b = item(new THREE.Group(), { action: 'harmonica', index: i, label: `Glasharmonika · Kugel ${i + 1} von 12` });
+    b.name = `act_orn_harmonica_${i}`;
+    b.position.set(-0.935 + i * 0.17, 0.95, 0.2);
+    const r = 0.047 - i * 0.0013;
+    const ball = mesh(new THREE.SphereGeometry(r, 16, 12), glass(cols[i % 2]), 0, -0.13 - r, 0);
+    const string = mesh(new THREE.CylinderGeometry(0.0015, 0.0015, 0.13, 4), M.metal, 0, -0.065, 0);
     b.add(ball, string);
     g.add(b);
-  });
-  const pickle = item(new THREE.Group(), { action: 'find', hangable: true, reward: true, label: 'Weihnachtsgurke', detail: 'The Christmas pickle: whoever finds it gets an extra present. You found it!' });
-  pickle.name = 'act_orn_pickle';
-  pickle.position.set(0.95, 0.62, -0.05);
-  const pk = mesh(new THREE.CapsuleGeometry(0.016, 0.06, 4, 8), glass(0x3f6b2a), 0, -0.09, 0);
-  pickle.add(pk);
-  g.add(pickle);
-  // the Herrnhut star: a paper shell round a warm core
-  const star = item(new THREE.Group(), { action: 'light', label: 'Herrnhuter Stern' });
-  star.name = 'act_orn_herrnhut';
-  star.position.set(-1.05, 0.62, -0.05);
-  const shell = mesh(new THREE.IcosahedronGeometry(0.07, 0), new THREE.MeshStandardMaterial({ color: 0xf2e6c8, roughness: 0.8, flatShading: true }), 0, -0.12, 0);
-  const core = mesh(new THREE.SphereGeometry(0.03, 10, 8), new THREE.MeshStandardMaterial({ name: 'orn_core', color: 0xffd9a0, emissive: 0xffc27a, emissiveIntensity: 0.2 }), 0, -0.12, 0);
-  core.name = 'herrnhut_core';
-  star.add(shell, core);
-  g.add(star);
-  // the nutcracker: a body, and a jaw hinged at its back
-  const nut = item(new THREE.Group(), { action: 'jaw', label: 'Nussknacker', jaw: 'act_orn_nutcracker_jaw' });
-  nut.name = 'act_orn_nutcracker';
-  nut.position.set(-0.7, 0, 0.05);
-  nut.add(mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.24, 10), colorMat(0xa3162c, 0.6), 0, 0.12, 0));
-  nut.add(mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 10), colorMat(0xe8c9a0, 0.7), 0, 0.28, 0));
-  const jaw = mesh(new THREE.BoxGeometry(0.05, 0.02, 0.04), colorMat(0xf2f2ee, 0.8), 0, 0.245, 0.02, 'act_orn_nutcracker_jaw');
-  nut.add(jaw);
-  g.add(nut);
-  // the Räuchermännchen, smoke at its mouth
-  const smoker = item(new THREE.Group(), { action: 'smoke', label: 'Räuchermännchen', fx: 'fx_smoke_1' });
-  smoker.name = 'act_orn_smoker';
-  smoker.position.set(-0.35, 0, 0.05);
-  smoker.add(mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.2, 10), colorMat(0x2e4f7a, 0.7), 0, 0.1, 0));
-  const fx = new THREE.Object3D(); fx.name = 'fx_smoke_1'; fx.position.set(0, 0.2, 0.04); smoker.add(fx);
-  g.add(smoker);
-  // the Schwibbogen: an arch with five candles, flames out
+  }
+  // the mercury-glass ball, 18 cm, on its own hook to the left, with the cameras for the dive
+  const ball = item(new THREE.Group(), { action: 'dive', label: 'Spiegelkugel · 18 cm', cam: 'cam_dive', cam_target: 'cam_dive_target' });
+  ball.name = 'act_orn_mirrorball';
+  ball.position.set(-1.45, 1.05, 0.55);
+  ball.add(mesh(new THREE.SphereGeometry(0.09, 32, 20), glass(0xcfcfd4), 0, -0.119, 0));
+  const cam = (n, x, y, z) => { const o = new THREE.Object3D(); o.name = n; o.position.set(x, y, z); ball.add(o); };
+  cam('cam_dive', 0.051, -0.119, 0.141); cam('cam_dive_target', 0, -0.119, 0); cam('cam_dive_approach', 0.238, -0.119, 0.658);
+  g.add(ball);
+  // the Schwibbogen: an arch with seven candles, flames out; they light from the outside in
   const arch = item(new THREE.Group(), { action: 'candles', label: 'Schwibbogen' });
   arch.name = 'act_orn_schwibbogen';
-  arch.position.set(0.2, 0, 0.05);
-  const bow = mesh(new THREE.TorusGeometry(0.2, 0.012, 6, 24, Math.PI), colorMat(0x7a5230, 0.8), 0, 0.02, 0);
+  arch.position.set(-0.42, 0, -0.11);
+  const bow = mesh(new THREE.TorusGeometry(0.21, 0.014, 6, 28, Math.PI), colorMat(0x7a5230, 0.8), 0, 0.03, 0);
   arch.add(bow);
   const flameMat = new THREE.MeshStandardMaterial({ name: 'flame', color: 0xffc070, emissive: 0xffa040, emissiveIntensity: 2.5 });
-  for (let i = 0; i < 5; i++) {
-    const a = Math.PI * (0.15 + 0.175 * i);
+  for (let i = 0; i < 7; i++) {
+    const a = Math.PI * (0.1 + (0.8 * i) / 6);
     const c = new THREE.Group(); c.name = `act_orn_candle_${i}`;
-    c.position.set(Math.cos(a) * 0.2, 0.02 + Math.sin(a) * 0.2 + 0.03, 0);
-    c.add(mesh(new THREE.ConeGeometry(0.006, 0.02, 6), flameMat, 0, 0.01, 0));
-    c.userData.item = { action: 'light', label: `Kerze ${i + 1}` };
+    c.position.set(Math.cos(a) * 0.21, 0.03 + Math.sin(a) * 0.21 + 0.035, 0);
+    c.add(mesh(new THREE.ConeGeometry(0.006, 0.022, 6), flameMat, 0, 0.011, 0));
+    c.userData.item = { action: 'light', order: Math.min(i, 6 - i), label: `Kerze ${i + 1} am Schwibbogen` };
     arch.add(c);
   }
   g.add(arch);
-  // a little display tree with hooks
-  const tree = new THREE.Group(); tree.name = 'standin_display_tree'; tree.position.set(0.7, 0, 0.05);
-  tree.add(mesh(new THREE.ConeGeometry(0.16, 0.5, 10), colorMat(0x234a2c, 0.9), 0, 0.3, 0));
-  for (let i = 0; i < 8; i++) {
-    const h = new THREE.Object3D(); h.name = `hook_tree_${i}`;
-    const a = i * 2.4, y = 0.12 + (i % 4) * 0.09, r = 0.15 - (i % 4) * 0.03;
-    h.position.set(Math.cos(a) * r, y, Math.sin(a) * r + 0.02);
-    tree.add(h);
-  }
-  g.add(tree);
 }

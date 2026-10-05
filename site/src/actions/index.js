@@ -20,7 +20,7 @@ export function createActions(ctx) {
     // the ornament shop (ADR 0004): for play, its buttons are its ornaments' actions
     get schmuck() {
       const list = items.handlers.schmuckActs?.() || [];
-      return list.length ? { hint: 'Click a bauble to ring it, the star to light it, the nutcracker, the smoker or the candle arch; hang ornaments on the little tree, and look for the pickle.', acts: list } : null;
+      return list.length ? { hint: 'Three things to try: light the candle arch and watch the town wake, brush the twelve glass baubles to play the ballad, and look into the big mercury-glass ball.', acts: list } : null;
     },
   };
   return {
@@ -30,6 +30,7 @@ export function createActions(ctx) {
     retract: () => items.retract(),
     featuredBooks: items.handlers.featuredBooks || [],
     rides,
+    shop: items.shop,
     bandPositions: band.positions,
     update(dt, t, still) {
       anim.update(dt);
