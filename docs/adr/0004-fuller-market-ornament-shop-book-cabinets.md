@@ -55,7 +55,7 @@ Dressing (sparkle in three tiers, with dark wood left between clusters):
 - Subtle: snow globes, spun-glass birds, two more lit Herrnhut stars at different heights.
 - The nutcracker, smoker (smoking on its own), pyramid and the rest are decoration, not clicks.
 
-Interactions (recommended set, pending Mac; three only, each a moment):
+Interactions (Mac said "ok" to the recommended set on 2026-10-05; three only, each a moment):
 1. Hero: the Schwibbogen wakes the town. Its candles light one by one from the outside in; with each flame more windows in the old town turn warm, a low chord builds, and the last flame sends a slow wave of light across the market before it settles.
 2. Glass harmonica: the baubles on the front rail are tuned to the ballad's melody. Brushing across them (drag or tap in order) plays it with long glassy decays; after a pause the next bauble glows faintly so visitors find the tune.
 3. Reflection dive: tapping the big mercury-glass bauble moves the camera in until the curved, live reflection of the lit market fills the view, then crossfades into the market seen from inside the glass, hushed like a snow globe, and back out.

@@ -318,7 +318,8 @@ EMBLEM = {"physics": "orbit", "lives": "burst", "mind": "spiral", "people": "bub
 def g_cover(b):
     """Round 8 (ADR 0004): a designed front cover in the category's family: the category colour and pattern,
     the German category name at the head, the title on a solid panel, a small emblem, the author in capitals.
-    The cabinet's lip hides the bottom few per cent, so nothing sits below 0.9 of the height. Original
+    The cabinet's lip hides the bottom few per cent, so nothing sits below 0.875 of the height
+    (round 8 pass 2: the author block moved up, clear of the top board's lip seen from below). Original
     typography only, no publisher artwork."""
     def f(w, h, seed):
         t = _cover_base(w, h, seed + 5, b["col"], "paper")
@@ -344,19 +345,19 @@ def g_cover(b):
         ew, eh = int(w * 0.5), int(h * 0.13)
         small = _motif(EMBLEM[b["category"]], ew, int(h * 0.5), h * 0.25)[int(h * 0.25) - eh // 2:][:eh]
         em = np.zeros((h, w))
-        ey, ex = int(h * 0.665) - eh // 2, (w - ew) // 2
+        ey, ex = int(h * 0.645) - eh // 2, (w - ew) // 2
         em[ey:ey + small.shape[0], ex:ex + ew] = small
         t.paint(em * 0.95, acc, 0.4)
-        t.paint(((np.abs(yy - h * 0.755) < 1.0) & (np.abs(xx - w / 2) < w * 0.14)).astype(float), acc, 0.4)
-        t.paint(((np.abs(yy - h * 0.9) < 1.0) & (xx > w * 0.08) & (xx < w * 0.92)).astype(float) * 0.8, acc, 0.4)
+        t.paint(((np.abs(yy - h * 0.722) < 1.0) & (np.abs(xx - w / 2) < w * 0.14)).astype(float), acc, 0.4)
+        t.paint(((np.abs(yy - h * 0.872) < 1.0) & (xx > w * 0.08) & (xx < w * 0.92)).astype(float) * 0.8, acc, 0.4)
         # round 8 pass 2: the author's name on its own solid band (panel colour), so it reads at cam_cat
-        t.paint(((yy > h * 0.778) & (yy < h * 0.874) & (xx > w * 0.06) & (xx < w * 0.94)).astype(float) * 0.9, panel, 0.5)
+        t.paint(((yy > h * 0.735) & (yy < h * 0.858) & (xx > w * 0.06) & (xx < w * 0.94)).astype(float) * 0.9, panel, 0.5)
         title, author = b["title"], b["author"]
         tink = ink if b["panel"] != "f4ead2" else hexc("1c1a18")
         rows_t = _text_block(w, h, title.upper() if up else title, fn, wg, h * 0.105, (x1 - x0) * 0.84,
                              (y0 + y1) / 2, 4, lead=1.08)
         rows_a = _text_block(w, h, author.upper(), "oswald" if up or fn == "bebas" else fn, 600, h * 0.052,
-                             w * 0.84, h * 0.825, 2, lead=1.1)
+                             w * 0.84, h * 0.7965, 2, lead=1.1)
         lab = b["label_de"].upper()
         rows_l = [(lab, "oswald", min(h * 0.042, va.fit_size(lab, "oswald", h * 0.042, 500, w * 0.86)), 500,
                    (w / 2, h * 0.044), "mm")]
