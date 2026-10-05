@@ -1,5 +1,5 @@
-// The panel buttons of the four section stalls: pour a mug, pull a pint, Prost, turn the sausages, a sausage in
-// a bun, and pick a book. Each drives the same code as clicking the item itself (actions/items/*); a stand-in
+// The panel buttons of the four section stalls: pour a mug, pull a pint, Prost, a Bratwurst in a bun, mix a plate,
+// and pick a book. Each drives the same code as clicking the item itself (actions/items/*); a stand-in
 // stall without those items falls back to the prototype's versions made here.
 import * as THREE from 'three';
 import { act, acts, counterLocal, toLocal, worldOf } from './util.js';
@@ -131,25 +131,27 @@ export function createStallActions(ctx) {
   const prostBier = () => { if (H.beerReady) H.prostBier(); else prost('bier'); };
   const prostGlueh = () => { prost('glueh'); if (H.mugsReady) H.prostMugs(); };
 
-  // ---------- Bratwurst ----------
-  function turnSausages() {
-    if (H.sausagesReady) return H.turnAll();
-    sfx('sizzle');
-    say(actionNote('wurst', 'turn', 'Turned. Nicely browned on this side.', { n: 0 }));
-  }
+  // ---------- Bratwurst (round 10: the plate) ----------
   function bun() {
-    if (H.rollsReady && H.bunNext()) return;
+    if (H.plateReady && H.bunPlate()) return;
     sfx('sizzle');
     say(actionNote('wurst', 'bun', 'One Bratwurst im Brötchen with mustard. <em>That will be 4 euros.</em>'));
     if (P.wurst) crowdSay(crowdLine('wurst', 'bun', 'Smells good!'), P.wurst.center.clone().setY(0), 9);
   }
+  function mixPlate() {
+    if (H.plateReady && H.mixPlate()) return;
+    sfx('sizzle');
+    say('A Nürnberger trio with Senf on a paper plate. <em>Guten Appetit!</em>');
+  }
+  // the writer's round-1 hint is about turning sausages, which the plate replaced (ADR 0004 revision)
+  const wurstHint = (() => { const fb = 'Put a few kinds on the paper plate, then a sauce.'; const w = actionHint('wurst', fb); return /turn|flip/i.test(w) ? fb : w; })();
 
   // ---------- Bücherstand ----------
 
   return {
     glueh: { hint: actionHint('glueh', 'Pour a cup of Glühwein, then raise it with the crowd.') + itemHint('glueh'), acts: [{ key: 'pour', label: 'Pour a cup', fn: pourMug }, { key: 'prost', label: 'Prost!', fn: prostGlueh }] },
     bier: { hint: actionHint('bier', 'Pull a pint from the middle tap.') + itemHint('bier'), acts: [{ key: 'pint', label: 'Pull a pint', fn: pullPint }, { key: 'prost', label: 'Prost!', fn: prostBier }] },
-    wurst: { hint: actionHint('wurst', 'Turn the sausages on the grill.') + itemHint('wurst'), acts: [{ key: 'turn', label: 'Turn the sausages', fn: turnSausages }, { key: 'bun', label: 'One in a bun, please', fn: bun }] },
+    wurst: { hint: wurstHint + itemHint('wurst'), acts: [{ key: 'bun', label: 'One in a bun, please', fn: bun }, { key: 'plate', label: 'Mix me a plate', fn: mixPlate }] },
     books: { hint: actionHint('books', 'Tap a cabinet to open it, then a cover; or let the bookseller choose.') + ' <em>Every book in the cabinets is one Mac has read; it opens with his notes on it.</em>', acts: [{ key: 'book', label: 'Pick a book for me', fn: () => H.pickBook?.() }],
       // one button per category cabinet (ADR 0004): the camera comes to it, its door opens and its covers come forward
       views: { label: 'Open a cabinet', list: () => (H.cabinets?.() || []).map((c) => ({ key: c.key, label: c.label, title: c.en, fn: () => H.openCabinet?.(c.key) })) } },
@@ -164,7 +166,7 @@ function itemHint(id) {
   const fallback = {
     glueh: 'Or click a mug to have it filled, or a wine bottle to read its label.',
     bier: 'Or click a glass to fill it at the tap; click two full glasses to clink them.',
-    wurst: 'Or click a sausage to turn it, or a roll to have one put in it.',
+    wurst: 'Or tap a sausage or the roll to put it on the plate, a bottle for sauce, and the plate to eat.',
   }[id];
   return fallback ? ` <em>${writerItemHint(id, fallback)}</em>` : '';
 }

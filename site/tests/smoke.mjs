@@ -53,6 +53,11 @@ const errors = [];
 const log = (...a) => console.log('·', ...a);
 const results = [];
 const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); console.log(ok ? '  ok  ' : '  FAIL', name, detail ? `(${String(detail).slice(0, 140)})` : ''); };
+const skipped = [];
+/** A check whose contract the files on disk have moved past (a later round's set): logged, not counted. */
+const skip = (name, why) => { skipped.push({ name, why }); console.log('  skip', name, `(${why})`); };
+/** The Bratwurst's set on disk: the round-8 rows of clickable sausages, or the round-10 plate (BUILD.md, ADR 0004). */
+const wurstSet = (page) => page.evaluate(() => { const c = window.__market.items(); return c['wurst:sausage'] ? 'sausages' : c['wurst:wurst'] ? 'plate' : 'none'; });
 const LONG = +opt('--long', 180) * 1000; // ms a click or wait may take (software GL on a busy machine: raise it)
 
 async function openPage(url, { reducedMotion = 'no-preference', viewport = { width: 1280, height: 860 }, before = null, touch = false } = {}) {
@@ -506,7 +511,8 @@ try {
     check('a sausage in a bun: one sits in a roll, with mustard', (await page.evaluate(() => window.__market.handlers.bunCount())) === 1);
     // a click in 3D on one sausage
     const aim = await aimAt(page, 'act_sausage_2');
-    if (aim) {
+    if (!aim && (await wurstSet(page)) === 'plate') skip('clicking one sausage in 3D turns that sausage (its node rotates)', 'the vendor\'s round-10 plate set is on disk: the sausage rows are merged scenery now; the engine port of the plate is round-10 work');
+    else if (aim) {
       const q0 = (await page.evaluate(() => window.__market.item('act_sausage_2'))).quaternion;
       await page.mouse.click(aim.x, aim.y);
       await page.evaluate(() => window.__market.advance(1.5));
@@ -966,7 +972,8 @@ try {
     check('reduced motion: the walk is a cut', (await page.evaluate(() => window.__market.arrived)) && (await state(page, 'stop')) === 'wurst');
     await frames(page, 2);
     const tAim = await aimAt(page, 'act_sausage_5');
-    if (tAim) {
+    if (!tAim && (await wurstSet(page)) === 'plate') skip('phone: tapping a sausage turns it', 'the vendor\'s round-10 plate set is on disk: no single sausages to tap');
+    else if (tAim) {
       const q0 = (await page.evaluate(() => window.__market.item('act_sausage_5'))).quaternion;
       await page.touchscreen.tap(tAim.x, tAim.y);
       await frames(page, 2);
@@ -1145,6 +1152,7 @@ try {
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
+if (skipped.length) console.log(`${skipped.length} skipped (a later round's files on disk): ${skipped.map((x) => x.name).join('; ')}`);
 if (errors.length) console.log('Console errors:\n  ' + errors.join('\n  '));
 else console.log('No console errors.');
 process.exit(failed.length || errors.length ? 1 : 0);

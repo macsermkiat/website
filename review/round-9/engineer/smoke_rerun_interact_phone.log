@@ -1,0 +1,51 @@
+· every action, both rides, snow, the overview, the keyboard and a click in 3D (lite market, small viewport)
+· ready in 8.1 s
+  ok   the crowd streams in after the first frame 
+  ok   the on-screen signpost walks to the Glühwein stall 
+  ok   the stop bar offers the actions as buttons 
+  ok   pour a mug (the ladle fills one of the stall's own mugs) (Blue mug with white snowflakes, filled. Mugs poured tonight: 1. Red wine, cinnamon, clove and orange. Careful, it's hot.)
+  ok   Prost: the crowd raises a glass (2 speaking)
+  ok   pull a pint (starts) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
+  ok   pull a pint (finishes) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
+  ok   turn the sausages (Turned. Nicely browned on this side.)
+  ok   a sausage in a bun (One Bratwurst im Brötchen with mustard. That will be 4 euros.)
+  ok   a sausage in a bun: one sits in a roll, with mustard 
+  skip clicking one sausage in 3D turns that sausage (its node rotates) (the vendor's round-10 plate set is on disk: the sausage rows are merged scenery now; the engine port of the plate is round-10 work)
+  ok   pull a book: the bookseller picks one and it opens ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
+  ok   lite: the player buttons say they move the spotlight 
+  ok   feature a band member (The spotlight is on the tenor sax. The lite market plays the band as one mix, so this light is only for the eyes. Switch to the full market )
+  ok   the band plays (Now playing: Lanterns After Closing · the Nachtmarkt Quartett)
+  ok   featuring while playing 
+  ok   the band stops 
+  ok   lite: rides and deco stalls arrive after the first frame ({"lod":40,"deferred":12})
+  ok   Riesenrad ride 
+  ok   Riesenrad: the ride stops at the top for the view ({"t":13.5,"stage":"top","cam":24.425646092462923})
+· screenshot ../review/round-9/engineer/ride_riesenrad.jpg
+  ok   get off the wheel 
+  ok   carousel ride 
+  ok   Escape ends the ride 
+  ok   snow on 
+  ok   snow off 
+  ok   Overview (reset) goes back to the view over the square 
+  ok   key 3 walks to the Bratwurst stand 
+  ok   → walks on along the loop (the Bratwurst is the last stop, so round to the Glühwein stall) 
+  ok   Escape at a stop goes back to the overview 
+  ok   Enter on a signpost arm walks there 
+· phone, reduced motion, touch
+· ready in 5.5 s
+  ok   lite market on a phone-sized screen 
+  ok   reduced motion: the home view holds still 
+  ok   phone: the signpost folds into one button 
+  ok   reduced motion: the walk is a cut 
+  skip phone: tapping a sausage turns it (the vendor's round-10 plate set is on disk: no single sausages to tap)
+  ok   phone: reading the menu board fills the screen with it 
+· screenshot ../review/round-9/engineer/phone_reading_menu.jpg
+  ok   phone: at the ornament shop the stop bar folds away (judge note, round 8) ({"stop":"schmuck","folded":true})
+  ok   reduced motion: the Schwibbogen cuts to the view over the arch, its seven candles light in about three seconds, Escape cuts back ({"cut":{"mode":"drive","cam":"hold"},"sw":{"burning":7,"wave":true,"phase":"lit"},"back":{"busy":null,"mode":"stop"},"swing":0,"d0":"into",")
+  ok   reduced motion: the harmonica's baubles ring and glow without swinging (0)
+  ok   reduced motion: the dive cuts in (no glide) and out ({"cut":{"mode":"drive","cam":"hold"},"sw":{"burning":7,"wave":true,"phase":"lit"},"back":{"busy":null,"mode":"stop"},"swing":0,"d0":"into",")
+
+38/38 checks passed
+2 skipped (a later round's files on disk): clicking one sausage in 3D turns that sausage (its node rotates); phone: tapping a sausage turns it
+No console errors.
+EXIT 0

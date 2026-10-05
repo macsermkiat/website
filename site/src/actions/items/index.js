@@ -1,5 +1,6 @@
 // Every item on the counters and shelves is its own clickable object: a book, a glass, a mug, a wine bottle,
-// a sausage, a roll, and the ornament shop's ornaments. This module finds them (the act_ nodes of the vendor's
+// the Bratwurst plate set (four kinds, a roll, three sauces, the curry tin and the plate), and the ornament shop's
+// three moments. This module finds them (the act_ nodes of the vendor's
 // prop sets, named in site/public/models/items.json), lifts them a little under the pointer, and hands a click
 // to the stall's own handler (beer.js, gluehwein.js, wurst.js, books.js, schmuck.js). The deco stalls' goods are
 // scenery with no act_ nodes (ADR 0004), so nothing here touches them.
@@ -12,10 +13,10 @@ import { createBooks } from './books.js';
 import { createSchmuck } from './schmuck.js';
 
 // act_ kinds a visitor can click; the rest (steam, smoke, the grill, the ladle) only move for them
-const CLICKABLE = new Set(['book', 'glass', 'tap', 'mug', 'bottle', 'wineglass', 'kettle', 'pot', 'lid', 'sausage', 'roll', 'served', 'orn']);
+const CLICKABLE = new Set(['book', 'glass', 'tap', 'mug', 'bottle', 'wineglass', 'kettle', 'pot', 'lid', 'wurst', 'roll', 'sauce', 'spice', 'plate', 'orn']);
 // kinds whose click the camera comes in close for (a book comes to the visitor instead; an ornament plays where it
 // hangs, seen from the shop's own view)
-const FOCUS = new Set(['glass', 'tap', 'mug', 'bottle', 'wineglass', 'kettle', 'pot', 'lid', 'sausage', 'roll', 'served']);
+const FOCUS = new Set(['glass', 'tap', 'mug', 'bottle', 'wineglass', 'kettle', 'pot', 'lid', 'wurst', 'roll', 'sauce', 'spice', 'plate']);
 const HOVER_LIFT = 0.018; // metres an item rises under the pointer
 
 export function createItems(ctx) {

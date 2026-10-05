@@ -1,8 +1,9 @@
 // Stand-in goods for real section-stall glbs that have no act_ nodes yet (the vendor's props supply them).
 // Each piece hangs off the stall's slot_ empties and uses the act_ names the actions look for,
-// so pour, pull, turn and pull-a-book work on the carpenter's stalls before the props arrive.
+// so pour, pull, the Bratwurst plate and pull-a-book work on the carpenter's stalls before the props arrive.
 import * as THREE from 'three';
 import { mats, colorMat, mergeStatic } from '../standins/kit.js';
+import { buildPlateSet } from '../standins/plate.js';
 
 const has = (nodes, prefix) => Object.keys(nodes.acts).some((k) => k.startsWith(prefix));
 
@@ -65,33 +66,14 @@ export function addStandinGoods(place, { warn }) {
     added = true;
   }
 
-  if (id === 'wurst' && !has(nodes, 'act_sausage')) {
-    // on the carpenter's coal bed when there is one, else along the counter
+  if (id === 'wurst' && !has(nodes, 'act_wurst_') && !has(nodes, 'act_plate')) {
+    // the round-10 plate set (stand-in for prop_wurst_counter.glb) at the counter; a grill only when the
+    // carpenter's stall has no coal bed of its own
     let grill = null;
     place.root.traverse((o) => { if (!grill && /grill|coals/i.test(o.name) && o.isMesh) grill = o; });
-    const sg = new THREE.CapsuleGeometry(0.035, 0.2, 4, 8);
-    const g = new THREE.Group();
-    g.name = 'standin_goods_bratwurst';
-    if (grill) {
-      const box = new THREE.Box3().setFromObject(grill);
-      const c = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-      place.holder.add(g);
-      g.position.copy(place.holder.worldToLocal(new THREE.Vector3(c.x, box.max.y + 0.06, c.z)));
-      const span = Math.max(0.6, Math.min(1.6, Math.max(size.x, size.z) - 0.2));
-      for (let i = 0; i < 7; i++) {
-        const s = mesh(sg, M.sausage, -span / 2 + (i * span) / 6, 0, i % 2 ? 0.06 : -0.06, `act_sausage_${i}`);
-        s.rotation.z = Math.PI / 2;
-        g.add(s);
-      }
-    } else {
-      counter.add(g);
-      for (let i = 0; i < 7; i++) {
-        const s = mesh(sg, M.sausage, -0.9 + i * 0.3, 0.05, 0, `act_sausage_${i}`);
-        s.rotation.z = Math.PI / 2;
-        g.add(s);
-      }
-    }
+    const set = buildPlateSet({ withGrill: !grill && !has(nodes, 'act_grill') });
+    set.name = 'standin_goods_bratwurst';
+    counter.add(set);
     added = true;
   }
 

@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { mats, mesh, empty, signMesh, bulbString, catenary, colorMat, mergeStatic, rng } from './kit.js';
 import { buildPerson } from './people.js';
+import { buildPlateSet } from './plate.js';
 
 export const STALL = { W: 4, D: 2.8, H: 2.6, TOP: 1.075 };
 
@@ -119,16 +120,15 @@ const GOODS = {
     }
     for (let i = 0; i < 14; i++) g.add(mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.3, 10), colorMat(0x1d4a24, 0.1, 0.1), { x: -1.7 + i * 0.26, y: 1.645 + 0.15, z: -D / 2 + 0.2 }));
   },
-  wurst(g, { M, TOP, fz, W }) {
-    g.add(mesh(new THREE.BoxGeometry(3, 0.12, 0.5), M.darkMetal, { y: TOP + 0.06, z: fz - 0.05 }));
-    const grill = mesh(new THREE.BoxGeometry(2.8, 0.02, 0.42), M.coal.clone(), { y: TOP + 0.13, z: fz - 0.05, name: 'act_grill' });
-    g.add(grill);
-    for (let i = 0; i < 12; i++) g.add(mesh(new THREE.BoxGeometry(0.01, 0.01, 0.46), M.darkMetal, { x: -1.35 + i * 0.245, y: TOP + 0.16, z: fz - 0.05 }));
+  wurst(g, { M, TOP, D, W }) {
+    // the round-10 plate set (BUILD.md, ADR 0004 revision) with a small grill, on the counter at slot_counter
+    const set = buildPlateSet({ withGrill: true });
+    set.position.set(0, TOP, D / 2 + 0.1 - 0.15);
+    g.add(set);
+    // scenery: a row of sausages hanging from the back rail
     const sg = new THREE.CapsuleGeometry(0.035, 0.2, 4, 8);
-    for (let i = 0; i < 9; i++) g.add(mesh(sg, M.sausage, { x: -1.25 + i * 0.3, y: TOP + 0.2, z: fz - 0.05 + (i % 2 ? 0.08 : -0.08), rz: Math.PI / 2, name: `act_sausage_${i}` }));
     for (let i = 0; i < 16; i++) g.add(mesh(sg, M.sausage, { x: -1.8 + i * 0.24, y: 2.0, z: -0.4 }));
     g.add(mesh(new THREE.CylinderGeometry(0.006, 0.006, W, 6), M.darkMetal, { y: 2.16, z: -0.4, rz: Math.PI / 2 }));
-    g.add(empty('act_smoke', 0, TOP + 0.25, fz - 0.05));
   },
   books(g, { M, TOP, fz, D, W, r }) {
     const pal = [0x7a1e2c, 0x1f3a5a, 0x2e5a3a, 0xb88a2e, 0x5a3a6a, 0xd9cbb0, 0x3a2a22, 0x8a4a2a, 0x1a1a1f, 0x2a6a7a];

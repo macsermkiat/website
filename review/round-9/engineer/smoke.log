@@ -85,3 +85,260 @@
 · screenshot ../review/round-9/engineer/home_signpost.jpg
   ok   deco stalls: every one is in the market, at its lite file only (no full-detail download, nothing streams) ({"ids":["deco-lebkuchen","deco-mandeln","deco-kerzen","deco-spielzeug","deco-kaese","deco-crepes","deco-maroni","deco-kartoffelpuffer"],"fil)
   ok   deco stalls are not clickable: a click on deco-lebkuchen picks nothing, shows no label, and the view stays home (no close-up) ({"hit":{"id":"deco-lebkuchen","x":479.5191263313183,"y":427.60071882278163,"pick":null},"tip":null,"after":{"stop":null,"mode":"home","readi)
+  ok   no deco stops in the stroll and no deco fly-to 
+  ok   the signpost's hover label stays inside the canvas ({"tip":[439,490,861,525],"canvas":[17,119,1263,709],"text":"Christbaumschmuck: walk to the Christbaumschmuck · Ornaments","hidden":false})
+  ok   the hover label stays inside the canvas at every edge and corner ([{"at":[1244,296],"inside":true},{"at":[2,296],"inside":true},{"at":[1244,4],"inside":true},{"at":[2,4],"inside":true},{"at":[623,3],"inside)
+  ok   clicking the signpost's Glühwein board walks to the Glühwein stall ({"x":555.4730976797782,"y":529.8274831641057})
+  ok   the camera walks (not flies) to the stop ({"kind":"walk","t":0,"dur":11.986485170234877,"length":38.35675254475161})
+  ok   walking pace (about 3 m/s; never a dash) (3.20 m/s over 38.4 m)
+  ok   mid-stroll the camera is on its way, down at eye level and off the straight line ([1.668,3.531,22.345])
+  ok   arrived at the Glühwein stop, with its bar of things to do ({"arrived":true,"cam":{"mode":"stop","moving":false,"progress":null,"look":{"yaw":0,"pitch":0,"zoom":1},"pos":[-5.422,1.8,3.028],"target":[-)
+  ok   at a stop the head turns at most 15° 
+  ok   streaming: the stall at the stop comes in at full detail ({"square":"full","gluehwein":"full","bierstand":"lite","bratwurst":"lite","buecherstand":"lite","bandstand":"full","tree":"full","signpost":)
+  ok   streaming: the swap kept every action's nodes (no graft errors) ([{"id":"gluehwein","files":["stall_gluehwein.glb","prop_gluehwein_counter.glb","prop_gluehwein_shelf.glb","prop_gluehwein_wine.glb"],"meshes)
+  ok   → walks on to the next stop (the bandstand) 
+  ok   ← walks back to the stop before 
+  ok   key 6 walks to the Riesenrad 
+  ok   the Riesenrad stop is the overview, high on the wheel ([-18.362,20.189,-14.078])
+· screenshot ../review/round-9/engineer/stop_riesenrad_overview.jpg
+  ok   key 4 walks to the Bücherstand 
+  ok   streaming: walking to a stall brings it in at full detail 
+  ok   0 goes back to the overview of the square 
+· reading on the writing surfaces (lite market, 1280 px)
+· ready in 7.8 s
+· writing surfaces on the models' own write_ nodes: glueh.board bier.vomfass wurst.menu wurst.paper books.card band.sheet ferris.notice carousel.ticket; stand-ins: none
+  ok   the carpenter's, vendor's and ride builder's write_ props carry the words where they exist (Glühwein board, vom Fass board, menu, Marktblatt, sheet music, noticeboard, ticket) ([{"id":"glueh.board","kind":"chalk","fromModel":true},{"id":"bier.vomfass","kind":"chalk","fromModel":true},{"id":"wurst.menu","kind":"chalk)
+  ok   a writing surface for each section (board, coasters, menu, paper, card, sheet, noticeboard, ticket) (glueh.board bier.vomfass bier.coaster_0 bier.coaster_1 bier.coaster_2 wurst.menu wurst.paper books.card band.sheet ferris.notice carousel.ti)
+  ok   glueh.board: the words are drawn on it in 3D, the camera close in front (A warm cup with Mac I'm Mac, a physician at Chulalongkorn University in Bangkok who builds)
+  ok   glueh.board: a visually hidden copy for screen readers, and the page bar (A warm cup with MacGlühwein · About meI'm Mac, a physician a)
+  ok   glueh.board: Escape stops reading and steps back to the stop 
+  ok   bier.vomfass: the words are drawn on it in 3D, the camera close in front (On tap Three things are on tap: two pieces of software and a course. -  ProtoCol · Helles )
+  ok   bier.vomfass: a visually hidden copy for screen readers, and the page bar (On tapBierstand · ProjectsThree things are on tap: two piece)
+  ok   the projects board carries the clickable links in content/projects.md ({"want":["https://www.protocol.med","https://www.youtube.com/playlist?list=PLama3Rl89mGYu-oaiC-tTSkO2gPpOxgv4"],"have":["https://www.protoco)
+  ok   bier.vomfass: Escape stops reading and steps back to the stop 
+  ok   bier.coaster_0: the words are drawn on it in 3D, the camera close in front (ProtoCol Helles · always on tap)
+  ok   bier.coaster_0: a visually hidden copy for screen readers, and the page bar (ProtoColHelles · always on tapA chatbot that helps researche)
+  ok   a Bierdeckel flips over to its back ([{"open":true,"id":"bier.coaster_0","surface":"bier.coaster_0","view":0,"views":2,"face":"front","title":"ProtoCol"},{"open":true,"id":"bier)
+  ok   a Bierdeckel's words are printed on its own round face: no card under them (front in the print, back a round card face) ({"fromModel":true,"frontPrinted":true,"backCardHidden":true,"roundBack":true,"reach":{"front":0.598,"back":0.774}})
+  ok   a Bierdeckel's words stay inside its edge, front and back ({"front":0.598,"back":0.774})
+  ok   bier.coaster_0: Escape stops reading and steps back to the stop 
+  ok   wurst.menu: the words are drawn on it in 3D, the camera close in front (Off the grill -  The No-Entry Sign. ( https://royyak.substack.com/p/the-no-e- ntry-sign ) )
+  ok   wurst.menu: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
+  ok   wurst.menu: Escape stops reading and steps back to the stop 
+  ok   wurst.paper: the words are drawn on it in 3D, the camera close in front (Off the grill This is where short essays on research, music and ideas will go. Nothing is )
+  ok   wurst.paper: a visually hidden copy for screen readers, and the page bar (Off the grillBratwurst · WritingThis is where short essays o)
+  ok   wurst.paper: Escape stops reading and steps back to the stop 
+  ok   books.card: the words are drawn on it in 3D, the camera close in front (The bookshop I read physics, philosophy and books about the brain. The shelves hold books )
+  ok   books.card: a visually hidden copy for screen readers, and the page bar (The bookshopBücherstand · ReadingI read physics, philosophy )
+  ok   books.card: Escape stops reading and steps back to the stop 
+  ok   band.sheet: the words are drawn on it in 3D, the camera close in front (The Nachtmarkt Quartett The band on the bandstand is a quartet: tenor sax, piano, double b)
+  ok   band.sheet: a visually hidden copy for screen readers, and the page bar (The Nachtmarkt QuartettBandstand · MusicThe band on the band)
+  ok   band.sheet: the sheet's card_ backing brightens with its write_ quad (no lighter inset) ({"card":true,"same":true,"glow":0.24})
+  ok   band.sheet: Escape stops reading and steps back to the stop 
+  ok   ferris.notice: the words are drawn on it in 3D, the camera close in front (View from the top Nothing is written up here yet. These are the questions I keep coming ba)
+  ok   ferris.notice: a visually hidden copy for screen readers, and the page bar (View from the topRiesenrad · Big questionsNothing is written)
+  ok   ferris.notice: the sheet's card_ backing brightens with its write_ quad (no lighter inset) ({"card":true,"same":true,"glow":0.24})
+  ok   ferris.notice: Escape stops reading and steps back to the stop 
+  ok   carousel.ticket: the words are drawn on it in 3D, the camera close in front (Come round again My code is on GitHub: github.com/macsermkiat . If you have something to s)
+  ok   carousel.ticket: a visually hidden copy for screen readers, and the page bar (Come round againKarussell · ContactMy code is on GitHub: git)
+  ok   carousel.ticket: the sheet's card_ backing brightens with its write_ quad (no lighter inset) ({"card":true,"same":true,"glow":7.5})
+  ok   carousel.ticket: Escape stops reading and steps back to the stop 
+  ok   the wheel parks forward, the way it turns, never backwards, and eases to a stop on a whole turn ({"angle":12.5664,"dir":1,"parkTo":12.566370614359172,"parking":true,"parked":true,"card":{"visible":true,"glow":0.04},"write":{"visible":tru)
+  ok   a gondola's placard: the wheel parks that gondola at the bottom and the placard is read where it hangs (["ferris.placard_0",{"angle":12.5664,"dir":1,"parkTo":12.566370614359172,"parking":true,"parked":true,"card":{"visible":true,"glow":0.24},"w)
+  ok   after reading, the wheel turns again 
+  ok   the book that opens is the vendor's hardback (book_open.glb), its pages printed on its paper (["book_open.glb",{"model":true,"material":"vendor_print"}])
+  ok   a clicked book opens with its words on its own 3D pages ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
+  ok   the book's page turns (a leaf turns over) (time, free will and ethics. Summary Carroll opens with a question that sounds li)
+  ok   Escape closes the book and puts it back 
+  ok   Enter at a stop reads its main piece (the Karussell ticket) 
+· every action, both rides, snow, the overview, the keyboard and a click in 3D (lite market, small viewport)
+· ready in 7.1 s
+  ok   the crowd streams in after the first frame 
+  ok   the on-screen signpost walks to the Glühwein stall 
+  ok   the stop bar offers the actions as buttons 
+  ok   pour a mug (the ladle fills one of the stall's own mugs) (Blue mug with white snowflakes, filled. Mugs poured tonight: 1. Red wine, cinnamon, clove and orange. Careful, it's hot.)
+  ok   Prost: the crowd raises a glass (2 speaking)
+  ok   pull a pint (starts) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
+  ok   pull a pint (finishes) (Half litre of Dunkles, full. Pints pulled tonight: 1. With a proper head of foam. Click two full glasses to clink them.)
+  ok   turn the sausages (Turned. Nicely browned on this side.)
+  ok   a sausage in a bun (One Bratwurst im Brötchen with mustard. That will be 4 euros.)
+  ok   a sausage in a bun: one sits in a roll, with mustard 
+  FAIL clicking one sausage in 3D turns that sausage (its node rotates) (no clear pixel on act_sausage_2)
+  ok   pull a book: the bookseller picks one and it opens ({"name":"act_book_00","slug":"the-many-hidden-worlds-of-quantum-mechanics","title":"The Many Hidden Worlds of Quantum Mechanics","author":"S)
+  ok   lite: the player buttons say they move the spotlight 
+  ok   feature a band member (The spotlight is on the tenor sax. The lite market plays the band as one mix, so this light is only for the eyes. Switch to the full market )
+  ok   the band plays (Now playing: Lanterns After Closing · the Nachtmarkt Quartett)
+  ok   featuring while playing 
+  ok   the band stops 
+  ok   lite: rides and deco stalls arrive after the first frame ({"lod":40,"deferred":12})
+  ok   Riesenrad ride 
+  ok   Riesenrad: the ride stops at the top for the view ({"t":13.5,"stage":"top","cam":24.425646092462923})
+· screenshot ../review/round-9/engineer/ride_riesenrad.jpg
+  ok   get off the wheel 
+  ok   carousel ride 
+  ok   Escape ends the ride 
+  ok   snow on 
+  ok   snow off 
+  ok   Overview (reset) goes back to the view over the square 
+  ok   key 3 walks to the Bratwurst stand 
+  ok   → walks on along the loop (the Bratwurst is the last stop, so round to the Glühwein stall) 
+  ok   Escape at a stop goes back to the overview 
+  ok   Enter on a signpost arm walks there 
+· the ornament shop (round 9): a stroll stop with three moments and nothing else to click (lite market, 960 px)
+· ready in 8.3 s
+  ok   the ornament shop is a stop on the stroll, between the Bücherstand and the Karussell (glueh,band,bier,books,schmuck,carousel,ferris,wurst)
+  ok   the signpost has an arm for it, in the market (act_sign_schmuck) and on screen 
+  ok   the signpost arm walks to the ornament shop ({"stop":"schmuck","arrived":true,"here":"Christbaumschmuck"})
+  ok   the shop is the vendor's stall_schmuck.glb, not a deco stall ([{"id":"deco-schmuck","place":"schmuck","kind":"section","source":"lite","file":"stall_schmuck.lite.glb","deferred":true}])
+  ok   small screen: the shop's stop bar starts folded and keeps off the stall (under 15 % of the view) ({"folded":true,"fold":true,"h":50,"vh":640,"expanded":"false"})
+  ok   "Things to do" opens the bar: exactly the three moments (candles, harmonica, dive) (candles,harmonica,dive)
+  ok   "Things to do" folds the bar away again 
+  ok   the round-8 ornament interactions are gone (only the harmonica, the mirror ball and the Schwibbogen answer a click) ({"api":[],"odd":[],"n":21})
+  ok   the nutcracker and the smoker are decoration (in the shop, not items) ({"nutcracker":false,"smoker":false,"act_orn_pickle":null,"act_orn_herrnhut":null,"act_orn_nutcracker":null,"act_orn_smoker":null})
+  ok   the harmonica's twelve baubles are tuned to the opening of the ballad (D Bb A G A C Eb D F# G F Ab) (["D5","Bb5","A5","G5","A5","C6","Eb6","D6","F#5","G5","F5","Ab5"])
+  ok   a mouse brush across the row rings the baubles left to right (the tune) ({"order":[0,1,2,3,4,5,6,7,8,9,10,11],"onCanvas":"CANVAS"})
+  ok   brushing does not turn the head (the row claims the pointer from the look-around) (0)
+  ok   each bauble glows on its note and swings on its ribbon ({"glow":[0.624,0.535,0.552,0.545,0.54,0.539,0.545,0.541,0.545,0.544,0.542,0.545],"swing":[0.1011,0.0766,0.0811,0.0793,0.0778,0.0777,0.0794,0)
+  ok   velocity follows the brush: a fast stroke rings louder than a slow one ({"slow":0.32,"fast":0.87,"n":12})
+  ok   tapping the baubles in order plays the phrase, and after a pause the next bauble glows faintly ({"log":[0,1,2,3,4],"expect":5,"hint":5})
+  ok   touch: a finger drag across the row plays it and leaves the look-around alone ({"log":[2,3,4,5,6,7,8,9],"yaw":0})
+  ok   played through, the row answers (a ripple of light, and a word about the ballad) (The glass harmonica: you played the opening of Lanterns After Closing, the ballad the band plays at the bandstand.)
+  ok   "Play the glass harmonica": the camera leans in until the row fills the view ({"busy":"harmonica","mode":"drive","phase":"hold","moment":"harmonica","span":0.84})
+  ok   ... it plays the phrase in its own rhythm, and eases back to the stop ({"log":["0:auto","1:auto","2:auto","3:auto","4:auto","5:auto","6:auto","7:auto","8:auto","9:auto","10:auto","11:auto"],"lean":{"busy":"harmo)
+  ok   Schwibbogen: the candles light one by one (000000000000000001112233344455566677777777777777777777777777777777777777777777777777777777777777)
+  ok   Schwibbogen: from the outside in (the vendor's order) (act_orn_candle_0,act_orn_candle_6,act_orn_candle_1,act_orn_candle_5,act_orn_candle_2,act_orn_candle_4,act_orn_candle_3)
+  ok   Schwibbogen: with each flame a share of the town's dark windows turns warm, until most are lit ({"windows":{"meshes":1,"candidates":384,"lit":356,"quiet":488,"hush":1,"wake":1.06},"half":286})
+  ok   Schwibbogen: a low warm chord builds, one voice per flame ([0,0,0,1,3,5,7,7,7,7,7,7,7,7,7,7])
+  ok   Schwibbogen: after the last flame a wave of light runs across the market (bulbs flare in turn, the bloom swells and settles) ({"firstWave":38,"lastLight":34,"crest":2.78,"bloomPeak":1.937,"end":1.09})
+  ok   Schwibbogen: the camera stands behind the arch looking out over the candles, the bar steps aside ({"cam":{"mode":"drive","moving":false,"progress":null,"look":{"yaw":0,"pitch":0,"zoom":1},"pos":[23.1,1.527,10.165],"target":[8.255,2.327,9.)
+  ok   Escape steps back round the arch to the stop; the candles keep burning ({"busy":null,"mode":"stop","stop":"schmuck","burning":7,"moment":null})
+  ok   a click on the arch again lets it fade back (candles out, the town back as it was, the glow gone) ({"phase":"off","burning":0,"wake":0,"hush":0,"chord":0,"settle":0,"label":"Light the Schwibbogen"})
+  ok   dive: a cube camera renders the market into the ball once at the tap (256 px on the lite market), with a clear coat's Fresnel ({"env":{"size":256,"captures":1},"glass":"engine_mirrorball_glass"})
+  ok   dive: the camera eases in until the reflection fills the view (within 2 ball radii of its centre) ({"seen":["approach","gaze","into","inside"],"close":0.15})
+  ok   dive: it crossfades into the market seen from inside the glass (the warped, hushed pass; the ball itself hidden) ({"inside":{"phase":"inside","env":{"size":256,"captures":1},"glass":"engine_mirrorball_glass","pass":{"enabled":true,"mix":1,"warp":1,"veil")
+  ok   dive: Escape eases back out to the stop (pass off, ball back, the camera's near plane and lens restored) ({"seen":["outof","back",null],"d":{"phase":null,"env":{"size":256,"captures":1},"glass":"engine_mirrorball_glass","pass":{"enabled":false,"m)
+  ok   dive: a tap ends it too ({"before":"inside","after":null,"mode":"stop"})
+  ok   sparkle: the foxed mirror gets a reflection (mirror_0, rendered while the visitor is near) ({"mirrors":1,"mirrorRenders":1,"mirrorSize":[256,130],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":10.933,"smoke":0.22})
+  ok   sparkle: the tinsel swags carry the glint shader ({"mirrors":1,"mirrorRenders":1,"mirrorSize":[256,130],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":10.933,"smoke":0.22})
+  ok   sparkle: the candle pyramid turns slowly about its upright axis, its flames flicker ({"p0":{"axis":"y","angle":-37.918},"p1":{"axis":"y","angle":-38.334},"f0":10.259,"f1":10.933})
+  ok   sparkle: the Räuchermännchen smokes on his own (fx_smoke_1) ({"mirrors":1,"mirrorRenders":1,"mirrorSize":[256,130],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":10.933,"smoke":0.22})
+· screenshot ../review/round-9/engineer/stop_schmuck.jpg
+  ok   a click in 3D on a harmonica bauble rings that bauble once ([{"i":6,"note":"Eb6","v":0.5,"source":"brush","t":123.94}])
+· the ornament shop's three moments at their peaks (full market, 1280 px): screenshots
+· ready in 13.8 s
+· settled (63 s)
+· at the shop, streamed (63 s)
+  ok   full market: the shop streams in at full detail at its stop ("full")
+· screenshot ../review/round-9/engineer/shop_stop.jpg
+· shop_stop.jpg (167 s)
+  ok   full market: the mirror reflection is 640 px wide and drawn every frame at the shop ({"mirrors":1,"mirrorRenders":1,"mirrorSize":[640,324],"tinsels":3,"glintMaterials":3,"flames":1,"flameGlow":9.533,"smoke":0.22})
+· screenshot ../review/round-9/engineer/schwib_1_town_dark.jpg
+· schwib_1_town_dark.jpg (198 s)
+· screenshot ../review/round-9/engineer/schwib_2_town_waking.jpg
+· schwib_2_town_waking.jpg (225 s)
+· screenshot ../review/round-9/engineer/schwib_3_light_wave.jpg
+· schwib_3_light_wave.jpg (252 s)
+· screenshot ../review/round-9/engineer/schwib_4_settled.jpg
+· schwib_4_settled.jpg (279 s)
+  ok   full market: the screenshots catch each beat (the town gone quiet over unlit candles, waking, the wave's bloom at its height, settled) ([{"name":"schwib_1_town_dark.jpg","burning":0,"windows":0,"hush":1,"quiet":709,"bloom":1,"cam":"hold"},{"name":"schwib_2_town_waking.jpg","b)
+  ok   full market: the Schwibbogen sequence ran (seven flames, windows warm, the wave) ({"phase":"lit","lit":["act_orn_candle_0","act_orn_candle_6","act_orn_candle_1","act_orn_candle_5","act_orn_candle_2","act_orn_candle_4","act)
+· screenshot ../review/round-9/engineer/harmonica_mid_phrase.jpg
+· harmonica_mid_phrase.jpg (322 s)
+  ok   full market: a bauble glows mid-phrase on the harmonica (the camera leaned in to the row) ([0.011,0.018,0.09,0.505,0.615,0,0,0,0,0,0,0])
+· screenshot ../review/round-9/engineer/dive_1_approach.jpg
+· dive_1_approach.jpg (406 s)
+· screenshot ../review/round-9/engineer/dive_2_reflection.jpg
+· dive_2_reflection.jpg (442 s)
+· screenshot ../review/round-9/engineer/dive_3_into_glass.jpg
+· dive_3_into_glass.jpg (500 s)
+· screenshot ../review/round-9/engineer/dive_4_inside.jpg
+· dive_4_inside.jpg (523 s)
+  ok   full market: the dive reaches the inside of the glass (512 px cube) ({"phase":"inside","env":{"size":512,"captures":1},"glass":"engine_mirrorball_glass","pass":{"enabled":true,"mix":1,"warp":1,"veil":0,"captur)
+  ok   full market: the dive comes back out 
+· the Bücherstand cabinets on a 390 px phone: tap, open, its books only, covers ≥ 44 px, arrows, a way back
+· ready in 6.2 s
+  ok   phone: the signpost walks to the Bücherstand 
+  ok   the Bücherstand has its six cabinets, each with a door (act_cab_), a sign (sign_cat_) and a tap target ([{"key":"physics","label":"Physik & Kosmos","en":"Physics and the Universe","books":10,"door":true,"sign":true,"proxy":true},{"key":"lives",)
+  ok   phone: ‹ › buttons beside the stall turn to the cabinets 
+  ok   › turns to a cabinet, now in view (and big enough to tap) ({"key":"people","faced":{"x":192,"y":440,"w":135,"h":197,"onScreen":true}})
+  ok   tapping a cabinet moves to its view, opens its door and brings its books forward ({"tapAt":{"x":195,"y":438.23979330026333,"via":"engine_cabinet_proxy_people"},"st":{"key":"people","open":true,"focus":null,"books":["act_bo)
+  ok   a clear way back is on screen (Step back) 
+  ok   only the open cabinet's books are pickable ({"seen":["act_book_25","act_book_26","act_book_27","act_book_28","act_book_29","act_book_30","act_book_31","act_book_32","act_book_33","act_)
+  ok   every cover in the open cabinet is at least 44 px on a 390 px screen, and in view (14 covers; smallest 69.0 px; [])
+· screenshot ../review/round-9/engineer/phone_cabinet_open.jpg
+  ok   ← → move between the open cabinet's books (["act_book_26","act_book_25"])
+  ok   ↓ opens the next cabinet (the first one shuts) ({"key":"decisions","open":true,"focus":"act_book_39","books":["act_book_39","act_book_40","act_book_41","act_book_42","act_book_43","act_boo)
+  ok   ↑ goes back to the cabinet before 
+  ok   tapping a cover opens that book ({"bAim":{"x":82.04541418143117,"y":429.62053332380185},"ob":{"name":"act_book_25","slug":"unreasonable-hospitality","title":"Unreasonable Ho)
+  ok   Escape puts the book back, and the cabinet is still open ({"book":null,"cab":"people"})
+  ok   Step back shuts the cabinet and returns to the stall's view ({"cab":null,"stop":"books","door":null})
+  ok   Step back keeps the view turned toward that cabinet (in view, and ‹ › go on from it) ({"faced":"people","x":228,"onScreen":true,"closeup":false})
+  ok   with the cabinet shut its books no longer answer the pointer 
+· lite market, auto-detected
+· ready in 8.0 s
+· lite: 5.18 MB downloaded when the market opens
+  ok   lite: the first load is smaller than round 4 (7.44 MB) (5.18 MB)
+  ok   lite market detected on a weak GPU (software GPU: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver))
+  ok   lite: no shadows 
+  ok   lite: fewer lights ({"realtime":4,"pools":24,"cap":4,"places":["bierstand","gluehwein","bratwurst","buecherstand"]})
+· screenshot ../review/round-9/engineer/home_lite_stage.jpg
+· phone, reduced motion, touch
+· ready in 5.9 s
+  ok   lite market on a phone-sized screen 
+  ok   reduced motion: the home view holds still 
+  ok   phone: the signpost folds into one button 
+  ok   reduced motion: the walk is a cut 
+  FAIL phone: tapping a sausage turns it (no clear pixel on act_sausage_5)
+  ok   phone: reading the menu board fills the screen with it 
+· screenshot ../review/round-9/engineer/phone_reading_menu.jpg
+  ok   phone: at the ornament shop the stop bar folds away (judge note, round 8) ({"stop":"schmuck","folded":true})
+  ok   reduced motion: the Schwibbogen cuts to the view over the arch, its seven candles light in about three seconds, Escape cuts back ({"cut":{"mode":"drive","cam":"hold"},"sw":{"burning":7,"wave":true,"phase":"lit"},"back":{"busy":null,"mode":"stop"},"swing":0,"d0":"into",")
+  ok   reduced motion: the harmonica's baubles ring and glow without swinging (0)
+  ok   reduced motion: the dive cuts in (no glide) and out ({"cut":{"mode":"drive","cam":"hold"},"sw":{"burning":7,"wave":true,"phase":"lit"},"back":{"busy":null,"mode":"stop"},"swing":0,"d0":"into",")
+· plain.html
+  ok   plain.html has all seven sections (7 sections)
+  ok   plain.html links back to the market 
+  ok   plain.html credits the music (the manifest's credit line) (Music: “Lanterns After Closing”, an original ballad for this site. Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: M)
+  ok   plain.html lists every third-party asset with its source URL 
+  ok   plain.html carries the books the 3D shelf features (they are on Mac's shelf), and not the unconfirmed list (
+      Bücherstand · Reading
+      The bookshop
+      I read physics, philosophy and books about the brain.
+ The shelves hold books from my )
+  ok   plain.html lists Mac's whole bookshelf (categories.json), with the writer's one-line summaries (55 of 55)
+  ok   plain.html carries the same notes the reading view shows, one article per book (55 of 55)
+· screenshot ../review/round-9/engineer/plain_html.jpg
+  ok   without WebGL the 3D page falls back to the text of all seven sections 
+  ok   the 3D page links to plain.html 
+  ok   the 3D page credits the music in its footer (Music: “Lanterns After Closing”, an original ballad for this site. Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0). Tenor sax: M)
+  ok   the credit links every licence it names (5 named)
+  ok   the 3D page lists every third-party asset with its source URL 
+  ok   the canvas has an accessible name 
+  ok   mute covers the band and the stall sounds 
+· every model missing and layout.json ignored: the BUILD.md layout with labelled stand-ins
+· ready in 21.4 s
+  ok   missing glbs: every place is a stand-in ([])
+  ok   missing layout.json: the BUILD.md layout (BUILD.md fallback)
+  ok   missing glbs are reported as bindings that did not resolve (nothing guessed) ([])
+  ok   stand-ins keep the actions working (Mugs poured tonight: 1. Red wine, cinnamon, clove and orange. Careful, it's hot.)
+  ok   stand-ins keep the writing surfaces (the chalkboard is still read in 3D) 
+· screenshot ../review/round-9/engineer/missing_models_standins.jpg
+· ready in 7.8 s
+  ok   ?perf shows the frame-time meter with its Tour button 
+  ok   the triangle count stays finite on every frame (troika text before its first sync) ({"bad":0,"tris":302199,"frames":7})
+  ok   two missing glbs: just those two are stand-ins ([{"id":"bierstand","place":"bier","kind":"section","source":"standin","file":null},{"id":"riesenrad","place":"ferris","kind":"landmark","sou)
+· recorded stems on the full market
+· ready in 12.9 s
+  ok   play starts at once (mix)
+  ok   the mix bridges the wait for the stems (mix)
+  ok   the stems take over from the mix (stems)
+  ok   stem levels reach the stage ({"sax":0.017899672625440625,"piano":0.022097555756777798,"bass":0.02613652931229177,"drums":0.06808676623867037})
+  ok   last pass: the stems play on into the out head instead of looping ({"pos":221.35,"pass":3,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
+  ok   earlier passes: the loop goes round again ({"pos":46.8,"pass":2,"alt":false,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
+  ok   pass 2 plays the second tenor chorus (alternate stems) ({"pos":121.46,"pass":2,"alt":true,"resting":false,"phase":"stems","passes":3,"loopEnd":219.390907,"end":268.822})
+  ok   pass 3 is back on the main chorus 
+  ok   the band stops (full) 
+
+277/279 checks passed
+No console errors.
+EXIT 1

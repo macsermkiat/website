@@ -11,7 +11,7 @@ import { mergeActMeshes } from './merge.js';
 
 const LIGHT_CAP = { section: 2, deco: 1 };
 const isInProp = (o, root) => { for (let x = o.parent; x && x !== root; x = x.parent) if (x.userData?.propFile) return true; return false; };
-const ITEM_RE = /^act_(book|glass|mug|bottle|wineglass|roll|sausage)_/i;
+const ITEM_RE = /^act_(book|glass|mug|bottle|wineglass)_/i;
 
 async function pool(items, n, fn) {
   const out = new Array(items.length);
@@ -116,7 +116,7 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
         // its goods are merged after that
         place.streamed = p.streamed;
         place.record = p;
-        // the goods (the bookshop's spines, the mugs, glasses, bottles, sausages and rolls): one merged mesh per
+        // the goods (the bookshop's spines, the mugs, glasses and bottles): one merged mesh per
         // set and look instead of one draw each; an item leaves it while it moves or its look changes
         if (!place.streamed) mergeGoods(place);
         market.places[p.entry.place] = place;
