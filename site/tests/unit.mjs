@@ -1,7 +1,7 @@
 // Unit checks that need no browser: the GPU classes behind the lite-market choice, the ballad's road map, the
 // strict content gate, the asset credits and the download budgets.
 // Usage: node tests/unit.mjs
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { gpuTier, detectLite } from '../src/quality.js';
 import { songPlan } from '../src/audio/songplan.js';
 import { mkdtempSync, writeFileSync } from 'node:fs';
@@ -119,7 +119,8 @@ check('the song is about ten minutes before it rests and starts again', plan.len
   // a note, not a failure: one role's asset over its budget should not stop Mac's deploy (npm run budget shows OVER)
   console.log(over.length ? `  note  over budget: ${over.join(' ')}` : '  note  every asset is inside its triangle and byte budget');
   const noDist = budget({ dist: '/nonexistent-dist' });
-  check('budget: it reports a missing dist (the CLI then exits 1)', noDist.hasDist === false && b.hasDist === true);
+  // (CI runs these checks before the build, so the real dist may not exist yet: b.hasDist must only match the disk)
+  check('budget: it reports a missing dist (the CLI then exits 1)', noDist.hasDist === false && b.hasDist === existsSync(new URL('../dist/index.html', import.meta.url)));
   check('budget: both first loads are under their aims', !b.totals.full.over && !b.totals.lite.over, `${(b.totals.full.firstLoad / 1e6).toFixed(2)} / ${(b.totals.lite.firstLoad / 1e6).toFixed(2)} MB`);
 }
 
