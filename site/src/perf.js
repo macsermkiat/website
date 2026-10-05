@@ -99,7 +99,9 @@ export function createPerfMeter({ stage, renderer, lite, governor, tour }) {
       calls = renderer.info.render.calls;
       triangles = renderer.info.render.triangles;
       renderer.info.reset();
-      if (dt > 0 && dt < 2) { ft[n++ % N] = dt * 1000; total++; if (run?.phase === 'measure') run.samples.push(dt * 1000); }
+      if (dt > 0 && dt < 2) { ft[n++ % N] = dt * 1000; total++; }
+      // the tour keeps every frame, however slow (on software GL a frame can take seconds: the tour must still end)
+      if (dt > 0 && run?.phase === 'measure') run.samples.push(dt * 1000);
       const now = performance.now();
       tourFrame(now);
       if (now - last < 500) return;

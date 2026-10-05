@@ -1,0 +1,260 @@
+{
+  "at": "2026-10-05T05:43:38.253Z",
+  "size": "960x600",
+  "markets": {
+    "full": {
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+      "software": true,
+      "target": {
+        "p50": 16.7,
+        "p95": 25
+      },
+      "firstLoadBytes": 7247042,
+      "crowd": {
+        "people": 87,
+        "lodFar": 12,
+        "far": {
+          "figures": 5,
+          "people": 0,
+          "bakeMs": 1342,
+          "vertices": 24033,
+          "rows": 240,
+          "drawn": 5,
+          "meshes": 5
+        },
+        "mixers": {
+          "ran": 27,
+          "throttled": 55,
+          "far": 5
+        },
+        "updateMs": 0.744
+      },
+      "stops": [
+        {
+          "view": "home",
+          "market": "full",
+          "frames": 6,
+          "p50": 10367.5,
+          "p95": 33916.8,
+          "fps": 0.1,
+          "calls": 642,
+          "triangles": null,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "Glühwein",
+          "market": "full",
+          "frames": 9,
+          "p50": 14822.2,
+          "p95": 45469.3,
+          "fps": 0.1,
+          "calls": 1512,
+          "triangles": null,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "bandstand",
+          "market": "full",
+          "frames": 12,
+          "p50": 24240,
+          "p95": 46134.3,
+          "fps": 0,
+          "calls": 1996,
+          "triangles": 1499682,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "Bücherstand",
+          "market": "full",
+          "frames": 12,
+          "p50": 29370.1,
+          "p95": 57869.6,
+          "fps": 0,
+          "calls": 1762,
+          "triangles": null,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "Riesenrad",
+          "market": "full",
+          "frames": 14,
+          "p50": 36123.4,
+          "p95": 88540.9,
+          "fps": 0,
+          "calls": 2125,
+          "triangles": 2422071,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "home again",
+          "market": "full",
+          "frames": 14,
+          "p50": 40114.5,
+          "p95": 75658,
+          "fps": 0,
+          "calls": 1588,
+          "triangles": 1732606,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        }
+      ],
+      "errors": []
+    },
+    "lite": {
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+      "software": true,
+      "target": {
+        "p50": 33.3,
+        "p95": 50
+      },
+      "firstLoadBytes": 5144026,
+      "crowd": {
+        "people": 40,
+        "lodFar": 12,
+        "far": {
+          "figures": 11,
+          "people": 40,
+          "bakeMs": 3225,
+          "vertices": 52887,
+          "rows": 1026,
+          "drawn": 40,
+          "meshes": 11
+        },
+        "mixers": {
+          "ran": 0,
+          "throttled": 0,
+          "far": 40
+        },
+        "updateMs": 0.293
+      },
+      "stops": [
+        {
+          "view": "home",
+          "market": "lite",
+          "frames": 8,
+          "p50": 166.1,
+          "p95": 24917.3,
+          "fps": 6,
+          "calls": 606,
+          "triangles": 303799,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "Glühwein",
+          "market": "lite",
+          "frames": 9,
+          "p50": 7433.8,
+          "p95": 8390.5,
+          "fps": 0.1,
+          "calls": 605,
+          "triangles": 303893,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "bandstand",
+          "market": "lite",
+          "frames": 9,
+          "p50": 4693.3,
+          "p95": 7401.4,
+          "fps": 0.2,
+          "calls": 599,
+          "triangles": 300537,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "Bücherstand",
+          "market": "lite",
+          "frames": 9,
+          "p50": 4176.8,
+          "p95": 5770.7,
+          "fps": 0.2,
+          "calls": 598,
+          "triangles": 300477,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "Riesenrad",
+          "market": "lite",
+          "frames": 9,
+          "p50": 4164.8,
+          "p95": 4333.1,
+          "fps": 0.2,
+          "calls": 596,
+          "triangles": 300165,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "home again",
+          "market": "lite",
+          "frames": 9,
+          "p50": 4528,
+          "p95": 6196.3,
+          "fps": 0.2,
+          "calls": 606,
+          "triangles": 303915,
+          "pixelRatio": 1,
+          "size": "926x466",
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        }
+      ],
+      "errors": []
+    }
+  }
+}

@@ -3,7 +3,7 @@ Cycles previews.
 
     NM_DEVICE=CPU NM_THREADS=2 /home/claude/tools/bpy-venv/bin/python blender/props/build_props.py
         [--only a,b] [--no-render] [--no-lite] [--no-full] [--no-ao] [--samples 48] [--res 1280x720]
-        [--render-only a,b] [--shots wide,hero] [--sheet-only]
+        [--render-only a,b] [--shots wide,hero]
 
 Outputs
     site/public/models/prop_<set>.glb, prop_<set>.lite.glb, shared prop_tex_*.webp
@@ -14,7 +14,7 @@ Outputs
     blender/out/vendor/renders/*.png   the preview PNGs (deco frames as prop_deco_<key>.png; never the shared
                                        blender/out/renders/, where the carpenter's deco.py writes deco_<key>.png)
     review/round-8/vendor/*.jpg        wide and close-up previews per section set, a frame per deco set
-                                       and the deco contact sheet (built only from the vendor's own frames)
+                                       (the deco contact sheet is render_stalls.py --sheet's)
 """
 import argparse
 import json
@@ -66,7 +66,7 @@ def args():
     ap.add_argument("--res", default="1280x720")
     ap.add_argument("--render-only", default=None, help="comma list: render previews only for these sets")
     ap.add_argument("--shots", default="wide,hero", help="section previews to render: wide, hero, stall (in the stall glb)")
-    ap.add_argument("--sheet-only", action="store_true", help="only rebuild the deco contact sheet from the frames")
+    ap.add_argument("--sheet-only", action="store_true", help="retired: use render_stalls.py --sheet")
     ap.add_argument("--json-only", action="store_true", help="only rewrite props.json and items.json from the report")
     a, _ = ap.parse_known_args(sys.argv[1:])
     return a
@@ -149,8 +149,7 @@ def main():
     a = args()
     sets = all_sets(retired=True)
     if a.sheet_only:
-        deco_contact_sheet(sets)
-        return
+        raise SystemExit("[props] the deco contact sheet is built by blender/props/render_stalls.py --sheet (round 8)")
     if a.json_only:
         placed = all_sets()
         write_props_json(placed)
@@ -194,8 +193,8 @@ def main():
         reports[name] = r
         print(f"[props] {name}: {json.dumps({k: r.get(k) for k in ('full', 'lite', 'size')})}")
         reports = save_report(name, r)
-    if not a.no_render:
-        deco_contact_sheet(sets)
+    # round 8 pass 2: the deco contact sheet is render_stalls.py --sheet's (the stocked stalls from the lane);
+    # a build no longer rebuilds it from the old per-set frames, which showed the retired act_ goods
     shrink_shared_textures()
     placed = all_sets()
     write_props_json(placed)
@@ -219,21 +218,6 @@ def save_report(name, r):
         json.dump(reports, f, indent=1, ensure_ascii=False)
     os.replace(tmp, REPORT)
     return reports
-
-
-def deco_contact_sheet(sets):
-    """The nine deco goods frames on one sheet, read only from the vendor's own renders
-    (blender/out/vendor/renders/prop_deco_<key>.png). Missing frames leave the old sheet alone."""
-    from nmlib import render
-    frames = [(os.path.join(vstage.RENDERS, f"{n}.png"), sets[n].get("label", n)) for n in sets
-              if n.startswith("prop_deco_")]
-    missing = [p for p, _ in frames if not os.path.exists(p)]
-    if missing:
-        print(f"[props] contact sheet not rebuilt, frames missing: {[os.path.basename(p) for p in missing]}")
-        return
-    out = os.path.join(vlib.REVIEW, "deco_goods_contact_sheet.jpg")
-    render.contact_sheet(frames, out, cols=3, tile=(416, 234), title="Deco stall goods (vendor, round 8)")
-    print(f"[props] wrote {out}")
 
 
 # Full-size shared maps that do not need 2048 px: the books' normal and roughness carry cloth weave

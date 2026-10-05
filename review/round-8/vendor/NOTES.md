@@ -2,6 +2,25 @@
 
 This round delivers the vendor's three parts of ADR 0004, in Mac's order: the deco stalls as cheap scenery, the ornament shop's goods, and the Bücherstand's face-out covers for the new cabinets. `python3 blender/props/check_props.py` passes with no failures (16 warnings, all about lite ratios; see below).
 
+## Pass 2: the judges' fixes
+
+1. **Dim left column in the book cabinets.** Three changes, all on my side (the cabinet lighting is the carpenter's and lighting designer's):
+   - Every `book_cover_<nn>` material now glows faintly with its own printed colours: the books colour map is also the emissive texture, at an emissive factor of 0.3 (`vlib.BOOK_GLOW`). The glb reuses the same texture, so no bytes are added. Titles and authors now read wherever the cabinet's two lamps fall off, in Cycles and in the engine alike. The untitled filler (`vendor_books`) does not glow.
+   - The category shades are lifted by about a third (`books_catalog.CAT_STYLE`). Physics, lives, mind, decisions and craft were the dark ones.
+   - The author's name now sits on its own solid band in the panel colour, and the author block moved up from 0.83 to 0.80 of the cover height. On the top board the camera looks up past the ledge lip, which used to clip two-line authors (Munger, Taleb, Mandelbrot & Hudson).
+
+   All six `cam_cat` previews are rendered again: `prop_books_<key>_cam_cat.jpg` for physics, lives, mind, people, decisions and craft. Every title and author reads in the left column too.
+2. **Section close-ups rendered fresh for round 8** (1280×720, 48 samples, Cycles CPU): `prop_gluehwein_counter_hero.jpg`, `prop_gluehwein_shelf_hero.jpg`, `prop_gluehwein_wine_hero.jpg`, `prop_bier_counter_hero.jpg`, `prop_bier_counter_foam.jpg`, `prop_bier_back_hero.jpg`, `prop_bier_shelf_hero.jpg`, `prop_wurst_counter_hero.jpg`, `prop_books_counter_hero.jpg`, `prop_books_shelf_1.jpg` and `prop_books_shelf_2.jpg`. The old `section_*_r3/_r6.jpg` copies are deleted. The sets were rebuilt from the same code and seeds, so their geometry and triangle counts are unchanged.
+3. **check_props deco MB column.** A deco stall's MB is now its hut glb plus its goods glb, checked against the 1 MB budget (`DECO_MB`; check_props fails over it). The shared `prop_tex_*` maps the goods use (0.77 MB, loaded once for the whole market) get their own column. The ornament shop still counts its shared textures against its 2 MB, which is the stricter reading. Deco stalls come to 0.24–0.33 MB of 1 MB.
+4. **Ornament shop headroom.** Goods triangles are down from 11,781 to 10,649:
+   - act_ baubles: 9 to 8 sides;
+   - the boxed scenery baubles on the counter and in the glass case: 7×5 to 6×4;
+   - the turned angels: 6 to 5 sides, halo 6 to 5;
+   - the tree's lite tub hoops: 12 to 8 sides.
+
+   The shop is now 28,004 stall + 10,649 goods = 38,653 of 40,000 triangles (1,347 headroom) and 1.94 of 2 MB with its shared textures. No ornament was removed and the act_ node names are unchanged.
+5. **Deco contact sheet.** `build_props.py` no longer rebuilds `deco_goods_contact_sheet.jpg` from the old per-set frames, which still showed the retired act_ goods. The sheet now comes only from `render_stalls.py --sheet`: the stocked stalls from the lane.
+
 ## 1. Deco stalls: full shelves, cheap scenery (Mac, 2026-10-05)
 
 > "There's no need to fully render object in side stores, because there will be no interaction to save the loading time."
@@ -45,9 +64,9 @@ There are 57 `act_orn_*` nodes, each with `name`, `label` and `action` in items.
 - The ribbon knots are now in the lite file too, so full and lite bounds match.
 - The tree uses 12 segments in both files.
 - The straw-star stands on tier 2 moved off the middle brace.
-- The AO maps are 256/128 px, which keeps the shop at 1.97 MB of its 2 MB.
+- The AO maps are 256/128 px (1.97 MB in pass 1; 1.94 MB after the pass-2 trims).
 
-Shop total with goods: 39,785 of 40,000 triangles.
+Shop total with goods: 28,004 stall + 10,649 goods = 38,653 of 40,000 triangles (1,347 headroom) and 1.94 of 2 MB with its shared textures (pass 2; it was 39,785 / 40,000 and 1.97 MB).
 
 Previews: `stall_schmuck.jpg` (lane view) and `stall_schmuck_close.jpg` (counter and rails).
 
@@ -62,11 +81,11 @@ This round:
 - The filler spines on each cabinet's top board are now at most 0.16 m tall, so they stay clear of the cabinet's bulb strip.
 - A price card on the counter moved off the stall's new counter frame.
 
-Previews from the engine's `cam_cat` cameras: `prop_books_physics_cam_cat.jpg` (10 books), `prop_books_lives_cam_cat.jpg` (6) and `prop_books_people_cam_cat.jpg` (14, the fullest). Every title and author reads at that view.
+Previews from the engine's `cam_cat` cameras, one per cabinet (pass 2): `prop_books_<key>_cam_cat.jpg` for physics (10 books), lives (6), mind, people (14, the fullest), decisions (11) and craft. Every title and author reads at that view, the left column included.
 
-## Section sets (unchanged this round)
+## Section sets
 
-The Glühwein, Bier and Wurst sets and the Bücherstand back shelves and counter keep their round-6/7 geometry and names (`act_mug_*`, `act_pot_lid`, `act_tap_0..2` pivoting at their base, `act_glass_*` with foam, `act_grill`, `act_sausage_*`, `act_bottle_*`, `act_wineglass_*`). To save Mac's usage, I did not render them again. Their latest close-ups are copied in as `section_<set>_r3.jpg` and `section_<set>_r6.jpg`, named after the round they were rendered in. The book shelves and counter were rebuilt, but their layout did not change.
+The Glühwein, Bier and Wurst sets and the Bücherstand back shelves and counter keep their round-6/7 geometry and names (`act_mug_*`, `act_pot_lid`, `act_tap_0..2` pivoting at their base, `act_glass_*` with foam, `act_grill`, `act_sausage_*`, `act_bottle_*`, `act_wineglass_*`). Pass 2 rebuilt them all and rendered fresh round-8 close-ups on a plain wooden counter at night (`prop_<set>_hero.jpg`, plus `prop_bier_counter_foam.jpg` and the two book shelves' wide shots).
 
 ## Budgets
 
@@ -86,12 +105,12 @@ Triangles are after optimisation. kB is the glb alone (full / lite), which embed
 | prop_books_shelf_1 | buecherstand | slot_shelf_1 | 1624 | 464 (29%) | 61 / 24 | 1.86 × 0.22 × 0.28 |
 | prop_books_shelf_2 | buecherstand | slot_shelf_2 | 1588 | 440 (28%) | 59 / 23 | 1.86 × 0.19 × 0.27 |
 | prop_books_counter | buecherstand | slot_counter | 2144 | 900 (42%) | 66 / 38 | 2.09 × 0.45 × 0.40 |
-| prop_books_physics | buecherstand | slot_cat_physics | 862 | 256 (30%) | 59 / 37 | 0.78 × 0.14 × 0.68 |
-| prop_books_lives | buecherstand | slot_cat_lives | 514 | 184 (36%) | 42 / 27 | 0.47 × 0.13 × 0.68 |
-| prop_books_mind | buecherstand | slot_cat_mind | 916 | 272 (30%) | 60 / 35 | 0.78 × 0.13 × 0.68 |
-| prop_books_people | buecherstand | slot_cat_people | 946 | 312 (33%) | 69 / 45 | 0.78 × 0.13 × 0.94 |
-| prop_books_decisions | buecherstand | slot_cat_decisions | 790 | 248 (31%) | 59 / 37 | 0.62 × 0.13 × 0.94 |
-| prop_books_craft | buecherstand | slot_cat_craft | 694 | 224 (32%) | 46 / 26 | 0.78 × 0.13 × 0.41 |
+| prop_books_physics | buecherstand | slot_cat_physics | 862 | 256 (30%) | 61 / 38 | 0.78 × 0.14 × 0.68 |
+| prop_books_lives | buecherstand | slot_cat_lives | 514 | 184 (36%) | 43 / 28 | 0.47 × 0.13 × 0.68 |
+| prop_books_mind | buecherstand | slot_cat_mind | 916 | 272 (30%) | 61 / 36 | 0.78 × 0.13 × 0.68 |
+| prop_books_people | buecherstand | slot_cat_people | 946 | 312 (33%) | 71 / 47 | 0.78 × 0.13 × 0.94 |
+| prop_books_decisions | buecherstand | slot_cat_decisions | 790 | 248 (31%) | 60 / 39 | 0.62 × 0.13 × 0.94 |
+| prop_books_craft | buecherstand | slot_cat_craft | 694 | 224 (32%) | 47 / 27 | 0.78 × 0.13 × 0.41 |
 | prop_deco_lebkuchen | deco-lebkuchen | slot_counter | 3814 | 1455 (38%) | 72 / 41 | 2.54 × 2.76 × 1.76 |
 | prop_deco_mandeln | deco-mandeln | slot_counter | 3612 | 1448 (40%) | 70 / 37 | 3.07 × 2.72 × 1.76 |
 | prop_deco_kerzen | deco-kerzen | slot_counter | 3879 | 1408 (36%) | 65 / 34 | 2.09 × 2.76 × 1.74 |
@@ -100,16 +119,16 @@ Triangles are after optimisation. kB is the glb alone (full / lite), which embed
 | prop_deco_crepes | deco-crepes | slot_counter | 3752 | 1446 (39%) | 56 / 33 | 2.40 × 2.76 × 1.82 |
 | prop_deco_maroni | deco-maroni | slot_counter | 3033 | 1455 (48%) | 66 / 34 | 2.24 × 2.74 × 1.78 |
 | prop_deco_puffer | deco-kartoffelpuffer | slot_counter | 3862 | 1433 (37%) | 63 / 34 | 2.91 × 2.76 × 1.77 |
-| prop_schmuck_rail_1 | deco-schmuck | slot_rail_1 | 2378 | 1674 (70%) | 114 / 95 | 2.23 × 0.22 × 0.37 |
-| prop_schmuck_rail_2 | deco-schmuck | slot_rail_2 | 2067 | 1525 (74%) | 115 / 99 | 2.31 × 0.08 × 0.33 |
-| prop_schmuck_rail_3 | deco-schmuck | slot_rail_3 | 404 | 343 (85%) | 30 / 27 | 0.60 × 0.05 × 0.27 |
+| prop_schmuck_rail_1 | deco-schmuck | slot_rail_1 | 2186 | 1674 (77%) | 106 / 95 | 2.23 × 0.22 × 0.37 |
+| prop_schmuck_rail_2 | deco-schmuck | slot_rail_2 | 1953 | 1513 (77%) | 107 / 100 | 2.31 × 0.08 × 0.33 |
+| prop_schmuck_rail_3 | deco-schmuck | slot_rail_3 | 383 | 337 (88%) | 30 / 27 | 0.60 × 0.05 × 0.27 |
 | prop_schmuck_rail_4 | deco-schmuck | slot_rail_4 | 252 | 204 (81%) | 24 / 21 | 0.51 × 0.02 × 0.19 |
-| prop_schmuck_counter | deco-schmuck | slot_counter | 2668 | 1543 (58%) | 84 / 61 | 2.35 × 0.37 × 0.39 |
-| prop_schmuck_shelf | deco-schmuck | slot_shelf_1 | 1910 | 1632 (85%) | 55 / 47 | 2.48 × 0.24 × 0.91 |
-| prop_schmuck_case | deco-schmuck | slot_cabinet | 1358 | 1053 (78%) | 42 / 33 | 0.63 × 0.28 × 0.46 |
-| prop_schmuck_tree | deco-schmuck | slot_tree | 744 | 480 (65%) | 30 / 21 | 0.66 × 0.66 × 1.27 |
+| prop_schmuck_counter | deco-schmuck | slot_counter | 2272 | 1543 (68%) | 80 / 61 | 2.35 × 0.37 × 0.39 |
+| prop_schmuck_shelf | deco-schmuck | slot_shelf_1 | 1784 | 1596 (89%) | 54 / 47 | 2.48 × 0.24 × 0.91 |
+| prop_schmuck_case | deco-schmuck | slot_cabinet | 1075 | 915 (85%) | 38 / 32 | 0.63 × 0.28 × 0.46 |
+| prop_schmuck_tree | deco-schmuck | slot_tree | 744 | 464 (62%) | 30 / 21 | 0.66 × 0.66 × 1.27 |
 
-All prop glbs together: 2.80 MB full and 1.67 MB lite. Shared textures (`prop_tex_*`): 1.94 MB full and 0.28 MB lite, loaded once for all sets.
+All prop glbs together: 2.78 MB full and 1.68 MB lite. Shared textures (`prop_tex_*`): 1.93 MB full and 0.36 MB lite, loaded once for all sets.
 
 Section stalls, the carpenter's current stall glb plus my props (60k triangles and 3 MB with the shared textures the sets use, the Bücherstand 80k and 4 MB; check_props fails under 2000 headroom):
 
@@ -118,21 +137,21 @@ Section stalls, the carpenter's current stall glb plus my props (60k triangles a
 | gluehwein | 38780 | 19132 | 57912 / 60k OK | 2088 | 2.32 / 3 |
 | bierstand | 41453 | 16178 | 57631 / 60k OK | 2369 | 2.27 / 3 |
 | bratwurst | 38378 | 18324 | 56702 / 60k OK | 3298 | 2.27 / 3 |
-| buecherstand | 51428 | 10078 | 61506 / 80k OK | 18494 | 3.19 / 4 |
+| buecherstand | 51428 | 10078 | 61506 / 80k OK | 18494 | 3.18 / 4 |
 
-Deco stalls, stall plus its one scenery goods set against 20k (the ornament shop, stall_schmuck.glb, with its eight goods sets against 40k and 2 MB; check_props fails over):
+Deco stalls, stall plus its one scenery goods set against 20k (the ornament shop, stall_schmuck.glb, with its eight goods sets against 40k and 2 MB; check_props fails over). MB is the stall glb plus its goods glb against the 1 MB budget; the shared prop textures load once for the whole market and are listed apart (the ornament shop's MB includes them, against its 2 MB):
 
-| deco stall | stall tris | goods | total / budget | room | act_ nodes (0: scenery) | MB with goods |
-|---|---|---|---|---|---|---|
-| lebkuchen | 8813 | 3814 | 12627 / 20k OK | 7373 | 0 | 1.09 |
-| mandeln | 9098 | 3612 | 12710 / 20k OK | 7290 | 0 | 1.08 |
-| kerzen | 8372 | 3879 | 12251 / 20k OK | 7749 | 0 | 1.07 |
-| spielzeug | 9633 | 3872 | 13505 / 20k OK | 6495 | 0 | 1.10 |
-| schmuck | 28004 | 11781 | 39785 / 40k OK | 215 | 57 | 1.97 |
-| kaese | 7023 | 3880 | 10903 / 20k OK | 9097 | 0 | 1.01 |
-| crepes | 7507 | 3752 | 11259 / 20k OK | 8741 | 0 | 1.04 |
-| maroni | 7336 | 3033 | 10369 / 20k OK | 9631 | 0 | 1.08 |
-| puffer | 8921 | 3862 | 12783 / 20k OK | 7217 | 0 | 1.08 |
+| deco stall | stall tris | goods | total / budget | room | act_ nodes (0: scenery) | MB stall + goods / budget | shared textures used (loaded once) |
+|---|---|---|---|---|---|---|---|
+| lebkuchen | 8813 | 3814 | 12627 / 20k OK | 7373 | 0 | 0.33 / 1 OK | 0.77 MB |
+| mandeln | 9098 | 3612 | 12710 / 20k OK | 7290 | 0 | 0.31 / 1 OK | 0.77 MB |
+| kerzen | 8372 | 3879 | 12251 / 20k OK | 7749 | 0 | 0.30 / 1 OK | 0.77 MB |
+| spielzeug | 9633 | 3872 | 13505 / 20k OK | 6495 | 0 | 0.33 / 1 OK | 0.77 MB |
+| schmuck | 28004 | 10649 | 38653 / 40k OK | 1347 | 57 | 1.94 / 2 OK | 0.77 MB |
+| kaese | 7023 | 3880 | 10903 / 20k OK | 9097 | 0 | 0.24 / 1 OK | 0.77 MB |
+| crepes | 7507 | 3752 | 11259 / 20k OK | 8741 | 0 | 0.27 / 1 OK | 0.77 MB |
+| maroni | 7336 | 3033 | 10369 / 20k OK | 9631 | 0 | 0.25 / 1 OK | 0.82 MB |
+| puffer | 8921 | 3862 | 12783 / 20k OK | 7217 | 0 | 0.31 / 1 OK | 0.77 MB |
 
 <!-- check_props:end -->
 
@@ -145,8 +164,10 @@ Deco stalls, stall plus its one scenery goods set against 20k (the ornament shop
   - the long-standing bier back and shelf.
 
   All are warnings, not budget failures.
-- **Deco "MB with goods" column:** it reads 1.01 to 1.10 MB against the 1 MB budget, but the column is conservative. It adds the six shared `prop_tex_atlas_*` / `prop_tex_market_*` maps (0.77 MB) to each stall, even though the browser loads them once for the whole market and the section stalls already need them. What a deco stall actually costs is its hut glb (0.19 to 0.26 MB) plus its goods glb (54 to 72 kB), so 0.24 to 0.33 MB.
-- **Ornament shop headroom:** the shop has 215 triangles of headroom (39,785 / 40,000) and 0.03 MB (1.97 / 2 MB). Any new ornament needs a trim elsewhere.
+- **Deco MB column (fixed in pass 2):** it now counts the hut glb plus the goods glb against 1 MB, with the shared textures in their own column.
+- **Ornament shop headroom:** 28,004 stall + 10,649 goods = 38,653 of 40,000 triangles (1,347 headroom) and 1.94 of 2 MB with its shared textures. Any new ornament should still be checked with `check_props.py`.
 - **Lite rail goods:** in the lite file the smallest rail goods (some braids, tapers) are pruned. From the lane the rail then reads thinner than in the full file.
-- **Section previews:** they are copies from rounds 3 and 6. A fresh set of section close-ups should be rendered once there is usage to spare.
+- **Ornament shop previews:** `stall_schmuck.jpg` and `stall_schmuck_close.jpg` are from pass 1. They were not rendered again after the pass-2 segment trims (baubles 9 to 8 sides, angels 6 to 5), which barely show at that distance, so Mac's usage was saved for the book and section renders.
+- **Coaster stand-in text (writer / Mac):** the Bier close-up prints Mac's project names from `content/projects.md` on the coasters, as the engine will. One of them, "Transfusion Audit", reads as clinical, which the brief keeps out of the scene. The writer or Mac should decide whether it belongs on a beer mat.
+- **Cabinet lighting (carpenter / lighting designer):** the covers now carry their own faint glow. If the cabinet lamps change, `vlib.BOOK_GLOW` (0.3) is the single knob.
 - No contract breaks. One note for BUILD.md: a deco stall's goods are now one set at `slot_counter` that reaches `slot_rail_1`, the shelves and `slot_crate` through fixed offsets. props.json marks these sets `"seat": "span"`.
