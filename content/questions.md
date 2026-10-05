@@ -16,13 +16,13 @@ notes:
 
 Nothing is written up here yet.
 
-These are the questions I keep coming back to. I don't have answers to them. When I write something on one, it will go on this page. <!-- check --> [[Mac: confirm the intro and the three topics below, or replace them. Until you do, a production build leaves them off the page.]]
+These are the questions I keep coming back to. I don't have answers to them. When I write something on one, it will go on this page.
 
 ### What is a cause?
-Science leans on the word all the time and rarely says what it means. <!-- check --> [[Mac: confirm this line or write your own.]]
+Science leans on the word all the time and rarely says what it means.
 
 ### Is time something the brain makes?
-Physics has trouble finding a flow of time. We feel one every second. <!-- check --> [[Mac: confirm this line or write your own.]]
+Physics has trouble finding a flow of time. We feel one every second.
 
 ### Why does improvisation feel inevitable afterwards?
-A good solo sounds planned once it's over. Nobody planned it. <!-- check --> [[Mac: confirm this line or write your own.]]
+A good solo sounds planned once it's over. Nobody planned it.
