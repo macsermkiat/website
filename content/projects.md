@@ -41,5 +41,5 @@ A course on designing observational studies as if they were randomized trials. Y
 
 A system that audits blood transfusion practice against guidelines.
 
-[[Mac: where it runs, who uses it, and whether it can be linked or shown in public.]]
+Testing at KCMH.
 
