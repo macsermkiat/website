@@ -84,3 +84,4 @@
   ok   zoom stays in its small band (1.1199992626945177)
 · screenshot ../review/round-9/engineer/home_signpost.jpg
   ok   deco stalls: every one is in the market, at its lite file only (no full-detail download, nothing streams) ({"ids":["deco-lebkuchen","deco-mandeln","deco-kerzen","deco-spielzeug","deco-kaese","deco-crepes","deco-maroni","deco-kartoffelpuffer"],"fil)
+  ok   deco stalls are not clickable: a click on deco-lebkuchen picks nothing, shows no label, and the view stays home (no close-up) ({"hit":{"id":"deco-lebkuchen","x":479.5191263313183,"y":427.60071882278163,"pick":null},"tip":null,"after":{"stop":null,"mode":"home","readi)
