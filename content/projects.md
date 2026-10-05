@@ -24,17 +24,16 @@ Three things are on tap: two pieces of software and a course.
 
 A chatbot that helps researchers write a study protocol and work out the sample size.
 
-You tell it about the study you have in mind, and it asks for what's missing. <!-- check --> [[Mac: confirm this is how it works. Until you do, a production build leaves this line out.]]
+You tell it about the study you have in mind, and it asks for what's missing. 
 
-[[Mac: link to ProtoCol, and one line on who it's for or who uses it.]]
+[ProtoCol](https://www.protocol.med)
 
 ### Target Trial Emulation
 
 *Dunkles · a seasonal series of video lessons*
 
 A course on designing observational studies as if they were randomized trials. You write down the trial you would run if you could, then copy it as closely as your data allows. The lessons are on YouTube.
-
-[[Mac: link to the playlist, and how many lessons there are so far.]]
+[YouTube Playlist](https://www.youtube.com/playlist?list=PLama3Rl89mGYu-oaiC-tTSkO2gPpOxgv4)
 
 ### Transfusion Audit
 
@@ -44,4 +43,3 @@ A system that audits blood transfusion practice against guidelines.
 
 [[Mac: where it runs, who uses it, and whether it can be linked or shown in public.]]
 
-More of my code is on [GitHub](https://github.com/macsermkiat).
