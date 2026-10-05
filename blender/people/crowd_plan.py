@@ -497,6 +497,10 @@ def main():
             continue
         fig, coat, scarf, hat, clip = DECO_LOOK[sid]
         sv = PL.slot(sid, "slot_vendor", [0, 0.13, 0.03])
+        if sid == "deco-schmuck":
+            # stand right of the candle pyramid (slot_pyramid x = 0.12), not behind it, so the
+            # harmonica close-up sees the pyramid and the shelves (market owner, round 10)
+            sv = [sv[0] + 0.95, sv[1], sv[2]]
         w = PL.stall_pt(sid, (sv[0], sv[2]))
         lite_only = sid != "deco-schmuck"      # the ornament shop is a stop with a close view; the rest is scenery
         e = dict(id=f"vendor_{sid}", kind="vendor", stall=sid, slot="slot_vendor",
