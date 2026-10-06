@@ -84,6 +84,7 @@ export function createGrillSausages(root, { anim }) {
   const roots = (Array.isArray(root) ? root : [root]).filter(Boolean);
   if (!roots.length) return null;
   const list = [];
+  let bakedSrc = null, baked = null; // the sausages at rest in one mesh (bake, below)
   // a stand-in grill: separate sausage meshes already
   const loose = [];
   for (const r of roots) r.traverse((o) => { if (o.isMesh && !o.userData.itemFx && !o.userData.grillPiece && !loose.includes(o)) loose.push(o); });
@@ -118,7 +119,61 @@ export function createGrillSausages(root, { anim }) {
       list.push({ mesh, pivot, wrap, c0: c.clone(), axis: s.x >= s.z ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, 1), angle: 0, turns: 0, q0: new THREE.Quaternion() });
     });
     // the full model grafted on later (engine/stream.js) brings a finer mesh: cut it the same way
-    src.userData.afterGraft = () => refit(src);
+    src.userData.afterGraft = () => { refit(src); bake(); };
+    bakedSrc = src;
+    bake();
+  }
+  // Round 10: at rest the sausages are drawn as one mesh again, baked from the pieces as they lie (each one's
+  // vertices carried by its pivot), so the grate costs one draw instead of one per sausage; the pieces show only
+  // while some of them turn, and the bake is redone when the last one lies again.
+  function bake() {
+    const src = bakedSrc;
+    if (!src || !list.length || list.some((x) => x.loose || x.busy)) return;
+    const geo = src.geometry;
+    const names = Object.keys(geo.attributes);
+    const out = Object.fromEntries(names.map((k) => [k, []]));
+    const idx = [];
+    const m = new THREE.Matrix4(), nm = new THREE.Matrix3(), v = new THREE.Vector3();
+    let base = 0;
+    for (const x of list) {
+      x.pivot.updateMatrix(); x.mesh.updateMatrix();
+      m.multiplyMatrices(x.pivot.matrix, x.mesh.matrix);
+      nm.getNormalMatrix(m);
+      const pidx = x.mesh.geometry.index.array;
+      const map = new Map();
+      for (const i of pidx) {
+        if (!map.has(i)) {
+          map.set(i, base + map.size);
+          for (const k of names) {
+            const a = geo.attributes[k];
+            if (k === 'position') { v.fromBufferAttribute(a, i).applyMatrix4(m); out[k].push(v.x, v.y, v.z); }
+            else if (k === 'normal') { v.fromBufferAttribute(a, i).applyMatrix3(nm).normalize(); out[k].push(v.x, v.y, v.z); }
+            else if (k === 'tangent') { v.fromBufferAttribute(a, i).transformDirection(m); out[k].push(v.x, v.y, v.z, a.getW(i)); }
+            else { out[k].push(a.getX(i)); if (a.itemSize > 1) out[k].push(a.getY(i)); if (a.itemSize > 2) out[k].push(a.getZ(i)); if (a.itemSize > 3) out[k].push(a.getW(i)); }
+          }
+        }
+        idx.push(map.get(i));
+      }
+      base += map.size;
+    }
+    const g = new THREE.BufferGeometry();
+    for (const k of names) g.setAttribute(k, new THREE.Float32BufferAttribute(out[k], geo.attributes[k].itemSize));
+    g.setIndex(idx);
+    g.computeBoundingBox(); g.computeBoundingSphere();
+    if (!baked) {
+      baked = new THREE.Mesh(g, src.material);
+      baked.name = 'grill_sausages_baked';
+      baked.raycast = () => {};
+      src.parent.add(baked);
+    } else { baked.geometry.dispose(); baked.geometry = g; baked.material = src.material; }
+    baked.position.copy(src.position); baked.quaternion.copy(src.quaternion); baked.scale.copy(src.scale);
+    baked.castShadow = src.castShadow; baked.receiveShadow = src.receiveShadow;
+    showPieces(false);
+  }
+  function showPieces(on) {
+    if (!baked) return;
+    baked.visible = !on;
+    for (const x of list) x.mesh.visible = on;
   }
   function wrapLoose(m) {
     // a mesh of its own: turn it in place about its middle
@@ -164,6 +219,7 @@ export function createGrillSausages(root, { anim }) {
       const s = list[i];
       if (!s || s.busy) return false;
       s.busy = true;
+      showPieces(true);
       const a0 = s.angle;
       s.angle += Math.PI;
       s.turns++;
@@ -175,7 +231,7 @@ export function createGrillSausages(root, { anim }) {
         if (base) s.pivot.quaternion.copy(base).multiply(q); else s.pivot.quaternion.copy(q);
         s.pivot.position.copy(s.c0).addScaledVector(up, hop);
       };
-      anim.add(0.5, (k) => pose(a0 + k * Math.PI, Math.sin(k * Math.PI) * 0.045), () => { pose(s.angle, 0); s.busy = false; done?.(s); }, delay);
+      anim.add(0.5, (k) => pose(a0 + k * Math.PI, Math.sin(k * Math.PI) * 0.045), () => { pose(s.angle, 0); s.busy = false; if (!list.some((x) => x.busy)) bake(); done?.(s); }, delay);
       return true;
     },
     angleOf: (i) => list[i]?.angle ?? null,

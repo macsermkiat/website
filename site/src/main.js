@@ -32,7 +32,7 @@ import { createSurfaces, placeCoasters, modelCoasters, hangPlacards } from './wo
 import { sectionPieces } from './world/sections.js';
 import { SECTIONS, ORDER, bookPicks, phrases, taglineHtml } from './content.js';
 import { createPerfMeter } from './perf.js';
-import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders, shadowProxies, holdShadowProxies, shadowStandIns } from './engine/merge.js';
+import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders, shadowProxies, holdShadowProxies, shadowStandIns, singlePassPanes } from './engine/merge.js';
 import { PROFILES as LIGHTING_PROFILES } from './lighting/settings.js';
 import { createGovernor } from './governor.js';
 import { counterLocal } from './actions/util.js';
@@ -527,6 +527,8 @@ async function boot() {
         merges.snow = (merges.snow || 0) + s.saved;
       }
     } catch (e) { warn(`merge snow caps: ${e?.message || e}`); }
+    // flat see-through panes in one pass instead of two (engine/merge.js singlePassPanes)
+    try { merges.singlePass = singlePassPanes(scene); } catch (e) { warn(`single-pass panes: ${e?.message || e}`); }
   }
   // the streamed models are merged reversibly until their full model is grafted on (engine/stream.js)
   compact(market.placed);

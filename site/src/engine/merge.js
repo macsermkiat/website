@@ -608,3 +608,55 @@ export function holdShadowProxies(renderer, list) {
   };
   return () => { sm.render = orig; };
 }
+
+// ---------- one pass for flat see-through panes (round 10) ----------
+// three draws a transparent double-sided mesh twice, its back faces and then its front faces, so a closed glass is
+// sorted against itself. A flat pane (a cabinet's glass, a booth window) has nothing behind itself: from any side
+// one of the two passes draws nothing, so one pass draws the same pixels. Every mesh with that material must be
+// flat; only the models' own materials (not the lighting module's or the engine's).
+const flatCache = new WeakMap();
+function isFlat(geometry) {
+  if (flatCache.has(geometry)) return flatCache.get(geometry);
+  const pos = geometry.getAttribute('position');
+  let flat = false;
+  if (pos && !geometry.morphAttributes?.position) {
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
+    const idx = geometry.index;
+    const at = (i) => (idx ? idx.getX(i) : i);
+    const count = idx ? idx.count : pos.count;
+    for (let i = 0; i + 2 < count && n.lengthSq() < 1e-12; i += 3) {
+      a.fromBufferAttribute(pos, at(i)); b.fromBufferAttribute(pos, at(i + 1)); c.fromBufferAttribute(pos, at(i + 2));
+      n.subVectors(c, b).cross(b.clone().sub(a));
+    }
+    if (n.lengthSq() >= 1e-12) {
+      n.normalize();
+      if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+      const eps = Math.max(1e-5, geometry.boundingSphere.radius * 1e-4);
+      const d = n.dot(a);
+      flat = true;
+      for (let i = 0; i < pos.count && flat; i++) if (Math.abs(n.dot(c.fromBufferAttribute(pos, i)) - d) > eps) flat = false;
+    }
+  }
+  flatCache.set(geometry, flat);
+  return flat;
+}
+/** Set forceSinglePass on the glb's transparent double-sided materials whose every mesh is flat. Returns how many. */
+export function singlePassPanes(scene) {
+  const byMat = new Map();
+  scene.traverse((o) => {
+    if (!o.isMesh || o.isInstancedMesh || o.isSkinnedMesh) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (!m || !m.transparent || m.side !== THREE.DoubleSide || !m.userData?.fromGlb) continue;
+      if (!byMat.has(m)) byMat.set(m, true);
+      if (byMat.get(m) && (Array.isArray(o.material) || !isFlat(o.geometry))) byMat.set(m, false);
+    }
+  });
+  let n = 0;
+  for (const [m, flat] of byMat) {
+    if (m.userData.singlePassSet === undefined && m.forceSinglePass) continue; // the file's own choice
+    m.forceSinglePass = flat;
+    m.userData.singlePassSet = flat;
+    if (flat) n++;
+  }
+  return n;
+}

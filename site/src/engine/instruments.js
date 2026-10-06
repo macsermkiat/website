@@ -3,6 +3,7 @@
 // Any placed model with slot_sax / slot_piano / slot_bass / slot_drums gets them, so a new bandstand needs no code.
 import * as THREE from 'three';
 import { loadGlb } from './loader.js';
+import { compactMusician } from '../crowd.js';
 import { liteVariant, modelExists } from '../layout.js';
 import { buildPerson } from '../standins/people.js';
 import { rng } from '../standins/kit.js';
@@ -34,7 +35,7 @@ export async function placeInstruments(placed, scanNodes, { lite, liteOf = null,
         // The organizer's animated musician when crowd.json has one, else a stand-in figure.
         const person = (await organizerMusician(k, lite, manager, warn)) || standinMusician(r, k);
         person.name = `musician_${k}`;
-        person.traverse((o) => { if (o.isMesh) { o.castShadow = !lite; o.receiveShadow = false; } });
+        person.traverse((o) => { if (o.isMesh) { o.castShadow = !lite && !o.userData.castsByProxy; o.receiveShadow = false; } });
         slot.add(person);
         // the band on a break: the tenor rests on its floor stand (instr_sax_stand, same origin) while the
         // player rests, and goes back into his hands when the band plays (actions/band.js). Only with the
@@ -73,7 +74,8 @@ async function organizerMusician(k, lite, manager, warn) {
   const file = (lite && liteVariant(m.model)) || m.model;
   if (!modelExists(file)) return null;
   try {
-    const g = await loadGlb(file, manager);
+    // the figure's parts in one draw (crowd.js), before its mixer binds to it
+    const g = compactMusician(await loadGlb(file, manager), lite);
     const clips = g.userData.animations || [];
     if (clips.length) {
       const mixer = new THREE.AnimationMixer(g);

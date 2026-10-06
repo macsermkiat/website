@@ -374,6 +374,7 @@ export function renderPage(page, { theme: themeKey = 'print', glow = 0.12, z = 0
   const mat = textMaterial(themeKey, glow, theme.color);
   const specs = [];
   let opacity = 1, disposed = false;
+  const unders = [];
   for (const line of page.lines) {
     const lw = line.segments.length ? Math.max(...line.segments.map((s) => s.x + s.w)) : 0;
     const dx = align === 'center' ? Math.max(0, (w - lw) / 2) : 0;
@@ -381,12 +382,9 @@ export function renderPage(page, { theme: themeKey = 'print', glow = 0.12, z = 0
       if (!s.text.trim()) continue;
       specs.push({ s, line, dx });
       if (s.href) {
-        // the link: a thin underline you can see, and a quad over the words you can click
-        const u = new THREE.Mesh(new THREE.PlaneGeometry(s.w, Math.max(0.0008, s.size * 0.06)), new THREE.MeshBasicMaterial({ color: new THREE.Color(s.color), transparent: true, opacity: 0.85 }));
-        u.position.set(s.x + dx + s.w / 2, -(line.y + line.height / 2) - s.size * 0.42, z);
-        u.raycast = () => {};
-        u.name = 'engine_text_underline';
-        group.add(u);
+        // the link: a thin underline you can see (all of a page's in one mesh, below), and a quad over the words
+        // you can click
+        unders.push({ x: s.x + dx + s.w / 2, y: -(line.y + line.height / 2) - s.size * 0.42, w: s.w, h: Math.max(0.0008, s.size * 0.06), color: new THREE.Color(s.color) });
         const hit = new THREE.Mesh(new THREE.PlaneGeometry(s.w + s.size * 0.3, line.height), new THREE.MeshBasicMaterial({ visible: false }));
         hit.position.set(s.x + dx + s.w / 2, -(line.y + line.height / 2), z + 0.0005);
         hit.name = 'engine_text_link';
@@ -396,6 +394,22 @@ export function renderPage(page, { theme: themeKey = 'print', glow = 0.12, z = 0
         links.push(hit);
       }
     }
+  }
+  // the page's link underlines: one quad each, their colours per vertex, one draw (round 10)
+  if (unders.length) {
+    const pos = [], col = [], idx = [];
+    for (const [k, u] of unders.entries()) {
+      for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { pos.push(u.x + (sx * u.w) / 2, u.y + (sy * u.h) / 2, z); col.push(u.color.r, u.color.g, u.color.b); }
+      idx.push(k * 4, k * 4 + 1, k * 4 + 2, k * 4, k * 4 + 2, k * 4 + 3);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx);
+    const u = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85 }));
+    u.raycast = () => {};
+    u.name = 'engine_text_underline';
+    group.add(u);
   }
   let batch = null;
   const ready = new Promise((done) => whenText(() => {
