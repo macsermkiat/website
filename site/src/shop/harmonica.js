@@ -12,7 +12,7 @@
 //   - The stop bar's "Play the glass harmonica" plays the phrase in its own rhythm.
 // Reduced motion: the baubles glow and ring but do not swing.
 import * as THREE from 'three';
-import { toThinGlass } from '../engine/glass.js';
+import { toThinGlass, keepThinGlass, thinGlass } from '../engine/glass.js';
 import { strike as glassStrike } from '../audio/glass.js';
 import { worldDirToParent } from '../actions/items/common.js';
 
@@ -43,9 +43,16 @@ function halo() {
  * (premultiplied blending: the diffuse scaled by a Fresnel alpha, the specular and the glow added whole).
  */
 function clearGlass(m) {
-  // round 10: glass whose transmission engine/glass.js turns into a blend (its alpha the Fresnel term) has no diffuse
-  // left; its rim alpha multiplies that alpha instead, which draws what transmission drew
-  const thin = !!m.userData.thinGlass || toThinGlass(m);
+  // round 10: glass whose transmission engine/glass.js has turned into two blended draws (a multiply by its
+  // transmittance, and a child mesh adding the specular) takes the rim alpha into the multiply, which draws what the
+  // premultiplied blend over the transmission drew
+  if (m.userData.thinGlass || toThinGlass(m)) {
+    keepThinGlass(m);
+    m.defines = { ...(m.defines || {}), NM_GLASS_FA: '' };
+    m.envMapIntensity = Math.max(m.envMapIntensity ?? 1, 1.6);
+    m.needsUpdate = true;
+    return;
+  }
   m.transparent = true;
   m.depthWrite = false;
   m.blending = THREE.CustomBlending;
@@ -54,13 +61,10 @@ function clearGlass(m) {
   m.blendSrcAlpha = THREE.OneFactor;
   m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor;
   m.envMapIntensity = Math.max(m.envMapIntensity ?? 1, 1.6);
-  if (thin) m.defines = { ...(m.defines || {}), NM_GLASS_FA: '' };
   const prev = m.onBeforeCompile;
   m.onBeforeCompile = (shader, r) => {
     prev?.call(m, shader, r);
-    shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', thin ? `
-  float nmGlassFa = mix( 0.1, 0.78, pow( 1.0 - clamp( abs( dot( geometryNormal, geometryViewDir ) ), 0.0, 1.0 ), 2.5 ) );
-  gl_FragColor = vec4( totalSpecular + totalEmissiveRadiance, 1.0 );` : `
+    shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `
   {
     float nv = clamp( abs( dot( geometryNormal, geometryViewDir ) ), 0.0, 1.0 );
     float fa = mix( 0.1, 0.78, pow( 1.0 - nv, 2.5 ) );
@@ -105,6 +109,7 @@ export function createHarmonica({ items, dom, camera, rig, motion, sfxLog, canPl
       };
       o.material = Array.isArray(o.material) ? o.material.map(swap) : swap(o.material);
     });
+    thinGlass(node); // the specular draw of glass turned above (engine/glass.js)
     const box = new THREE.Box3().setFromObject(node);
     const sphere = box.getBoundingSphere(new THREE.Sphere());
     // the halo sits on the glass itself (the node's box takes in the ribbon and the cap too)

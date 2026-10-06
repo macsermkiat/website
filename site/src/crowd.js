@@ -73,6 +73,16 @@ function figureMaterial(ao) {
   return sharedFigureMat;
 }
 
+/**
+ * The same skin: one skeleton, or (a figure copied by SkeletonUtils.clone, which gives each mesh its own skeleton
+ * object) the same bones with the same inverse bind matrices.
+ */
+function sameSkin(a, b) {
+  if (a === b) return true;
+  if (!a || !b || a.bones.length !== b.bones.length) return false;
+  return a.bones.every((x, i) => x === b.bones[i]) && a.boneInverses.every((m, i) => m.equals(b.boneInverses[i]));
+}
+
 /** Merge a figure's part meshes into one skinned mesh, once per loaded figure. Returns the figure. */
 function compactFigure(src) {
   if (compacted.has(src)) return src;
@@ -86,7 +96,7 @@ function compactFigure(src) {
     byParent.get(o.parent).push(o);
   });
   for (const [parent, list] of byParent) {
-    if (list.length < 2 || list.some((o) => o.skeleton !== list[0].skeleton)) continue;
+    if (list.length < 2 || list.some((o) => !sameSkin(o.skeleton, list[0].skeleton))) continue;
     const names = ['position', 'normal', 'uv', 'skinIndex', 'skinWeight'];
     if (!list.every((o) => names.every((n) => o.geometry.getAttribute(n)))) continue;
     const parts = [];

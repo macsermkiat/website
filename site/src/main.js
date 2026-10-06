@@ -33,7 +33,7 @@ import { createSurfaces, placeCoasters, modelCoasters, hangPlacards } from './wo
 import { sectionPieces } from './world/sections.js';
 import { SECTIONS, ORDER, bookPicks, phrases, taglineHtml } from './content.js';
 import { createPerfMeter } from './perf.js';
-import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders, shadowProxies, holdShadowProxies, shadowStandIns, singlePassPanes } from './engine/merge.js';
+import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders, shadowProxies, holdShadowProxies, shadowStandIns } from './engine/merge.js';
 import { PROFILES as LIGHTING_PROFILES } from './lighting/settings.js';
 import { thinGlass } from './engine/glass.js';
 import { createGovernor } from './governor.js';
@@ -324,6 +324,8 @@ async function boot() {
       compact([rec]);
       const place = rec.entry.place && market.places[rec.entry.place];
       if (place) market.mergeGoods(place);
+      // the merged goods' glass gets its specular draw too (engine/glass.js)
+      if (place) { try { thinGlass(place.root); } catch (e) { warn(`thin glass: ${e?.message || e}`); } }
       if (place?.id === 'schmuck' || rec.entry.kind === 'town') actions.shop?.refresh();
       market.snow.forEach((o) => (o.visible = snowOn));
       if (renderer.shadowMap.autoUpdate === false) renderer.shadowMap.needsUpdate = true;
@@ -531,11 +533,9 @@ async function boot() {
         merges.snow = (merges.snow || 0) + s.saved;
       }
     } catch (e) { warn(`merge snow caps: ${e?.message || e}`); }
-    // thin glass drawn by blending instead of three's transmission pass, which drew every opaque mesh twice
+    // thin glass in two blended draws instead of three's transmission pass, which drew every opaque mesh twice
     // (engine/glass.js; ?glass=0 keeps transmission)
     if (params.get('glass') !== '0') { try { merges.thinGlass = (merges.thinGlass || 0) + thinGlass(scene); } catch (e) { warn(`thin glass: ${e?.message || e}`); } }
-    // flat see-through panes in one pass instead of two (engine/merge.js singlePassPanes)
-    try { merges.singlePass = singlePassPanes(scene); } catch (e) { warn(`single-pass panes: ${e?.message || e}`); }
   }
   // the streamed models are merged reversibly until their full model is grafted on (engine/stream.js)
   compact(market.placed);
