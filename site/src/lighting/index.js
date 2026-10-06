@@ -12,6 +12,8 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { NIGHT, PROFILES } from './settings.js';
 import { createSky } from './sky.js';
 import { installHeightFog, recompile } from './fog.js';
@@ -19,7 +21,7 @@ import { syntheticEnvironment, createEnvUpdater, probeTargets, captureProbe } fr
 import { installShading, bulbStrings } from './shading.js';
 import { createSnow } from './snow.js';
 import { GradePass } from './grade.js';
-import { placeWarmLights, adoptEngineLights, tuneEmissives, retargetLight, bulbBounce, hubFade } from './lights.js';
+import { placeWarmLights, adoptEngineLights, tuneEmissives, retargetLight, bulbBounce, hubFade, bulbMinSize } from './lights.js';
 
 export { NIGHT, PROFILES } from './settings.js';
 export { placeWarmLights, tuneEmissives } from './lights.js';
@@ -66,6 +68,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   const add = (o) => { scene.add(o); added.push(o); return o; };
   const disposers = [];
   const _cam = new THREE.Vector3();
+  const _buf = new THREE.Vector2();
   // the renderer state this module changes, put back by dispose()
   const was = {
     toneMapping: renderer.toneMapping,
@@ -322,6 +325,10 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     });
   }
   const emissives = tuneEmissives(scene, N, { lite });
+  // bulbs keep ~2 px across when MSAA is off (lights.js bulbMinSize); uBulbPx is set each frame in update()
+  const bulbPx = { uBulbPx: { value: 0 } };
+  const bulbMin = (set) => { if (!P.msaa) bulbMinSize(set, bulbPx); };
+  bulbMin(emissives.bulbs);
   addBulbGlows(scene);
   // LEGACY: re-tune lights the engine placed before this module ran (main.js now calls placeLights)
   const adopted = options.adoptEngineLights === true
@@ -440,6 +447,7 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     const r = tuneEmissives(root, N, { lite });
     try { const n = bulbBounce(root, N); if (n) console.info(`[lighting] bulb bounce on ${n} materials of ${root.name || 'a model'}`); } catch (e) { console.warn('[lighting] bulb bounce failed', e); }
     try { const h = hubFade(root, N, r.bulbs); if (h) console.info(`[lighting] hub fade on ${h} bulb meshes of ${root.name || 'a model'}`); } catch (e) { console.warn('[lighting] hub fade failed', e); }
+    bulbMin(r.bulbs); // after hubFade, which adds its clones to r.bulbs
     r.bulbs.forEach((m) => emissives.bulbs.add(m));
     r.windows.forEach((m) => emissives.windows.add(m));
     addBulbGlows(root);
@@ -513,6 +521,26 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
   const grade = new GradePass({ exposure: N.exposure, punch: N.punch, vignette: N.vignette, grain: P.grain ? N.grain : 0 });
   grade.exposureFrom = renderer;
   composer.addPass(grade);
+  // Edge smoothing by FXAA on the graded image instead of MSAA (2026-10-06): on Mac's M3 MacBook Air the
+  // multisampled half-float targets (every post pass ping-pongs through them) cost 10-15x the frame time;
+  // msaa:0 took the full market from ~650 ms to ~45 ms a frame. ?lighting=msaa:4 brings MSAA back for comparison.
+  // FXAA alone smooths a lone bright pixel away as if it were a jagged edge, and the bulb strings across the square
+  // vanished with it; a pixel much brighter than FXAA's result keeps its own colour. ?lighting=fxaa:0 turns it off.
+  const fxaa = P.msaa || P.fxaa === 0 ? null : new ShaderPass({
+    ...FXAAShader,
+    fragmentShader: FXAAShader.fragmentShader.replace(
+      'gl_FragColor = ApplyFXAA( tDiffuse, resolution.xy, vUv );',
+      `vec4 aa = ApplyFXAA( tDiffuse, resolution.xy, vUv );
+			vec4 own = texture2D( tDiffuse, vUv );
+			float lo = dot( own.rgb, vec3( 0.299, 0.587, 0.114 ) ), la = dot( aa.rgb, vec3( 0.299, 0.587, 0.114 ) );
+			gl_FragColor = ( lo > 0.35 && lo > la * 1.25 ) ? own : aa;`),
+  });
+  if (fxaa) composer.addPass(fxaa);
+  const setSize = composer.setSize.bind(composer);
+  composer.setSize = (w, h) => {
+    setSize(w, h);
+    if (fxaa) { const r = Math.min(prWanted, prCap); fxaa.material.uniforms.resolution.value.set(1 / Math.max(1, w * r), 1 / Math.max(1, h * r)); }
+  };
   composer.setSize(size.x || 256, size.y || 256);
 
   // ---------- per frame ----------
@@ -584,6 +612,10 @@ export function createLighting({ scene, renderer, camera, lite = false, options 
     if (camOverride) { camera.position.copy(camOverride.pos); camera.lookAt(camOverride.target); camera.updateMatrixWorld(); }
     const rawDt = Math.max(dt || 0, 0);
     dt = Math.min(rawDt, 0.1);
+    if (!P.msaa && camera.isPerspectiveCamera) {
+      renderer.getDrawingBufferSize(_buf);
+      bulbPx.uBulbPx.value = (P.bulbPx ?? 1) * 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / (camera.zoom || 1) / Math.max(1, _buf.y);
+    }
     const st = lastT == null ? 0 : Math.max(0, t - lastT); // scene time step (0 under reduced motion)
     lastT = t;
     // wall-clock step: the snow blend and the refresh timer run in real time, so a slow machine

@@ -1021,3 +1021,32 @@ export function hubFade(root, N, bulbs) {
   });
   return n;
 }
+
+/**
+ * Keep every bulb at least about two pixels across (2026-10-06). Without MSAA (FXAA replaced it,
+ * index.js) a distant bulb smaller than a pixel lands between pixel centres and the strings drop out.
+ * The vertex shader pushes each bulb vertex out along its normal by `uniforms.uBulbPx` times its view
+ * depth, which the caller sets each frame to about a pixel (?lighting=bulbPx:n); near bulbs barely change.
+ */
+const bulbPatched = new WeakSet();
+export function bulbMinSize(materials, uniforms) {
+  let n = 0;
+  for (const m of materials) {
+    if (!m || bulbPatched.has(m) || !(m.isMeshStandardMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial)) continue;
+    // a WeakSet, not a userData flag: clone() copies userData but not onBeforeCompile (the engine's lightBulbs clones)
+    bulbPatched.add(m);
+    const prev = m.onBeforeCompile, key = m.customProgramCacheKey?.bind(m);
+    m.onBeforeCompile = (sh, r) => {
+      prev?.call(m, sh, r);
+      sh.uniforms.uBulbPx = uniforms.uBulbPx;
+      if (sh.vertexShader.includes('uBulbPx')) return; // hubFade's clone of a patched material chains this patch already
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nuniform float uBulbPx;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\n\t{ float bnl = length( transformedNormal ); if ( bnl > 1e-6 ) { mvPosition.xyz += transformedNormal / bnl * ( - mvPosition.z ) * uBulbPx; gl_Position = projectionMatrix * mvPosition; } }');
+    };
+    m.customProgramCacheKey = () => `${key ? key() : ''}|bulbPx`;
+    m.needsUpdate = true;
+    n++;
+  }
+  return n;
+}

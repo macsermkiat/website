@@ -275,7 +275,7 @@ export const PROFILES = {
     // meshes smaller than this (world bounding radius, m) stop casting the moon's shadow once the
     // static interior shadows are drawn: at 5.5 cm a texel their shadow is a blur of a few texels
     minMoonCaster: 0.15,
-    msaa: 4,
+    msaa: 0, // FXAA instead (index.js): MSAA cost 10-15x the frame time on an M3 MacBook Air (2026-10-06)
     bloomScale: 1,
     envSize: 256,
     envCapture: true,
@@ -306,8 +306,8 @@ export const PROFILES = {
     shadows: false,
     shadowMapSize: 0,
     shadowRadius: 0,
-    // 2x MSAA: with none, the hairline gaps between counter boards alias into rows of dots
-    msaa: 2,
+    // FXAA instead of 2x MSAA (index.js; 2026-10-06 measurement); MSAA had kept the counter boards' hairline gaps from aliasing
+    msaa: 0,
     bloomScale: 0.5,
     envSize: 128,
     envCapture: false,
