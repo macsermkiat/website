@@ -42,6 +42,37 @@ function newText() {
 }
 const whenText = (f) => (troika ? f() : waitingForText.push(f));
 
+/**
+ * Fewer draw calls (round 10): the words of one page (one Text per styled run, often twenty or more) draw as one
+ * troika BatchedText instead of one draw each. The runs stay Text objects (their text, font, size, colour and
+ * opacity are read from them every frame) but are members of the batch, not children of the page.
+ * troika packs a member's colour as an sRGB byte triple and reads it back as a linear value over 256: the
+ * vertex shader is patched to decode it as three's Color does (sRGB to linear, over 255), so a batched page
+ * keeps exactly the colours its single Texts had.
+ */
+let PageBatch = null;
+function newBatch() {
+  if (!PageBatch) {
+    PageBatch = class extends troika.BatchedText {
+      createDerivedMaterial(base) {
+        const m = super.createDerivedMaterial(base);
+        // a troika derived material keeps its own onBeforeCompile; one assigned to it runs after it (on the shaders
+        // troika has already upgraded)
+        m.onBeforeCompile = (shader) => {
+          shader.vertexShader = shader.vertexShader.replace(/diffuse\s*=\s*troikaFloatToColor\(\s*data\.x\s*\);/,
+            'diffuse = troikaFloatToColor(data.x) * (256.0 / 255.0);\n      diffuse = mix(diffuse * 0.0773993808, pow(diffuse * 0.9478672986 + 0.0521327014, vec3(2.4)), step(0.04045, diffuse));');
+        };
+        const key = m.customProgramCacheKey?.bind(m);
+        m.customProgramCacheKey = () => `${key ? key() : ''}|nmBatchSRGB`;
+        return m;
+      }
+    };
+  }
+  const b = new PageBatch();
+  b.geometry.instanceCount = 0; // as newText(): nothing to draw (and no Infinity triangles) before the first pack
+  return b;
+}
+
 /** The faces, by role: the URL troika draws with and the family the canvas measures with. */
 export const FONTS = {
   chalk: { url: chalkUrl, family: 'NM Chalk' },
@@ -366,8 +397,19 @@ export function renderPage(page, { theme: themeKey = 'print', glow = 0.12, z = 0
       }
     }
   }
+  let batch = null;
   const ready = new Promise((done) => whenText(() => {
     if (disposed) { done(); return; }
+    // one draw for the page's words (see newBatch); a page of a single run keeps its plain Text
+    if (specs.length > 1) {
+      batch = newBatch();
+      batch.name = 'engine_text_batch';
+      batch.isText = true;
+      batch.material = mat;
+      batch.userData.itemFx = true;
+      batch.raycast = () => {};
+      group.add(batch);
+    }
     for (const { s, line, dx } of specs) {
       const t = newText();
       t.isText = true;
@@ -386,7 +428,7 @@ export function renderPage(page, { theme: themeKey = 'print', glow = 0.12, z = 0
       if (rough) t.rotation.z = Math.sin((line.y * 37 + s.x * 11) * 3.1) * 0.006;
       t.userData.itemFx = true;
       t.raycast = () => {}; // the surface and the link quads answer the pointer, not the glyphs
-      group.add(t);
+      if (batch) batch.addText(t); else group.add(t);
       texts.push(t);
     }
     Promise.all(texts.map((t) => new Promise((res) => { try { t.sync(res); } catch { res(); } }))).then(() => done());
@@ -397,7 +439,8 @@ export function renderPage(page, { theme: themeKey = 'print', glow = 0.12, z = 0
     dispose() {
       disposed = true;
       group.removeFromParent();
-      for (const t of texts) t.dispose();
+      for (const t of texts) { batch?.removeText(t); t.dispose(); }
+      batch?.dispose();
       group.traverse((o) => { if (o.isMesh && !o.isText && o.geometry) { o.geometry.dispose(); o.material?.dispose?.(); } });
     },
   };

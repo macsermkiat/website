@@ -96,7 +96,7 @@ export function graft(lite, full) {
  * The streamer. after(record, { failed }) runs once a placed model is upgraded (merge, lighting tune, picking).
  * A record is a placed layout entry { entry, root, source, streamed } (market.placed; a place's is place.record).
  */
-export function createStreamer({ market, lite, warn, after, manager }) {
+export function createStreamer({ market, lite, warn, before, after, manager }) {
   const state = {}; // layout id -> 'lite' | 'loading' | 'full' | 'failed' | 'scenery' (a deco stall: its lite file, for good)
   const report = [];
   const pending = {};
@@ -124,6 +124,7 @@ export function createStreamer({ market, lite, warn, after, manager }) {
       let meshes = 0;
       try {
         const loaded = await Promise.all(parts.map((p) => loadGlb(p.full, manager).then((root) => ({ ...p, root }))));
+        before?.(rec);
         for (const p of loaded) {
           const g = graft(p.node, p.root);
           meshes += g.meshes;

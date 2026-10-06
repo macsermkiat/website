@@ -32,7 +32,8 @@ import { createSurfaces, placeCoasters, modelCoasters, hangPlacards } from './wo
 import { sectionPieces } from './world/sections.js';
 import { SECTIONS, ORDER, bookPicks, phrases, taglineHtml } from './content.js';
 import { createPerfMeter } from './perf.js';
-import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders } from './engine/merge.js';
+import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders, shadowProxies, holdShadowProxies } from './engine/merge.js';
+import { PROFILES as LIGHTING_PROFILES } from './lighting/settings.js';
 import { createGovernor } from './governor.js';
 import { counterLocal } from './actions/util.js';
 import { showPlainFallback } from './ui/fallback.js';
@@ -306,6 +307,13 @@ async function boot() {
   // ---------- streaming ----------
   const streamer = createStreamer({
     market, lite, warn,
+    // the lite model's merged meshes go before the graft: it moves the full model onto the original nodes
+    before: (rec) => {
+      try { rec.unshadow?.(); rec.unmerge?.(); } catch (e) { warn(`unmerge ${rec.entry.id}: ${e?.message || e}`); }
+      rec.unmerge = null; rec.unshadow = null;
+      const place = rec.entry.place && market.places[rec.entry.place];
+      if (place?.merge?.undo) { place.merge.undo(); place.merge = null; }
+    },
     after: (rec, { failed }) => {
       if (failed) { compact([rec]); return; }
       try { lighting.raw?.tune?.(rec.holder); } catch (e) { warn(`lighting.tune failed: ${e?.message || e}`); }
@@ -466,8 +474,36 @@ async function boot() {
   snowRow.name = 'snow_row_merged';
   scene.add(snowRow);
   const riderSyncs = [];
-  function compact(placed) {
+  // shadow stand-ins (engine/merge.js shadowProxies): each placed model's static casters as one mesh per side in
+  // the shadow passes; shown only while three draws the shadow maps
+  const proxies = new Set();
+  const shadowsOn = !lite && renderer.shadowMap.enabled && params.get('proxies') !== '0';
+  if (shadowsOn) holdShadowProxies(renderer, () => proxies);
+  const minCaster = LIGHTING_PROFILES.full.minMoonCaster || 0;
+  function standIn(root) {
+    if (!shadowsOn) return null;
+    try {
+      const sp = shadowProxies(root, { minRadius: minCaster });
+      if (!sp) return null;
+      sp.proxies.forEach((x) => proxies.add(x));
+      merges.shadowCasters = (merges.shadowCasters || 0) + sp.count;
+      merges.shadowProxies = (merges.shadowProxies || 0) + sp.proxies.length;
+      return () => { sp.proxies.forEach((x) => proxies.delete(x)); sp.undo(); };
+    } catch (e) { warn(`shadow stand-ins ${root.name}: ${e?.message || e}`); return null; }
+  }
+  function compact(all) {
     if (params.get('merge') === '0') return;
+    // a streamed model (its lite file until the full one is grafted on) is merged reversibly: the streamer undoes it
+    // just before the graft (engine/stream.js `before`), and the full model is merged as usual after it
+    for (const p of all.filter((x) => x.streamed)) {
+      try {
+        const r = mergeStatic(p.root, { reversible: true });
+        p.unmerge = r.undo;
+        merges.streamed = (merges.streamed || 0) + (r.before - r.after);
+      } catch (e) { warn(`merge ${p.entry.id} (lite): ${e?.message || e}`); }
+      p.unshadow = standIn(p.root);
+    }
+    const placed = all.filter((x) => !x.streamed);
     for (const p of placed) {
       try { const r = mergeStatic(p.root); merges.before += r.before; merges.after += r.after; } catch (e) { warn(`merge ${p.entry.id}: ${e?.message || e}`); }
       for (const list of [p.nodes?.gondolas, p.nodes?.horses]) {
@@ -481,7 +517,9 @@ async function boot() {
     const deco = placed.filter((p) => p.entry.kind === 'deco').map((p) => p.root);
     if (deco.length > 1) {
       try { const saved = mergeAcross(deco, decoRow); merges.row += saved; merges.after -= saved; } catch (e) { warn(`merge deco row: ${e?.message || e}`); }
+      standIn(decoRow);
     }
+    for (const p of placed) standIn(p.root);
     try {
       const s = mergeSnow(placed.map((p) => p.root), snowRow);
       if (s.added.length) {
@@ -490,8 +528,8 @@ async function boot() {
       }
     } catch (e) { warn(`merge snow caps: ${e?.message || e}`); }
   }
-  // the streamed models stay unmerged until their full model is grafted on (engine/stream.js)
-  compact(market.placed.filter((p) => !p.streamed));
+  // the streamed models are merged reversibly until their full model is grafted on (engine/stream.js)
+  compact(market.placed);
 
   // ---------- snow, overview, keyboard ----------
   const snowBtn = $('snow');
@@ -784,13 +822,19 @@ async function boot() {
         const inv = f.area.matrixWorld.clone().invert();
         const c = new THREE.Vector3(f.w / 2, -f.h / 2, 0);
         let far = 0, n = 0;
+        // a page's runs are members of one batched draw (world/text.js): their frame is the batch's times their own
+        const runs = [];
         f.area.traverse((o) => {
-          const b = o.isText && o.visible && o.text?.trim() && o.textRenderInfo?.blockBounds;
-          if (!b) return;
-          n++;
-          const m = inv.clone().multiply(o.matrixWorld);
-          for (const [x, y] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) { const p = new THREE.Vector3(x, y, 0).applyMatrix4(m); far = Math.max(far, Math.hypot(p.x - c.x, p.y - c.y)); }
+          if (o.isText && o.visible && o._members) for (const t of o._members.keys()) { t.updateMatrix(); runs.push({ t, world: o.matrixWorld.clone().multiply(t.matrix) }); }
+          else if (o.isText && o.visible) runs.push({ t: o, world: o.matrixWorld });
         });
+        for (const { t, world } of runs) {
+          const b = t.text?.trim() && t.textRenderInfo?.blockBounds;
+          if (!b) continue;
+          n++;
+          const m = inv.clone().multiply(world);
+          for (const [x, y] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) { const p = new THREE.Vector3(x, y, 0).applyMatrix4(m); far = Math.max(far, Math.hypot(p.x - c.x, p.y - c.y)); }
+        }
         if (n) reach[face] = +(far / f.r).toFixed(3);
       }
       return { fromModel: !!s.fromModel, frontPrinted: !!fc && !!disc && fc.material === disc.material || (!!fc && /vendor_print/.test(fc.material?.name || '')), backCardHidden: !!bc && !bc.visible, roundBack: !!back?.visible, reach };

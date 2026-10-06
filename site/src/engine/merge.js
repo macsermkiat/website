@@ -113,6 +113,13 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
     settle(pivot) { for (const m of meshesOf(pivot)) { m.visible = false; setRange(m, true); } },
     /** Leave a mesh out of the merged mesh for good (its own mesh is then drawn, or hidden, by its owner). */
     drop(m) { if (!owner.has(m)) return; setRange(m, false); owner.delete(m); },
+    /** Take the merged meshes out and draw every item with its own mesh again (before a streamed graft). */
+    undo() {
+      for (const g of groups) { g.mesh.removeFromParent(); g.mesh.geometry.dispose(); }
+      for (const m of owner.keys()) m.visible = true;
+      owner.clear();
+      groups.length = 0;
+    },
   };
 }
 
@@ -131,8 +138,9 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
 // Emissive materials (windows, embers) are only merged with the very same material object, because the
 // lighting module and the actions change those materials while the market runs.
 
-const SKIP = /^(snow_|bulbs_|musician_|lighting_|engine_|action_|effect_|item_|open_|band_pick_|pool_|merged_|act_sign_|write_|card_|cam_read_)/i;
-const skipNode = (o) => SKIP.test(o.name || '') || o.userData.live || o.userData.pickProxy || o.userData.readable || o.userData.sign;
+const SKIP = /^(snow_|bulbs_|musician_|lighting_|engine_|action_|effect_|item_|open_|band_pick_|pool_|merged_|act_sign_|write_|card_|cam_read_|sign_|tinsel_|mirror_|fx_|light_|path_)/i;
+// (round 10) BUILD.md's addressed prefixes are never merged, nor a door (a cabinet's or a booth's), whatever its prefix
+const skipNode = (o) => SKIP.test(o.name || '') || /door/i.test(o.name || '') || o.userData.live || o.userData.pickProxy || o.userData.readable || o.userData.sign;
 const ANCHOR = /^(rot_|gondola_|horse_|instrument_)/i;
 const WRITING = /^(write_|card_|cam_read_)/i;
 const ATTRS = ['position', 'normal', 'uv', 'uv1', 'uv2', 'tangent', 'color'];
@@ -146,7 +154,7 @@ function liveMaterial(m) {
 
 function eligible(o) {
   if (!o.isMesh || o.isSkinnedMesh || o.isInstancedMesh || o.isPoints || o.isLine) return false;
-  if (o.morphTargetInfluences || o.userData.merged || o.userData.bulbs || o.userData.keep) return false;
+  if (o.morphTargetInfluences || o.userData.merged || o.userData.mergedAway || o.userData.bulbs || o.userData.keep) return false;
   if (o.onBeforeRender !== defaultBeforeRender) return false;
   const m = o.material;
   if (!m || Array.isArray(m) || !o.geometry?.getAttribute('position')) return false;
@@ -204,8 +212,11 @@ function bucketKey(o, anchorId) {
 /**
  * Merge the static meshes of one placed model (see above). Returns { before, after } mesh counts.
  * `extraSkip(o)` may protect more nodes (with their subtrees).
+ * `reversible` (round 10, a streamed model's lite file on the full market): the merged meshes stay in the tree,
+ * hidden, instead of leaving it, and the result carries `undo()`, which takes the merged meshes out and shows the
+ * originals again, so the streamer can graft the full model onto the very nodes it knows (engine/stream.js).
  */
-export function mergeStatic(root, { extraSkip = null } = {}) {
+export function mergeStatic(root, { extraSkip = null, reversible = false } = {}) {
   root.updateMatrixWorld(true);
   const moving = animatedNames(root);
   const buckets = new Map();
@@ -238,13 +249,22 @@ export function mergeStatic(root, { extraSkip = null } = {}) {
   };
   walk(root, root);
   let removed = 0;
+  const made = [], hidden = [];
   for (const b of buckets.values()) {
     if (b.items.length < 2) continue;
+    // a mesh with node children (an empty, a slot) is merged only where its children can stay put: when it
+    // leaves the tree it takes them along, so it is hidden instead
     const mesh = mergeItems(b.items, b.anchor);
     if (!mesh) continue;
     mesh.name = `merged_${b.items[0].mesh.material.name || 'mesh'}`;
     b.anchor.add(mesh);
-    for (const it of b.items) it.mesh.removeFromParent();
+    made.push(mesh);
+    for (const it of b.items) {
+      // reversible, or a mesh with node children of its own (they must stay): it stays in the tree but is drawn by
+      // no camera and answers no ray (layers; `visible` would hide its children too)
+      if (reversible || it.mesh.children.length) { hidden.push([it.mesh, it.mesh.layers.mask]); it.mesh.layers.disableAll(); it.mesh.userData.mergedAway = true; }
+      else it.mesh.removeFromParent();
+    }
     removed += b.items.length - 1;
   }
   for (const b of bulbs.values()) {
@@ -256,10 +276,22 @@ export function mergeStatic(root, { extraSkip = null } = {}) {
     mesh.castShadow = false;
     mesh.receiveShadow = false;
     b.anchor.add(mesh);
-    for (const it of b.items) it.mesh.visible = false; // the bulbs_ nodes stay (the lighting module knows them)
+    made.push(mesh);
+    for (const it of b.items) { it.mesh.visible = false; hidden.push([it.mesh, null]); } // the bulbs_ nodes stay (the lighting module knows them)
     removed += b.items.length - 1;
   }
-  return { before, after: before - removed };
+  const out = { before, after: before - removed };
+  if (reversible) {
+    out.undo = () => {
+      for (const m of made) { m.removeFromParent(); m.geometry.dispose(); }
+      for (const [m, mask] of hidden) {
+        if (mask == null) m.visible = true;
+        else { m.layers.mask = mask; delete m.userData.mergedAway; }
+      }
+      made.length = 0; hidden.length = 0;
+    };
+  }
+  return out;
 }
 
 /**
@@ -463,4 +495,113 @@ export function mergeSnow(roots, into) {
     else merged.forEach((m) => { m.removeFromParent(); });
   }
   return { added, removed: [...removed], saved };
+}
+
+/**
+ * Shadow stand-ins (round 10): the static shadow casters of one placed model drawn in the shadow passes as one
+ * mesh per side, instead of one draw each in every moon-shadow pass and every interior cube face. The stand-in
+ * holds the casters' positions only (a shadow pass reads nothing else), stays hidden from the main pass (`hold`
+ * shows it only while three draws the shadow maps), and the casters it stands for stop casting themselves.
+ * Left out, so they cast as before: anything mergeStatic would not merge (act_ nodes, snow_ caps, writing,
+ * riders, animated nodes, skinned or instanced meshes), materials whose shadow depends on more than their shape
+ * (alpha-tested or displaced, clipped, custom depth materials), and meshes smaller than `minRadius` (the lighting
+ * module's minMoonCaster: it stops those from casting the moon's shadow a few frames in, and still may).
+ * Returns { proxies: [meshes], count, undo() } or null.
+ */
+const proxyMats = new Map();
+function proxyMaterial(side, shadowSide) {
+  const k = `${side}|${shadowSide}`;
+  if (!proxyMats.has(k)) {
+    const m = new THREE.MeshBasicMaterial({ side, colorWrite: false, depthWrite: false });
+    m.shadowSide = shadowSide;
+    m.name = 'engine_shadow_proxy';
+    proxyMats.set(k, m);
+  }
+  return proxyMats.get(k);
+}
+export function shadowProxies(root, { minRadius = 0, into = null } = {}) {
+  root.updateMatrixWorld(true);
+  const moving = animatedNames(root);
+  const buckets = new Map();
+  const ws = new THREE.Vector3();
+  const walk = (o) => {
+    if (o !== root) {
+      if (!o.visible || (!o.userData.merged && skipNode(o)) || moving.has(o.name) || ANCHOR.test(o.name || '') || /^bulbs_/i.test(o.name || '')) return;
+    }
+    if (o.isMesh && o.castShadow && !o.isSkinnedMesh && !o.isInstancedMesh && !o.morphTargetInfluences && !Array.isArray(o.material) &&
+        o.layers.mask !== 0 && o.onBeforeRender === defaultBeforeRender && o.customDepthMaterial === undefined && o.customDistanceMaterial === undefined &&
+        o.geometry?.getAttribute('position') && !o.userData.bulbs) {
+      const m = o.material;
+      const plain = m && m.visible !== false && !m.wireframe && !(m.alphaTest > 0) && !m.alphaToCoverage && !(m.displacementMap && m.displacementScale !== 0) && !(m.clippingPlanes?.length);
+      if (plain) {
+        if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+        o.getWorldScale(ws);
+        if (o.geometry.boundingSphere.radius * Math.max(ws.x, ws.y, ws.z) >= minRadius) {
+          const key = `${m.side}|${m.shadowSide}|${o.frustumCulled ? 1 : 0}`;
+          if (!buckets.has(key)) buckets.set(key, { side: m.side, shadowSide: m.shadowSide, culled: o.frustumCulled, items: [] });
+          buckets.get(key).items.push(o);
+        }
+      }
+    }
+    for (const c of o.children) walk(c);
+  };
+  walk(root);
+  const frame = into || root;
+  frame.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(frame.matrixWorld).invert();
+  const proxies = [], casters = [];
+  let count = 0;
+  for (const b of buckets.values()) {
+    if (b.items.length < 2) continue;
+    const geos = [];
+    for (const o of b.items) {
+      const g = floatGeometry(o.geometry, ['position']);
+      const mtx = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+      g.applyMatrix4(mtx);
+      if (mtx.determinant() < 0) { const a = g.index.array; for (let i = 0; i < a.length; i += 3) { const t = a[i + 1]; a[i + 1] = a[i + 2]; a[i + 2] = t; } }
+      geos.push(g);
+    }
+    const merged = mergeGeometries(geos, false);
+    geos.forEach((g) => g.dispose());
+    if (!merged) continue;
+    merged.computeBoundingSphere();
+    merged.computeBoundingBox();
+    const proxy = new THREE.Mesh(merged, proxyMaterial(b.side, b.shadowSide));
+    proxy.name = 'engine_shadow_proxy';
+    proxy.castShadow = true;
+    proxy.receiveShadow = false;
+    proxy.frustumCulled = b.culled;
+    proxy.visible = false; // drawn only inside the shadow passes (see holdShadowProxies)
+    proxy.raycast = () => {};
+    proxy.userData.shadowProxy = true;
+    frame.add(proxy);
+    proxies.push(proxy);
+    for (const o of b.items) { o.castShadow = false; casters.push(o); }
+    count += b.items.length;
+  }
+  if (!proxies.length) return null;
+  return {
+    proxies, count,
+    undo() {
+      for (const p of proxies) { p.removeFromParent(); p.geometry.dispose(); }
+      for (const o of casters) o.castShadow = true;
+      proxies.length = 0; casters.length = 0;
+    },
+  };
+}
+
+/**
+ * Show the shadow stand-ins only while three draws the shadow maps: three builds the main pass's list before it
+ * draws the shadows, so a stand-in hidden outside this call is never in the main pass. `list()` gives the live
+ * stand-ins. Returns a function that puts the renderer back.
+ */
+export function holdShadowProxies(renderer, list) {
+  const sm = renderer.shadowMap;
+  const orig = sm.render;
+  sm.render = function (...args) {
+    const ps = list();
+    for (const p of ps) p.visible = true;
+    try { return orig.apply(this, args); } finally { for (const p of ps) p.visible = false; }
+  };
+  return () => { sm.render = orig; };
 }

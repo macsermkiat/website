@@ -113,12 +113,12 @@ export async function buildMarket({ scene, lite, warn, onProgress, defer = () =>
         const center = new THREE.Vector3(p.holder.position.x, THREE.MathUtils.clamp(size.y * 0.45, 1.6, 9), p.holder.position.z);
         const place = { id: p.entry.place, entry: p.entry, holder: p.holder, root: p.root, nodes, rides, center, ry: p.holder.rotation.y, source: p.source, radius: Math.max(size.x, size.z) / 2 };
         // streaming: opened lite on the full market, the full model is grafted on at its stop (engine/stream.js);
-        // its goods are merged after that
+        // its goods are merged again after that (the lite merge is undone just before the graft)
         place.streamed = p.streamed;
         place.record = p;
         // the goods (the bookshop's spines, the mugs, glasses and bottles): one merged mesh per
         // set and look instead of one draw each; an item leaves it while it moves or its look changes
-        if (!place.streamed) mergeGoods(place);
+        mergeGoods(place);
         market.places[p.entry.place] = place;
         market.hotRoots.push(p.holder);
       }
