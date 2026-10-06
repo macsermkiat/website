@@ -106,7 +106,7 @@
    },
    "sign": {
     "node": "sign_cat_lives",
-    "text": "Lebensgeschichten",
+    "text": "Lives in Science and Industry",
     "center": [
      -3.1079,
      -2.2224,
@@ -238,7 +238,7 @@
    },
    "sign": {
     "node": "sign_cat_mind",
-    "text": "Geist & Körper",
+    "text": "Mind and Body",
     "center": [
      -2.5281,
      -1.7359,
@@ -370,7 +370,7 @@
    },
    "sign": {
     "node": "sign_cat_physics",
-    "text": "Physik & Kosmos",
+    "text": "Physics and the Universe",
     "center": [
      -1.555,
      -1.5,
@@ -521,7 +521,7 @@
    },
    "sign": {
     "node": "sign_cat_people",
-    "text": "Menschen & Gespräche",
+    "text": "People and Conversation",
     "center": [
      1.555,
      -1.5,
@@ -669,7 +669,7 @@
    },
    "sign": {
     "node": "sign_cat_decisions",
-    "text": "Risiko & Entscheidungen",
+    "text": "Risk, Decisions and Markets",
     "center": [
      2.4675,
      -1.6851,
@@ -782,7 +782,7 @@
    },
    "sign": {
     "node": "sign_cat_craft",
-    "text": "Handwerk & Gewohnheit",
+    "text": "Craft, Habits and Work",
     "center": [
      3.1079,
      -2.2224,

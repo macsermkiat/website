@@ -890,6 +890,9 @@ try {
     check('phone: the signpost walks to the Bücherstand', (await state(page, 'stop')) === 'books' && (await page.evaluate(() => window.__market.arrived)));
     const cabs = await page.evaluate(() => window.__market.handlers.cabinets());
     check('the Bücherstand has its six cabinets, each with a door (act_cab_), a sign (sign_cat_) and a tap target', cabs.length === 6 && cabs.every((c) => c.door && c.sign && c.proxy && c.books > 0), JSON.stringify(cabs));
+    // round 10 (Mac, 2026-10-06): the groupings are named in English (label_en), never the German label_de
+    const catsJson = JSON.parse(readFileSync(path.resolve('../content/books/categories.json'), 'utf8')).categories;
+    check('the cabinets are named in English (label_en), not German', cabs.every((c) => catsJson.some((k) => k.key === c.key && k.label_en === c.label && c.label !== k.label_de)), JSON.stringify(cabs.map((c) => c.label)));
     // on a 390 px phone the stall's front is wider than the screen: the cabinets stand off either edge, and the
     // ‹ › buttons beside the stall turn the visitor to them, one at a time
     check('phone: ‹ › buttons beside the stall turn to the cabinets', (await page.locator('#cabTurnR').isVisible()) && (await page.locator('#cabTurnL').isVisible()));

@@ -159,7 +159,7 @@ export function createStallActions(ctx) {
     wurst: { hint: wurstHint + itemHint('wurst'), acts: [{ key: 'turn', label: 'Turn the sausages', fn: turnSausages }, { key: 'bun', label: 'One in a bun, please', fn: bun }, { key: 'plate', label: 'Mix me a plate', fn: mixPlate }] },
     books: { hint: actionHint('books', 'Tap a cabinet to open it, then a cover; or let the bookseller choose.') + ' <em>Every book in the cabinets is one Mac has read; it opens with his notes on it.</em>', acts: [{ key: 'book', label: 'Pick a book for me', fn: () => H.pickBook?.() }],
       // one button per category cabinet (ADR 0004): the camera comes to it, its door opens and its covers come forward
-      views: { label: 'Open a cabinet', list: () => (H.cabinets?.() || []).map((c) => ({ key: c.key, label: c.label, title: c.en, fn: () => H.openCabinet?.(c.key) })) } },
+      views: { label: 'Open a cabinet', list: () => (H.cabinets?.() || []).map((c) => ({ key: c.key, label: c.label, title: `${c.label}: ${c.books} book${c.books === 1 ? '' : 's'}`, fn: () => H.openCabinet?.(c.key) })) } },
     update(dt, t, still) {
       emitters.forEach((e) => e.update(dt, still));
     },

@@ -6,7 +6,8 @@ and a hand-painted swallow-tail sign "Bücher" hung on chains.
 
 Round 8 (docs/adr/0004): six glazed category cabinets replace the round-3 side racks and book
 carts. Two stand in the hut front either side of the counter, four in two short wings under
-shingled canopies. Each cabinet has a cream crest sign with its German label (sign_cat_<key>),
+shingled canopies. Each cabinet has a cream crest sign with its English label (sign_cat_<key>;
+round 10, Mac 2026-10-06: the groupings in English, label_en),
 angled face-out boards for up to five covers per row (sized for the category's book count), a
 spine board above them, a glazed door (act_cab_<key>, hinged on its left edge), slot_cat_<key>
 and the close-up camera pair cam_cat_<key> / cam_cat_<key>_target. The geometry comes from
@@ -146,15 +147,53 @@ def _T(x, y, z):
 
 
 # labels that are one long word get a hyphenated second line on a narrow board
-HYPHEN = {"Lebensgeschichten": "Lebens-\ngeschichten"}
+SIGN_FONT = "alegreya_sc"
+SIGN_MAX_SIZE = 0.13            # one short line
+SIGN_TEXT_H = 0.16              # height the letters may take on a SIGN_H board (inside the border and arch)
 
 
-def sign_label(label):
-    """Two lines for a label with ' & ' (keeps the letters large), one line otherwise."""
-    if " & " in label:
-        a, b = label.split(" & ", 1)
-        return a + " &\n" + b
-    return HYPHEN.get(label, label)
+def _measure(text, size):
+    """Width and height (m) of a sign label set as Part.text sets it, without emitting anything."""
+    from nmlib.geo import load_font
+    cu = bpy.data.curves.new("tmp_measure", "FONT")
+    cu.body = text
+    cu.font = load_font(state.font(SIGN_FONT))
+    cu.size = size
+    cu.align_x, cu.align_y = 'CENTER', 'CENTER'
+    cu.fill_mode = 'FRONT'
+    ob = bpy.data.objects.new("tmp_measure_ob", cu)
+    bpy.context.scene.collection.objects.link(ob)
+    bpy.context.view_layer.update()
+    me = bpy.data.meshes.new_from_object(ob.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    xs = [v.co.x for v in me.vertices] or [0]
+    ys = [v.co.y for v in me.vertices] or [0]
+    bpy.data.objects.remove(ob)
+    bpy.data.meshes.remove(me)
+    bpy.data.curves.remove(cu)
+    return max(xs) - min(xs), max(ys) - min(ys)
+
+
+def sign_layout(label, max_w, max_h):
+    """Round 10 (Mac, 2026-10-06: the groupings in English): the English label on one, two or three lines,
+    whichever gives the biggest letters inside max_w x max_h (a line never starts with '&' or 'and'). More lines
+    win only when they give clearly bigger letters. Returns (text, size)."""
+    words = label.split()
+    cands = [label]
+    for i in range(1, len(words)):
+        cands.append(" ".join(words[:i]) + "\n" + " ".join(words[i:]))
+        for j in range(i + 1, len(words)):
+            cands.append(" ".join(words[:i]) + "\n" + " ".join(words[i:j]) + "\n" + " ".join(words[j:]))
+    best = None
+    ref = 0.1
+    for c in cands:
+        if any(ln.split()[0] in ("&",) for ln in c.split("\n")):
+            continue
+        w, h = _measure(c, ref)
+        size = min(ref * max_w / w, ref * max_h / h, SIGN_MAX_SIZE)
+        lines = c.count("\n") + 1
+        if best is None or size > best[1] * (1.06 if lines > best[2] else 1.0):
+            best = (c, size, lines)
+    return best[0], best[1]
 
 
 def section_sign(h, key, label, F, cx, cy, cz, w, hh, lite):
@@ -179,13 +218,11 @@ def section_sign(h, key, label, F, cx, cy, cz, w, hh, lite):
                            (-w / 2 + e, -k / 2, 0.008, hh - 2 * e - k), (w / 2 - e, -k / 2, 0.008, hh - 2 * e - k)):
         S.mbox(F @ _T(cx + x, cy - d / 2 - 0.002, cz + z), (ww, 0.004, zz), band="gold", bevel=0,
                grain=0 if ww > zz else 2, drop=("+y",))
-    text = sign_label(label)
-    two = "\n" in text
-    size = 0.1 if two else 0.13
+    text, size = sign_layout(label, w - 0.07, SIGN_TEXT_H + (hh - BS.SIGN_H))
     Mt = F @ _T(cx, cy - d / 2 - 0.0035, cz - 0.012) @ Euler((math.pi / 2, 0, 0)).to_matrix().to_4x4()
-    tw, th = S.text(text, state.font("alegreya_sc"), size, 0.004, M=Mt, max_width=w - 0.07, band="green",
+    tw, th = S.text(text, state.font(SIGN_FONT), size, 0.004, M=Mt, max_width=w - 0.07, band="green",
                     resolution=1, bevel=0.0)
-    print(f"[buecher] sign {key}: letters {tw:.3f} x {th:.3f} m on a {w:.2f} x {hh:.2f} board")
+    print(f"[buecher] sign {key}: {text!r} at {size:.3f} m, letters {tw:.3f} x {th:.3f} m on a {w:.2f} x {hh:.2f} board")
     return S
 
 
@@ -297,7 +334,7 @@ def category_cabinet(h, s, lite):
         h.bulbs.sphere(p + Vector((0, 0, -0.022)), 0.014, seg=6 if lite else 8, rings=4 if lite else 5,
                        scale=(1, 1, 1.25))
     # crest sign on the cornice
-    section_sign(h, s["key"], s["label_de"], F, *L["sign"], cw - 0.03, BS.SIGN_H, lite)
+    section_sign(h, s["key"], s["label_en"], F, *L["sign"], cw - 0.03, BS.SIGN_H, lite)
     # glazed door: its own node act_cab_<key> at the hinge, frame and glass as child meshes
     door = Part(f"cab_door_{s['key']}", "paint", var=0.03)
     pane = Part(f"cab_glass_{s['key']}", "glass_clear", var=0.0)

@@ -44,7 +44,7 @@ export function createBooks(ctx) {
   function describe(n) {
     const b = bookInfo(n);
     const lib = standIn.has(n) ? libraryBook({ slug: standIn.get(n).slug }) : libraryEntry(n);
-    if (lib) return { mac: true, slug: lib.slug, title: lib.title || b?.title, author: lib.author || b?.author || '', note: lib.oneLine || b?.note || 'One of the books on Mac’s own shelf.', category: lib.categoryDe || '' };
+    if (lib) return { mac: true, slug: lib.slug, title: lib.title || b?.title, author: lib.author || b?.author || '', note: lib.oneLine || b?.note || 'One of the books on Mac’s own shelf.', category: lib.categoryLabel || '' };
     return { mac: false, slug: '', title: b?.title || 'A secondhand book', author: b?.author || '', note: b?.note || 'A secondhand copy from the bookseller’s stock, not one of Mac’s.' };
   }
 
@@ -162,7 +162,8 @@ export function createBooks(ctx) {
   // door (act_cab_<key>) open and brings its face-out covers forward; only that cabinet's books answer the pointer
   // then (never more than 14 targets). Escape or "Step back" closes it. Keys: ↓ / ↑ open a cabinet and move to the
   // next / previous one, ← / → move between its books, Enter opens the book in focus.
-  const shelves = LIBRARY.categories.map((c) => ({ key: c.key, label: c.labelDe || c.label, en: c.label })).filter((c) => c.key);
+  // round 10 (Mac, 2026-10-06): the groupings are named in English everywhere a visitor sees them (label_en)
+  const shelves = LIBRARY.categories.map((c) => ({ key: c.key, label: c.label })).filter((c) => c.key);
   const under = (n, anc) => { for (let o = n; o; o = o.parent) if (o === anc) return true; return false; };
   /** A category's books: those standing in its cabinet (under slot_cat_<key>), else by their items.json category. */
   function spinesOf(key) {
@@ -212,7 +213,7 @@ export function createBooks(ctx) {
     m.name = `engine_cabinet_proxy_${cab.key}`;
     m.position.copy(center);
     m.visible = false; // never drawn; the raycaster still meets it
-    m.userData.pickProxy = { kind: 'cabinet', key: cab.key, place: 'books', label: `${cab.label}${cab.en && cab.en !== cab.label ? ` · ${cab.en}` : ''}: open the cabinet (${cab.books.length} book${cab.books.length === 1 ? '' : 's'})`, outline: cab.door || cab.sign || null, off: false };
+    m.userData.pickProxy = { kind: 'cabinet', key: cab.key, place: 'books', label: `${cab.label}: open the cabinet (${cab.books.length} book${cab.books.length === 1 ? '' : 's'})`, outline: cab.door || cab.sign || null, off: false };
     frame.add(m);
     cab.proxy = m;
   }
@@ -287,7 +288,7 @@ export function createBooks(ctx) {
     showFocus();
     document.documentElement.dataset.cabinet = cab.key;
     const n = cab.books.length;
-    say(`<b lang="de">${esc(cab.label)}</b>${cab.en && cab.en !== cab.label ? ` · ${esc(cab.en)}` : ''}: ${n} book${n === 1 ? '' : 's'}. <em>Tap a cover to open it. ← → move between the books, ↑ ↓ between the cabinets, Escape steps back.</em>`);
+    say(`<b>${esc(cab.label)}</b>: ${n} book${n === 1 ? '' : 's'}. <em>Tap a cover to open it. ← → move between the books, ↑ ↓ between the cabinets, Escape steps back.</em>`);
     return true;
   }
 
@@ -362,7 +363,7 @@ export function createBooks(ctx) {
     const t = Math.tan(THREE.MathUtils.degToRad((ctx.camera?.fov || 55) / 2));
     const target = c.clone().addScaledVector(UP, -dist * t * 0.3);
     ctx.turnTo?.(target);
-    say(`<b lang="de">${esc(cab.label)}</b>${cab.en && cab.en !== cab.label ? ` · ${esc(cab.en)}` : ''}. <em>Tap the cabinet to open it.</em>`);
+    say(`<b>${esc(cab.label)}</b>. <em>Tap the cabinet to open it.</em>`);
     return cab.key;
   }
 
@@ -426,7 +427,7 @@ export function createBooks(ctx) {
     api: {
       featuredBooks: featured,
       /** The six cabinets (key, German label, English label, number of books). */
-      cabinets: () => cabinets.map((c) => ({ key: c.key, label: c.label, en: c.en, books: c.books.length, door: !!c.door, sign: !!c.sign, proxy: !!c.proxy })),
+      cabinets: () => cabinets.map((c) => ({ key: c.key, label: c.label, books: c.books.length, door: !!c.door, sign: !!c.sign, proxy: !!c.proxy })),
       openCabinet,
       closeCabinet: () => closeCabinet(),
       /** Turn toward the next (1) or previous (-1) cabinet from the stop (a narrow screen); 0 turns back. */

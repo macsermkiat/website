@@ -19,7 +19,7 @@ import vendor_atlas as va
 from vendor_atlas import Tex, fbm, hexc, mix, shape_mask, smooth, text_mask
 
 SPINE_PX_CM = (20, 14)        # px per cm across the spine (thickness) and along it (height); round 8: covers matter more
-COVER_PX_CM = 15              # px per cm on the front cover (round 8: read at the cam_cat close-up)
+COVER_PX_CM = 22              # px per cm on the front cover (round 10: up from 15, so titles stay sharp at cam_cat)
 N_FILLER = 18                 # untitled filler spines (not clickable, merged into each set's static mesh)
 FILLER_PX = (40, 300)
 SANS = ("oswald", "bebas", "josefin")
@@ -105,40 +105,6 @@ def filler_kinds():
 
 
 # ------------------------------------------------------------ covers
-def _wrap(text, fn, wght, max_w, size, max_lines):
-    """Greedy word wrap at the largest size (<= size) that fits max_lines lines of max_w px."""
-    words = text.split()
-    s = size
-    while s > 6:
-        f = va.font(fn, s * 3, wght)
-        lines, cur = [], ""
-        for wd in words:
-            trial = (cur + " " + wd).strip()
-            if f.getlength(trial) / 3 <= max_w or not cur:
-                cur = trial
-            else:
-                lines.append(cur)
-                cur = wd
-        lines.append(cur)
-        if len(lines) <= max_lines and all(f.getlength(ln) / 3 <= max_w for ln in lines):
-            return lines, s
-        s -= 0.5
-    return [text], s
-
-
-def _text_block(w, h, text, fn, wght, size, max_w, y_mid, max_lines=4, lead=1.12):
-    lines, s = _wrap(text, fn, wght, max_w, size, max_lines)
-    n = len(lines)
-    return [(ln, fn, s, wght, (w / 2, y_mid + (i - (n - 1) / 2) * s * lead), "mm") for i, ln in enumerate(lines)]
-
-
-def _frame(w, h, inset, width):
-    yy, xx = np.mgrid[0:h, 0:w].astype(float)
-    outer = (xx > inset) & (xx < w - 1 - inset) & (yy > inset) & (yy < h - 1 - inset)
-    inner = (xx > inset + width) & (xx < w - 1 - inset - width) & (yy > inset + width) & (yy < h - 1 - inset - width)
-    return (outer & ~inner).astype(float)
-
-
 def _cover_base(w, h, seed, col, kind):
     t = va.spine_base(w, h, seed, col, kind)
     # boards wear at the corners and along the fore-edge (right); the spine hinge (left) is creased
@@ -150,107 +116,6 @@ def _cover_base(w, h, seed, col, kind):
     t.height = t.height - hinge * 0.6
     t.col = mix(t.col, t.col * 0.8, hinge * 0.5)
     return t
-
-
-def _motif(name, w, h, cy):
-    """A cover graphic as a mask (0..1) centred at height cy. Simple original shapes, one per design."""
-    cx = w / 2
-    r = w * 0.26
-
-    def draw(fn):
-        return shape_mask(w, h, fn)
-    if name == "waves":
-        return draw(lambda d, s: [d.line([((x) * s, (cy + 6 * k + 4 * math.sin(x / w * 2 * math.pi * 2 + k)) * s)
-                                          for x in range(0, w + 1, 2)], fill=255, width=int(1.6 * s)) for k in range(-3, 4)])
-    if name == "orbit":
-        return draw(lambda d, s: [d.ellipse([(cx - r * f) * s, (cy - r * f * 0.45) * s, (cx + r * f) * s,
-                                             (cy + r * f * 0.45) * s], outline=255, width=int(1.4 * s))
-                                  for f in (0.5, 0.8, 1.1)] + [d.ellipse([(cx - 5) * s, (cy - 5) * s, (cx + 5) * s,
-                                                                          (cy + 5) * s], fill=255)])
-    if name == "field":
-        return draw(lambda d, s: [d.line([((cx - r * 1.2) * s, (cy + k * 5) * s), ((cx + r * 1.2) * s, (cy + k * 5 + 3 * math.sin(k)) * s)],
-                                         fill=255, width=int(1.2 * s)) for k in range(-4, 5)])
-    if name in ("rings", "sun"):
-        out = draw(lambda d, s: [d.ellipse([(cx - r * f) * s, (cy - r * f) * s, (cx + r * f) * s, (cy + r * f) * s],
-                                           outline=255, width=int(1.4 * s)) for f in (0.4, 0.7, 1.0)])
-        if name == "sun":
-            out = np.maximum(out, draw(lambda d, s: d.ellipse([(cx - r * 0.3) * s, (cy - r * 0.3) * s,
-                                                               (cx + r * 0.3) * s, (cy + r * 0.3) * s], fill=255)))
-        return out
-    if name == "spiral":
-        pts = [(cx + r * (t / 40) * math.cos(t * 0.45), cy + r * (t / 40) * math.sin(t * 0.45)) for t in range(41)]
-        return draw(lambda d, s: d.line([(x * s, y * s) for x, y in pts], fill=255, width=int(1.5 * s)))
-    if name == "clock":
-        def f(d, s):
-            for i in range(60):
-                a = 2 * math.pi * i / 60
-                ln = 8 if i % 5 == 0 else 3.5
-                d.line([((cx + r * math.cos(a)) * s, (cy + r * math.sin(a)) * s),
-                        ((cx + (r - ln) * math.cos(a)) * s, (cy + (r - ln) * math.sin(a)) * s)], fill=255, width=int(1.2 * s))
-        return draw(f)
-    if name == "split":
-        yy, xx = np.mgrid[0:h, 0:w].astype(float)
-        return ((yy > cy) & (yy < cy + h * 0.16)).astype(float)
-    if name == "curve":
-        pts = [(w * 0.15 + w * 0.7 * t / 30, cy + r - (r * 2) * (t / 30) ** 2) for t in range(31)]
-        return draw(lambda d, s: d.line([(x * s, y * s) for x, y in pts], fill=255, width=int(2 * s)))
-    if name == "burst":
-        def f(d, s):
-            for i in range(24):
-                a = 2 * math.pi * i / 24
-                d.line([(cx * s, cy * s), ((cx + r * 1.2 * math.cos(a)) * s, (cy + r * 1.2 * math.sin(a)) * s)],
-                       fill=255, width=int(1.0 * s))
-            d.ellipse([(cx - r * 0.3) * s, (cy - r * 0.3) * s, (cx + r * 0.3) * s, (cy + r * 0.3) * s], fill=255)
-        return draw(f)
-    if name == "bongo":
-        return draw(lambda d, s: [d.ellipse([(cx + dx - r * 0.45) * s, (cy - r * 0.45) * s, (cx + dx + r * 0.45) * s,
-                                             (cy + r * 0.45) * s], outline=255, width=int(2 * s)) for dx in (-r * 0.5, r * 0.55)])
-    if name in ("bar", "frame2"):
-        yy, xx = np.mgrid[0:h, 0:w].astype(float)
-        m = ((yy > cy - 3) & (yy < cy + 3) & (xx > w * 0.15) & (xx < w * 0.85)).astype(float)
-        return np.maximum(m, _frame(w, h, 8, 2)) if name == "frame2" else m
-    if name == "dots":
-        return draw(lambda d, s: [d.ellipse([(cx + i * 11 - 2.6) * s, (cy + j * 11 - 2.6) * s, (cx + i * 11 + 2.6) * s,
-                                             (cy + j * 11 + 2.6) * s], fill=255) for i in range(-3, 4) for j in range(-1, 2)])
-    if name == "grid":
-        def f(d, s):
-            for k in range(-3, 4):
-                d.line([((cx + k * 9) * s, (cy - 27) * s), ((cx + k * 9) * s, (cy + 27) * s)], fill=255, width=int(1 * s))
-                d.line([((cx - 27) * s, (cy + k * 9) * s), ((cx + 27) * s, (cy + k * 9) * s)], fill=255, width=int(1 * s))
-        return draw(f)
-    if name == "arch":
-        return draw(lambda d, s: d.arc([(cx - r) * s, (cy - r) * s, (cx + r) * s, (cy + r) * s], 180, 360, fill=255,
-                                       width=int(3 * s)))
-    if name == "bubble":
-        return draw(lambda d, s: [d.rounded_rectangle([(cx - r + dx) * s, (cy - r * 0.45 + dy) * s, (cx + r * 0.4 + dx) * s,
-                                                       (cy + r * 0.2 + dy) * s], radius=int(6 * s), outline=255,
-                                                      width=int(1.6 * s)) for dx, dy in ((0, 0), (r * 0.6, r * 0.55))])
-    if name == "crack":
-        pts = [(w * 0.2, cy - 10), (w * 0.38, cy + 3), (w * 0.5, cy - 6), (w * 0.62, cy + 8), (w * 0.8, cy - 2)]
-        return draw(lambda d, s: d.line([(x * s, y * s) for x, y in pts], fill=255, width=int(1.6 * s)))
-    if name == "swan":
-        def f(d, s):
-            d.ellipse([(cx - r * 0.7) * s, (cy) * s, (cx + r * 0.5) * s, (cy + r * 0.55) * s], fill=255)
-            d.arc([(cx + r * 0.1) * s, (cy - r * 0.9) * s, (cx + r * 0.75) * s, (cy + r * 0.3) * s], 180, 330,
-                  fill=255, width=int(3 * s))
-        return draw(f)
-    if name == "pencil":
-        return draw(lambda d, s: d.line([((cx - r) * s, (cy + r * 0.3) * s), ((cx + r) * s, (cy - r * 0.3) * s)],
-                                        fill=255, width=int(4 * s)))
-    if name == "dag":
-        def f(d, s):
-            pts = [(w * 0.3, cy - 6), (w * 0.7, cy - 6), (w * 0.5, cy + 8)]
-            for (x0, y0), (x1, y1) in ((pts[0], pts[1]), (pts[0], pts[2]), (pts[1], pts[2])):
-                d.line([(x0 * s, y0 * s), (x1 * s, y1 * s)], fill=255, width=int(1.5 * s))
-            for x, y in pts:
-                d.ellipse([(x - 4.5) * s, (y - 4.5) * s, (x + 4.5) * s, (y + 4.5) * s], fill=255)
-        return draw(f)
-    if name == "arrow":
-        def f(d, s):
-            d.line([((cx - r) * s, cy * s), ((cx + r * 0.6) * s, cy * s)], fill=255, width=int(2.5 * s))
-            d.polygon([((cx + r) * s, cy * s), ((cx + r * 0.5) * s, (cy - 7) * s), ((cx + r * 0.5) * s, (cy + 7) * s)], fill=255)
-        return draw(f)
-    return np.zeros((h, w))
 
 
 def _lines(f, p, lw):
@@ -311,59 +176,175 @@ def _pattern(name, w, h, seed):
     return np.zeros((h, w))
 
 
-EMBLEM = {"physics": "orbit", "lives": "burst", "mind": "spiral", "people": "bubble", "decisions": "dag",
-          "craft": "pencil"}
+# Round 10 (Mac, 2026-10-06: "Some of the book titles are hard to read"): the title owns the cover. One heavy
+# condensed face for every title (Oswald 700, capitals), light on a dark panel or dark on a light one; the panel
+# takes two thirds of the cover; long titles wrap onto up to six lines before the type shrinks, and a word too
+# long for the panel at the minimum size breaks at a syllable (TITLE_HYPHEN) instead of shrinking further.
+TITLE_FONT, TITLE_WGHT = "oswald", 700
+AUTHOR_FONT, AUTHOR_WGHT = "oswald", 700
+TITLE_MIN_CAP = 0.084         # smallest title cap height, as a fraction of the cover's height
+TITLE_MAX_CAP = 0.15          # largest (a one-word title does not fill the panel edge to edge)
+TITLE_MAX_LINES = 6
+TITLE_LEAD = 1.06             # line pitch in em
+PANEL_Y = (0.080, 0.755)      # title panel, top and bottom (fractions of the height, from the head)
+AUTHOR_Y = (0.768, 0.872)     # the author's band (the cabinet's lip hides the cover below about 0.875)
+HEAD_Y = 0.062                # the head band with the category's English name
+# syllable breaks for the long words that would otherwise force a title below TITLE_MIN_CAP
+TITLE_HYPHEN = {"SUPERCOMMUNICATORS": ("SUPER", "COMMUNI", "CATORS"), "CONVERSATIONS": ("CONVER", "SATIONS"),
+                "CONVERSATION": ("CONVER", "SATION"), "HOSPITALITY": ("HOSPI", "TALITY"),
+                "UNREASONABLE": ("UNREASON", "ABLE"), "ULTRALEARNING": ("ULTRA", "LEARNING"),
+                "MISBEHAVIOR": ("MIS", "BEHAVIOR"), "ULTRA-PROCESSED": ("ULTRA", "PROCESSED"),
+                "ANTIFRAGILE": ("ANTI", "FRAGILE"), "PROGRAMMER": ("PROGRAM", "MER"),
+                "MECHANICS": ("MECHAN", "ICS"), "BOUNDARIES": ("BOUND", "ARIES"), "ALGORITHMS": ("ALGO", "RITHMS")}
+
+
+def _cap(fn, wght):
+    """Cap height of a face per px of font size."""
+    f = va.font(fn, 200, wght)
+    return -f.getbbox("H", anchor="ls")[1] / 200.0
+
+
+def _best_lines(tokens, widths, space, max_w, max_lines):
+    """Split tokens (with their widths at the reference size) into 1..max_lines lines; for each line count the
+    split whose widest line is narrowest. tokens ending in '-' join the next without a space.
+    Returns {n: (widest, [line strings])}."""
+    n_tok = len(tokens)
+    out = {}
+
+    def width(i, j):
+        w = 0.0
+        for k in range(i, j):
+            w += widths[k]
+            if k < j - 1 and not tokens[k].endswith("-"):
+                w += space
+        return w
+
+    def text(i, j):
+        t = ""
+        for k in range(i, j):
+            t += tokens[k] + ("" if tokens[k].endswith("-") or k == j - 1 else " ")
+        return t
+    # dp[n][j]: (widest, cuts) for the first j tokens in n lines
+    INF = float("inf")
+    dp = [[(INF, None)] * (n_tok + 1) for _ in range(max_lines + 1)]
+    dp[0][0] = (0.0, [])
+    for n in range(1, max_lines + 1):
+        for j in range(1, n_tok + 1):
+            best = (INF, None)
+            for i in range(n - 1, j):
+                prev = dp[n - 1][i]
+                if prev[1] is None:
+                    continue
+                w = max(prev[0], width(i, j))
+                if w < best[0]:
+                    best = (w, prev[1] + [(i, j)])
+            dp[n][j] = best
+        if dp[n][n_tok][1] is not None:
+            out[n] = (dp[n][n_tok][0], [text(i, j) for i, j in dp[n][n_tok][1]])
+    return out
+
+
+def _tokens(text, hyphenate):
+    toks = []
+    for wd in text.split():
+        core = wd.rstrip(",:;!?")
+        parts = TITLE_HYPHEN.get(core) if hyphenate else None
+        if parts:
+            toks += [p + "-" for p in parts[:-1]] + [parts[-1] + wd[len(core):]]
+        else:
+            toks.append(wd)
+    return toks
+
+
+def _title_fit(text, fn, wght, box_w, box_h, cap_min_px, cap_max_px, max_lines=TITLE_MAX_LINES, lead=TITLE_LEAD):
+    """The largest type that sets `text` in the box: (lines, size_px). More lines win over smaller type; a long
+    word breaks at a syllable only when the unbroken setting would fall below cap_min_px."""
+    capr = _cap(fn, wght)
+    ref = 100.0
+    f = va.font(fn, ref * 3, wght)
+    space = f.getlength(" ") / 3
+
+    def solve(hyph):
+        toks = _tokens(text, hyph)
+        widths = [f.getlength(t) / 3 for t in toks]
+        best = None
+        for n, (widest, lines) in _best_lines(toks, widths, space, box_w, max_lines).items():
+            s_w = box_w / max(widest, 1e-6) * ref
+            s_h = box_h / ((n - 1) * lead + capr)
+            s = min(s_w, s_h, cap_max_px / capr)
+            # prefer fewer lines unless more lines give clearly bigger type
+            if best is None or s > best[1] * 1.04:
+                best = (lines, s)
+        return best
+    lines, s = solve(False)
+    if s * capr < cap_min_px and any(w.rstrip(",:;!?") in TITLE_HYPHEN for w in text.split()):
+        l2, s2 = solve(True)
+        if s2 > s * 1.08:
+            lines, s = l2, s2
+    # the largest size the real glyphs fit (the reference widths are measured, so this only trims rounding)
+    while s > 6:
+        g = va.font(fn, s * 3, wght)
+        if all(g.getlength(ln) / 3 <= box_w for ln in lines):
+            break
+        s -= 0.25
+    return lines, s
+
+
+def _set_lines(lines, fn, wght, s, cx, y_mid, lead=TITLE_LEAD):
+    """Rows for text_mask: lines centred on cx, the block's cap-height extent centred on y_mid."""
+    capr = _cap(fn, wght)
+    n = len(lines)
+    block = (n - 1) * lead * s + capr * s
+    base0 = y_mid - block / 2 + capr * s
+    return [(ln, fn, s, wght, (cx, base0 + i * lead * s), "ms") for i, ln in enumerate(lines)]
 
 
 def g_cover(b):
-    """Round 8 (ADR 0004): a designed front cover in the category's family: the category colour and pattern,
-    the German category name at the head, the title on a solid panel, a small emblem, the author in capitals.
-    The cabinet's lip hides the bottom few per cent, so nothing sits below 0.875 of the height
-    (round 8 pass 2: the author block moved up, clear of the top board's lip seen from below). Original
-    typography only, no publisher artwork."""
+    """Round 10 (Mac, 2026-10-06): the title owns the cover. The category colour and pattern behind; at the head a
+    narrow band with the category's English name; a solid title panel over two thirds of the cover with the title in
+    heavy condensed capitals (light on dark, or dark on the people cabinet's cream), wrapped onto up to six lines
+    before it shrinks and never below TITLE_MIN_CAP; under it the author in heavy capitals on their own band. The
+    cabinet's lip hides the cover below about 0.875 of its height, so nothing is printed there. Original typography
+    only, no publisher artwork."""
     def f(w, h, seed):
         t = _cover_base(w, h, seed + 5, b["col"], "paper")
-        col, ink, acc, panel = hexc(b["col"]), hexc(b["ink"]), hexc(b["accent"]), hexc(b["panel"])
-        fn = b["font"]
-        up = fn in SANS
-        wg = 700 if fn in ("josefin", "playfair", "baskerville") else 600
+        ink, acc, panel = hexc(b["ink"]), hexc(b["accent"]), hexc(b["panel"])
         pat = _pattern(b["motif"], w, h, seed + 11)
         t.paint(pat * 0.16, ink, None)
         yy, xx = np.mgrid[0:h, 0:w].astype(float)
-        # head band with the category name
-        band = (yy < h * 0.085).astype(float)
-        t.paint(band * 0.9, panel, 0.5)
-        t.paint(((yy > h * 0.085) & (yy < h * 0.085 + 2)).astype(float), acc, 0.4)
-        # the title panel, framed in the accent colour
-        x0, x1, y0, y1 = w * 0.08, w * 0.92, h * 0.15, h * 0.58
-        box = ((xx > x0) & (xx < x1) & (yy > y0) & (yy < y1)).astype(float)
-        t.paint(box * 0.94, panel, 0.5)
-        fr = ((xx > x0 + 4) & (xx < x1 - 4) & (yy > y0 + 4) & (yy < y1 - 4)) & \
-            ~((xx > x0 + 5.5) & (xx < x1 - 5.5) & (yy > y0 + 5.5) & (yy < y1 - 5.5))
+        # head band with the category's English name
+        hb = h * HEAD_Y
+        t.paint((yy < hb).astype(float) * 0.92, panel, 0.5)
+        t.paint(((yy > hb) & (yy < hb + max(1.5, h * 0.005))).astype(float), acc, 0.4)
+        # the title panel, a thin accent frame just inside it
+        x0, x1, y0, y1 = w * 0.04, w * 0.96, h * PANEL_Y[0], h * PANEL_Y[1]
+        t.paint(((xx > x0) & (xx < x1) & (yy > y0) & (yy < y1)).astype(float) * 0.97, panel, 0.5)
+        ins, lw = max(3.0, w * 0.014), max(1.2, w * 0.005)
+        fr = ((xx > x0 + ins) & (xx < x1 - ins) & (yy > y0 + ins) & (yy < y1 - ins)) & \
+            ~((xx > x0 + ins + lw) & (xx < x1 - ins - lw) & (yy > y0 + ins + lw) & (yy < y1 - ins - lw))
         t.paint(fr.astype(float) * 0.9, acc, 0.4)
-        # emblem under the panel and a rule above the author
-        ew, eh = int(w * 0.5), int(h * 0.13)
-        small = _motif(EMBLEM[b["category"]], ew, int(h * 0.5), h * 0.25)[int(h * 0.25) - eh // 2:][:eh]
-        em = np.zeros((h, w))
-        ey, ex = int(h * 0.645) - eh // 2, (w - ew) // 2
-        em[ey:ey + small.shape[0], ex:ex + ew] = small
-        t.paint(em * 0.95, acc, 0.4)
-        t.paint(((np.abs(yy - h * 0.722) < 1.0) & (np.abs(xx - w / 2) < w * 0.14)).astype(float), acc, 0.4)
-        t.paint(((np.abs(yy - h * 0.872) < 1.0) & (xx > w * 0.08) & (xx < w * 0.92)).astype(float) * 0.8, acc, 0.4)
-        # round 8 pass 2: the author's name on its own solid band (panel colour), so it reads at cam_cat
-        t.paint(((yy > h * 0.735) & (yy < h * 0.858) & (xx > w * 0.06) & (xx < w * 0.94)).astype(float) * 0.9, panel, 0.5)
-        title, author = b["title"], b["author"]
-        tink = ink if b["panel"] != "f4ead2" else hexc("1c1a18")
-        rows_t = _text_block(w, h, title.upper() if up else title, fn, wg, h * 0.105, (x1 - x0) * 0.84,
-                             (y0 + y1) / 2, 4, lead=1.08)
-        rows_a = _text_block(w, h, author.upper(), "oswald" if up or fn == "bebas" else fn, 600, h * 0.052,
-                             w * 0.84, h * 0.7965, 2, lead=1.1)
-        lab = b["label_de"].upper()
-        rows_l = [(lab, "oswald", min(h * 0.042, va.fit_size(lab, "oswald", h * 0.042, 500, w * 0.86)), 500,
-                   (w / 2, h * 0.044), "mm")]
+        # the author's band
+        a0, a1 = h * AUTHOR_Y[0], h * AUTHOR_Y[1]
+        t.paint(((yy > a0) & (yy < a1) & (xx > x0) & (xx < x1)).astype(float) * 0.97, panel, 0.5)
+        tink = ink
+        # title
+        bw = (x1 - x0) - 2 * (ins + lw) - w * 0.035
+        bh = (y1 - y0) - 2 * (ins + lw) - h * 0.04
+        lines, s = _title_fit(b["title"].upper(), TITLE_FONT, TITLE_WGHT, bw, bh, h * TITLE_MIN_CAP, h * TITLE_MAX_CAP)
+        rows_t = _set_lines(lines, TITLE_FONT, TITLE_WGHT, s, w / 2, (y0 + y1) / 2)
+        # author: one line if it keeps a decent size, else two
+        acap = _cap(AUTHOR_FONT, AUTHOR_WGHT)
+        al, as_ = _title_fit(b["author"].upper(), AUTHOR_FONT, AUTHOR_WGHT, (x1 - x0) * 0.92, (a1 - a0) * 0.76,
+                             h * 0.034, h * 0.044, max_lines=2, lead=1.14)
+        rows_a = _set_lines(al, AUTHOR_FONT, AUTHOR_WGHT, as_, w / 2, (a0 + a1) / 2, lead=1.14)
+        # the category's English name at the head
+        lab = b["label_en"].upper()
+        ls = va.fit_size(lab, "oswald", h * 0.034 / _cap("oswald", 600), 600, w * 0.9)
+        rows_l = _set_lines([lab], "oswald", 600, ls, w / 2, hb / 2)
         t.paint(text_mask(w, h, rows_t), tink, 0.5, 0.0, 0.05)
         t.paint(text_mask(w, h, rows_a), tink, 0.5, 0.0, 0.02)
         t.paint(text_mask(w, h, rows_l), acc, 0.45)
+        t.cover_title = (lines, s * _cap(TITLE_FONT, TITLE_WGHT) / h)     # for the build's report
         return t
     return f
 

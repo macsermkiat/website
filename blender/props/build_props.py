@@ -195,7 +195,7 @@ def main():
         reports = save_report(name, r)
     # round 8 pass 2: the deco contact sheet is render_stalls.py --sheet's (the stocked stalls from the lane);
     # a build no longer rebuilds it from the old per-set frames, which showed the retired act_ goods
-    shrink_shared_textures()
+    books_textures()
     placed = all_sets()
     write_props_json(placed)
     write_items_json(placed, load_report())
@@ -220,25 +220,29 @@ def save_report(name, r):
     return reports
 
 
-# Full-size shared maps that do not need 2048 px: the books' normal and roughness carry cloth weave
-# and wear, which read the same at 1024; the spine lettering lives in the colour map, which stays 2048.
-# Keeps the Bücherstand (stall + props + shared textures) under its 3 MB budget.
-SHRINK = {"prop_tex_books_normal.webp": 1024, "prop_tex_books_rm.webp": 1024}
+# Round 10 (Mac, 2026-10-06: titles hard to read): the books atlas (vendor_atlas.BOOKS_SIZE, 4096 px wide) ships at
+# its own sizes, written straight from the atlas PNGs after every build, whatever size a set's export gave it:
+# the colour map (the lettering) at full size, a quarter for the lite market (1024 px wide, so a cover in the lite
+# file is about 85 px across, against 60 px before); the normal and roughness maps carry cloth weave and wear only
+# and ship at half (lite an eighth). Every prop_books_* glb references these files by name.
+BOOKS_TEX = {"color": (1.0, 0.25, 86), "rm": (0.5, 0.125, 82), "normal": (0.5, 0.125, 82)}   # full, lite, quality
 
 
-def shrink_shared_textures():
+def books_textures():
     from PIL import Image
-    for fn, size in SHRINK.items():
-        path = os.path.join(vlib.MODELS, fn)
-        if not os.path.exists(path):
+    for k, (full, lite, q) in BOOKS_TEX.items():
+        src = os.path.join(vlib.ATLAS_DIR, f"books_{k}.png")
+        if not os.path.exists(src):
             continue
-        im = Image.open(path)
-        if im.size[0] <= size:
-            continue
-        before = os.path.getsize(path)
-        new = (size, round(im.size[1] * size / im.size[0]))          # keep the aspect (the books atlas is tall)
-        im.resize(new, Image.LANCZOS).save(path, "WEBP", quality=82, method=6)
-        print(f"[props] {fn}: {im.size} -> {new} px, {before / 1e3:.0f} -> {os.path.getsize(path) / 1e3:.0f} kB")
+        im = Image.open(src).convert("RGB")
+        for frac, suffix in ((full, ""), (lite, ".lite")):
+            path = os.path.join(vlib.MODELS, f"prop_tex_books_{k}{suffix}.webp")
+            if not os.path.exists(path):
+                continue                  # only replace what the sets reference
+            size = (round(im.size[0] * frac), round(im.size[1] * frac))
+            out = im if frac == 1.0 else im.resize(size, Image.LANCZOS)
+            out.save(path, "WEBP", quality=q, method=6)
+            print(f"[props] prop_tex_books_{k}{suffix}.webp: {size[0]}x{size[1]} px, {os.path.getsize(path) / 1e3:.0f} kB")
 
 
 def write_props_json(sets):

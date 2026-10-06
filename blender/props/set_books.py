@@ -113,7 +113,7 @@ def add_real_book(s, nn, b, loc, rz=0.0, clear=None, depth=None, where="section"
     book(node, w, h, d, "spine_" + k, "cover_" + k, "paper" if b["binding"] == "paper" else "hard",
          f"book:{nn:02d}", None, C("efe6d0") if b["binding"] != "cloth" else C("e2d6b8"))
     s.item(name, b["title"], "book", title=b["title"], author=b["author"], slug=b["slug"], category=b["category"],
-           category_de=b["label_de"], cover_material=f"book_cover_{nn:02d}", cover_uv=cover_uv_gltf("cover_" + k),
+           category_en=b["label_en"], cover_material=f"book_cover_{nn:02d}", cover_uv=cover_uv_gltf("cover_" + k),
            cover_texture="prop_tex_books_color.webp", where=where,
            size_m=[round(w, 3), round(h, 3), round(d, 3)])
     return w
@@ -412,7 +412,7 @@ def add_face_out(s, nn, b, loc, lean, cmax):
     book(node, w, h, d, "spine_" + k, "cover_" + k, "paper" if b["binding"] == "paper" else "hard",
          f"book:{nn:02d}", M, C("efe6d0"))
     s.item(name, b["title"], "book", title=b["title"], author=b["author"], slug=b["slug"], category=b["category"],
-           category_de=b["label_de"], cover_material=f"book_cover_{nn:02d}", cover_uv=cover_uv_gltf("cover_" + k),
+           category_en=b["label_en"], cover_material=f"book_cover_{nn:02d}", cover_uv=cover_uv_gltf("cover_" + k),
            cover_texture="prop_tex_books_color.webp", where="cabinet", face_out=True,
            lean_deg=round(math.degrees(lean), 2), size_m=[round(w, 3), round(h, 3), round(d, 3)],
            pivot="the middle of the foot's back edge, on the ledge; the cover faces -Y, the spine is on -X")
@@ -487,7 +487,7 @@ def _section_def(key, seed):
                 cam=((W / 2, -1.0, zc + 0.1), (W / 2, 0.05, zc), 32), cam_fixed=True,
                 hero=((W * 0.5, -0.75, top + 0.16), (W * 0.5, 0.05, top + 0.1), 40),
                 in_stall="stall_buecher.glb", stall_cams={"cam_cat": cam_cat}, seat="lean",
-                label=f"{sec['label_de']} ({sec['books']} books)")
+                label=f"{sec['label_en']} ({sec['books']} books)")
 
 
 SETS = {

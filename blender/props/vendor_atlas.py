@@ -30,6 +30,7 @@ OUT = os.path.join(REPO, "blender", "out", "vendor")
 FONTS = os.path.join(HERE, "fonts")
 LIBFONTS = os.path.join(REPO, "blender", "lib", "fonts")
 SIZE = 2048
+BOOKS_SIZE = 4096   # round 10: the books atlas is 4096 px wide (covers at atlas_books.COVER_PX_CM), as tall as it needs
 PAD = 4
 
 FONT_FILES = {
@@ -1002,10 +1003,11 @@ def normal_from_height(hgt, k):
 
 def _render_atlas(specs, size, prefix, out, grow=False):
     """Pack, generate and save one atlas (<prefix>_color / _rm / _normal.png). Returns (regions, used px).
-    grow=True: the atlas is `size` wide and as tall as it needs, in steps of 256 px (the books atlas)."""
+    grow=True: the atlas is `size` wide and as tall as it needs, in steps of 256 px (the books atlas; round 10:
+    it may be shorter than it is wide, so the 4096 px books atlas stays inside a 4096 px texture)."""
     if grow:
         _, need = pack(specs, size, 1 << 15)
-        hgt = max(size, -(-need // 256) * 256)
+        hgt = -(-need // 256) * 256
     else:
         hgt = size
     rects, used = pack(specs, size, hgt)
@@ -1041,14 +1043,14 @@ def build(size=SIZE, out=OUT):
     specs = region_specs()
     regions, used = _render_atlas(specs, size, "atlas", out)
     bspecs = atlas_books.books_specs()
-    bregions, bused = _render_atlas(bspecs, size, "books", out, grow=True)
+    bregions, bused = _render_atlas(bspecs, BOOKS_SIZE, "books", out, grow=True)
     to8 = lambda a: Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8))
     # coal_glow has its own small texture pair (UV 0..1): base colour and the glow of the cracks
     cseed = 1000 + [s[0] for s in specs].index("coal") * 13
     to8(atlas_goods.g_coal(512, 512, cseed).col).save(os.path.join(out, "coal_color.png"))
     to8(atlas_goods.coal_emit(512, 512, cseed)).save(os.path.join(out, "coal_emit.png"))
     meta = {"size": size, "used_rows_px": used, "regions": regions,
-            "books": {"size": size, "height": max(size, -(-bused // 256) * 256), "used_rows_px": bused,
+            "books": {"size": BOOKS_SIZE, "height": -(-bused // 256) * 256, "used_rows_px": bused,
                       "regions": bregions}}
     with open(os.path.join(out, "regions.json"), "w") as f:
         json.dump(meta, f, indent=0)
@@ -1057,7 +1059,7 @@ def build(size=SIZE, out=OUT):
     return meta
 
 
-def build_books(size=SIZE, out=OUT):
+def build_books(size=BOOKS_SIZE, out=OUT):
     """Round 8: re-render only the Bücherstand atlas (books_*) and its entry in regions.json, leaving the main
     atlas and every set built on it untouched."""
     import atlas_books
@@ -1065,7 +1067,7 @@ def build_books(size=SIZE, out=OUT):
     with open(path) as f:
         meta = json.load(f)
     bregions, bused = _render_atlas(atlas_books.books_specs(), size, "books", out, grow=True)
-    meta["books"] = {"size": size, "height": max(size, -(-bused // 256) * 256), "used_rows_px": bused,
+    meta["books"] = {"size": size, "height": -(-bused // 256) * 256, "used_rows_px": bused,
                      "regions": bregions}
     with open(path, "w") as f:
         json.dump(meta, f, indent=0)

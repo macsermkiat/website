@@ -235,7 +235,7 @@ def sections():
                               "origin (on the door's front face): rotate the node about its local vertical axis by "
                               "open_deg (Blender Z and three.js Y take the same sign; negative for a left hinge). Fully "
                               "open it folds flat beside the cabinet, out of the cam_cat view"},
-            "sign": {"node": "sign_cat_" + key, "text": c["label_de"],
+            "sign": {"node": "sign_cat_" + key, "text": c["label_en"],
                      "center": to_stall(origin, a, *sign_local), "size": [round(cw - 0.03, 3), SIGN_H]},
             "cam": "cam_cat_" + key,
             "cam_position": to_stall(origin, a, *cam_local),
@@ -373,7 +373,7 @@ if __name__ == "__main__":
         sys.exit(1 if problems else 0)
     d = write_json()
     for s in d["sections"]:
-        print(f"{s['key']:10s} {s['label_de']:26s} {s['books']:3d} books  {s['rows']} x {s['covers_per_row']}"
+        print(f"{s['key']:10s} {s['label_en']:30s} {s['books']:3d} books  {s['rows']} x {s['covers_per_row']}"
               f"  cabinet {s['cabinet']['width']:.3f} m  slot {s['slot_position']} rotZ {s['slot_rotation_z_deg']}"
               f"  cam {s['cam_distance']:.2f} m")
     print("wrote", OUT_JSON)

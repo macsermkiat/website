@@ -926,12 +926,8 @@ def export_set(name, lite_mode, items=None):
     from nmlib import export as nexport
     out = name + (".lite" if lite_mode else "")
     size = TEX_LITE if lite_mode else TEX_FULL
-    if name.startswith("prop_books"):
-        # the books atlas is 2048 px wide and taller than that; the optimiser fits textures inside a square,
-        # so raise the limit to keep its full width (lite: 512 px wide)
-        with open(os.path.join(ATLAS_DIR, "regions.json")) as f:
-            bh = json.load(f)["books"].get("height", 2048)
-        size = int(size * bh / 2048)
+    # round 10: the shared books textures (prop_tex_books_*) are written from the atlas PNGs at their own sizes
+    # after the build (build_props.books_textures), so the books sets export at the usual sizes like every set
     shared = any(o.type == 'MESH' and o.data.users > 1 for o in state.export_collection().all_objects)
     ext = (lambda n: n.startswith(SHARED_TEX), tex_uri(lite_mode))
     rep = nexport.export_glb(out, texture_size=size, externalize=None if shared else ext)

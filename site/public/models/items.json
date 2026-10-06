@@ -262,13 +262,13 @@
    "author": "David Thomas and Andrew Hunt",
    "slug": "the-pragmatic-programmer",
    "category": "craft",
-   "category_de": "Handwerk & Gewohnheit",
+   "category_en": "Craft, Habits and Work",
    "cover_material": "book_cover_50",
    "cover_uv": [
-    0.0022,
-    0.31766,
-    0.13843,
-    0.4156
+    0.88,
+    0.19027,
+    0.9801,
+    0.35824
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -290,13 +290,13 @@
    "author": "Robert C. Martin",
    "slug": "clean-code",
    "category": "craft",
-   "category_de": "Handwerk & Gewohnheit",
+   "category_en": "Craft, Habits and Work",
    "cover_material": "book_cover_51",
    "cover_uv": [
-    0.14282,
-    0.31766,
-    0.27271,
-    0.4156
+    0.0011,
+    0.36475,
+    0.09656,
+    0.53271
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -318,13 +318,13 @@
    "author": "Cal Newport",
    "slug": "deep-work",
    "category": "craft",
-   "category_de": "Handwerk & Gewohnheit",
+   "category_en": "Craft, Habits and Work",
    "cover_material": "book_cover_52",
    "cover_uv": [
-    0.68677,
-    0.61426,
-    0.79224,
-    0.70438
+    0.82874,
+    0.53564,
+    0.90637,
+    0.68994
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -346,13 +346,13 @@
    "author": "James Clear",
    "slug": "atomic-habits",
    "category": "craft",
-   "category_de": "Handwerk & Gewohnheit",
+   "category_en": "Craft, Habits and Work",
    "cover_material": "book_cover_53",
    "cover_uv": [
-    0.74829,
-    0.31766,
-    0.86108,
-    0.4156
+    0.44128,
+    0.36475,
+    0.52429,
+    0.53271
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -374,13 +374,13 @@
    "author": "Scott H. Young",
    "slug": "ultralearning",
    "category": "craft",
-   "category_de": "Handwerk & Gewohnheit",
+   "category_en": "Craft, Habits and Work",
    "cover_material": "book_cover_54",
    "cover_uv": [
-    0.60767,
-    0.21498,
-    0.72437,
-    0.31515
+    0.79211,
+    0.19027,
+    0.87781,
+    0.36182
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -402,13 +402,13 @@
    "author": "Annie Duke",
    "slug": "quit",
    "category": "decisions",
-   "category_de": "Risiko & Entscheidungen",
+   "category_en": "Risk, Decisions and Markets",
    "cover_material": "book_cover_39",
    "cover_uv": [
-    0.0022,
-    0.21498,
-    0.1189,
-    0.31515
+    0.35266,
+    0.19027,
+    0.43835,
+    0.36182
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -430,13 +430,13 @@
    "author": "Charles T. Munger",
    "slug": "poor-charlies-almanack",
    "category": "decisions",
-   "category_de": "Risiko & Entscheidungen",
+   "category_en": "Risk, Decisions and Markets",
    "cover_material": "book_cover_40",
    "cover_uv": [
-    0.0022,
-    0.00126,
-    0.14087,
-    0.10979
+    0.0011,
+    0.00146,
+    0.10291,
+    0.18734
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -458,13 +458,13 @@
    "author": "Benoit Mandelbrot and Richard L. Hudson",
    "slug": "the-misbehavior-of-markets",
    "category": "decisions",
-   "category_de": "Risiko & Entscheidungen",
+   "category_en": "Risk, Decisions and Markets",
    "cover_material": "book_cover_41",
    "cover_uv": [
-    0.6311,
-    0.31766,
-    0.7439,
-    0.4156
+    0.35608,
+    0.36475,
+    0.43909,
+    0.53271
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -486,13 +486,13 @@
    "author": "Nassim Nicholas Taleb",
    "slug": "antifragile",
    "category": "decisions",
-   "category_de": "Risiko & Entscheidungen",
+   "category_en": "Risk, Decisions and Markets",
    "cover_material": "book_cover_42",
    "cover_uv": [
-    0.3479,
-    0.41811,
-    0.45874,
-    0.51409
+    0.86218,
+    0.36475,
+    0.94348,
+    0.52913
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -514,13 +514,13 @@
    "author": "Nassim Nicholas Taleb",
    "slug": "the-black-swan",
    "category": "decisions",
-   "category_de": "Risiko & Entscheidungen",
+   "category_en": "Risk, Decisions and Markets",
    "cover_material": "book_cover_43",
    "cover_uv": [
-    0.46313,
-    0.41811,
-    0.57397,
-    0.51409
+    0.0011,
+    0.53564,
+    0.0824,
+    0.70003
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -542,13 +542,13 @@
    "author": "Brian Christian and Tom Griffiths",
    "slug": "algorithms-to-live-by",
    "category": "decisions",
-   "category_de": "Risiko & Entscheidungen",
+   "category_en": "Risk, Decisions and Markets",
    "cover_material": "book_cover_44",
    "cover_uv": [
-    0.0022,
-    0.71024,
-    0.10425,
-    0.80036
+    0.0011,
+    0.70296,
+    0.07605,
+    0.85726
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -570,13 +570,13 @@
    "author": "Kenneth Cukier et al.",
    "slug": "framers",
    "category": "decisions",
-   "category_de": "Risiko & Entscheidungen",
+   "category_en": "Risk, Decisions and Markets",
    "cover_material": "book_cover_45",
    "cover_uv": [
-    0.12329,
-    0.21498,
-    0.23999,
-    0.31515
+    0.44055,
+    0.19027,
+    0.52625,
+    0.36182
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -598,13 +598,13 @@
    "author": "Adam Grant",
    "slug": "think-again",
    "category": "decisions",
-   "category_de": "Risiko & Entscheidungen",
+   "category_en": "Risk, Decisions and Markets",
    "cover_material": "book_cover_46",
    "cover_uv": [
-    0.24438,
-    0.21498,
-    0.36108,
-    0.31515
+    0.52844,
+    0.19027,
+    0.61414,
+    0.36182
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -626,13 +626,13 @@
    "author": "Carl T. Bergstrom and Jevin D. West",
    "slug": "calling-bullshit",
    "category": "decisions",
-   "category_de": "Risiko & Entscheidungen",
+   "category_en": "Risk, Decisions and Markets",
    "cover_material": "book_cover_47",
    "cover_uv": [
-    0.36548,
-    0.21498,
-    0.48218,
-    0.31515
+    0.61633,
+    0.19027,
+    0.70203,
+    0.36182
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -654,13 +654,13 @@
    "author": "Daniel Kahneman",
    "slug": "thinking-fast-and-slow",
    "category": "decisions",
-   "category_de": "Risiko & Entscheidungen",
+   "category_en": "Risk, Decisions and Markets",
    "cover_material": "book_cover_48",
    "cover_uv": [
-    0.57837,
-    0.41811,
-    0.68921,
-    0.51409
+    0.08459,
+    0.53564,
+    0.16589,
+    0.70003
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -682,13 +682,13 @@
    "author": "Judea Pearl and Dana Mackenzie",
    "slug": "the-book-of-why",
    "category": "decisions",
-   "category_de": "Risiko & Entscheidungen",
+   "category_en": "Risk, Decisions and Markets",
    "cover_material": "book_cover_49",
    "cover_uv": [
-    0.48657,
-    0.21498,
-    0.60327,
-    0.31515
+    0.70422,
+    0.19027,
+    0.78992,
+    0.36182
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -710,13 +710,13 @@
    "author": "Walter Isaacson",
    "slug": "elon-musk",
    "category": "lives",
-   "category_de": "Lebensgeschichten",
+   "category_en": "Lives in Science and Industry",
    "cover_material": "book_cover_10",
    "cover_uv": [
-    0.19019,
-    0.00126,
-    0.31079,
-    0.10226
+    0.1051,
+    0.00146,
+    0.19348,
+    0.17432
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -738,13 +738,13 @@
    "author": "Richard Rhodes",
    "slug": "the-making-of-the-atomic-bomb",
    "category": "lives",
-   "category_de": "Lebensgeschichten",
+   "category_en": "Lives in Science and Industry",
    "cover_material": "book_cover_11",
    "cover_uv": [
-    0.86548,
-    0.31766,
-    0.97827,
-    0.41532
+    0.52649,
+    0.36475,
+    0.6095,
+    0.53206
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -766,13 +766,13 @@
    "author": "Richard P. Feynman",
    "slug": "the-meaning-of-it-all",
    "category": "lives",
-   "category_de": "Lebensgeschichten",
+   "category_en": "Lives in Science and Industry",
    "cover_material": "book_cover_12",
    "cover_uv": [
-    0.46997,
-    0.71024,
-    0.57202,
-    0.79785
+    0.07825,
+    0.70296,
+    0.1532,
+    0.85303
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -794,13 +794,13 @@
    "author": "Walter Isaacson",
    "slug": "einstein",
    "category": "lives",
-   "category_de": "Lebensgeschichten",
+   "category_en": "Lives in Science and Industry",
    "cover_material": "book_cover_13",
    "cover_uv": [
-    0.0022,
-    0.1123,
-    0.1189,
-    0.21247
+    0.63806,
+    0.00146,
+    0.72375,
+    0.17301
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -822,13 +822,13 @@
    "author": "Richard P. Feynman",
    "slug": "surely-youre-joking-mr-feynman",
    "category": "lives",
-   "category_de": "Lebensgeschichten",
+   "category_en": "Lives in Science and Industry",
    "cover_material": "book_cover_14",
    "cover_uv": [
-    0.89575,
-    0.71024,
-    0.9939,
-    0.79478
+    0.38684,
+    0.70296,
+    0.45911,
+    0.84814
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -850,13 +850,13 @@
    "author": "Richard P. Feynman and Ralph Leighton",
    "slug": "what-do-you-care-what-other-people-think",
    "category": "lives",
-   "category_de": "Lebensgeschichten",
+   "category_en": "Lives in Science and Industry",
    "cover_material": "book_cover_15",
    "cover_uv": [
-    0.0022,
-    0.80287,
-    0.10034,
-    0.88742
+    0.4613,
+    0.70296,
+    0.53357,
+    0.84814
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -878,13 +878,13 @@
    "author": "Robert Greene",
    "slug": "the-laws-of-human-nature",
    "category": "mind",
-   "category_de": "Geist & Körper",
+   "category_en": "Mind and Body",
    "cover_material": "book_cover_16",
    "cover_uv": [
-    0.12329,
-    0.1123,
-    0.23999,
-    0.21247
+    0.72595,
+    0.00146,
+    0.81165,
+    0.17301
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -906,13 +906,13 @@
    "author": "Viktor E. Frankl",
    "slug": "mans-search-for-meaning",
    "category": "mind",
-   "category_de": "Geist & Körper",
+   "category_en": "Mind and Body",
    "cover_material": "book_cover_17",
    "cover_uv": [
-    0.87134,
-    0.80287,
-    0.96265,
-    0.88211
+    0.60706,
+    0.70296,
+    0.67395,
+    0.8387
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -934,13 +934,13 @@
    "author": "Angela Duckworth",
    "slug": "grit",
    "category": "mind",
-   "category_de": "Geist & Körper",
+   "category_en": "Mind and Body",
    "cover_material": "book_cover_18",
    "cover_uv": [
-    0.24438,
-    0.1123,
-    0.36108,
-    0.21247
+    0.81384,
+    0.00146,
+    0.89954,
+    0.17301
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -962,13 +962,13 @@
    "author": "Ranjay Gulati",
    "slug": "how-to-be-bold",
    "category": "mind",
-   "category_de": "Geist & Körper",
+   "category_en": "Mind and Body",
    "cover_material": "book_cover_19",
    "cover_uv": [
-    0.2771,
-    0.31766,
-    0.39233,
-    0.4156
+    0.09875,
+    0.36475,
+    0.18347,
+    0.53271
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -990,13 +990,13 @@
    "author": "Ichiro Kishimi and Fumitake Koga",
    "slug": "the-courage-to-be-happy",
    "category": "mind",
-   "category_de": "Geist & Körper",
+   "category_en": "Mind and Body",
    "cover_material": "book_cover_20",
    "cover_uv": [
-    0.57642,
-    0.71024,
-    0.67847,
-    0.79785
+    0.1554,
+    0.70296,
+    0.23035,
+    0.85303
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1018,13 +1018,13 @@
    "author": "Ichiro Kishimi and Fumitake Koga",
    "slug": "the-courage-to-be-disliked",
    "category": "mind",
-   "category_de": "Geist & Körper",
+   "category_en": "Mind and Body",
    "cover_material": "book_cover_21",
    "cover_uv": [
-    0.68286,
-    0.71024,
-    0.78491,
-    0.79785
+    0.23254,
+    0.70296,
+    0.3075,
+    0.85303
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1046,13 +1046,13 @@
    "author": "Chris van Tulleken",
    "slug": "ultra-processed-people",
    "category": "mind",
-   "category_de": "Geist & Körper",
+   "category_en": "Mind and Body",
    "cover_material": "book_cover_22",
    "cover_uv": [
-    0.36548,
-    0.1123,
-    0.48218,
-    0.21247
+    0.90173,
+    0.00146,
+    0.98743,
+    0.17301
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1074,13 +1074,13 @@
    "author": "James Nestor",
    "slug": "breath",
    "category": "mind",
-   "category_de": "Geist & Körper",
+   "category_en": "Mind and Body",
    "cover_material": "book_cover_23",
    "cover_uv": [
-    0.48657,
-    0.1123,
-    0.60327,
-    0.21247
+    0.0011,
+    0.19027,
+    0.08679,
+    0.36182
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1102,13 +1102,13 @@
    "author": "Eric Jorgenson",
    "slug": "the-almanack-of-naval-ravikant",
    "category": "mind",
-   "category_de": "Geist & Körper",
+   "category_en": "Mind and Body",
    "cover_material": "book_cover_24",
    "cover_uv": [
-    0.0022,
-    0.5166,
-    0.11304,
-    0.61175
+    0.33508,
+    0.53564,
+    0.41638,
+    0.69873
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1130,13 +1130,13 @@
    "author": "Will Guidara",
    "slug": "unreasonable-hospitality",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_25",
    "cover_uv": [
-    0.60767,
-    0.1123,
-    0.72437,
-    0.21247
+    0.08899,
+    0.19027,
+    0.17468,
+    0.36182
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1158,13 +1158,13 @@
    "author": "Chase Hughes",
    "slug": "six-minute-x-ray",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_26",
    "cover_uv": [
-    0.11743,
-    0.5166,
-    0.22827,
-    0.61175
+    0.41858,
+    0.53564,
+    0.49988,
+    0.69873
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1186,13 +1186,13 @@
    "author": "Nedra Glover Tawwab",
    "slug": "set-boundaries-find-peace",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_27",
    "cover_uv": [
-    0.79663,
-    0.61426,
-    0.89868,
-    0.70438
+    0.90857,
+    0.53564,
+    0.98352,
+    0.68994
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1214,13 +1214,13 @@
    "author": "Vanessa Van Edwards",
    "slug": "cues",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_28",
    "cover_uv": [
-    0.0022,
-    0.41811,
-    0.11304,
-    0.51409
+    0.61169,
+    0.36475,
+    0.69299,
+    0.52913
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1242,13 +1242,13 @@
    "author": "Vanessa Van Edwards",
    "slug": "captivate",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_29",
    "cover_uv": [
-    0.11743,
-    0.41811,
-    0.22827,
-    0.51409
+    0.69519,
+    0.36475,
+    0.77649,
+    0.52913
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1270,13 +1270,13 @@
    "author": "David Brooks",
    "slug": "how-to-know-a-person",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_30",
    "cover_uv": [
-    0.72876,
-    0.1123,
-    0.84546,
-    0.21247
+    0.17688,
+    0.19027,
+    0.26257,
+    0.36182
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1298,13 +1298,13 @@
    "author": "Joseph Grenny et al.",
    "slug": "crucial-conversations",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_31",
    "cover_uv": [
-    0.23267,
-    0.5166,
-    0.34351,
-    0.61175
+    0.50208,
+    0.53564,
+    0.58337,
+    0.69873
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1326,13 +1326,13 @@
    "author": "Jefferson Fisher",
    "slug": "the-next-conversation",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_32",
    "cover_uv": [
-    0.5769,
-    0.61426,
-    0.68237,
-    0.70438
+    0.7489,
+    0.53564,
+    0.82654,
+    0.68994
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1354,13 +1354,13 @@
    "author": "Charles Duhigg",
    "slug": "supercommunicators",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_33",
    "cover_uv": [
-    0.84985,
-    0.1123,
-    0.96655,
-    0.21247
+    0.26477,
+    0.19027,
+    0.35046,
+    0.36182
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1382,13 +1382,13 @@
    "author": "Robert B. Cialdini",
    "slug": "influence",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_34",
    "cover_uv": [
-    0.51392,
-    0.31766,
-    0.62671,
-    0.4156
+    0.27087,
+    0.36475,
+    0.35388,
+    0.53271
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1410,13 +1410,13 @@
    "author": "Chris Voss and Tahl Raz",
    "slug": "never-split-the-difference",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_35",
    "cover_uv": [
-    0.3479,
-    0.5166,
-    0.45874,
-    0.61175
+    0.58557,
+    0.53564,
+    0.66687,
+    0.69873
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1438,13 +1438,13 @@
    "author": "Faith G. Harper",
    "slug": "unf-ck-your-boundaries",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_36",
    "cover_uv": [
-    0.05493,
-    0.88993,
-    0.14722,
-    0.96415
+    0.67615,
+    0.70296,
+    0.74402,
+    0.83024
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1466,13 +1466,13 @@
    "author": "Dale Carnegie",
    "slug": "how-to-win-friends-and-influence-people",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_37",
    "cover_uv": [
-    0.78931,
-    0.71024,
-    0.89136,
-    0.79785
+    0.30969,
+    0.70296,
+    0.38464,
+    0.85303
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1494,13 +1494,13 @@
    "author": "Paul T. Mason and Randi Kreger",
    "slug": "stop-walking-on-eggshells",
    "category": "people",
-   "category_de": "Menschen & Gespräche",
+   "category_en": "People and Conversation",
    "cover_material": "book_cover_38",
    "cover_uv": [
-    0.23267,
-    0.41811,
-    0.34351,
-    0.51409
+    0.77869,
+    0.36475,
+    0.85999,
+    0.52913
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1522,13 +1522,13 @@
    "author": "Sean Carroll",
    "slug": "the-many-hidden-worlds-of-quantum-mechanics",
    "category": "physics",
-   "category_de": "Physik & Kosmos",
+   "category_en": "Physics and the Universe",
    "cover_material": "book_cover_00",
    "cover_uv": [
-    0.6936,
-    0.41811,
-    0.80444,
-    0.51325
+    0.16809,
+    0.53564,
+    0.24939,
+    0.69873
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1550,13 +1550,13 @@
    "author": "Sean Carroll",
    "slug": "the-biggest-ideas-in-the-universe",
    "category": "physics",
-   "category_de": "Physik & Kosmos",
+   "category_en": "Physics and the Universe",
    "cover_material": "book_cover_01",
    "cover_uv": [
-    0.31519,
-    0.00126,
-    0.43335,
-    0.10142
+    0.19568,
+    0.00146,
+    0.28235,
+    0.17301
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1578,13 +1578,13 @@
    "author": "Sean Carroll",
    "slug": "quanta-and-fields",
    "category": "physics",
-   "category_de": "Physik & Kosmos",
+   "category_en": "Physics and the Universe",
    "cover_material": "book_cover_02",
    "cover_uv": [
-    0.43774,
-    0.00126,
-    0.55591,
-    0.10142
+    0.28455,
+    0.00146,
+    0.37122,
+    0.17301
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1606,13 +1606,13 @@
    "author": "James Gleick",
    "slug": "chaos",
    "category": "physics",
-   "category_de": "Physik & Kosmos",
+   "category_en": "Physics and the Universe",
    "cover_material": "book_cover_03",
    "cover_uv": [
-    0.39673,
-    0.31766,
-    0.50952,
-    0.4156
+    0.18567,
+    0.36475,
+    0.26868,
+    0.53271
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1634,13 +1634,13 @@
    "author": "Carlo Rovelli",
    "slug": "reality-is-not-what-it-seems",
    "category": "physics",
-   "category_de": "Physik & Kosmos",
+   "category_en": "Physics and the Universe",
    "cover_material": "book_cover_04",
    "cover_uv": [
-    0.66724,
-    0.80287,
-    0.76147,
-    0.88546
+    0.53577,
+    0.70296,
+    0.60486,
+    0.84456
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1662,13 +1662,13 @@
    "author": "Thomas Hertog",
    "slug": "on-the-origin-of-time",
    "category": "physics",
-   "category_de": "Physik & Kosmos",
+   "category_en": "Physics and the Universe",
    "cover_material": "book_cover_05",
    "cover_uv": [
-    0.68286,
-    0.00126,
-    0.79956,
-    0.10142
+    0.46228,
+    0.00146,
+    0.54797,
+    0.17301
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1690,13 +1690,13 @@
    "author": "Sean Carroll",
    "slug": "mysteries-of-modern-physics-time",
    "category": "physics",
-   "category_de": "Physik & Kosmos",
+   "category_en": "Physics and the Universe",
    "cover_material": "book_cover_06",
    "cover_uv": [
-    0.80884,
-    0.41811,
-    0.91968,
-    0.51325
+    0.25159,
+    0.53564,
+    0.33289,
+    0.69873
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1718,13 +1718,13 @@
    "author": "Sean Carroll",
    "slug": "something-deeply-hidden",
    "category": "physics",
-   "category_de": "Physik & Kosmos",
+   "category_en": "Physics and the Universe",
    "cover_material": "book_cover_07",
    "cover_uv": [
-    0.80396,
-    0.00126,
-    0.92065,
-    0.10142
+    0.55017,
+    0.00146,
+    0.63586,
+    0.17301
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1746,13 +1746,13 @@
    "author": "Carlo Rovelli",
    "slug": "the-order-of-time",
    "category": "physics",
-   "category_de": "Physik & Kosmos",
+   "category_en": "Physics and the Universe",
    "cover_material": "book_cover_08",
    "cover_uv": [
-    0.46704,
-    0.61426,
-    0.57251,
-    0.70438
+    0.66907,
+    0.53564,
+    0.7467,
+    0.68994
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",
@@ -1774,13 +1774,13 @@
    "author": "Steven Strogatz",
    "slug": "infinite-powers",
    "category": "physics",
-   "category_de": "Physik & Kosmos",
+   "category_en": "Physics and the Universe",
    "cover_material": "book_cover_09",
    "cover_uv": [
-    0.5603,
-    0.00126,
-    0.67847,
-    0.10142
+    0.37341,
+    0.00146,
+    0.46008,
+    0.17301
    ],
    "cover_texture": "prop_tex_books_color.webp",
    "where": "cabinet",

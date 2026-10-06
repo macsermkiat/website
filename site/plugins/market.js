@@ -266,6 +266,7 @@ export function buildLibrary(dir = CONTENT_DIR) {
         author: String(b.author || page?.author || ''),
         slug,
         category: String(c.key || ''),
+        categoryLabel: String(c.label_en || c.label || c.key || ''),
         categoryDe: String(c.label_de || ''),
         oneLine: page?.oneLine || '',
         page: !!page,
@@ -317,7 +318,7 @@ export function libraryHtml(lib, { open = false } = {}) {
       const t = b.page ? `<a href="plain.html#book-${esc(b.slug)}" data-book="${esc(b.slug)}"><em>${esc(b.title)}</em></a>` : `<em>${esc(b.title)}</em>`;
       return `<li>${t}${b.author ? ` · ${esc(b.author)}` : ''}${b.oneLine ? `. <span class="one-line">${esc(b.oneLine)}</span>` : ''}</li>`;
     }).join('');
-    return `${c.label ? `<h4>${esc(c.label)}${c.labelDe ? ` <span lang="de">· ${esc(c.labelDe)}</span>` : ''}</h4>` : ''}<ul class="shelf-list">${li}</ul>`;
+    return `${c.label ? `<h4>${esc(c.label)}</h4>` : ''}<ul class="shelf-list">${li}</ul>`;
   }).join('\n');
   return `\n<details class="library" id="bookshelf"${open ? ' open' : ''}><summary>Mac’s bookshelf: ${lib.books.length} books he has read, by subject</summary>\n${groups}\n</details>\n`;
 }
@@ -333,7 +334,7 @@ export function libraryPagesHtml(lib) {
         ${bookFragment(lib, b.slug, { level: 5 })}
         <p class="back"><a href="#bookshelf">Back to the bookshelf</a></p>
       </article>`).join('');
-    return arts ? `<h3 class="bookcat">${esc(c.label)}${c.labelDe ? ` <span lang="de">· ${esc(c.labelDe)}</span>` : ''}</h3>${arts}` : '';
+    return arts ? `<h3 class="bookcat">${esc(c.label)}</h3>${arts}` : '';
   }).join('\n');
   return `\n<div class="booknotes" role="region" aria-label="Notes on every book on Mac’s shelf">\n<h3>Notes on every book</h3>\n${parts}\n</div>\n`;
 }
