@@ -74,6 +74,9 @@ export function detectLite(info = gpuInfo(), env = globalThis) {
   if (/iPad|Android/i.test(ua) && !phone) reasons.push('tablet');
   const tier = gpuTier(info.renderer);
   if (tier === 'software' || tier === 'weak') reasons.push(`${tier} GPU: ${info.renderer}`);
+  // Measured 2026-10-06 on an Apple M3 MacBook Air: the full market ran at 1-5 fps, the lite one smoothly. Built-in
+  // GPUs (Apple M base chips, Intel Iris/UHD, AMD Radeon Graphics) start on lite; the full market is one click away.
+  if (tier === 'integrated') reasons.push(`built-in GPU: ${info.renderer}`);
   if (info.maxTex && info.maxTex < 8192) reasons.push('small textures');
   if (nav.deviceMemory && nav.deviceMemory <= 4) reasons.push('low memory');
   if (nav.hardwareConcurrency && nav.hardwareConcurrency <= 2) reasons.push('few cores');
@@ -95,9 +98,11 @@ export function chooseQuality() {
 }
 
 /** Switch quality and reload; the choice is remembered for this browser. */
-export function switchQuality(lite) {
-  storageSet(lite ? 'lite' : 'full');
+export function switchQuality(lite, { remember = true } = {}) {
+  if (remember) storageSet(lite ? 'lite' : 'full');
   const url = new URL(location.href);
   url.searchParams.delete('quality');
+  // an automatic switch (the full market was too slow here) is not remembered: the URL carries it for this visit
+  if (!remember) { url.searchParams.set('quality', lite ? 'lite' : 'full'); url.searchParams.set('auto', '1'); }
   location.href = url.toString();
 }

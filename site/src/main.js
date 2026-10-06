@@ -650,10 +650,25 @@ async function boot() {
     renderMarket(dt);
     perf?.frame(rawDt);
     governor?.frame(rawDt);
+    earlyCheck(rawDt);
     frames++;
     if (!lite && !governor && frames > 30 && frames < 330 && dt > 0.045) slowFrames++;
     if (!governor && frames === 330 && slowFrames > 200) suggestLite();
     requestAnimationFrame(frame);
+  }
+  // Too slow from the start: in the first 4 s after the market is ready, a median frame over 60 ms (under ~16 fps)
+  // on a full market the visitor did not choose switches to lite for this visit (not remembered; the button goes back).
+  const early = { t: 0, ft: [], done: lite || quality.source !== 'detected' || params.get('governor') === '0' };
+  function earlyCheck(rawDt) {
+    if (early.done || document.documentElement.dataset.ready !== 'true' || document.hidden || !(rawDt > 0)) return;
+    early.t += rawDt;
+    early.ft.push(rawDt * 1000);
+    if (early.t < 4 || early.ft.length < 6) return;
+    early.done = true;
+    const sorted = early.ft.slice(2).sort((a, b) => a - b);
+    const p50 = sorted[sorted.length >> 1];
+    report.early = { p50: +p50.toFixed(1), frames: early.ft.length };
+    if (p50 > 60) { console.info('[market] too slow for the full market here', JSON.stringify(report.early)); switchQuality(true, { remember: false }); }
   }
   let suggested = false;
   function suggestLite() {

@@ -4,7 +4,8 @@
 //   1. the crowd's distance LOD comes in to 12 m      2. to 6 m
 //   3. everyone draws their lite figure, and the crowd stops casting moon shadows
 //   4. the "Running slowly? Switch to the lite market" button
-// It never steps back up. Hidden-tab and loading hitches (frames over 250 ms) are not counted.
+// It never steps back up. Frames in a hidden tab are not counted; very slow frames count, capped at 1 s (until
+// 2026-10-06 frames over 250 ms were dropped, so a market running at 2-5 fps never stepped down at all).
 export const TARGET_MS = 33.3;
 
 export function createGovernor({ crowd, lightingStats, suggestLite, onStep, target = TARGET_MS, window = 120 }) {
@@ -21,8 +22,8 @@ export function createGovernor({ crowd, lightingStats, suggestLite, onStep, targ
     state,
     frame(dt) {
       frames++;
-      if (frames < 90 || !(dt > 0) || dt > 0.25 || state.level >= steps.length) return;
-      ft[n++] = dt * 1000;
+      if (frames < 90 || !(dt > 0) || globalThis.document?.hidden || state.level >= steps.length) return;
+      ft[n++] = Math.min(dt, 1) * 1000;
       if (n < window) return;
       n = 0;
       const p50 = Array.from(ft).sort((a, b) => a - b)[window >> 1];

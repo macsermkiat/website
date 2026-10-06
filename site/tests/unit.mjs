@@ -46,8 +46,10 @@ const GPUS = [
 for (const [r, want] of GPUS) check(`GPU class: ${r.slice(0, 70)}`, gpuTier(r) === want, `${gpuTier(r)} (want ${want})`);
 const env = (ua, extra = {}) => ({ navigator: { userAgent: ua, deviceMemory: 8, hardwareConcurrency: 8, ...extra }, matchMedia: () => ({ matches: /iPhone|Android/.test(ua) }), screen: { width: /iPhone|Android/.test(ua) ? 390 : 1920, height: 844 } });
 const desk = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36';
-check('a UHD 620 laptop gets the full market', detectLite({ renderer: GPUS[2][0], maxTex: 16384 }, env(desk)).lite === false);
-check('an Iris Xe laptop gets the full market', detectLite({ renderer: GPUS[5][0], maxTex: 16384 }, env(desk)).lite === false);
+check('a UHD 620 laptop starts on the lite market (built-in GPU)', detectLite({ renderer: GPUS[2][0], maxTex: 16384 }, env(desk)).lite === true);
+check('an Iris Xe laptop starts on the lite market (built-in GPU)', detectLite({ renderer: GPUS[5][0], maxTex: 16384 }, env(desk)).lite === true);
+check('an Apple M3 MacBook Air starts on the lite market (measured: full ran at 1-5 fps)', detectLite({ renderer: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Version)', maxTex: 16384 }, env(desk)).lite === true);
+check('a desktop with a discrete GPU gets the full market', detectLite({ renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)', maxTex: 16384 }, env(desk)).lite === false);
 check('an HD 4000 laptop gets the lite market', detectLite({ renderer: GPUS[15][0], maxTex: 16384 }, env(desk)).lite === true);
 check('a phone gets the lite market', detectLite({ renderer: 'Apple GPU', maxTex: 16384 }, env('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Safari/604.1')).lite === true);
 check('a 4 GB laptop gets the lite market', detectLite({ renderer: GPUS[2][0], maxTex: 16384 }, env(desk, { deviceMemory: 4 })).lite === true);
