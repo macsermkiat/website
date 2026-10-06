@@ -590,6 +590,9 @@ export function shadowProxies(root, { minRadius = 0, into = null } = {}) {
   };
 }
 
+/** Shadow-only meshes made outside this module (the crowd's figure stand-ins) for holdShadowProxies to show. */
+export const shadowStandIns = new Set();
+
 /**
  * Show the shadow stand-ins only while three draws the shadow maps: three builds the main pass's list before it
  * draws the shadows, so a stand-in hidden outside this call is never in the main pass. `list()` gives the live

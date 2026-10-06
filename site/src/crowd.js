@@ -9,6 +9,7 @@ import { readVec, readRot, modelExists, liteVariant } from './layout.js';
 import { loadGlb } from './engine/loader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { bakeFigure, createFarFigure } from './crowdFar.js';
+import { shadowStandIns } from './engine/merge.js';
 
 const crowdFiles = import.meta.glob('./crowd.json', { eager: true, import: 'default' });
 const RAW = crowdFiles['./crowd.json'] ?? null;
@@ -39,6 +40,7 @@ const THROTTLE = [[18, 3], [12, 2]]; // [metres, update every n-th frame]
 // (times the figure's own COLOR_0), and one material draws the whole crowd. Recolouring a person rewrites the
 // colour attribute of their own copy of the geometry; everything else is shared.
 const PARTS = new Set(['coat', 'body', 'hat', 'scarf']);
+const QUERY = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
 const compacted = new WeakMap();
 let sharedFigureMat = null;
 
@@ -116,6 +118,183 @@ function compactFigure(src) {
     list.forEach((o) => o.removeFromParent());
   }
   return src;
+}
+
+// ---------- one draw per near figure on the full market (round 10) ----------
+// The full figures keep their cloth normal maps (wool on the coat, knit on the hat and scarf), so compactFigure
+// leaves them as five meshes: five draws a person, and five more in every moon-shadow pass. Here a figure's parts
+// become one skinned mesh with one material that does per part what the five did: each vertex carries its part,
+// and the part picks its roughness, its normal map (none, the first or the second) and normal scale, whether it is
+// one-sided (a back face of a one-sided part is discarded, as culling would) and whether the crowd's lift applies
+// (the mug has none); colours go into the vertex colours (part colour times COLOR_0), as for the lite figures, so a
+// person's own colours repaint their copy of the geometry. The shadows come from two hidden stand-ins on the same
+// skeleton (the double-sided parts and the one-sided ones, as three's shadow pass treats them), drawn only in the
+// shadow passes (engine/merge.js shadowStandIns). A figure is built twice at most: with its mug, and without.
+const fullTemplates = new WeakMap();
+const MAX_PARTS = 8;
+function fullFigureMaterial(parts, normalA, normalB, ao) {
+  const m = new THREE.MeshStandardMaterial({ name: 'crowd_figure_full', vertexColors: true, roughness: 1, metalness: 0, side: THREE.DoubleSide, normalMap: normalA || normalB || null, aoMap: ao || null });
+  const arr = (f) => Array.from({ length: MAX_PARTS }, (_, i) => (parts[i] ? f(parts[i]) : 0));
+  const uni = {
+    cfRough: { value: arr((p) => p.roughness) },
+    cfNMap: { value: arr((p) => p.nmap) },
+    cfNScale: { value: Array.from({ length: MAX_PARTS }, (_, i) => (parts[i]?.nscale || new THREE.Vector2(1, 1)).clone()) },
+    cfFront: { value: arr((p) => (p.front ? 1 : 0)) },
+    cfLift: { value: arr((p) => (p.lift ? 1 : 0)) },
+    cfNormalB: { value: normalA && normalB ? normalB : null },
+  };
+  const twoMaps = !!(normalA && normalB);
+  m.userData.crowdLift = true; // lit like the parts it draws (the lift itself is per part, below)
+  m.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uni);
+    shader.uniforms.crowdLift = crowdLift;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aPart;\nvarying float vPart;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vPart = aPart;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+varying float vPart;
+uniform float cfRough[ ${MAX_PARTS} ];
+uniform float cfNMap[ ${MAX_PARTS} ];
+uniform vec2 cfNScale[ ${MAX_PARTS} ];
+uniform float cfFront[ ${MAX_PARTS} ];
+uniform float cfLift[ ${MAX_PARTS} ];
+uniform float crowdLift;
+${twoMaps ? 'uniform sampler2D cfNormalB;' : ''}`)
+      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+  int cfPart = int( vPart + 0.5 );
+  if ( cfFront[ cfPart ] > 0.5 && ! gl_FrontFacing ) discard;`)
+      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = cfRough[ cfPart ];')
+      .replace('#include <normal_fragment_maps>', `#ifdef USE_NORMALMAP_TANGENTSPACE
+  {
+    vec3 cfA = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;
+    ${twoMaps ? 'vec3 cfB = texture2D( cfNormalB, vNormalMapUv ).xyz * 2.0 - 1.0;' : 'vec3 cfB = cfA;'}
+    float cfN = cfNMap[ cfPart ];
+    vec3 mapN = cfN > 1.5 ? cfB : ( cfN > 0.5 ? cfA : vec3( 0.0, 0.0, 1.0 ) );
+    mapN.xy *= cfNScale[ cfPart ];
+    normal = normalize( tbn * mapN );
+  }
+#endif`)
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += ( diffuseColor.rgb * 0.8 + vec3( 0.006, 0.0065, 0.009 ) ) * crowdLift * vec3( 0.55, 0.5, 0.62 ) * cfLift[ cfPart ];');
+  };
+  m.customProgramCacheKey = () => `crowdFull|${twoMaps ? 2 : 1}`;
+  return m;
+}
+
+/** The figure (a template to clone per person) with its parts in one mesh, or null when it cannot be done. */
+function fullFigureTemplate(src, withMug) {
+  let t = fullTemplates.get(src);
+  if (!t) fullTemplates.set(src, (t = {}));
+  const key = withMug ? 'mug' : 'bare';
+  if (key in t) return t[key];
+  t[key] = null;
+  const tpl = cloneSkinned(src);
+  const list = [];
+  tpl.traverse((o) => {
+    if (!o.isSkinnedMesh || Array.isArray(o.material) || !o.visible) return;
+    const isMug = /^mug/i.test(o.name) || /^mug/i.test(o.material.name || '');
+    if (isMug && !withMug) { o.visible = false; return; }
+    if (PARTS.has(o.material.name) || isMug) list.push({ o, isMug });
+  });
+  if (list.length < 2 || list.length > MAX_PARTS) return null;
+  // the parts may hang off different nodes (the body's primitives under one, the mug under its own); they must sit
+  // in the same place and bind to the same skeleton the same way
+  const first = list[0].o;
+  tpl.updateMatrixWorld(true);
+  const near = (a, b) => a.elements.every((v, i) => Math.abs(v - b.elements[i]) < 1e-6);
+  if (list.some(({ o }) => o.bindMode !== first.bindMode || !near(o.matrixWorld, first.matrixWorld) || !near(o.bindMatrix, first.bindMatrix))) return null;
+  // a part on a skin of its own (the mug: its own skin over the same bones) is moved onto the first part's skin:
+  // each of its joints must be one of that skin's bones, bound the same way
+  const skel = first.skeleton;
+  const remaps = new Map();
+  for (const { o } of list) {
+    if (o.skeleton === skel) continue;
+    const map = o.skeleton.bones.map((b, j) => {
+      const k = skel.bones.indexOf(b);
+      return k >= 0 && near(o.skeleton.boneInverses[j], skel.boneInverses[k]) ? k : -1;
+    });
+    if (map.some((k) => k < 0)) return null;
+    remaps.set(o, map);
+  }
+  // the textures: at most two distinct normal maps, one occlusion map (any channel), no other maps
+  const normals = [];
+  let ao = null;
+  for (const { o } of list) {
+    const m = o.material;
+    if (!m.isMeshStandardMaterial || m.map || m.roughnessMap || m.metalnessMap || m.emissiveMap || m.alphaMap || m.transparent || m.metalness !== 0 || (m.emissive && m.emissive.getHex() !== 0)) return null;
+    if (m.normalMap && !normals.some((n) => n.source === m.normalMap.source)) normals.push(m.normalMap);
+    if (m.aoMap) { if (ao && ao.source !== m.aoMap.source) return null; ao ||= m.aoMap; }
+    if (!m.vertexColors && o.geometry.getAttribute('color')) return null;
+  }
+  if (normals.length > 2) return null;
+  const parts = [], geos = [], shadowSides = { double: [], front: [] };
+  let start = 0;
+  for (const [i, { o, isMug }] of list.entries()) {
+    const m = o.material, g = o.geometry;
+    const n = g.getAttribute('position').count;
+    const out = new THREE.BufferGeometry();
+    const copy = (name, from = name, Arr = Float32Array) => {
+      const a = g.getAttribute(from);
+      const size = a ? a.itemSize : (name === 'uv' || name === 'uv1' ? 2 : 3);
+      const arr = new Arr(n * size);
+      if (a) { const get = [(k) => a.getX(k), (k) => a.getY(k), (k) => a.getZ(k), (k) => a.getW(k)]; for (let k = 0; k < n; k++) for (let c = 0; c < size; c++) arr[k * size + c] = get[c](k); }
+      out.setAttribute(name, new THREE.BufferAttribute(arr, size));
+    };
+    copy('position'); copy('normal'); copy('uv'); copy('skinIndex', 'skinIndex', Uint16Array); copy('skinWeight');
+    const remap = remaps.get(o);
+    if (remap) { const si = out.getAttribute('skinIndex').array; for (let k = 0; k < si.length; k++) si[k] = remap[si[k]] ?? 0; }
+    // the occlusion map's coordinates, wherever the part read them from
+    copy('uv1', m.aoMap ? (m.aoMap.channel ? `uv${m.aoMap.channel}` : 'uv') : 'uv');
+    const own = g.getAttribute('color');
+    const base = new Float32Array(n * 3).fill(1);
+    if (own) for (let k = 0; k < n; k++) { base[k * 3] = own.getX(k); base[k * 3 + 1] = own.getY(k); base[k * 3 + 2] = own.getZ(k); }
+    out.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+    out.setAttribute('aPart', new THREE.BufferAttribute(new Float32Array(n).fill(i), 1));
+    out.setIndex(g.index ? Array.from(g.index.array) : [...Array(n).keys()]);
+    geos.push(out);
+    parts.push({
+      name: m.name, start, count: n, base, color: m.color.clone(),
+      roughness: m.roughness, nmap: m.normalMap ? 1 + normals.findIndex((x) => x.source === m.normalMap.source) : 0,
+      nscale: m.normalScale ? m.normalScale.clone() : new THREE.Vector2(1, 1), front: m.side === THREE.FrontSide, lift: !isMug && PARTS.has(m.name),
+    });
+    (m.side === THREE.DoubleSide ? shadowSides.double : shadowSides.front).push(out);
+    start += n;
+  }
+  const merged = mergeGeometries(geos, false);
+  if (!merged) return null;
+  const aoTex = ao ? (ao.channel === 1 ? ao : Object.assign(ao.clone(), { channel: 1 })) : null;
+  merged.userData.parts = parts;
+  paint(merged.getAttribute('color'), parts, null);
+  merged.computeBoundingSphere(); merged.computeBoundingBox();
+  const mesh = new THREE.SkinnedMesh(merged, fullFigureMaterial(parts, normals[0], normals[1], aoTex));
+  mesh.name = 'figure';
+  mesh.position.copy(first.position); mesh.quaternion.copy(first.quaternion); mesh.scale.copy(first.scale);
+  mesh.bind(first.skeleton, first.bindMatrix);
+  mesh.bindMode = first.bindMode;
+  mesh.frustumCulled = first.frustumCulled;
+  mesh.userData.castsByProxy = true; // its shadow comes from the stand-ins below
+  first.parent.add(mesh);
+  for (const [side, gs] of [[THREE.DoubleSide, shadowSides.double], [THREE.FrontSide, shadowSides.front]]) {
+    if (!gs.length) continue;
+    const sg = mergeGeometries(gs.map((x) => { const y = new THREE.BufferGeometry(); for (const nm of ['position', 'skinIndex', 'skinWeight']) y.setAttribute(nm, x.getAttribute(nm)); y.setIndex(x.index); return y; }), false);
+    if (!sg) continue;
+    sg.computeBoundingSphere(); sg.computeBoundingBox();
+    const sm = new THREE.SkinnedMesh(sg, new THREE.MeshBasicMaterial({ name: 'engine_shadow_proxy', side, colorWrite: false, depthWrite: false }));
+    sm.name = 'engine_shadow_proxy';
+    sm.position.copy(first.position); sm.quaternion.copy(first.quaternion); sm.scale.copy(first.scale);
+    sm.bind(first.skeleton, first.bindMatrix);
+    sm.bindMode = first.bindMode;
+    sm.frustumCulled = first.frustumCulled;
+    sm.visible = false;
+    sm.castShadow = true;
+    sm.receiveShadow = false;
+    sm.raycast = () => {};
+    sm.userData.shadowProxy = true;
+    first.parent.add(sm);
+  }
+  for (const { o } of list) o.removeFromParent();
+  t[key] = tpl;
+  return tpl;
 }
 
 function floatCopy(src, names) {
@@ -398,7 +577,9 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
   /** One figure of a person (the full or the lite model): a recoloured skinned clone with its own mixer. */
   const noMug = (p) => (p.clip && /_free$/.test(p.clip)) || (plan.organizer && p.mug === false);
   function makeLevel(src, p, phase) {
-    const fig = cloneSkinned(compactFigure(src));
+    // the full market's near figure: one draw (fullFigureTemplate); the lite figures: compactFigure
+    const tpl = !lite && QUERY.get('figures') !== '0' ? fullFigureTemplate(src, !noMug(p)) : null;
+    const fig = cloneSkinned(tpl || compactFigure(src));
     paintFigure(fig, p.colors);
     recolor(fig, p.colors);
     // the full figure's own materials get the same lift as the merged ones, so a person does not change
@@ -406,7 +587,10 @@ export async function createCrowd({ scene, overlay, lite, manager, warn, avoid, 
     fig.traverse((o) => { if (o.isMesh && !Array.isArray(o.material) && PARTS.has(o.material.name)) liftMaterial(o.material); });
     // a figure without a mug still carries the (scaled-away) mug mesh: skip drawing it
     if (noMug(p)) fig.traverse((o) => { if (o.isMesh && /^mug/i.test(o.name)) o.visible = false; });
-    fig.traverse((o) => { if (o.isMesh) { o.castShadow = !lite; o.receiveShadow = false; } });
+    // with the stand-ins off (?proxies=0) a one-draw figure casts its own shadow
+    const byProxy = QUERY.get('proxies') !== '0';
+    fig.traverse((o) => { if (o.isMesh) { o.castShadow = !lite && !(byProxy && o.userData.castsByProxy); o.receiveShadow = false; } });
+    if (!lite && byProxy) fig.traverse((o) => { if (o.userData.shadowProxy) shadowStandIns.add(o); });
     const level = { root: fig, mixer: null, clips: null };
     const clips = clipsFor(src, shared);
     if (clips.length) {

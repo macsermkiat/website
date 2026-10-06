@@ -32,7 +32,7 @@ import { createSurfaces, placeCoasters, modelCoasters, hangPlacards } from './wo
 import { sectionPieces } from './world/sections.js';
 import { SECTIONS, ORDER, bookPicks, phrases, taglineHtml } from './content.js';
 import { createPerfMeter } from './perf.js';
-import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders, shadowProxies, holdShadowProxies } from './engine/merge.js';
+import { mergeStatic, mergeAcross, mergeSnow, instancePools, instanceRiders, shadowProxies, holdShadowProxies, shadowStandIns } from './engine/merge.js';
 import { PROFILES as LIGHTING_PROFILES } from './lighting/settings.js';
 import { createGovernor } from './governor.js';
 import { counterLocal } from './actions/util.js';
@@ -476,7 +476,7 @@ async function boot() {
   const riderSyncs = [];
   // shadow stand-ins (engine/merge.js shadowProxies): each placed model's static casters as one mesh per side in
   // the shadow passes; shown only while three draws the shadow maps
-  const proxies = new Set();
+  const proxies = shadowStandIns; // shared with the crowd's figure stand-ins (crowd.js)
   const shadowsOn = !lite && renderer.shadowMap.enabled && params.get('proxies') !== '0';
   if (shadowsOn) holdShadowProxies(renderer, () => proxies);
   const minCaster = LIGHTING_PROFILES.full.minMoonCaster || 0;
