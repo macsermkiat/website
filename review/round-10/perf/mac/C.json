@@ -1,0 +1,140 @@
+{
+  "at": "2026-10-06T15:13:10.369Z",
+  "size": "1440x900",
+  "markets": {
+    "full": {
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve",
+      "software": false,
+      "target": {
+        "p50": 16.7,
+        "p95": 25
+      },
+      "firstLoadBytes": 8115048,
+      "crowd": {
+        "people": 87,
+        "lodFar": 18,
+        "far": {
+          "figures": 14,
+          "people": 69,
+          "bakeMs": 2479,
+          "vertices": 66706,
+          "rows": 1690,
+          "drawn": 69,
+          "meshes": 14
+        },
+        "mixers": {
+          "ran": 3,
+          "throttled": 15,
+          "far": 69
+        },
+        "updateMs": 0.106
+      },
+      "badTriangles": 0,
+      "stops": [
+        {
+          "view": "home",
+          "market": "full",
+          "frames": 167,
+          "p50": 39,
+          "p95": 123,
+          "fps": 25.6,
+          "calls": 761,
+          "triangles": 1058407,
+          "badTriangles": 0,
+          "pixelRatio": 1,
+          "size": "1406x700",
+          "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "Glühwein",
+          "market": "full",
+          "frames": 314,
+          "p50": 41.9,
+          "p95": 90.6,
+          "fps": 23.9,
+          "calls": 607,
+          "triangles": 1179552,
+          "badTriangles": 0,
+          "pixelRatio": 1,
+          "size": "1406x700",
+          "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "bandstand",
+          "market": "full",
+          "frames": 443,
+          "p50": 57.2,
+          "p95": 127.5,
+          "fps": 17.5,
+          "calls": 582,
+          "triangles": 1305665,
+          "badTriangles": 0,
+          "pixelRatio": 1,
+          "size": "1406x700",
+          "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "Bücherstand",
+          "market": "full",
+          "frames": 585,
+          "p50": 63.8,
+          "p95": 212.6,
+          "fps": 15.7,
+          "calls": 273,
+          "triangles": 542683,
+          "badTriangles": 0,
+          "pixelRatio": 1,
+          "size": "1406x700",
+          "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "Riesenrad",
+          "market": "full",
+          "frames": 794,
+          "p50": 26.9,
+          "p95": 103,
+          "fps": 37.2,
+          "calls": 431,
+          "triangles": 1134566,
+          "badTriangles": 0,
+          "pixelRatio": 1,
+          "size": "1406x700",
+          "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        },
+        {
+          "view": "home again",
+          "market": "full",
+          "frames": 924,
+          "p50": 50.2,
+          "p95": 113.6,
+          "fps": 19.9,
+          "calls": 557,
+          "triangles": 823957,
+          "badTriangles": 0,
+          "pixelRatio": 1,
+          "size": "1406x700",
+          "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve",
+          "adaptive": 0,
+          "governor": null,
+          "ok": false
+        }
+      ],
+      "errors": []
+    }
+  }
+}

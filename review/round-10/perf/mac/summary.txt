@@ -1,0 +1,80 @@
+=== A:   'Battery Power'  load { 3.91 4.28 5.20 }
+full market on ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve
+  first load 8.12 MB (fetched before the market opened)
+  MISS home         median 633.1 ms  p95 1445.9 ms  588 draws  714k tris
+  MISS Glühwein     median 657.3 ms  p95 1853.2 ms  974 draws  1735k tris
+  MISS bandstand    median 888.3 ms  p95 1612.1 ms  930 draws  1753k tris
+  MISS Bücherstand  median 869.5 ms  p95 1696.6 ms  852 draws  1600k tris
+  MISS Riesenrad    median  65.8 ms  p95 2280.4 ms  563 draws  878k tris
+  MISS home again   median 784.1 ms  p95 1710.2 ms  816 draws  1524k tris
+  crowd 87 people: 53 drawn as far instances in 11 draws (11 figures baked in 1975 ms); mixers ran 14, throttled 20; crowd update 0.17 ms/frame
+=== B: pr=1  'Battery Power'  load { 3.79 4.27 5.12 }
+full market on ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve
+  first load 8.12 MB (fetched before the market opened)
+  MISS home         median 642.3 ms  p95 1359.1 ms  593 draws  715k tris
+  MISS Glühwein     median 615.5 ms  p95 1331.8 ms  976 draws  1738k tris
+  MISS bandstand    median   728 ms  p95 1635.5 ms  592 draws  874k tris
+  MISS Bücherstand  median 286.1 ms  p95 2461.8 ms  579 draws  884k tris
+  MISS Riesenrad    median 414.8 ms  p95 2275.6 ms  563 draws  878k tris
+  MISS home again   median 1043.6 ms  p95 1702.6 ms  569 draws  871k tris
+  crowd 87 people: 47 drawn as far instances in 11 draws (11 figures baked in 1926 ms); mixers ran 14, throttled 26; crowd update 0.357 ms/frame
+=== C: lighting=msaa:0  'Battery Power'  load { 3.43 4.01 4.95 }
+full market on ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve
+  first load 8.12 MB (fetched before the market opened)
+  MISS home         median    39 ms  p95   123 ms  761 draws  1058k tris
+  MISS Glühwein     median  41.9 ms  p95  90.6 ms  607 draws  1180k tris
+  MISS bandstand    median  57.2 ms  p95 127.5 ms  582 draws  1306k tris
+  MISS Bücherstand  median  63.8 ms  p95 212.6 ms  273 draws  543k tris
+  MISS Riesenrad    median  26.9 ms  p95   103 ms  431 draws  1135k tris
+  MISS home again   median  50.2 ms  p95 113.6 ms  557 draws  824k tris
+  crowd 87 people: 69 drawn as far instances in 14 draws (14 figures baked in 2479 ms); mixers ran 3, throttled 15; crowd update 0.106 ms/frame
+=== D: lighting=lightBudget:4,glows:16,shadowedLights:0  'Battery Power'  load { 3.30 3.87 4.83 }
+full market on ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve
+  first load 8.12 MB (fetched before the market opened)
+  MISS home         median  42.1 ms  p95 633.7 ms  744 draws  1296k tris
+  MISS Glühwein     median  93.7 ms  p95 13656.6 ms  968 draws  1697k tris
+  MISS bandstand    median  97.5 ms  p95 527.8 ms  553 draws  826k tris
+  MISS Bücherstand  median   4.6 ms  p95 288.5 ms  747 draws  1254k tris
+  MISS Riesenrad    median 178.1 ms  p95 413.6 ms  728 draws  1291k tris
+  MISS home again   median 200.9 ms  p95 413.6 ms  555 draws  827k tris
+  crowd 87 people: 69 drawn as far instances in 14 draws (14 figures baked in 2818 ms); mixers ran 3, throttled 15; crowd update 0.133 ms/frame
+=== E: lighting=shadows:0  'Battery Power'  load { 3.80 3.98 4.81 }
+full market on ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve
+  first load 8.12 MB (fetched before the market opened)
+  MISS home         median 227.8 ms  p95 4467.5 ms  425 draws  506k tris
+  MISS Glühwein     median  60.7 ms  p95 1815.9 ms  584 draws  746k tris
+  MISS bandstand    median 454.7 ms  p95 1524.3 ms  573 draws  800k tris
+  MISS Bücherstand  median 905.4 ms  p95 1822.6 ms  580 draws  906k tris
+  MISS Riesenrad    median 531.1 ms  p95 1450.4 ms  559 draws  890k tris
+  MISS home again   median  62.6 ms  p95 1717.3 ms  556 draws  862k tris
+  crowd 87 people: 47 drawn as far instances in 10 draws (10 figures baked in 1967 ms); mixers ran 13, throttled 27; crowd update 0.246 ms/frame
+=== F: lighting=bloomScale:0.5  'Battery Power'  load { 4.21 4.21 4.83 }
+full market on ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve
+  first load 8.12 MB (fetched before the market opened)
+  MISS home         median 373.2 ms  p95 1380.1 ms  1404 draws  1695k tris
+  MISS Glühwein     median 568.5 ms  p95 1983.9 ms  599 draws  775k tris
+  MISS bandstand    median 824.6 ms  p95 2263.9 ms  930 draws  1753k tris
+  MISS Bücherstand  median 970.2 ms  p95  1861 ms  898 draws  1745k tris
+  MISS Riesenrad    median 104.6 ms  p95 2360.6 ms  829 draws  1593k tris
+  MISS home again   median 274.6 ms  p95 2484.7 ms  817 draws  1528k tris
+  crowd 87 people: 53 drawn as far instances in 11 draws (11 figures baked in 2026 ms); mixers ran 11, throttled 23; crowd update 0.17 ms/frame
+=== G: mirror=0  'Battery Power'  load { 3.27 3.98 4.69 }
+full market on ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve
+  first load 8.12 MB (fetched before the market opened)
+  MISS home         median 622.5 ms  p95 1383.8 ms  588 draws  714k tris
+  MISS Glühwein     median  1223 ms  p95  1986 ms  600 draws  774k tris
+  MISS bandstand    median  90.6 ms  p95  1930 ms  943 draws  1784k tris
+  MISS Bücherstand  median  92.1 ms  p95 2567.6 ms  584 draws  888k tris
+  MISS Riesenrad    median  92.2 ms  p95 3142.9 ms  828 draws  1586k tris
+  MISS home again   median 102.8 ms  p95 2334.8 ms  570 draws  873k tris
+  crowd 87 people: 47 drawn as far instances in 10 draws (10 figures baked in 1776 ms); mixers ran 13, throttled 27; crowd update 0.197 ms/frame
+=== H: lighting=shadows:0,msaa:2,bloomScale:0.5,lightBudget:4,glows:16,shadowedLights:0,probes:2,envCapture:0&pr=1.25  'Battery Power'  load { 2.55 3.61 4.49 }
+full market on ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve
+  first load 8.12 MB (fetched before the market opened)
+  MISS home         median    48 ms  p95 909.1 ms  584 draws  714k tris
+  MISS Glühwein     median  71.7 ms  p95   204 ms  499 draws  726k tris
+  MISS bandstand    median   8.9 ms  p95 179.4 ms  542 draws  737k tris
+  MISS Bücherstand  median  82.8 ms  p95 192.6 ms  450 draws  675k tris
+  MISS Riesenrad    median   6.4 ms  p95 264.7 ms  197 draws  405k tris
+  MISS home again   median  98.2 ms  p95 198.9 ms  553 draws  824k tris
+  crowd 87 people: 69 drawn as far instances in 14 draws (14 figures baked in 2505 ms); mixers ran 7, throttled 11; crowd update 0.128 ms/frame
