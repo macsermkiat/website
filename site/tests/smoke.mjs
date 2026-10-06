@@ -18,6 +18,10 @@
 //    the wave of light, the view over the arch and back), the reflection dive (cube env, in, inside, Escape and a
 //    tap), the sparkle (mirror, tinsel, pyramid, smoke); (moments) the same at their peaks on the full market, as
 //    screenshots; the phone section runs the reduced-motion versions
+// 10. (round 10, Mac 2026-10-06) the glow on what can be clicked: the arrival shimmer on a stop's clickable things
+//    (interact, phone: reduced motion, a steady glow; lite: a slow breath), fading after an interaction or ~20 s and
+//    back on the next arrival, a brighter glow on the hovered item; the Bücherstand's six lit signs and their lamps
+//    (cabinet)
 // Fails on any console error, failed request or HTTP error.
 // Usage: npm run build && node tests/smoke.mjs [--out ../review/round-5/engineer] [--port 4317] [--only unit,stroll,reading,interact,schmuck,moments,cabinet,lite,phone,plain,missing,audio]
 import { spawn } from 'node:child_process';
@@ -55,6 +59,9 @@ const results = [];
 const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); console.log(ok ? '  ok  ' : '  FAIL', name, detail ? `(${String(detail).slice(0, 140)})` : ''); };
 /** The Bratwurst's set on disk: the round-8 rows of clickable sausages, or the round-10 plate (BUILD.md, ADR 0004). */
 const wurstSet = (page) => page.evaluate(() => { const c = window.__market.items(); return c['wurst:sausage'] ? 'sausages' : c['wurst:wurst'] ? 'plate' : 'none'; });
+/** The glow on what can be clicked (interaction/glow.js): its state now. */
+const glowNow = (page) => page.evaluate(() => window.__market.glow());
+const lit = (g) => g.items.filter((i) => i.level > 0.001 && i.drawn > 0);
 const LONG = +opt('--long', 180) * 1000; // ms a click or wait may take (software GL on a busy machine: raise it)
 
 async function openPage(url, { reducedMotion = 'no-preference', viewport = { width: 1280, height: 860 }, before = null, touch = false } = {}) {
@@ -488,8 +495,17 @@ try {
     await page.evaluate(() => window.__market.advance(1));
     check('the on-screen signpost walks to the Glühwein stall', (await page.evaluate(() => window.__market.stop)) === 'glueh' && (await page.evaluate(() => window.__market.arrived)));
     check('the stop bar offers the actions as buttons', (await page.locator('#stopActs [data-action="pour"]').count()) === 1);
+    // round 10 (Mac, 2026-10-06): the things a visitor can click at the stop glow faintly on arrival
+    await page.evaluate(() => window.__market.advance(1.5));
+    const ga = await glowNow(page);
+    const gb = (await page.evaluate(() => { window.__market.advance(0.7); return window.__market.glow(); }));
+    const gaLevels = lit(ga).map((i) => i.level);
+    check('glow: arriving at the Glühwein stall, its clickable things glow faintly (reduced motion: steady, no breath)', ga.stop === 'glueh' && ga.targets.length >= 3 && lit(ga).length === ga.targets.length && Math.max(...gaLevels) <= ga.peak + 1e-6 && Math.abs(lit(gb)[0]?.level - lit(ga)[0]?.level) < 1e-4, JSON.stringify({ targets: ga.targets, lit: lit(ga).length, levels: gaLevels.slice(0, 4), peak: ga.peak, after: lit(gb)[0]?.level }));
+    check('glow: only clickable act_ items glow (no deco stall, no scenery)', ga.targets.every((n) => /^act_/.test(n)), ga.targets.join(' '));
     await tapAct(page, '#stopActs [data-action="pour"]');
     check('pour a mug (the ladle fills one of the stall\'s own mugs)', await waitN(/poured tonight: 1/), await noteNow());
+    const gc = await page.evaluate(() => { window.__market.advance(2.5); return window.__market.glow(); });
+    check('glow: after the first interaction at the stop the shimmer fades out', gc.ending && gc.shimmer === 0 && lit(gc).length === 0, JSON.stringify({ ending: gc.ending, shimmer: gc.shimmer, lit: lit(gc).map((i) => i.name) }));
     await act('glueh', 'prost');
     // the first voice answers at once, the rest a moment apart (timers, not frames): give them a few seconds
     let bubbles = 0;
@@ -504,6 +520,9 @@ try {
     // the Bratwurst (round 10, ADR 0004 revision): the grill's sausages turn from the button (scenery, not one by one),
     // and four kinds, a roll, three sauces, the curry tin and the paper plate are the clickable set
     check('the Bratwurst has the round-10 plate set (no clickable sausage rows left)', (await wurstSet(page)) === 'plate', await wurstSet(page));
+    const gw = await page.evaluate(() => { window.__market.advance(1.5); return window.__market.glow(); });
+    const plateSet = ['act_wurst_thueringer', 'act_wurst_nuernberger', 'act_wurst_krakauer', 'act_wurst_curry', 'act_roll', 'act_sauce_senf', 'act_sauce_ketchup', 'act_sauce_curry', 'act_shaker_curry', 'act_plate'];
+    check('glow: a new arrival (the Bratwurst) brings the shimmer back, on the whole plate set and nothing else', gw.stop === 'wurst' && !gw.ending && gw.shimmer === 1 && plateSet.every((n) => gw.targets.includes(n)) && gw.targets.length === plateSet.length && lit(gw).length === plateSet.length, JSON.stringify({ targets: gw.targets, lit: lit(gw).length }));
     check('the Bratwurst\'s buttons: Turn the sausages, One in a bun, Mix me a plate', (await page.locator('#stopActs [data-action="turn"]').count()) === 1 && (await page.locator('#stopActs [data-action="bun"]').count()) === 1 && (await page.locator('#stopActs [data-action="plate"]').count()) === 1);
     const g0 = await page.evaluate(() => window.__market.handlers.grill());
     await tapAct(page, '#stopActs [data-action="turn"]');
@@ -524,6 +543,13 @@ try {
     check('tapping the plate hands it over (Guten Appetit) and a fresh, empty plate is set out', pc.food.length === 0 && pc.sauces.length === 0 && pc.served === 1 && /Guten Appetit/.test(await noteNow()), JSON.stringify(pc));
     const kAim = await aimAt(page, 'act_wurst_krakauer');
     if (kAim) {
+      // the hovered item glows brighter than the shimmer (and keeps its lift and label)
+      await page.mouse.move(kAim.x, kAim.y);
+      await page.waitForFunction(() => window.__market.hoveredItem === 'act_wurst_krakauer', null, { timeout: LONG }).catch(() => {});
+      const gh = await page.evaluate(() => { window.__market.advance(0.5); return window.__market.glow(); });
+      const hk = gh.items.find((i) => i.name === 'act_wurst_krakauer');
+      const others = gh.items.filter((i) => i.name !== 'act_wurst_krakauer').map((i) => i.level);
+      check('glow: the hovered item glows a little brighter than the rest', gh.hovered === 'act_wurst_krakauer' && !!hk && hk.drawn > 0 && hk.level >= gh.hover * 0.95 && hk.level > Math.max(0, ...others) * 1.3 && hk.level < 0.3, JSON.stringify({ hovered: gh.hovered, hk, maxOther: Math.max(0, ...others) }));
       const k0 = (await page.evaluate(() => window.__market.item('act_wurst_krakauer'))).position;
       await page.mouse.click(kAim.x, kAim.y);
       const pk = await settlePlate();
@@ -893,6 +919,15 @@ try {
     // round 10 (Mac, 2026-10-06): the groupings are named in English (label_en), never the German label_de
     const catsJson = JSON.parse(readFileSync(path.resolve('../content/books/categories.json'), 'utf8')).categories;
     check('the cabinets are named in English (label_en), not German', cabs.every((c) => catsJson.some((k) => k.key === c.key && k.label_en === c.label && c.label !== k.label_de)), JSON.stringify(cabs.map((c) => c.label)));
+    // round 10 (Mac, 2026-10-06: "the sign for each bookshelf should have light"): a brass picture lamp over each
+    // sign (lamp_cat_<key>, its bulb in the stall's bulbs_ mesh) and the board lit by it (sign_cat_<key>_board:
+    // an emissive pool of light, brightest under the lamp). No real light is added for them.
+    const glbNodes = (f) => { const b = readFileSync(path.resolve('public/models', f)); const j = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString()); return { names: new Set(j.nodes.map((n) => n.name)), mats: j.materials }; };
+    const lampsOk = ['stall_buecher.glb', 'stall_buecher.lite.glb'].map((f) => { const g = glbNodes(f); const lit = g.mats.find((m) => m.name === 'sign_lit'); return cabs.every((c) => g.names.has(`sign_cat_${c.key}`) && g.names.has(`sign_cat_${c.key}_board`) && g.names.has(`lamp_cat_${c.key}`)) && !!lit?.emissiveTexture && lit.emissiveFactor.some((v) => v > 0.3); });
+    const boards = await page.evaluate((keys) => keys.map((k) => { const s = window.__market.scene.getObjectByName(`sign_cat_${k}`); const b = s?.getObjectByName(`sign_cat_${k}_board`); return { k, sign: !!s, board: !!b && b.parent === s, lit: !!b?.material?.emissiveMap && b.material.emissive.r > 0.3 }; }), cabs.map((c) => c.key));
+    check('the six cabinet signs exist with their picture lamps, each board lit by its lamp (both glbs and in the scene)', lampsOk.every(Boolean) && boards.length === 6 && boards.every((b) => b.sign && b.board && b.lit), JSON.stringify({ lampsOk, boards }));
+    const gcab = await page.evaluate(() => { window.__market.advance(1.5); return window.__market.glow(); });
+    check('glow: at the Bücherstand the closed cabinets glow (each answers for its books)', gcab.stop === 'books' && cabs.every((c) => gcab.targets.includes(`act_cab_${c.key}`)) && lit(gcab).length >= 6, JSON.stringify({ targets: gcab.targets, lit: lit(gcab).length }));
     // on a 390 px phone the stall's front is wider than the screen: the cabinets stand off either edge, and the
     // ‹ › buttons beside the stall turn the visitor to them, one at a time
     check('phone: ‹ › buttons beside the stall turn to the cabinets', (await page.locator('#cabTurnR').isVisible()) && (await page.locator('#cabTurnL').isVisible()));
@@ -993,6 +1028,27 @@ try {
     check('lite: fewer lights', report.lights.realtime <= 4, JSON.stringify(report.lights));
     await frames(page, 4);
     await shot(page, 'home_lite_stage.jpg', '#stage');
+    // the arrival shimmer, with motion: a slow breath (about 2.6 s), faint, gone after about 20 s, back on the next arrival
+    const breath = await page.evaluate(() => {
+      const m = window.__market;
+      m.freeze(true);
+      m.walkTo('glueh');
+      for (let t = 0; t < 90 && !m.arrived; t += 0.5) m.advance(0.5);
+      m.advance(1.5);
+      const lv = [];
+      for (let t = 0; t < 2.8; t += 0.1) { m.advance(0.1); const g = m.glow(); lv.push(Math.max(0, ...g.items.map((i) => i.level))); }
+      const g0 = m.glow();
+      m.advance(22);
+      const g1 = m.glow();
+      m.home(); for (let t = 0; t < 60 && !(m.arrived && m.stop === null); t += 0.5) m.advance(0.5);
+      m.walkTo('glueh'); for (let t = 0; t < 90 && !m.arrived; t += 0.5) m.advance(0.5);
+      m.advance(1.5);
+      const g2 = m.glow();
+      m.freeze(false);
+      return { min: Math.min(...lv), max: Math.max(...lv), peak: g0.peak, reduced: g0.reduced, targets: g0.targets.length, after20: { shimmer: g1.shimmer, lit: g1.items.filter((i) => i.level > 0.001).length }, again: { stop: g2.stop, shimmer: g2.shimmer, lit: g2.items.filter((i) => i.level > 0.001).length } };
+    });
+    check('glow (lite, with motion): the clickable things breathe slowly and faintly on arrival', !breath.reduced && breath.targets >= 3 && breath.max <= breath.peak + 1e-6 && breath.max > breath.min * 1.8 && breath.min > 0, JSON.stringify(breath));
+    check('glow: the shimmer is gone after about 20 s, and comes back on the next arrival', breath.after20.shimmer === 0 && breath.after20.lit === 0 && breath.again.stop === 'glueh' && breath.again.shimmer > 0.9 && breath.again.lit >= 3, JSON.stringify(breath));
     await ctx.close();
   }
 
@@ -1011,6 +1067,8 @@ try {
     await frames(page, 1);
     check('reduced motion: the walk is a cut', (await page.evaluate(() => window.__market.arrived)) && (await state(page, 'stop')) === 'wurst');
     await frames(page, 2);
+    const gp = await page.evaluate(() => { window.__market.advance(1.5); return window.__market.glow(); });
+    check('phone: on arrival the things to tap glow (no hover on a phone)', gp.stop === 'wurst' && gp.reduced && lit(gp).length >= 8, JSON.stringify({ stop: gp.stop, lit: lit(gp).length, targets: gp.targets }));
     const tAim = await aimAt(page, 'act_wurst_thueringer');
     if (tAim) {
       await page.evaluate(() => window.__market.handlers.clearPlate());
@@ -1018,6 +1076,8 @@ try {
       await page.touchscreen.tap(tAim.x, tAim.y);
       const pt = await page.evaluate(() => { const m = window.__market; for (let t = 0; t < 10 && m.handlers.plate().busy; t += 0.5) m.advance(0.5); m.advance(0.5); return m.handlers.plate(); });
       check('phone: tapping a Thüringer puts one on the plate (reduced motion: it lands at once)', pt.food.join() === 'thueringer', JSON.stringify(pt));
+      const gq = await page.evaluate(() => { window.__market.advance(2.5); return window.__market.glow(); });
+      check('phone: after the first tap the glow fades (the tapped item glows a moment while its name shows)', gq.ending && gq.shimmer === 0 && lit(gq).every((i) => i.name === gq.hovered), JSON.stringify({ ending: gq.ending, shimmer: gq.shimmer, lit: lit(gq).map((i) => i.name), hovered: gq.hovered }));
     } else check('phone: tapping a Thüringer puts one on the plate (reduced motion: it lands at once)', false, 'no clear pixel on act_wurst_thueringer');
     await page.evaluate(() => window.__market.read('wurst.menu'));
     await page.evaluate(() => window.__market.advance(1));
@@ -1028,6 +1088,9 @@ try {
     await page.evaluate(() => { window.__market.closeRead?.(); window.__market.walkTo('schmuck'); window.__market.advance(0.5); });
     const pf = await page.evaluate(() => ({ stop: window.__market.stop, folded: document.getElementById('stopbar').classList.contains('folded') }));
     check('phone: at the ornament shop the stop bar folds away (judge note, round 8)', pf.stop === 'schmuck' && pf.folded, JSON.stringify(pf));
+    const gs = await page.evaluate(() => { window.__market.advance(1.5); return window.__market.glow(); });
+    const harm = gs.targets.filter((n) => /^act_orn_harmonica_\d+$/.test(n)).length;
+    check('glow: at the ornament shop its three moments glow (twelve harmonica baubles, the mirror ball, the Schwibbogen) and nothing else', gs.stop === 'schmuck' && harm === 12 && gs.targets.includes('act_orn_mirrorball') && gs.targets.includes('act_orn_schwibbogen') && gs.targets.length === 14 && lit(gs).length === 14, JSON.stringify({ targets: gs.targets, lit: lit(gs).length }));
     const rm = await page.evaluate(() => {
       const m = window.__market, H = () => m.handlers.schmuck();
       m.freeze(true);

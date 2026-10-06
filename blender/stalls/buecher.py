@@ -239,7 +239,7 @@ LAMP_Z = BS.SIGN_Z + BS.SIGN_H + 0.075     # hood axis: 7.5 cm above the board's
 LAMP_Y = -0.095                           # and 10 cm in front of its face
 LAMP_R = 0.021                            # brass hood radius
 GLOW_RES = (128, 64)                      # the pool-of-light texture (shared by the six boards)
-GLOW_PEAK = (0.74, 0.58, 0.40)            # emissive factor at the brightest point (linear, warm cream)
+GLOW_PEAK = (0.80, 0.56, 0.32)            # emissive factor at the brightest point (linear, warm lamplight)
 
 
 def sign_lamp(h, key, F, cx, cz, w, lite):
@@ -278,7 +278,7 @@ def sign_lamp(h, key, F, cx, cz, w, lite):
 
 def _glow_pixels():
     """The pool of light a picture lamp throws on the board below it, as a grey falloff (1 = GLOW_PEAK),
-    u across the board, v up it (v = 1 at the crest). Brightest just under the lamp, about a third at the
+    u across the board, v up it (v = 1 at the crest). Brightest just under the lamp, about two fifths at the
     foot, a little dimmer toward the ends than the middle, with a faint paint mottle."""
     import numpy as np
     W_, H_ = GLOW_RES
@@ -292,8 +292,8 @@ def _glow_pixels():
     cos_in = dz / np.sqrt(r2)                    # light reaches the vertical face at a grazing angle
     e = cos_in * dy / r2                          # irradiance from a point above the face (relative)
     e = e / e.max()
-    across = 1.0 - 0.32 * np.clip(np.abs(u - 0.5) / 0.5, 0, 1) ** 2.2
-    g = (0.28 + 0.72 * e ** 0.55) * across
+    across = 1.0 - 0.4 * np.clip(np.abs(u - 0.5) / 0.5, 0, 1) ** 2.2
+    g = (0.14 + 0.86 * e ** 0.7) * across
     rng = np.random.default_rng(10)
     mott = rng.normal(0, 1, (H_ // 8, W_ // 8)).astype(np.float32)
     mott = np.kron(mott, np.ones((8, 8), np.float32))
