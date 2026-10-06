@@ -420,6 +420,9 @@ def add_face_out(s, nn, b, loc, lean, cmax):
 
 
 COVER_GLOW_MID, COVER_GLOW_RIGHT, COVER_GLOW_LEFT = 0.1, 0.14, 0.24    # added to vlib.BOOK_GLOW (0.3), round 9
+# round 10: the people cabinet's covers are bright amber under the hut's lamp; at full glow their cream titles bloomed
+# into a haze in the browser, so they glow at a third
+COVER_GLOW_SCALE = {"people": 0.35}
 
 
 def section_set(key):
@@ -445,8 +448,8 @@ def section_set(key):
         # a little more than in round 8, and the outer columns more again, where the cabinet's stiles shade them
         # from its lamps (the left one most: the lamps sit right of centre in the cam_cat views)
         cols = sorted(bd["cover_slots_x"])
-        glow[nn] = vlib.BOOK_GLOW + (COVER_GLOW_LEFT if x == cols[0] else COVER_GLOW_RIGHT if x == cols[-1]
-                                     else COVER_GLOW_MID)
+        glow[nn] = COVER_GLOW_SCALE.get(key, 1.0) * (vlib.BOOK_GLOW + (
+            COVER_GLOW_LEFT if x == cols[0] else COVER_GLOW_RIGHT if x == cols[-1] else COVER_GLOW_MID))
         # the foot's back edge 3 mm in front of the backboard's foot (ledge_depth behind the lip), so the cover
         # leans parallel to the backboard without touching it
         add_face_out(s, nn, b, (ox + x + rng.uniform(-0.002, 0.002), oy + bd["ledge_depth"] - 0.004, oz), lean, cmax)
