@@ -70,6 +70,20 @@ function countFormat(t) {
   ktx2.formats[k] = (ktx2.formats[k] || 0) + 1;
 }
 
+// The transcoder must answer before any texture goes to it: a transcoder that fetched but cannot run (a wasm
+// that does not compile, a worker that dies) never answers, and the market would wait on its textures for ever.
+// A 4 x 4 KTX2 goes first; no answer within 30 s of the transcoder's files arriving, and the webp files load.
+const PROBE = 'q0tUWCAyMLsNChoKAAAAAAEAAAAEAAAABAAAAAAAAAAAAAAAAQAAAAEAAAABAAAAaAAAACwAAACUAAAAJAAAALgAAAAAAAAAgwAAAAAAAAA7AQAAAAAAAAEAAAAAAAAAAAAAAAAAAAAsAAAAAAAAAAIAKACjAQIAAwMAAAAAAAAAAAAAAAA/AAAAAAAAAAAA/////x8AAABLVFh3cml0ZXIAQmFzaXMgVW5pdmVyc2FsIDEuMTYAAAEAAQArAAAABQAAACsAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAABwAQAAAAAAADCA5gSAAAAAACCogPMBAATAAAAAAAACAJgBgAAAAAAAAlkVFVVVQUAwUQAAAAAAADyXy0AmAAAAAAAAEAIABMAAgAAAACIAcAEAAAAAAAAAggAAA==';
+let health = null;
+function transcoderHealth() {
+  health ||= ktx2.loader.init().then(() => new Promise((resolve, reject) => {
+    const bytes = Uint8Array.from(atob(PROBE), (c) => c.charCodeAt(0));
+    const timer = setTimeout(() => reject(new Error('the KTX2 transcoder did not answer')), 30000);
+    ktx2.loader.parse(bytes.buffer, (t) => { clearTimeout(timer); t.dispose(); resolve(); }, (e) => { clearTimeout(timer); reject(e); });
+  }));
+  return health;
+}
+
 // external KTX2 files (the deco kit, the vendors' atlases) are shared by several glbs: transcode each once and
 // give every glb a clone (one Source, so one GPU upload)
 const ktxShared = new Map();
@@ -79,7 +93,7 @@ function ktx2Watcher(failures) {
       const own = url.startsWith('blob:') || url.startsWith('data:');
       let p = own ? null : ktxShared.get(url);
       if (!p) {
-        p = ktx2.loader.loadAsync(url);
+        p = transcoderHealth().then(() => ktx2.loader.loadAsync(url));
         if (!own) { ktxShared.set(url, p); p.then((t) => { countFormat(t); THREE.Cache.remove(url); }, () => {}); }
       }
       p.then((t) => { if (own) countFormat(t); onLoad(own ? t : t.clone()); }, (e) => { failures.push(e); if (!own) ktxShared.delete(url); onError?.(e); });
