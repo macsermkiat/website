@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { buildStandin } from '../standins/index.js';
 
@@ -23,11 +24,126 @@ function getLoader(manager) {
   return loader;
 }
 
+// ---------- GPU-compressed textures (round 10) ----------
+// Every glb whose textures have a GPU-compressed version has a twin, <name>.ktx2.glb (scripts/ktx2.mjs writes
+// them, public/models/ktx2.json lists them): the same file with those textures as Basis Universal KTX2
+// (KHR_texture_basisu), which the GPU keeps compressed, a quarter to an eighth of the memory of the decoded
+// webp. initTextures() (main.js, once the renderer exists) reads the list and checks the GPU takes a compressed
+// format; loadGlb then loads the twin. Should a twin or any texture in it fail to load or transcode, that model
+// loads from its webp file, and so does every model after it: the market always opens. ?ktx2=0 turns it off.
+const ktx2 = { loader: null, twins: null, sidecars: null, ready: null, broken: false, twinsLoaded: 0, fellBack: 0, format: null, formats: {} };
+export function initTextures(renderer, { enabled = true } = {}) {
+  if (ktx2.ready) return ktx2.ready;
+  ktx2.ready = (async () => {
+    if (!enabled || !renderer?.capabilities?.isWebGL2) return;
+    try {
+      const res = await fetch(`${BASE}models/ktx2.json`);
+      if (!res.ok) return;
+      const list = await res.json();
+      const l = new KTX2Loader();
+      l.setTranscoderPath(`${BASE}basis/`);
+      l.detectSupport(renderer);
+      const c = l.workerConfig || {};
+      const ext = (n) => !!renderer.extensions.get(n);
+      // a format the GPU keeps compressed, sRGB included (colour textures are sRGB), or the webp files
+      ktx2.format = c.astcSupported ? 'astc' : c.bptcSupported ? 'bc7' : c.etc2Supported ? 'etc2' : c.dxtSupported && ext('WEBGL_compressed_texture_s3tc_srgb') ? 'bc1' : null;
+      if (!ktx2.format) { l.dispose(); return; }
+      ktx2.loader = l;
+      ktx2.twins = new Map(Object.entries(list.files || {}));
+      ktx2.sidecars = new Map(Object.entries(list.sidecars || {}));
+    } catch (e) {
+      ktx2.loader = null;
+      ktx2.twins = null;
+    }
+  })();
+  return ktx2.ready;
+}
+/** What the texture path did, for tests and the perf bench. */
+export function textureInfo() {
+  return { ktx2: !!ktx2.loader && !ktx2.broken, gpu: ktx2.format, formats: { ...ktx2.formats }, twins: ktx2.twins?.size || 0, twinsLoaded: ktx2.twinsLoaded, fellBack: ktx2.fellBack };
+}
+
+// what the GPU got, for the report (the transcoder picks the format per GPU)
+const FORMAT_NAMES = { [THREE.RGBA_BPTC_Format]: 'BC7', [THREE.RGB_ETC2_Format]: 'ETC2', [THREE.RGBA_ETC2_EAC_Format]: 'ETC2 RGBA', [THREE.RGB_ETC1_Format]: 'ETC1', [THREE.RGBA_ASTC_4x4_Format]: 'ASTC 4x4', [THREE.RGBA_S3TC_DXT1_Format]: 'BC1', [THREE.RGBA_S3TC_DXT5_Format]: 'BC3', [THREE.RGBAFormat]: 'RGBA (uncompressed)' };
+function countFormat(t) {
+  const k = FORMAT_NAMES[t.format] || String(t.format);
+  ktx2.formats[k] = (ktx2.formats[k] || 0) + 1;
+}
+
+// external KTX2 files (the deco kit, the vendors' atlases) are shared by several glbs: transcode each once and
+// give every glb a clone (one Source, so one GPU upload)
+const ktxShared = new Map();
+function ktx2Watcher(failures) {
+  return {
+    load(url, onLoad, onProgress, onError) {
+      const own = url.startsWith('blob:') || url.startsWith('data:');
+      let p = own ? null : ktxShared.get(url);
+      if (!p) {
+        p = ktx2.loader.loadAsync(url);
+        if (!own) { ktxShared.set(url, p); p.then((t) => { countFormat(t); THREE.Cache.remove(url); }, () => {}); }
+      }
+      p.then((t) => { if (own) countFormat(t); onLoad(own ? t : t.clone()); }, (e) => { failures.push(e); if (!own) ktxShared.delete(url); onError?.(e); });
+    },
+  };
+}
+
+// an external texture with a .ktx2 beside it (manifest `sidecars`): the glb names the .webp, so swap it in before
+// the textures load (a glb that only uses external textures needs no twin)
+class SidecarSwap {
+  constructor(parser) { this.parser = parser; this.name = 'nachtmarkt_ktx2_sidecars'; }
+  beforeRoot() {
+    const j = this.parser.json;
+    (j.images || []).forEach((im, i) => {
+      const side = im.uri && ktx2.sidecars?.get(decodeURIComponent(im.uri));
+      if (!side) return;
+      im.uri = encodeURI(side);
+      im.mimeType = 'image/ktx2';
+      for (const t of j.textures || []) {
+        if (t.extensions?.EXT_texture_webp?.source !== i) continue;
+        delete t.extensions.EXT_texture_webp;
+        t.extensions.KHR_texture_basisu = { source: i };
+      }
+    });
+    return null;
+  }
+}
+
+async function parseGlb(rel, manager, compressed) {
+  const url = modelUrl(rel);
+  let gltf;
+  if (compressed) {
+    const failures = [];
+    const l = new GLTFLoader(manager);
+    l.setMeshoptDecoder(MeshoptDecoder);
+    l.setKTX2Loader(ktx2Watcher(failures));
+    l.register((parser) => new SidecarSwap(parser));
+    gltf = await l.loadAsync(url);
+    THREE.Cache.remove(url);
+    if (failures.length) throw Object.assign(new Error(`${failures.length} texture(s) did not transcode: ${failures[0]?.message || failures[0]}`), { textures: true });
+  } else {
+    gltf = await getLoader(manager).loadAsync(url);
+    THREE.Cache.remove(url); // keep the decoded images, not the glb's bytes
+  }
+  return gltf;
+}
+
 const cache = new Map();
 async function fetchGlb(rel, manager) {
-  const url = modelUrl(rel);
-  const gltf = await getLoader(manager).loadAsync(url);
-  THREE.Cache.remove(url); // keep the decoded images, not the glb's bytes
+  let gltf = null;
+  if (ktx2.ready) await ktx2.ready;
+  if (!ktx2.broken && ktx2.loader) {
+    const twin = ktx2.twins?.get(rel);
+    try {
+      gltf = await parseGlb(twin || rel, manager, true);
+      if (twin) ktx2.twinsLoaded++;
+    } catch (err) {
+      // a texture that did not transcode: the webp files from here on; anything else (a missing twin): this file
+      if (err?.textures) ktx2.broken = true;
+      ktx2.fellBack++;
+      console.warn(`textures: ${twin || rel} did not load with KTX2 textures (${err?.message || err}); ${err?.textures ? 'the webp files from here on' : 'its webp file instead'}.`);
+    }
+  }
+  if (!gltf) gltf = await parseGlb(rel, manager, false);
   const root = gltf.scene || gltf.scenes?.[0];
   if (!root) throw new Error(`${rel} has no scene`);
   setClips(root, gltf.animations || []);

@@ -7,6 +7,7 @@ import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import inventory from 'virtual:market-inventory';
 import { chooseQuality, switchQuality } from './quality.js';
 import { buildMarket } from './engine/market.js';
+import { initTextures, textureInfo } from './engine/loader.js';
 import { setupLighting } from './engine/lighting.js';
 import { placeLights } from './engine/lights.js';
 import { createSnowfall } from './engine/snowfall.js';
@@ -97,6 +98,8 @@ async function boot() {
   renderer.domElement.setAttribute('role', 'img');
   renderer.domElement.setAttribute('aria-label', "Mac's Nachtmarkt: a 3D Christmas market at night.");
   stage.insertBefore(renderer.domElement, overlay);
+  // GPU-compressed textures where the GPU takes them (engine/loader.js; ?ktx2=0 loads the webp files)
+  initTextures(renderer, { enabled: params.get('ktx2') !== '0' });
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, stage.clientWidth / stage.clientHeight, 0.1, 600);
@@ -774,7 +777,7 @@ async function boot() {
     get stop() { return guide.here; },
     get arrived() { return guide.arrived && !rig.moving; },
     get panel() { return guide.arrived ? guide.here : null; },
-    camera, scene, renderer,
+    camera, scene, renderer, textures: textureInfo,
     cam: () => ({ mode: rig.mode, moving: rig.moving, progress: rig.progress, look: rig.look, pos: camera.position.toArray().map((v) => +v.toFixed(3)), target: rig.controls.target.toArray().map((v) => +v.toFixed(3)) }),
     nudge: (yaw, zoom, pitch) => rig.nudge(yaw, zoom, pitch),
     /** The lane path a walk from here to a stop would take (tests check it keeps clear of the stalls). */

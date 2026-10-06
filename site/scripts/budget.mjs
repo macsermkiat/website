@@ -6,7 +6,9 @@
 //   - on the full market, the distance level of the crowd (each figure's .lite.glb, loaded after the first frame);
 //   - every external texture those glbs reference (the deco kit and the vendor's atlases are separate .webp files),
 //     each texture once per market, and files with the same bytes under two names once (deduped by content hash);
-//   - the site's own scripts, styles and fonts from dist/assets (run it after `npm run build`; no dist is an error).
+//   - the site's own scripts, styles and fonts from dist/assets (run it after `npm run build`; no dist is an error);
+//   - round 10: with GPU-compressed twins (scripts/ktx2.mjs, public/models/ktx2.json) both texture paths, the webp
+//     files and the KTX2 ones with the Basis transcoder (public/basis), each held to the same aims by --strict.
 // It splits each market's download into the first load (before the market opens) and the deferred part (the deco
 // stalls, both rides and the crowd's distance level, loaded just after the first frame), as main.js does.
 // Round 5 streams detail: the full market opens with the lite files of the section stalls, the bandstand, the town
@@ -80,18 +82,33 @@ function fileInfo(p) {
   return fileCache.get(p);
 }
 
+// round 10: GPU-compressed twins (scripts/ktx2.mjs, public/models/ktx2.json). A browser whose GPU takes a compressed
+// texture format downloads a glb's twin (<name>.ktx2.glb) when it has one, each external texture's .ktx2 when it
+// has one, and the Basis transcoder (public/basis) once; any other browser, or one where a twin fails, the webp
+// files. Both paths are counted, and the strict run holds both to the aims.
+const ktx2Manifest = new Map();
+function ktx2Of(models) {
+  if (!ktx2Manifest.has(models)) ktx2Manifest.set(models, readJson(path.join(models, 'ktx2.json')));
+  return ktx2Manifest.get(models);
+}
+
 /** What loading `glb` downloads: the glb and each external texture, as file infos; missing files listed apart. */
-function filesOf(models, glb) {
-  const p = path.join(models, glb);
+function filesOf(models, glb, mode = 'webp') {
+  const k = mode === 'ktx2' ? ktx2Of(models) : null;
+  const twin = k?.files?.[glb];
+  const p = path.join(models, twin || glb);
   const g = fileInfo(p);
-  if (!g) return { tris: 0, glb: null, textures: [], missing: [glb] };
+  if (!g) return { tris: 0, glb: null, textures: [], missing: [twin || glb] };
   const j = readGlb(p);
   const textures = [], missing = [];
+  let compressed = !!twin;
   for (const img of j.images) {
-    const t = fileInfo(path.join(path.dirname(p), img));
-    if (t) textures.push(t); else missing.push(img);
+    const side = k?.sidecars?.[img];
+    if (side) compressed = true;
+    const t = fileInfo(path.join(path.dirname(p), side || img));
+    if (t) textures.push(t); else missing.push(side || img);
   }
-  return { tris: j.tris, glb: g, textures, missing };
+  return { tris: j.tris, glb: g, textures, missing, compressed };
 }
 
 export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
@@ -199,26 +216,42 @@ export function budget({ models = MODELS, site = SITE, dist = DIST } = {}) {
   const stills = path.join(dist, 'stills');
   if (fs.existsSync(stills)) for (const f of fs.readdirSync(stills)) if (/^home\./.test(f)) still += fs.statSync(path.join(stills, f)).size;
 
-  const totals = {};
-  for (const market of ['full', 'lite']) {
-    const seen = new Set();
-    const add = (files) => {
-      let bytes = 0;
-      for (const f of files) {
-        const m = filesOf(models, f);
-        for (const x of [m.glb, ...m.textures]) if (x && !seen.has(x.hash)) { seen.add(x.hash); bytes += x.size; }
-      }
-      return bytes;
-    };
-    // first load before the deferred part, so a texture both use is charged to the first load
-    let first = code + still, later = codeLater, onDemand = 0;
-    const stream = market === 'full' && !args.includes('--no-stream');
-    for (const g of groups) if (!g.deferred[market]) first += add(stream && g.streamed ? g.files.lite : g.files[market]);
-    for (const g of groups) if (g.deferred[market]) later += add(stream && g.streamed ? g.files.lite : g.files[market]);
-    for (const g of groups) if (stream && g.streamed) onDemand += add(g.files.full);
-    totals[market] = { firstLoad: first, deferred: later, onDemand, everything: first + later + onDemand, aim: FIRST_LOAD[market], round4: ROUND4[market], over: first > FIRST_LOAD[market], grew: first >= ROUND4[market] };
+  // the Basis transcoder, fetched once by the first compressed texture (public/basis, copied to dist/basis)
+  let transcoder = 0;
+  for (const dir of [path.join(dist, 'basis'), path.join(site, 'public', 'basis')]) {
+    if (!fs.existsSync(dir)) continue;
+    for (const f of fs.readdirSync(dir)) if (/\.(js|wasm)$/.test(f)) transcoder += fs.statSync(path.join(dir, f)).size;
+    break;
   }
-  return { rows, shared, totals, code, codeLater, still, hasDist };
+  const count = (mode) => {
+    const totals = {};
+    for (const market of ['full', 'lite']) {
+      const seen = new Set();
+      let usesKtx2 = false;
+      const add = (files) => {
+        let bytes = 0, compressed = false;
+        for (const f of files) {
+          const m = filesOf(models, f, mode);
+          compressed ||= !!m.compressed;
+          for (const x of [m.glb, ...m.textures]) if (x && !seen.has(x.hash)) { seen.add(x.hash); bytes += x.size; }
+        }
+        // the transcoder comes with the first part that needs it
+        if (compressed && !usesKtx2) { usesKtx2 = true; bytes += transcoder; }
+        return bytes;
+      };
+      // first load before the deferred part, so a texture both use is charged to the first load
+      let first = code + still, later = codeLater, onDemand = 0;
+      const stream = market === 'full' && !args.includes('--no-stream');
+      for (const g of groups) if (!g.deferred[market]) first += add(stream && g.streamed ? g.files.lite : g.files[market]);
+      for (const g of groups) if (g.deferred[market]) later += add(stream && g.streamed ? g.files.lite : g.files[market]);
+      for (const g of groups) if (stream && g.streamed) onDemand += add(g.files.full);
+      totals[market] = { firstLoad: first, deferred: later, onDemand, everything: first + later + onDemand, aim: FIRST_LOAD[market], round4: ROUND4[market], over: first > FIRST_LOAD[market], grew: first >= ROUND4[market] };
+    }
+    return totals;
+  };
+  const totals = count('webp');
+  const ktx2 = ktx2Of(models) ? count('ktx2') : null;
+  return { rows, shared, totals, ktx2, transcoder, code, codeLater, still, hasDist };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -240,7 +273,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const sharedBytes = r.shared.reduce((a, s) => a + s.bytes, 0);
   console.log(`  ${'shared textures'.padEnd(24)} ${String(r.shared.length).padStart(7)} files ${mb(sharedBytes).padStart(9)} (each charged once)`);
   console.log(`Site code, styles and fonts: ${mb(r.code)} first, ${mb(r.codeLater)} after the first frame (3D text); home still: ${mb(r.still)}`);
+  if (r.ktx2) console.log('webp textures (no compressed format on the GPU, ?ktx2=0, or a twin that failed):');
   for (const [m, t] of Object.entries(r.totals)) console.log(`${m.padEnd(4)} market: first load ${mb(t.firstLoad)} (aim ${mb(t.aim)}; round 4 ${mb(t.round4)}, margin ${mb(t.round4 - t.firstLoad)})${t.over ? '  OVER' : ''}${t.grew ? '  NOT BELOW ROUND 4' : ''}; deferred ${mb(t.deferred)}${t.onDemand ? `; full detail on demand ${mb(t.onDemand)}` : ''}; everything ${mb(t.everything)}`);
-  if (args.includes('--strict') && Object.values(r.totals).some((t) => t.over)) { console.error('budget: a first load is over its aim'); process.exit(1); }
-  if (args.includes('--strict') && Object.values(r.totals).some((t) => t.grew)) { console.error('budget: a first load is not below round 4\'s'); process.exit(1); }
+  if (r.ktx2) {
+    console.log(`GPU-compressed textures (KTX2 twins, public/models/ktx2.json; the transcoder, ${mb(r.transcoder)}, counted where it first loads):`);
+    for (const [m, t] of Object.entries(r.ktx2)) {
+      const w = r.totals[m];
+      const pct = (a, b) => `${a >= b ? '+' : ''}${(((a - b) / b) * 100).toFixed(1)}%`;
+      console.log(`${m.padEnd(4)} market: first load ${mb(t.firstLoad)} (${pct(t.firstLoad, w.firstLoad)} on webp)${t.over ? '  OVER' : ''}${t.grew ? '  NOT BELOW ROUND 4' : ''}; deferred ${mb(t.deferred)}${t.onDemand ? `; full detail on demand ${mb(t.onDemand)}` : ''}; everything ${mb(t.everything)} (${pct(t.everything, w.everything)})`);
+    }
+  }
+  const all = [...Object.values(r.totals), ...Object.values(r.ktx2 || {})];
+  if (args.includes('--strict') && all.some((t) => t.over)) { console.error('budget: a first load is over its aim'); process.exit(1); }
+  if (args.includes('--strict') && all.some((t) => t.grew)) { console.error('budget: a first load is not below round 4\'s'); process.exit(1); }
 }

@@ -123,6 +123,42 @@ check('the song is about ten minutes before it rests and starts again', plan.len
   // (CI runs these checks before the build, so the real dist may not exist yet: b.hasDist must only match the disk)
   check('budget: it reports a missing dist (the CLI then exits 1)', noDist.hasDist === false && b.hasDist === existsSync(new URL('../dist/index.html', import.meta.url)));
   check('budget: both first loads are under their aims', !b.totals.full.over && !b.totals.lite.over, `${(b.totals.full.firstLoad / 1e6).toFixed(2)} / ${(b.totals.lite.firstLoad / 1e6).toFixed(2)} MB`);
+  // round 10: the GPU-compressed path (KTX2 twins) is held to the same aims, and grows a first load by about a tenth at most
+  if (b.ktx2) {
+    const k = b.ktx2;
+    const grow = (m) => k[m].firstLoad / b.totals[m].firstLoad - 1;
+    check('budget: with KTX2 textures both first loads are under their aims and below round 4', !k.full.over && !k.lite.over && !k.full.grew && !k.lite.grew, `${(k.full.firstLoad / 1e6).toFixed(2)} / ${(k.lite.firstLoad / 1e6).toFixed(2)} MB`);
+    check('budget: KTX2 textures grow neither first load by more than about a tenth (11%)', grow('full') <= 0.11 && grow('lite') <= 0.11, `full ${(grow('full') * 100).toFixed(1)}%, lite ${(grow('lite') * 100).toFixed(1)}%`);
+  }
+}
+
+// ---------- GPU-compressed twins (round 10, scripts/ktx2.mjs) ----------
+{
+  const MODELS = new URL('../public/models/', import.meta.url);
+  const man = existsSync(new URL('ktx2.json', MODELS)) ? JSON.parse(readFileSync(new URL('ktx2.json', MODELS), 'utf8')) : null;
+  if (man) {
+    const glb = (f) => { const b = readFileSync(new URL(f, MODELS)); const len = b.readUInt32LE(12); return { b, j: JSON.parse(b.subarray(20, 20 + len).toString('utf8')), bin: 20 + len + 8 }; };
+    const isKtx2 = (buf) => buf.subarray(0, 12).equals(Buffer.from([0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a]));
+    const bad = [];
+    for (const [orig, twin] of Object.entries(man.files || {})) {
+      if (!existsSync(new URL(twin, MODELS)) || !existsSync(new URL(orig, MODELS))) { bad.push(`${twin}: missing`); continue; }
+      const a = glb(orig), t = glb(twin);
+      // the same file apart from the textures: nodes, meshes, accessors, materials, animations, skins
+      for (const key of ['nodes', 'meshes', 'accessors', 'materials', 'animations', 'skins', 'samplers']) if (JSON.stringify(a.j[key]) !== JSON.stringify(t.j[key])) bad.push(`${twin}: ${key} differ`);
+      (t.j.textures || []).forEach((tex, i) => {
+        const k = tex.extensions?.KHR_texture_basisu;
+        if (!k) { if (JSON.stringify(tex) !== JSON.stringify(a.j.textures[i])) bad.push(`${twin}: texture ${i} changed`); return; }
+        const im = t.j.images[k.source];
+        const bv = t.j.bufferViews[im.bufferView];
+        if (im.mimeType !== 'image/ktx2' || !bv || !isKtx2(t.b.subarray(t.bin + (bv.byteOffset || 0), t.bin + (bv.byteOffset || 0) + 12))) bad.push(`${twin}: texture ${i} is not KTX2`);
+      });
+    }
+    for (const [uri, side] of Object.entries(man.sidecars || {})) {
+      if (!existsSync(new URL(side, MODELS)) || !isKtx2(readFileSync(new URL(side, MODELS)))) bad.push(`${side} (for ${uri}): missing or not KTX2`);
+    }
+    check('ktx2: every twin is its glb with KTX2 textures in place of webp, and every external .ktx2 is there', !bad.length, bad.slice(0, 5).join('; ') || `${Object.keys(man.files || {}).length} twins, ${Object.keys(man.sidecars || {}).length} external`);
+    check('ktx2: the Basis transcoder is in public/basis (the loader reads it from <base>/basis/)', ['basis_transcoder.js', 'basis_transcoder.wasm'].every((f) => existsSync(new URL(`../public/basis/${f}`, import.meta.url))));
+  }
 }
 
 // ---------- streaming and the stroll ----------
