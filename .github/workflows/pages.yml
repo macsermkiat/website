@@ -30,8 +30,6 @@ jobs:
           cache: npm
           cache-dependency-path: site/package-lock.json
       - run: npm ci
-      # the browser-free checks: GPU classes for the lite market, and the ballad's road map
-      - run: npm run test:unit
       # The Pages base path ("/website" for this repository; "" with a custom domain) becomes Vite's base
       - id: pages
         uses: actions/configure-pages@v5
@@ -46,6 +44,8 @@ jobs:
           STRICT_CONTENT: '1'
           CONTENT_NOTES: ${{ vars.CONTENT_NOTES || 'hide' }}
           PAGES_BASE: ${{ steps.pages.outputs.base_path }}/
+      # the browser-free checks (GPU classes, the ballad's road map, budgets that need the built site)
+      - run: npm run test:unit
       # The budget gate (scripts/budget.mjs --strict): counting every external texture, the first load of each market
       # must stay under its aim (25 MB full, 8 MB lite) and below round 4's (19.70 MB full, 7.44 MB lite), or nothing
       # is deployed. Per-asset budgets are reported for the roles that own the models.

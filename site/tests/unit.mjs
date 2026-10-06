@@ -128,7 +128,9 @@ check('the song is about ten minutes before it rests and starts again', plan.len
     const k = b.ktx2;
     const grow = (m) => k[m].firstLoad / b.totals[m].firstLoad - 1;
     check('budget: with KTX2 textures both first loads are under their aims and below round 4', !k.full.over && !k.lite.over && !k.full.grew && !k.lite.grew, `${(k.full.firstLoad / 1e6).toFixed(2)} / ${(k.lite.firstLoad / 1e6).toFixed(2)} MB`);
-    check('budget: KTX2 textures grow neither first load by more than about a tenth (11%)', grow('full') <= 0.11 && grow('lite') <= 0.11, `full ${(grow('full') * 100).toFixed(1)}%, lite ${(grow('lite') * 100).toFixed(1)}%`);
+    // the growth is a share of the whole first load, site code included, so it needs the built site (dist)
+    if (b.hasDist) check('budget: KTX2 textures grow neither first load by more than about a tenth (11%)', grow('full') <= 0.11 && grow('lite') <= 0.11, `full ${(grow('full') * 100).toFixed(1)}%, lite ${(grow('lite') * 100).toFixed(1)}%`);
+    else console.log('  note  KTX2 growth check skipped: no dist yet (npm run build first; CI runs it after the build)');
   }
 }
 
