@@ -1,0 +1,18 @@
+=== 1-default   'Battery Power' lowpower=0 load { 4.51 4.48 4.35 }
+full market on ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve
+  first load 8.16 MB (fetched before the market opened)
+  MISS home         median  45.7 ms  p95  97.7 ms  770 draws  1047k tris
+  MISS Glühwein     median    43 ms  p95 100.3 ms  619 draws  1183k tris
+  MISS bandstand    median  61.7 ms  p95 129.1 ms  305 draws  632k tris
+  MISS Bücherstand  median  69.8 ms  p95   235 ms  292 draws  546k tris
+  MISS Riesenrad    median  31.7 ms  p95    94 ms  436 draws  1134k tris
+  MISS home again   median  50.6 ms  p95 101.8 ms  752 draws  1277k tris
+=== 2-msaa4 lighting=msaa:4  'Battery Power' lowpower=0 load { 3.78 4.31 4.29 }
+full market on ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Ve
+  first load 8.16 MB (fetched before the market opened)
+  MISS home         median   365 ms  p95 1396.8 ms  770 draws  716k tris
+  MISS Glühwein     median   531 ms  p95 1834.3 ms  605 draws  776k tris
+  MISS bandstand    median 816.5 ms  p95 2146.9 ms  945 draws  1755k tris
+  MISS Bücherstand  median 1523.8 ms  p95 2525.5 ms  588 draws  889k tris
+  MISS Riesenrad    median 130.4 ms  p95 2551.6 ms  569 draws  880k tris
+  MISS home again   median 1494.1 ms  p95 2591.5 ms  575 draws  873k tris
