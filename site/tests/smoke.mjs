@@ -543,6 +543,7 @@ try {
     check('tapping the plate hands it over (Guten Appetit) and a fresh, empty plate is set out', pc.food.length === 0 && pc.sauces.length === 0 && pc.served === 1 && /Guten Appetit/.test(await noteNow()), JSON.stringify(pc));
     const kAim = await aimAt(page, 'act_wurst_krakauer');
     if (kAim) {
+      const k0 = (await page.evaluate(() => window.__market.item('act_wurst_krakauer'))).position;
       // the hovered item glows brighter than the shimmer (and keeps its lift and label)
       await page.mouse.move(kAim.x, kAim.y);
       await page.waitForFunction(() => window.__market.hoveredItem === 'act_wurst_krakauer', null, { timeout: LONG }).catch(() => {});
@@ -550,7 +551,6 @@ try {
       const hk = gh.items.find((i) => i.name === 'act_wurst_krakauer');
       const others = gh.items.filter((i) => i.name !== 'act_wurst_krakauer').map((i) => i.level);
       check('glow: the hovered item glows a little brighter than the rest', gh.hovered === 'act_wurst_krakauer' && !!hk && hk.drawn > 0 && hk.level >= gh.hover * 0.95 && hk.level > Math.max(0, ...others) * 1.3 && hk.level <= gh.hover + 1e-6, JSON.stringify({ hovered: gh.hovered, hk, maxOther: Math.max(0, ...others) }));
-      const k0 = (await page.evaluate(() => window.__market.item('act_wurst_krakauer'))).position;
       await page.mouse.click(kAim.x, kAim.y);
       const pk = await settlePlate();
       const k1 = (await page.evaluate(() => window.__market.item('act_wurst_krakauer'))).position;
