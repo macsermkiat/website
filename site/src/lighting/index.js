@@ -52,7 +52,16 @@ const damp = (a, b, rate, dt) => a + (b - a) * (1 - Math.exp(-rate * dt));
  */
 export function createLighting({ scene, renderer, camera, lite = false, options = {} }) {
   const N = NIGHT;
-  const P = { ...(lite ? PROFILES.lite : PROFILES.full), ...(options.profile || {}) };
+  // ?lighting=key:value,... overrides profile numbers for measuring (e.g. lighting=lightBudget:4,glows:16,shadows:0)
+  const urlProfile = {};
+  try {
+    const q = new URLSearchParams(globalThis.location?.search || '').get('lighting');
+    for (const kv of (q || '').split(',').filter(Boolean)) {
+      const [k, v] = kv.split(':');
+      if (k && v != null && /^-?\d+(\.\d+)?$/.test(v)) urlProfile[k] = (k === 'shadows' || k === 'envCapture' || k === 'clouds' || k === 'grain') ? v !== '0' : +v;
+    }
+  } catch { /* no location */ }
+  const P = { ...(lite ? PROFILES.lite : PROFILES.full), ...(options.profile || {}), ...urlProfile };
   const added = [];
   const add = (o) => { scene.add(o); added.push(o); return o; };
   const disposers = [];

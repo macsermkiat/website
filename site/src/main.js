@@ -91,7 +91,8 @@ async function boot() {
     return;
   }
   // pixel ratio capped at 1.5 on the full market (a 4K laptop screen at 2x is four times the fragments)
-  const PR = Math.min(window.devicePixelRatio || 1, lite ? 1.25 : 1.5);
+  // ?pr=<n> caps the pixel ratio (for measuring)
+  const PR = Math.min(window.devicePixelRatio || 1, lite ? 1.25 : 1.5, Number(params.get('pr')) > 0 ? Number(params.get('pr')) : Infinity);
   renderer.setPixelRatio(PR);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setSize(stage.clientWidth, stage.clientHeight, false);

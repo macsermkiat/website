@@ -8,6 +8,7 @@
 //   fx_smoke_<n>                       the Räuchermännchen smokes on his own: a thin, slow curl from his mouth
 // (rot_pyramid turns with the market's spinners: engine/conventions.js reads its {"axis": "y"} extra.)
 import * as THREE from 'three';
+const NO_MIRROR = (() => { try { return new URLSearchParams(location.search).get('mirror') === '0'; } catch { return false; } })();
 
 // ---------- the smoker's smoke: one thin curl, not a column of puffs ----------
 let wispTex = null;
@@ -279,6 +280,7 @@ vec3 glintHash( vec3 p ) { p = fract( p * vec3( 443.897, 441.423, 437.195 ) ); p
     refresh() { for (const M of mirrors) dressMirror(M); },
     /** Before the market is drawn: the mirror's reflection, when it can be seen. */
     beforeRender({ force = false } = {}) {
+      if (NO_MIRROR) return;   // ?mirror=0, for measuring
       if (!mirrors.length) return;
       frame++;
       for (const M of mirrors) {
