@@ -88,6 +88,7 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
     const saved = merged.index.array.slice();
     for (const it of b.items) {
       it.mesh.visible = false; // stays in the tree: the pick proxy and the thing the action moves
+      it.mesh.userData.inMerge = true; // drawn by the merged mesh (interaction/glow.js glows it all the same)
       owner.set(it.mesh, { mesh, range: it.range, saved });
     }
     groups.push({ mesh, count: b.items.length });
@@ -108,15 +109,15 @@ export function mergeActMeshes(root, re, { minCount = 6 } = {}) {
     groups,
     count: owner.size,
     /** Take a pivot out of the merged mesh (its own mesh draws, so it can move). */
-    lift(pivot) { for (const m of meshesOf(pivot)) { setRange(m, false); m.visible = true; } },
+    lift(pivot) { for (const m of meshesOf(pivot)) { setRange(m, false); m.visible = true; m.userData.inMerge = false; } },
     /** Put it back once it is home again. */
-    settle(pivot) { for (const m of meshesOf(pivot)) { m.visible = false; setRange(m, true); } },
+    settle(pivot) { for (const m of meshesOf(pivot)) { m.visible = false; m.userData.inMerge = true; setRange(m, true); } },
     /** Leave a mesh out of the merged mesh for good (its own mesh is then drawn, or hidden, by its owner). */
-    drop(m) { if (!owner.has(m)) return; setRange(m, false); owner.delete(m); },
+    drop(m) { if (!owner.has(m)) return; setRange(m, false); owner.delete(m); m.userData.inMerge = false; },
     /** Take the merged meshes out and draw every item with its own mesh again (before a streamed graft). */
     undo() {
       for (const g of groups) { g.mesh.removeFromParent(); g.mesh.geometry.dispose(); }
-      for (const m of owner.keys()) m.visible = true;
+      for (const m of owner.keys()) { m.visible = true; m.userData.inMerge = false; }
       owner.clear();
       groups.length = 0;
     },

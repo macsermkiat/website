@@ -457,6 +457,9 @@ export function createBooks(ctx) {
       openedBook: () => (open ? { name: open.n.name, slug: open.d.slug, title: open.d.title, author: open.d.author, note: open.d.note, mac: !!open.d.mac, state: open.state, model: open.group?.fromModel ? 'book_open.glb' : open.group ? 'engine' : null } : null),
     },
     retract: () => { close({ retract: true }); closeCabinet(); faced = faceAfter; faceAfter = -1; },
+    /** What the arrival glow lights here besides the items (interaction/glow.js): each closed cabinet's door, which
+     *  answers for the cabinet (its books do not answer until it is open). */
+    glowTargets(id) { return id === 'books' ? cabinets.filter((c) => c !== openCab && c.proxy && !c.proxy.userData.pickProxy.off).map((c) => c.door || c.sign).filter(Boolean) : []; },
     /** Books in a cabinet answer the pointer only while that cabinet is open; the rest only while none is. */
     pickable(item) {
       if (item.kind !== 'book' || !cabinets.length) return undefined;

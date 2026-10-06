@@ -13,7 +13,7 @@ function surfaceRoot(o) { let top = o; for (let x = o; x && x.userData?.readable
 // further away the pointer means the whole stall.
 export const ITEM_RANGE = 11;
 
-export function createPicking({ dom, camera, market, overlay, outline, items, labelFor, onPick, onItem, onProxy, proxyLabel = (p) => p.label || '', current = () => null, extraRoots = () => [], readLabel = () => '', signLabel = () => '', onRead, onSign, onLink, readingNow = () => false }) {
+export function createPicking({ dom, camera, market, overlay, outline, items, labelFor, onPick, onItem, onProxy, proxyLabel = (p) => p.label || '', current = () => null, extraRoots = () => [], readLabel = () => '', signLabel = () => '', onRead, onSign, onLink, readingNow = () => false, glow = null }) {
   const ray = new THREE.Raycaster();
   const ptr = new THREE.Vector2();
   const tip = document.createElement('div');
@@ -96,6 +96,8 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
   function show(p) {
     hover = p?.id || null;
     items?.hover(p?.item || null);
+    // the hovered item (or the cabinet a pick proxy answers for) glows a little brighter (interaction/glow.js)
+    glow?.hover(p?.item ? p.item.node : p?.proxy ? p.proxy.outline || null : null);
     if (outline) {
       const target = p?.link ? null : p?.target ? p.target : p?.item ? p.item.node : p?.id ? market.places[p.id]?.holder : null;
       // while reading, the page itself is not outlined (the words would blur)

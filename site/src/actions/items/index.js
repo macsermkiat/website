@@ -24,6 +24,7 @@ export function createItems(ctx) {
   const byNode = new Map(); // pivot -> item
   const byPlace = {}; // place id -> [item]
   let hovered = null;
+  let interact = null; // interaction/glow.js: the visitor did something here (the arrival shimmer fades)
 
   /** Make an item record for an act_ pivot. */
   function add(node, placeId, place, kind = kindOf(node)) {
@@ -128,13 +129,18 @@ export function createItems(ctx) {
       return true;
     },
     /** A click on a pick proxy (a cabinet): its handler's. */
-    proxyClick(px) { for (const h of handlers) if (h.proxyClick?.(px)) return true; return false; },
+    proxyClick(px) { interact?.(); for (const h of handlers) if (h.proxyClick?.(px)) return true; return false; },
     click(item) {
       const fn = onClick[item.kind];
       if (!fn) return false;
+      interact?.();
       fn(item);
       return true;
     },
+    /** Called on every click on an item or a pick proxy (interaction/glow.js). */
+    onInteract(f) { interact = f; },
+    /** Things at a stop that answer a click but are not items (the Bücherstand's closed cabinets): their nodes. */
+    glowTargets(id) { const out = []; for (const h of handlers) out.push(...(h.glowTargets?.(id) || [])); return out; },
     /** Places that arrive after the first frame (the rides, a deferred ornament shop). */
     addPlaced(placed) {
       for (const p of placed) {

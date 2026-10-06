@@ -19,6 +19,7 @@ import { createActions } from './actions/index.js';
 import { bandPositions } from './actions/band.js';
 import { createCameraRig } from './interaction/camera.js';
 import { createPicking } from './interaction/picking.js';
+import { createGlow, GLOW } from './interaction/glow.js';
 import { itemFrame } from './interaction/itemFrame.js';
 import { bindKeyboard, watchMotion } from './interaction/keyboard.js';
 import { createStroll } from './nav/stroll.js';
@@ -179,6 +180,7 @@ async function boot() {
   let guide = null;
   const note = createNote({ overlay, announce: announceEl, anchorFor: (id) => noteAnchor(market, id || guide?.here) });
   let world = null;
+  let glow = null; // the glow on what can be clicked (interaction/glow.js)
   const sfxLog = [];
   const actions = createActions({
     market, scene, lite, motion, audio, rig, camera, overlay,
@@ -257,7 +259,7 @@ async function boot() {
     // after reading a book from an open cabinet, the camera goes back to that cabinet
     stopView: () => { const cv = actions.items.handlers.cabinetView?.(); if (cv) { const b = frameRegionView(cv); if (b) return b; } return guide?.stopView(); },
     els: { bar: $('readbar'), title: $('readTitle'), page: $('readPage'), prevBtn: $('readPrev'), nextBtn: $('readNext'), closeBtn: $('readClose'), flipBtn: $('readFlip'), copy: $('readCopy') },
-    onOpen: () => { stopbarEl.hidden = true; picking?.refresh(); },
+    onOpen: () => { stopbarEl.hidden = true; picking?.refresh(); glow?.interacted(); },
     onClose: () => { releaseWheel(); if (guide?.here && guide.arrived) stopbar.show(guide.here, { prevId: stroll.prev(guide.here), nextId: stroll.next(guide.here) }); },
   });
   const stopbarEl = $('stopbar');
@@ -331,6 +333,7 @@ async function boot() {
       market.snow.forEach((o) => (o.visible = snowOn));
       if (renderer.shadowMap.autoUpdate === false) renderer.shadowMap.needsUpdate = true;
       picking?.refresh();
+      if (place && place.id === guide?.here) glow?.refresh();
       report.streamed = streamer.report();
     },
   });
@@ -367,6 +370,16 @@ async function boot() {
     if (top < 0 || top > innerHeight * 0.4) window.scrollBy({ top: top - 8, behavior: motion.reduced ? 'auto' : 'smooth' });
   };
 
+  // the arrival shimmer and the hover glow on what answers a click at the stop (interaction/glow.js)
+  glow = createGlow({
+    scene, items: actions.items, motion,
+    here: () => (guide.arrived && guide.here && !actions.rides.riding ? guide.here : null),
+    extraTargets: (id) => actions.items.glowTargets(id),
+  });
+  actions.items.onInteract(() => glow.interacted());
+  // a button for something to do at the stop (read, an action, an item, a view) is an interaction too
+  stopbarEl.addEventListener('click', (e) => { if (e.target.closest?.('button[data-action],button[data-item],button[data-read],button[data-view]')) glow.interacted(); });
+
   let picking = null;
   function highlightSign(id) {
     if (!outline) return;
@@ -374,7 +387,7 @@ async function boot() {
     outline.selectedObjects = arm ? [arm] : [];
   }
   picking = createPicking({
-    dom: renderer.domElement, camera, market, overlay, outline, items: actions.items,
+    dom: renderer.domElement, camera, market, overlay, outline, items: actions.items, glow,
     current: () => (guide.arrived ? guide.here : null),
     labelFor: (id) => (guide.here === id && guide.arrived ? `${SECTIONS[id]?.name} · ${SECTIONS[id]?.sub}` : `Walk to the ${SECTIONS[id]?.name} · ${SECTIONS[id]?.sub}`),
     extraRoots: () => (signpost.group ? [signpost.group] : Object.values(signpost.arms)),
@@ -623,6 +636,7 @@ async function boot() {
     const snowLift = 1 + 0.3 * (lighting.raw?.snowAmount ?? (snowOn ? 1 : 0));
     market.bulbMaterials.forEach((m, i) => { m.emissiveIntensity = m.userData.baseEmissive * snowLift * (0.9 + (still ? 0 : 0.07 * Math.sin(T * 1.3 + i * 1.7)) + pulse); });
     actions.update(dt, T, still);
+    glow.update(dt);
     key?.update(dt);
     // high above the square (the Riesenrad stop's overview, as on the ride) the lit market is small and far
     // below: the exposure opens up the same way
@@ -923,6 +937,10 @@ async function boot() {
     tipAt: (x, y, text) => picking.tipAt(x, y, text),
     hoverAt(x, y) { renderer.domElement.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, pointerType: 'mouse', bubbles: true })); },
     get hoveredItem() { return actions.items.hovered?.node.name || null; },
+    /** The glow on what can be clicked (tests): the shimmer's state and each glowing node's level. */
+    glow: () => glow.state(),
+    /** Tune the glow live (tests and screenshots): GLOW's keys (peak, hover, period, hold, ...). */
+    glowTune: (o) => Object.assign(GLOW, o || {}),
     renderFrame() { renderMarket(0.016); },
     muted: () => audio.muted,
     screenPoint(name) {

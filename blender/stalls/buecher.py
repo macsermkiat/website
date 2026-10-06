@@ -204,6 +204,13 @@ def section_sign(h, key, label, F, cx, cy, cz, w, hh, lite):
     S.flat_text = True          # painted letters: one front face each, no sides
     S.curve_simplify = 8.0
     h.extra.append(S)
+    # round 10 (Mac, 2026-10-06: "the sign for each bookshelf should have light"): the board itself is its own
+    # mesh sign_cat_<key>_board (a child of sign_cat_<key>), in 'sign_lit': the paint kit with an emissive
+    # pool of warm light from the picture lamp above it (brightest under the lamp, falling off downward and
+    # toward the ends; see sign_lamp and finish_sign_boards). The letters and the gold border stay in
+    # 'paint_glow', so they keep their dark green against the lit cream.
+    B = Part(f"sign_cat_{key}_board", "paint_glow", var=0.03)
+    h.extra.append(B)
     Mb = F @ _T(cx, cy, cz) @ Euler((math.pi / 2, 0, 0)).to_matrix().to_4x4()
     d = 0.022
     k = 0.035                   # arch rise above the board's shoulders
@@ -211,7 +218,8 @@ def section_sign(h, key, label, F, cx, cy, cz, w, hh, lite):
     outline = [(-w / 2, -hh / 2), (w / 2, -hh / 2), (w / 2, hh / 2 - k)]
     outline += [(w / 2 * math.cos(math.pi * i / n), hh / 2 - k + k * math.sin(math.pi * i / n)) for i in range(1, n)]
     outline += [(-w / 2, hh / 2 - k)]
-    S.shape(outline, depth=d, M=Mb, band="cream", bevel=0.003)
+    B.shape(outline, depth=d, M=Mb, band="cream", bevel=0.003)
+    h.sign_boards.append((key, Mb, w, hh))
     # thin gold border just inside the edge, proud of the face (sides and bottom; the arch is plain)
     e = 0.016
     for (x, z, ww, zz) in ((0, -hh / 2 + e, w - 2 * e + 0.008, 0.008),
@@ -224,6 +232,149 @@ def section_sign(h, key, label, F, cx, cy, cz, w, hh, lite):
                     resolution=1, bevel=0.0)
     print(f"[buecher] sign {key}: {text!r} at {size:.3f} m, letters {tw:.3f} x {th:.3f} m on a {w:.2f} x {hh:.2f} board")
     return S
+
+
+# ------------------------------------------------------------------ round 10: lit cabinet signs
+LAMP_Z = BS.SIGN_Z + BS.SIGN_H + 0.075     # hood axis: 7.5 cm above the board's crest
+LAMP_Y = -0.095                           # and 10 cm in front of its face
+LAMP_R = 0.021                            # brass hood radius
+GLOW_RES = (128, 64)                      # the pool-of-light texture (shared by the six boards)
+GLOW_PEAK = (0.74, 0.58, 0.40)            # emissive factor at the brightest point (linear, warm cream)
+
+
+def sign_lamp(h, key, F, cx, cz, w, lite):
+    """A small brass picture lamp over a crest sign, as its own mesh lamp_cat_<key> (brass): a tubular
+    hood along the board on two swan-neck arms that rise from the cornice behind the board, with a warm
+    tube bulb (in the stall's bulbs_ mesh, so the engine makes it glow) under the hood. Real lamps are
+    not added in the browser (each real light slows the whole market): the light it throws is painted
+    onto the board (sign_lit)."""
+    Lp = Part(f"lamp_cat_{key}", "brass", var=0.02)
+    h.extra.append(Lp)
+    L = min(w * 0.62, 0.5)                # hood length
+    seg = 6 if lite else 10
+    rot = (0, math.pi / 2, 0)
+
+    def W(x, y, z):
+        return F @ Vector((x, y, z))
+    ang = math.atan2(F[1][0], F[0][0])    # the cabinet's yaw: the hood runs along its width
+    hood_rot = (Euler((0, 0, ang)).to_matrix() @ Euler(rot).to_matrix()).to_euler()
+    Lp.cyl(W(cx, LAMP_Y, LAMP_Z), LAMP_R, LAMP_R * 0.86, L, seg=seg, rot=hood_rot, caps=True)
+    # end caps a touch wider (the rolled rim of a picture light)
+    for s_ in (-1, 1):
+        Lp.cyl(W(cx + s_ * L / 2, LAMP_Y, LAMP_Z), LAMP_R * 1.12, LAMP_R * 1.12, 0.008, seg=seg, rot=hood_rot)
+    for s_ in (-1, 1):
+        x = cx + s_ * L * 0.32
+        pts = [W(x, 0.05, BS.SIGN_Z + 0.01), W(x, 0.05, BS.SIGN_Z + BS.SIGN_H + 0.02),
+               W(x, 0.035, LAMP_Z + 0.035), W(x, -0.01, LAMP_Z + 0.05), W(x, LAMP_Y + 0.03, LAMP_Z + 0.03),
+               W(x, LAMP_Y, LAMP_Z + LAMP_R * 0.6)]
+        if lite:
+            pts = [pts[0], pts[1], pts[3], pts[5]]
+        Lp.tube(pts, 0.0045, tseg=5 if lite else 6)
+        Lp.box(W(x, 0.05, BS.SIGN_Z + 0.012), (0.02, 0.014, 0.012), rot=(0, 0, ang), bevel=0)   # foot
+    # the tube bulb: hangs just under the hood axis, so from below it shows as a warm strip
+    h.bulbs.cyl(W(cx, LAMP_Y + 0.004, LAMP_Z - LAMP_R * 0.55), 0.0075, 0.0075, L * 0.88, seg=5 if lite else 6,
+                rot=hood_rot)
+
+
+def _glow_pixels():
+    """The pool of light a picture lamp throws on the board below it, as a grey falloff (1 = GLOW_PEAK),
+    u across the board, v up it (v = 1 at the crest). Brightest just under the lamp, about a third at the
+    foot, a little dimmer toward the ends than the middle, with a faint paint mottle."""
+    import numpy as np
+    W_, H_ = GLOW_RES
+    v, u = np.mgrid[0:H_, 0:W_].astype(np.float32)
+    u = (u + 0.5) / W_
+    v = 1.0 - (v + 0.5) / H_                      # image rows run top-down
+    # distance from the lamp: it hangs over the crest, in front of the face
+    dz = (1.0 - v) * BS.SIGN_H + (LAMP_Z - BS.SIGN_Z - BS.SIGN_H)
+    dy = -LAMP_Y
+    r2 = dz * dz + dy * dy
+    cos_in = dz / np.sqrt(r2)                    # light reaches the vertical face at a grazing angle
+    e = cos_in * dy / r2                          # irradiance from a point above the face (relative)
+    e = e / e.max()
+    across = 1.0 - 0.32 * np.clip(np.abs(u - 0.5) / 0.5, 0, 1) ** 2.2
+    g = (0.28 + 0.72 * e ** 0.55) * across
+    rng = np.random.default_rng(10)
+    mott = rng.normal(0, 1, (H_ // 8, W_ // 8)).astype(np.float32)
+    mott = np.kron(mott, np.ones((8, 8), np.float32))
+    from scipy import ndimage
+    mott = ndimage.gaussian_filter(mott, 3.0)
+    g = np.clip(g * (1.0 + 0.04 * mott / (mott.std() + 1e-6)), 0, 1)
+    return g
+
+
+def sign_glow_image():
+    """blender/out/kit/sign_glow.png (sRGB grey falloff), loaded as a Blender image."""
+    import numpy as np
+    from PIL import Image
+    path = os.path.join(state.KIT_DIR, "sign_glow.png")
+    g = _glow_pixels()
+    srgb = np.where(g <= 0.0031308, g * 12.92, 1.055 * np.power(g, 1 / 2.4) - 0.055)
+    px = np.clip(srgb * 255 + 0.5, 0, 255).astype(np.uint8)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    Image.fromarray(np.stack([px, px, px], -1)).save(path)
+    img = bpy.data.images.get("sign_glow")
+    if img is None:
+        img = bpy.data.images.load(path)
+        img.name = "sign_glow"
+    else:
+        img.reload()
+    img.colorspace_settings.name = "sRGB"
+    return img
+
+
+def sign_lit_material():
+    """'sign_lit': the paint kit (base colour, roughness, normal) with emissive = sign_glow.png on the
+    'SignLit' UV map x GLOW_PEAK (the exporter writes emissiveTexture + emissiveFactor)."""
+    from nmlib import mats
+    m = bpy.data.materials.get("sign_lit")
+    if m is not None:
+        return m
+    m = mats.get("paint_glow").copy()
+    m.name = "sign_lit"
+    nt = m.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    for ln in list(bsdf.inputs["Emission Color"].links):
+        nt.links.remove(ln)
+    uv = nt.nodes.new("ShaderNodeUVMap")
+    uv.uv_map = "SignLit"
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = sign_glow_image()
+    tex.extension = 'EXTEND'
+    nt.links.new(uv.outputs[0], tex.inputs[0])
+    mul = nt.nodes.new("ShaderNodeMix")
+    mul.data_type = 'RGBA'
+    mul.blend_type = 'MULTIPLY'
+    mul.inputs[0].default_value = 1.0
+    nt.links.new(tex.outputs["Color"], mul.inputs[6])
+    mul.inputs[7].default_value = (*GLOW_PEAK, 1)
+    nt.links.new(mul.outputs[2], bsdf.inputs["Emission Color"])
+    bsdf.inputs["Emission Strength"].default_value = 1.0
+    return m
+
+
+def finish_sign_boards(h, objs):
+    """After h.finish(): each sign_cat_<key>_board gets the 'sign_lit' material, a 'SignLit' UV map
+    (u across the board, v up it, from the board's own frame) and is parented to sign_cat_<key>."""
+    by_name = {o.name: o for o in objs}
+    mat = sign_lit_material()
+    for key, Mb, w, hh in h.sign_boards:
+        ob = by_name.get(f"sign_cat_{key}_board")
+        sign = by_name.get(f"sign_cat_{key}")
+        if ob is None:
+            continue
+        me = ob.data
+        me.materials[0] = mat
+        uvl = me.uv_layers.new(name="SignLit")
+        inv = Mb.inverted()
+        for poly in me.polygons:
+            for li in poly.loop_indices:
+                p = inv @ me.vertices[me.loops[li].vertex_index].co
+                uvl.data[li].uv = (p.x / w + 0.5, p.y / hh + 0.5)
+        me.uv_layers.active = me.uv_layers["UVMap"]
+        if sign is not None:
+            ob.parent = sign
+            ob.matrix_parent_inverse = sign.matrix_world.inverted()
 
 
 def canopy(h, F, L, D, lite, snow_index, tint="walnut"):
@@ -335,6 +486,7 @@ def category_cabinet(h, s, lite):
                        scale=(1, 1, 1.25))
     # crest sign on the cornice
     section_sign(h, s["key"], s["label_en"], F, *L["sign"], cw - 0.03, BS.SIGN_H, lite)
+    sign_lamp(h, s["key"], F, L["sign"][0], L["sign"][2], cw - 0.03, lite)
     # glazed door: its own node act_cab_<key> at the hinge, frame and glass as child meshes
     door = Part(f"cab_door_{s['key']}", "paint", var=0.03)
     pane = Part(f"cab_glass_{s['key']}", "glass_clear", var=0.0)
@@ -385,6 +537,7 @@ def section_slots(secs):
 def build_sections(h, lite):
     secs = BS.sections()
     h.doors = []
+    h.sign_boards = []
     for s in secs:
         category_cabinet(h, s, lite)
     for i, (unit, (o, a, L)) in enumerate(sorted(BS.wing_units().items())):
@@ -450,7 +603,9 @@ def build(lite):
     h.markers(sign_pos=tuple(sign_c + Vector((0, -0.04, 0))),
               lights=[(0, 0.15, 2.4), (0, yF - 0.95, 2.3)], cam_dist=5.0, cam_h=1.85)
     reading_card(h)
-    return h.finish() + finish_doors(h)
+    objs = h.finish()
+    finish_sign_boards(h, objs)
+    return objs + finish_doors(h)
 
 
 # round 7: the Reading section's intro card (BUILD.md write_ / cam_read_). A cream card clipped

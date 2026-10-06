@@ -4,9 +4,9 @@
  "minRatio": 75,
  "liteMinRatio": 150,
  "textures": {
-  "candidates": 256,
+  "candidates": 257,
   "converted": 119,
-  "of": 312
+  "of": 313
  },
  "files": {
   "book_open.glb": "book_open.ktx2.glb",
