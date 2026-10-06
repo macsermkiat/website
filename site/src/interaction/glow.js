@@ -16,7 +16,7 @@ import * as THREE from 'three';
 
 export const GLOW = {
   color: [1.0, 0.72, 0.42], // warm lamplight (linear)
-  peak: 0.3, // breath at its fullest: the item's colour x this, added (before exposure; bloom starts near 1)
+  peak: 0.26, // breath at its fullest: the item's colour x this, added (before exposure; bloom starts near 1)
   tint: 0.12, // plus this much of the light itself (dark things still show it)
   low: 0.3, // the breath's trough, as a share of the peak
   steady: 0.62, // reduced motion: a steady glow at this share of the peak
@@ -24,7 +24,7 @@ export const GLOW = {
   hold: 20, // seconds the shimmer lasts after an arrival
   fadeIn: 1.2,
   fadeOut: 1.6,
-  hover: 0.55, // the hovered item
+  hover: 0.5, // the hovered item
   rim: 1.1, // extra toward the silhouette (1 - n.v)^2: reads as light catching the edges
 };
 
@@ -33,11 +33,17 @@ const vertexShader = /* glsl */ `
 #include <fog_pars_vertex>
 varying vec3 vN;
 varying vec3 vV;
+varying vec3 vCol;
 #ifdef GLOW_MAP
 uniform mat3 uMapTransform;
 varying vec2 vUv;
 #endif
 void main() {
+#ifdef USE_COLOR
+  vCol = color.rgb; // the vendors' tints live in COLOR_0 (three multiplies it into the base colour)
+#else
+  vCol = vec3(1.0);
+#endif
 #ifdef GLOW_MAP
   vUv = (uMapTransform * vec3(uv, 1.0)).xy;
 #endif
@@ -60,6 +66,7 @@ uniform float uTint;
 uniform float uScale;
 varying vec3 vN;
 varying vec3 vV;
+varying vec3 vCol;
 #ifdef GLOW_MAP
 uniform sampler2D uMap;
 varying vec2 vUv;
@@ -70,7 +77,7 @@ void main() {
   float ndv = abs(dot(normalize(vN), normalize(vV)));
   float rim = (1.0 - ndv) * (1.0 - ndv);
   // the item's own colour lit by warm lamplight (its hue kept), plus a little of the light itself for dark things
-  vec3 albedo = uAlbedo;
+  vec3 albedo = uAlbedo * vCol;
 #ifdef GLOW_MAP
   albedo *= texture2D(uMap, vUv).rgb;
 #endif
@@ -89,15 +96,16 @@ void main() {
 const templates = {};
 const warm = new THREE.Color(...GLOW.color);
 /** A glow material for a mesh drawn with `src` (its colour and colour map, so the glow keeps the item's hue). */
-function glowMaterial(normals, src, hasUv) {
+function glowMaterial(normals, src, hasUv, hasColor) {
   const map = hasUv && src?.map?.isTexture ? src.map : null;
-  const key = (normals ? 'n' : 'f') + (map ? 'm' : '');
+  const vcol = !!src?.vertexColors && hasColor;
+  const key = (normals ? 'n' : 'f') + (map ? 'm' : '') + (vcol ? 'c' : '');
   templates[key] ||= new THREE.ShaderMaterial({
     name: 'engine_glow',
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uColor: { value: warm }, uAlbedo: { value: new THREE.Color(1, 1, 1) }, uLevel: { value: 0 }, uRim: { value: GLOW.rim }, uTint: { value: GLOW.tint }, uScale: { value: 1 }, uMap: { value: null }, uMapTransform: { value: new THREE.Matrix3() } }]),
     vertexShader, fragmentShader,
     defines: { ...(normals ? { GLOW_NORMALS: '' } : {}), ...(map ? { GLOW_MAP: '' } : {}) },
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: true,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: true, vertexColors: vcol,
     // drawn over its own surface (or the merged copy of it, transformed on the CPU): a nudge toward the camera
     polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4,
   });
@@ -134,9 +142,9 @@ export function createGlow({ scene, items, motion, here, extraTargets = () => []
     const mats = new Map(); // one glow material per source material (and normals / uv)
     const matFor = (m) => {
       const src = Array.isArray(m.material) ? m.material[0] : m.material;
-      const n = !!m.geometry.attributes.normal, uv = !!m.geometry.attributes.uv;
-      const k = `${src?.uuid}|${n}|${uv}`;
-      if (!mats.has(k)) mats.set(k, glowMaterial(n, src, uv));
+      const n = !!m.geometry.attributes.normal, uv = !!m.geometry.attributes.uv, col = !!m.geometry.attributes.color;
+      const k = `${src?.uuid}|${n}|${uv}|${col}`;
+      if (!mats.has(k)) mats.set(k, glowMaterial(n, src, uv, col));
       return mats.get(k);
     };
     const overlays = [];

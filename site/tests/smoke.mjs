@@ -549,7 +549,7 @@ try {
       const gh = await page.evaluate(() => { window.__market.advance(0.5); return window.__market.glow(); });
       const hk = gh.items.find((i) => i.name === 'act_wurst_krakauer');
       const others = gh.items.filter((i) => i.name !== 'act_wurst_krakauer').map((i) => i.level);
-      check('glow: the hovered item glows a little brighter than the rest', gh.hovered === 'act_wurst_krakauer' && !!hk && hk.drawn > 0 && hk.level >= gh.hover * 0.95 && hk.level > Math.max(0, ...others) * 1.3 && hk.level < 0.3, JSON.stringify({ hovered: gh.hovered, hk, maxOther: Math.max(0, ...others) }));
+      check('glow: the hovered item glows a little brighter than the rest', gh.hovered === 'act_wurst_krakauer' && !!hk && hk.drawn > 0 && hk.level >= gh.hover * 0.95 && hk.level > Math.max(0, ...others) * 1.3 && hk.level <= gh.hover + 1e-6, JSON.stringify({ hovered: gh.hovered, hk, maxOther: Math.max(0, ...others) }));
       const k0 = (await page.evaluate(() => window.__market.item('act_wurst_krakauer'))).position;
       await page.mouse.click(kAim.x, kAim.y);
       const pk = await settlePlate();
