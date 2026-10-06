@@ -13,7 +13,8 @@ export function createStopbar({ actionsFor, itemsFor, readsFor, onRead, onStep, 
   let current = null;
   let steps = { prev: null, next: null };
   // On a small screen a busy stop would cover the lower third of the stall, so its buttons fold into one "Things to
-  // do" button; the ornament shop always folds there. A visitor who opens it keeps it open.
+  // do" button; the ornament shop always folds there. Round 10: an open Bücherstand cabinet folds the bar on every
+  // screen, so its covers have the stage to themselves. A visitor who opens it keeps it open.
   const small = window.matchMedia?.('(max-width: 640px), (max-height: 720px)');
   let userOpen = false;
 
@@ -29,7 +30,8 @@ export function createStopbar({ actionsFor, itemsFor, readsFor, onRead, onStep, 
     const tall = bar.offsetHeight > 0.2 * window.innerHeight;
     // the ornament shop (round 9) always folds on a small screen: its moments want the whole stall in view, as an
     // open Bücherstand cabinet does
-    const can = !!small?.matches && ((count > 3 && tall) || (current === 'schmuck' && count > 1));
+    const cabinet = current === 'books' && !!document.documentElement.dataset.cabinet;
+    const can = (!!small?.matches && ((count > 3 && tall) || (current === 'schmuck' && count > 1))) || (cabinet && count > 1);
     fold.hidden = !can;
     fold.textContent = `Things to do (${acts.children.length})`;
     if (can && !userOpen) setFolded(true);
@@ -41,6 +43,7 @@ export function createStopbar({ actionsFor, itemsFor, readsFor, onRead, onStep, 
     if (open) acts.querySelector('button')?.focus({ preventScroll: true });
   });
   small?.addEventListener?.('change', autoFold);
+  window.addEventListener('nm:cabinet', () => { if (current && !bar.hidden) autoFold(); });
   window.addEventListener('resize', () => { if (current && !bar.hidden) autoFold(); });
 
   prev.addEventListener('click', () => steps.prev && onStep(steps.prev));

@@ -39,7 +39,7 @@ def spine_spec(b):
     title = b["spine_title"].upper() if up else b["spine_title"]
     author = b["spine_author"].upper() if up else b["spine_author"]
     two = "\n" in title
-    acc = b["accent"]
+    acc = b["spine_accent"]
     # layout along the spine (0 = head, 1 = foot): the title from near the head, the author's name before the
     # foot band; a long author name takes more length from the title
     aw = min(0.27, max(0.13, 0.0115 * len(author)))
@@ -49,8 +49,8 @@ def spine_spec(b):
     tx, span = (t0 + t1) / 2, (t1 - t0)
     if b["binding"] == "cloth":
         light = b["col"] in ("e8dfc8", "d8c9a2", "b49a6a")
-        return dict(col=b["col"], kind="cloth", gilt=not light and b["ink"] == "d9b25e", title=title, author=author,
-                    font=fnt, wght=600, ink=b["ink"], x=tx, span=span, ax=ax, aw=aw, scale=1.0, afont=fnt)
+        return dict(col=b["col"], kind="cloth", gilt=not light and b["spine_ink"] == "d9b25e", title=title, author=author,
+                    font=fnt, wght=600, ink=b["spine_ink"], x=tx, span=span, ax=ax, aw=aw, scale=1.0, afont=fnt)
 
     def extra(th, L, T, xx, yy):
         # the jacket's accent: a band at the foot, a publisher's mark inside it, and for some a head band
@@ -60,7 +60,7 @@ def spine_spec(b):
         if b["motif"] in ("bar", "split", "frame2", "grid"):
             th.paint(((xx > L * 0.02) & (xx < L * 0.04)).astype(float), hexc(acc), 0.45)
     return dict(col=b["col"], kind="paper", title=title, author=author, font=fnt,
-                wght=700 if fnt in ("josefin", "playfair") else 600, ink=b["ink"], x=tx, span=span,
+                wght=700 if fnt in ("josefin", "playfair") else 600, ink=b["spine_ink"], x=tx, span=span,
                 ax=ax, aw=aw, afont="oswald" if up else fnt, extra=extra, rules=False, scale=1.0 if two else 0.92)
 
 

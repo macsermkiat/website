@@ -129,6 +129,9 @@ D = {
 # panel: the solid title panel; accent: rules, emblem and pattern highlights; font: the category's typeface;
 # pattern: the background pattern (atlas_books._pattern). Round 8 pass 2: the dark shades are lifted about a
 # third so the covers read under the cabinet's light (the judges found the left column too dim at cam_cat).
+# Round 10: every title panel is dark with light type; the people cabinet's cream panel glowed white in the browser
+# (cover glow plus bloom) and washed its dark titles out, so it is dark brown with cream type like the rest; its
+# spines keep their dark lettering on amber (spine_ink, spine_accent).
 CAT_STYLE = {
     "physics": dict(cols=("1f3a66", "27467a", "1a3058"), ink="f2e8d0", panel="0b1426", accent="e0a43a",
                     font="josefin", pattern="orbits"),
@@ -136,8 +139,8 @@ CAT_STYLE = {
                   font="playfair", pattern="lattice"),
     "mind": dict(cols=("267076", "2e7666", "225e66"), ink="f4efe4", panel="10363a", accent="f0a07a",
                  font="garamond", pattern="ripples"),
-    "people": dict(cols=("d89a2a", "e0a83a", "c88a24"), ink="1c1a18", panel="f4ead2", accent="8a2a1a",
-                   font="oswald", pattern="circles"),
+    "people": dict(cols=("d89a2a", "e0a83a", "c88a24"), ink="f6ecd6", panel="2b1a0c", accent="f3c96b",
+                   font="oswald", pattern="circles", spine_ink="1c1a18", spine_accent="8a2a1a"),
     "decisions": dict(cols=("2a6244", "326e4c", "22543a"), ink="f2ead8", panel="0f2a1c", accent="e8b84a",
                       font="baskerville", pattern="branches"),
     "craft": dict(cols=("b8522e", "c26034", "a8482a"), ink="f6efe0", panel="2a2522", accent="e8c070",
@@ -180,7 +183,8 @@ def load():
             i_cat = c["books"].index(b)
             col, ink, fnt, acc, motif = st["cols"][i_cat % 3], st["ink"], st["font"], st["accent"], st["pattern"]
             binding = "jacket" if binding == "cloth" else binding
-            out.append((nn, dict(panel=st["panel"], i_cat=i_cat,title=b["title"], author=b["author"], slug=slug, category=c["key"],
+            out.append((nn, dict(panel=st["panel"], spine_ink=st.get("spine_ink", ink),
+                                 spine_accent=st.get("spine_accent", acc), i_cat=i_cat, title=b["title"], author=b["author"], slug=slug, category=c["key"],
                                  label_de=c["label_de"], label_en=c["label_en"],
                                  spine_title=SPINE_TITLE.get(slug, b["title"]),
                                  spine_author=SPINE_AUTHOR.get(slug, short_author(b["author"])),

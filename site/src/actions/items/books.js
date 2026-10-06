@@ -248,7 +248,7 @@ export function createBooks(ctx) {
       }
     }
     const lift = eye ? (eye.y - target.y) / Math.max(0.2, Math.hypot(eye.x - target.x, eye.z - target.z)) : 0.12;
-    return { center, facing: flat, halfW: halfW + 0.03, halfH: halfH + 0.03, lift, margin: 1.12, near: 0.25, eye, target };
+    return { center, facing: flat, halfW: halfW + 0.03, halfH: halfH + 0.03, lift, margin: 1.12, near: 0.25, eye, target, clearBar: true };
   }
 
   function setProxies() { for (const c of cabinets) if (c.proxy) c.proxy.userData.pickProxy.off = c === openCab; }
@@ -260,9 +260,12 @@ export function createBooks(ctx) {
     if (openCab && openCab !== cab) shutCabinet(openCab);
     openCab = cab;
     setProxies();
+    // first, so the stop bar folds away (or, on a phone, steps aside) before the view is fitted above it
+    document.documentElement.dataset.cabinet = cab.key;
+    window.dispatchEvent(new Event('nm:cabinet'));
     const v = cabinetView(cab);
     if (v) {
-      const back = ctx.frame?.({ center: v.center, facing: v.facing, halfW: v.halfW, halfH: v.halfH, lift: v.lift, margin: v.margin, near: v.near });
+      const back = ctx.frame?.({ center: v.center, facing: v.facing, halfW: v.halfW, halfH: v.halfH, lift: v.lift, margin: v.margin, near: v.near, clearBar: v.clearBar });
       if (!back && v.eye) ctx.flyBack?.({ pos: v.eye, target: v.target, near: 0.3, exact: true });
       ctx.keyAt?.(v.center, v.facing);
     }
@@ -286,7 +289,6 @@ export function createBooks(ctx) {
     focusIdx = Math.min(Math.max(0, focus), cab.books.length - 1);
     if (focus < 0) focusIdx = -1;
     showFocus();
-    document.documentElement.dataset.cabinet = cab.key;
     const n = cab.books.length;
     say(`<b>${esc(cab.label)}</b>: ${n} book${n === 1 ? '' : 's'}. <em>Tap a cover to open it. ← → move between the books, ↑ ↓ between the cabinets, Escape steps back.</em>`);
     return true;
@@ -319,6 +321,7 @@ export function createBooks(ctx) {
     setProxies();
     ctx.highlight?.(null);
     delete document.documentElement.dataset.cabinet;
+    window.dispatchEvent(new Event('nm:cabinet'));
   }
 
   function showFocus() {

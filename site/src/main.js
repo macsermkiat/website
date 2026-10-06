@@ -418,28 +418,42 @@ async function boot() {
     rig.flyTo({ pos, target, near: 1 });
     guide.markCloseUp();
   }
-  /** Frame a box (centre, facing, half width and height in metres) square to its face, above the stop bar. */
-  /** The view frameRegion would fly to (position, target, near), without flying. */
-  function frameRegionView({ center, facing, halfW, halfH, depth = 0, lift = 0.25, margin = 1.25, near = 0.5 }) {
-    if (!center || !facing) return null;
-    const fx = 1, fy = 1 - Math.min(0.2, 70 / Math.max(300, stage.clientHeight));
-    const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-    const d = Math.max((halfH * margin) / (t * fy), (halfW * margin) / (t * camera.aspect * fx), near + 0.15) + depth / 2;
-    const dir = facing.clone().setY(0).normalize();
-    dir.y = lift;
-    dir.normalize();
-    return { pos: center.clone().addScaledVector(dir, d), target: center.clone(), near };
+  // How far up the stage the stop bar reaches (px). Round 10: a framed close-up (an open Bücherstand cabinet at
+  // 1366 x 768) sat centred on the whole stage, so the bar hid its lowest row of covers; it is now framed in the
+  // clear part above the bar. While the bar is away for a book being read, the last measure stands (the view back
+  // to the cabinet is worked out then); a bar the stylesheet hides (a phone's open cabinet) covers nothing.
+  let barCoverPx = 0;
+  function barCover() {
+    const bar = stopbarEl;
+    if (!bar) return 0;
+    if (bar.hidden) return document.documentElement.dataset.cabinet ? barCoverPx : 0;
+    if (getComputedStyle(bar).display === 'none') return (barCoverPx = 0);
+    const s = stage.getBoundingClientRect(), b = bar.getBoundingClientRect();
+    return (barCoverPx = Math.max(0, Math.min(s.height * 0.45, s.bottom - b.top + 8)));
   }
-  function frameRegion({ center, facing, halfW, halfH, depth = 0, lift = 0.25, margin = 1.25, near = 0.5 }) {
-    if (rig.riding || !center || !facing) return null;
-    const fx = 1, fy = 1 - Math.min(0.2, 70 / Math.max(300, stage.clientHeight));
+  /** The view frameRegion would fly to (position, target, near), without flying: the box (centre, facing, half width
+   *  and height in metres) square to its face; with clearBar, in the clear part of the stage above the stop bar. */
+  function frameRegionView({ center, facing, halfW, halfH, depth = 0, lift = 0.25, margin = 1.25, near = 0.5, clearBar = false }) {
+    if (!center || !facing) return null;
+    const H = Math.max(300, stage.clientHeight);
+    const cover = clearBar ? barCover() : 0;
+    const fx = 1, fy = 1 - Math.min(0.45, Math.max(70, cover) / H);
     const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
     const d = Math.max((halfH * margin) / (t * fy), (halfW * margin) / (t * camera.aspect * fx), near + 0.15) + depth / 2;
     const dir = facing.clone().setY(0).normalize();
     dir.y = lift;
     dir.normalize();
+    // look a little below the box, so it sits centred in the clear part of the stage above the bar
+    const target = center.clone();
+    target.y -= (cover / H) * d * t;
+    return { pos: target.clone().addScaledVector(dir, d), target, near };
+  }
+  function frameRegion(o) {
+    if (rig.riding) return null;
+    const v = frameRegionView(o);
+    if (!v) return null;
     const back = { pos: camera.position.clone(), target: rig.controls.target.clone(), near: rig.controls.minDistance };
-    rig.flyTo({ pos: center.clone().addScaledVector(dir, d), target: center.clone(), near });
+    rig.flyTo(v);
     return back;
   }
 
