@@ -5,6 +5,10 @@
 //     cabinets) breathe a faint warm light, about one breath every 2.6 s. It fades after the first interaction at
 //     that stop, or after about 20 s, and comes back on the next arrival. On a phone (no hover) this is how a
 //     visitor finds what to tap. With reduced motion it is a steady faint glow instead of a breath.
+//   - rest (Mac, 2026-10-07: "the responsive object should have glowing light in every responsive objects"): after the
+//     shimmer, everything that answers a click keeps a faint steady glow for as long as the visitor stays. That covers
+//     the writing surfaces too (chalkboards, menus, coasters, the gondola placards, the ticket), and at the overview
+//     the signpost's arms. A surface being read does not glow (the words would wash out).
 //   - hover: the item under the pointer glows a little brighter (picking.js keeps its lift and label).
 // Cheap by design: no extra pass and no outline. Items often share one material (the vendor's atlas, the merged
 // shelf goods), so nothing here touches a model's material: each glowing mesh gets a thin additive copy that draws
@@ -16,15 +20,16 @@ import * as THREE from 'three';
 
 export const GLOW = {
   color: [1.0, 0.72, 0.42], // warm lamplight (linear)
-  peak: 0.26, // breath at its fullest: the item's colour x this, added (before exposure; bloom starts near 1)
-  tint: 0.12, // plus this much of the light itself (dark things still show it)
+  peak: 0.34, // breath at its fullest: the item's colour x this, added (before exposure; bloom starts near 1)
+  tint: 0.2, // plus this much of the light itself (dark things still show it)
   low: 0.3, // the breath's trough, as a share of the peak
   steady: 0.62, // reduced motion: a steady glow at this share of the peak
   period: 2.6, // seconds per breath
   hold: 20, // seconds the shimmer lasts after an arrival
   fadeIn: 1.2,
   fadeOut: 1.6,
-  hover: 0.5, // the hovered item
+  rest: 0.2, // after the shimmer: a faint steady glow on everything that answers a click
+  hover: 0.6, // the hovered item
   rim: 1.1, // extra toward the silhouette (1 - n.v)^2: reads as light catching the edges
 };
 
@@ -115,18 +120,21 @@ function glowMaterial(normals, src, hasUv, hasColor) {
   if (src?.color?.isColor) m.uniforms.uAlbedo.value.copy(src.color);
   // see-through things (a cabinet's glass, a glass of Glühwein) glow about as much as they show
   if (src?.transparent) m.uniforms.uScale.value = THREE.MathUtils.clamp((src.opacity ?? 1) * 2, 0.15, 1);
+  // metal (the copper pot) shows its light colour only in reflections: glowing it at full albedo turns it pale
+  if (src?.metalness > 0) m.uniforms.uScale.value *= 1 - 0.75 * Math.min(1, src.metalness);
   if (map) { map.updateMatrix(); m.uniforms.uMap.value = map; m.uniforms.uMapTransform.value.copy(map.matrix); }
   return m;
 }
 
 const SKIP_MESH = /^(fx_|write_|card_|cam_|engine_|open_|steam|smoke)/i;
+const SKIP_MESH_READABLE = /^(fx_|cam_|engine_|open_|steam|smoke)/i; // a writing surface glows on its own page and board
 const shown = (o) => { for (let x = o; x; x = x.parent) if (!x.visible) return false; return true; };
 
 /**
  * createGlow({ scene, items, motion, here: () => stop id or null (arrived), extraTargets: (stop) => [Object3D] })
  * update(dt) once a frame; hover(node|null); interacted(); refresh() after a graft; state() for tests.
  */
-export function createGlow({ scene, items, motion, here, extraTargets = () => [] }) {
+export function createGlow({ scene, items, motion, here, extraTargets = () => [], reading = () => false }) {
   const group = new THREE.Group();
   group.name = 'engine_glow_overlays';
   group.matrixAutoUpdate = false;
@@ -148,9 +156,10 @@ export function createGlow({ scene, items, motion, here, extraTargets = () => []
       return mats.get(k);
     };
     const overlays = [];
+    const skip = node.userData.readable ? SKIP_MESH_READABLE : SKIP_MESH;
     node.traverse((m) => {
       if (!m.isMesh || m.isSkinnedMesh || m.isInstancedMesh || m.isText || m.isSprite || m.morphTargetInfluences) return;
-      if (SKIP_MESH.test(m.name || '') || m.userData.pickProxyHidden || m.userData.pickProxy || m.userData.glowSkip) return;
+      if (skip.test(m.name || '') || m.userData.pickProxyHidden || m.userData.pickProxy || m.userData.glowSkip) return;
       if (!m.geometry?.attributes?.position) return;
       const o = new THREE.Mesh(m.geometry, matFor(m));
       o.name = 'engine_glow';
@@ -183,7 +192,7 @@ export function createGlow({ scene, items, motion, here, extraTargets = () => []
   function targets(id) {
     if (!id) return [];
     const out = new Set();
-    for (const it of items.of(id)) if (it.clickable && it.node && (items.pickable?.(it) ?? true)) out.add(it.node);
+    for (const it of items.of(id) || []) if (it.clickable && it.node && (items.pickable?.(it) ?? true)) out.add(it.node);
     for (const n of extraTargets(id) || []) if (n) out.add(n);
     // a node inside another target (the Schwibbogen's candles) glows with it, not twice
     return [...out].filter((n) => { for (let p = n.parent; p; p = p.parent) if (out.has(p)) return false; return true; });
@@ -228,9 +237,12 @@ export function createGlow({ scene, items, motion, here, extraTargets = () => []
       for (const r of [...recs.values()]) {
         // the hover glow eases in and out (about a sixth of a second)
         r.hk = r.node === hovered ? Math.min(1, r.hk + dt * 6) : Math.max(0, r.hk - dt * 6);
-        r.level = Math.max(here_.has(r.node) && shimmer > 0 ? base : 0, GLOW.hover * ease(r.hk));
+        const quiet = r.node.userData.readable && reading();
+        r.level = Math.max(here_.has(r.node) && !quiet ? Math.max(base, GLOW.rest) : 0, GLOW.hover * ease(r.hk));
         if (r.level <= 0.0005 && r.node !== hovered && !here_.has(r.node)) { drop(r); continue; }
-        for (const m of r.mats) { m.uniforms.uLevel.value = r.level; m.uniforms.uRim.value = GLOW.rim; m.uniforms.uTint.value = GLOW.tint; }
+        // writing glows by its own ink and chalk only (no added light): a chalkboard's words stay crisp
+        const tint = r.node.userData.readable ? 0 : GLOW.tint;
+        for (const m of r.mats) { m.uniforms.uLevel.value = r.level; m.uniforms.uRim.value = GLOW.rim; m.uniforms.uTint.value = tint; }
         const on = r.level > 0.0005;
         for (const ov of r.overlays) {
           const { o, m } = ov;
@@ -253,7 +265,7 @@ export function createGlow({ scene, items, motion, here, extraTargets = () => []
     /** For tests: the shimmer's state and each glowing node's level. */
     state() {
       const list = [...recs.values()].map((r) => ({ name: r.node.name, level: +r.level.toFixed(4), drawn: r.overlays.filter((x) => x.o.visible).length, meshes: r.overlays.length }));
-      return { stop, t: +t.toFixed(2), shimmer: +shimmer.toFixed(3), ending, reduced: !!motion.reduced, hovered: hovered?.name || null, targets: current.map((n) => n.name), items: list, peak: GLOW.peak, hover: GLOW.hover };
+      return { stop, t: +t.toFixed(2), shimmer: +shimmer.toFixed(3), ending, reduced: !!motion.reduced, hovered: hovered?.name || null, targets: current.map((n) => n.name), readables: current.filter((n) => n.userData.readable).map((n) => n.name), items: list, peak: GLOW.peak, hover: GLOW.hover, rest: GLOW.rest };
     },
   };
 }

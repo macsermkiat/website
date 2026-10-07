@@ -13,7 +13,7 @@ function surfaceRoot(o) { let top = o; for (let x = o; x && x.userData?.readable
 // further away the pointer means the whole stall.
 export const ITEM_RANGE = 11;
 
-export function createPicking({ dom, camera, market, overlay, outline, items, labelFor, onPick, onItem, onProxy, proxyLabel = (p) => p.label || '', current = () => null, extraRoots = () => [], readLabel = () => '', signLabel = () => '', onRead, onSign, onLink, readingNow = () => false, glow = null }) {
+export function createPicking({ dom, camera, market, overlay, outline, items, labelFor, onPick, onItem, onProxy, proxyLabel = (p) => p.label || '', current = () => null, extraRoots = () => [], readLabel = () => '', signLabel = () => '', onRead, onSign, onLink, readingNow = () => false, glow = null, bodyAnswers = () => true }) {
   const ray = new THREE.Raycaster();
   const ptr = new THREE.Vector2();
   const tip = document.createElement('div');
@@ -86,7 +86,9 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
       const near = h.distance < ITEM_RANGE || (place && current() === place);
       // an item only answers where its handler lets it (the books in a closed cabinet do not)
       if (item && near && place && (items.pickable?.(item) ?? true)) return { ...base, id: place, item };
-      if (place) return { ...base, id: place };
+      // a stall's own body (its walls, roof, counter) walks there from afar; at a stop it answers nothing, so a stray
+      // click does not open the stall's reading (Mac, 2026-10-07: only the things you can use should respond)
+      if (place) return bodyAnswers(place) ? { ...base, id: place } : null;
       // a deco stall (scenery) or anything else: it stops the pointer, and nothing answers
       return null;
     }
@@ -167,7 +169,7 @@ export function createPicking({ dom, camera, market, overlay, outline, items, la
     /** What is under client (x, y): the full pick (tests). */
     full: (x, y) => { const p = pick({ clientX: x, clientY: y }); return p ? { id: p.id || null, item: p.item?.node.name || null, proxy: p.proxy ? `${p.proxy.kind}:${p.proxy.key}` : null, readable: p.readable || null, sign: p.sign || null, link: p.link || null } : null; },
     /** The raw hit list under client (x, y), nearest first (tests: what stops the pointer). */
-    rawAt: (x, y) => { setRay({ clientX: x, clientY: y }); const cands = boxes.filter((b) => ray.ray.intersectsBox(b.box)).map((b) => b.h); return ray.intersectObjects(cands, true).slice(0, 4).map((h) => { let o = h.object; while (o && !o.userData.entry) o = o.parent; return { entry: o?.userData.entry?.id || null, kind: o?.userData.entry?.kind || null, distance: +h.distance.toFixed(2) }; }); },
+    rawAt: (x, y) => { setRay({ clientX: x, clientY: y }); const cands = boxes.filter((b) => ray.ray.intersectsBox(b.box)).map((b) => b.h); return ray.intersectObjects(cands, true).slice(0, 4).map((h) => { let o = h.object; while (o && !o.userData.entry) o = o.parent; return { entry: o?.userData.entry?.id || null, kind: o?.userData.entry?.kind || null, place: o?.userData.place || null, distance: +h.distance.toFixed(2) }; }); },
     /** Highlight a place without a pointer, for keyboard focus on the place buttons. */
     highlight(id) { if (outline) outline.selectedObjects = id && market.places[id] ? [market.places[id].holder] : []; },
   };

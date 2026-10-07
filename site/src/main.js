@@ -371,10 +371,23 @@ async function boot() {
   };
 
   // the arrival shimmer and the hover glow on what answers a click at the stop (interaction/glow.js)
+  // the writing surfaces of a stop (their top node: a chalkboard, a coaster, a gondola placard), found on arrival
+  function readableRoots(id) {
+    const out = [];
+    scene.traverse((o) => {
+      const r = o.userData.readable;
+      if (!r || o.parent?.userData.readable === r || o.userData.glowOverlay || o.userData.href) return; // a reading page's links are not on the stall
+      let p = o; while (p && !p.userData.place) p = p.parent;
+      if (p?.userData.place === id) out.push(o);
+    });
+    return out;
+  }
   glow = createGlow({
     scene, items: actions.items, motion,
-    here: () => (guide.arrived && guide.here && !actions.rides.riding ? guide.here : null),
-    extraTargets: (id) => actions.items.glowTargets(id),
+    // at the overview (no stop, standing still) the signpost's arms are what answers
+    here: () => (actions.rides.riding ? null : guide.arrived && guide.here ? guide.here : !guide.here && !rig.moving ? 'overview' : null),
+    extraTargets: (id) => (id === 'overview' ? Object.values(signpost.arms) : [...actions.items.glowTargets(id), ...readableRoots(id)]),
+    reading: () => world.isOpen,
   });
   actions.items.onInteract(() => glow.interacted());
   // a button for something to do at the stop (read, an action, an item, a view) is an interaction too
@@ -392,6 +405,8 @@ async function boot() {
     labelFor: (id) => (guide.here === id && guide.arrived ? `${SECTIONS[id]?.name} · ${SECTIONS[id]?.sub}` : `Walk to the ${SECTIONS[id]?.name} · ${SECTIONS[id]?.sub}`),
     extraRoots: () => (signpost.group ? [signpost.group] : Object.values(signpost.arms)),
     readingNow: () => world.isOpen,
+    // at a stop only the things there answer (items, writing, cabinets, signs); from the overview a stall walks there
+    bodyAnswers: () => !(guide.arrived && guide.here),
     readLabel: (sid) => { const s = world.surface(sid); const p = world.pieceFor(sid); return p?.decorative ? p.title : `Read ${s?.label || 'this'}${p?.title && s?.kind === 'coaster' ? `: ${p.title}` : ''}`; },
     signLabel: (id) => `${ARM_NAMES[id] || id}: walk to the ${SECTIONS[id]?.name || id} · ${SECTIONS[id]?.sub || ''}`,
     onSign: (id) => guide.walkTo(id),

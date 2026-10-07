@@ -491,6 +491,11 @@ try {
     const act = async (id, k) => { await page.evaluate(([id, k]) => window.__market.act(id, k), [id, k]); };
     const noteNow = () => page.evaluate(() => window.__market.note());
     const waitN = (re, s = 20) => page.evaluate(([src, s]) => { const m = window.__market; for (let t = 0; t < s; t += 0.5) { if (new RegExp(src).test(m.note())) return true; m.advance(0.5); } return new RegExp(src).test(m.note()); }, [re.source, s]);
+    // round 10 (Mac, 2026-10-07): at the overview the signpost's arms glow (they answer a click)
+    {
+      const go0 = await page.evaluate(() => { window.__market.advance(1.5); return window.__market.glow(); });
+      check('glow: at the overview the signpost\'s arms glow', go0.stop === 'overview' && go0.targets.length >= 5 && lit(go0).length >= 5, JSON.stringify({ stop: go0.stop, targets: go0.targets, lit: lit(go0).length }));
+    }
     await page.click('#signboard .sb-arm[data-place="glueh"]');
     await page.evaluate(() => window.__market.advance(1));
     check('the on-screen signpost walks to the Glühwein stall', (await page.evaluate(() => window.__market.stop)) === 'glueh' && (await page.evaluate(() => window.__market.arrived)));
@@ -501,11 +506,31 @@ try {
     const gb = (await page.evaluate(() => { window.__market.advance(0.7); return window.__market.glow(); }));
     const gaLevels = lit(ga).map((i) => i.level);
     check('glow: arriving at the Glühwein stall, its clickable things glow faintly (reduced motion: steady, no breath)', ga.stop === 'glueh' && ga.targets.length >= 3 && lit(ga).length === ga.targets.length && Math.max(...gaLevels) <= ga.peak + 1e-6 && Math.abs(lit(gb)[0]?.level - lit(ga)[0]?.level) < 1e-4, JSON.stringify({ targets: ga.targets, lit: lit(ga).length, levels: gaLevels.slice(0, 4), peak: ga.peak, after: lit(gb)[0]?.level }));
-    check('glow: only clickable act_ items glow (no deco stall, no scenery)', ga.targets.every((n) => /^act_/.test(n)), ga.targets.join(' '));
+    check('glow: only what answers a click glows: act_ items and the stop\'s writing (no deco stall, no scenery)', ga.targets.every((n) => /^act_/.test(n) || ga.readables.includes(n)) && ga.readables.length >= 1, JSON.stringify({ targets: ga.targets, readables: ga.readables }));
     await tapAct(page, '#stopActs [data-action="pour"]');
     check('pour a mug (the ladle fills one of the stall\'s own mugs)', await waitN(/poured tonight: 1/), await noteNow());
     const gc = await page.evaluate(() => { window.__market.advance(2.5); return window.__market.glow(); });
-    check('glow: after the first interaction at the stop the shimmer fades out', gc.ending && gc.shimmer === 0 && lit(gc).length === 0, JSON.stringify({ ending: gc.ending, shimmer: gc.shimmer, lit: lit(gc).map((i) => i.name) }));
+    check('glow: after the first interaction the shimmer fades to a faint steady glow on everything that answers a click', gc.ending && gc.shimmer === 0 && lit(gc).length === gc.targets.length && lit(gc).every((i) => Math.abs(i.level - gc.rest) < 1e-3 || i.name === gc.hovered), JSON.stringify({ ending: gc.ending, shimmer: gc.shimmer, rest: gc.rest, lit: lit(gc).map((i) => [i.name, i.level]) }));
+    // round 10 (Mac, 2026-10-07): at a stop the stall's own walls, roof and counter answer nothing (no label, no reading)
+    {
+      const body = await page.evaluate(() => {
+        const m = window.__market, c = document.querySelector('#stage canvas').getBoundingClientRect();
+        for (let y = c.top + 20; y < c.bottom - 20; y += 14) for (let x = c.left + 20; x < c.right - 20; x += 14) {
+          const raw = m.rawAt(x, y)[0];
+          if (raw?.place === 'glueh' && !m.pickAt(x, y)) return { x, y, entry: raw.entry };
+        }
+        return null;
+      });
+      if (body) {
+        await page.mouse.move(body.x, body.y);
+        await page.evaluate(() => window.__market.advance(0.3));
+        const tip = await page.evaluate(() => { const t = document.querySelector('.overlay .tip'); return t && !t.hidden ? t.textContent : null; });
+        await page.mouse.click(body.x, body.y);
+        await page.evaluate(() => window.__market.advance(1.5));
+        const after = await page.evaluate(() => ({ stop: window.__market.stop, reading: window.__market.reading().open }));
+        check('at a stop, a click on the stall itself (not on a thing to use) does nothing: no label, no reading, no walk', !tip && after.stop === 'glueh' && !after.reading, JSON.stringify({ body, tip, after }));
+      } else check('at a stop, a click on the stall itself does nothing (a stall pixel to click on)', false, 'no stall pixel found');
+    }
     await act('glueh', 'prost');
     // the first voice answers at once, the rest a moment apart (timers, not frames): give them a few seconds
     let bubbles = 0;
@@ -522,7 +547,7 @@ try {
     check('the Bratwurst has the round-10 plate set (no clickable sausage rows left)', (await wurstSet(page)) === 'plate', await wurstSet(page));
     const gw = await page.evaluate(() => { window.__market.advance(1.5); return window.__market.glow(); });
     const plateSet = ['act_wurst_thueringer', 'act_wurst_nuernberger', 'act_wurst_krakauer', 'act_wurst_curry', 'act_roll', 'act_sauce_senf', 'act_sauce_ketchup', 'act_sauce_curry', 'act_shaker_curry', 'act_plate'];
-    check('glow: a new arrival (the Bratwurst) brings the shimmer back, on the whole plate set and nothing else', gw.stop === 'wurst' && !gw.ending && gw.shimmer === 1 && plateSet.every((n) => gw.targets.includes(n)) && gw.targets.length === plateSet.length && lit(gw).length === plateSet.length, JSON.stringify({ targets: gw.targets, lit: lit(gw).length }));
+    check('glow: a new arrival (the Bratwurst) brings the shimmer back, on the whole plate set (and the stall\'s writing where it shows), nothing else', gw.stop === 'wurst' && !gw.ending && gw.shimmer === 1 && plateSet.every((n) => gw.targets.includes(n)) && gw.targets.every((n) => plateSet.includes(n) || gw.readables.includes(n)) && plateSet.every((n) => lit(gw).some((i) => i.name === n)), JSON.stringify({ readables: gw.readables, unlit: gw.targets.filter((n) => !lit(gw).some((i) => i.name === n)) }));
     check('the Bratwurst\'s buttons: Turn the sausages, One in a bun, Mix me a plate', (await page.locator('#stopActs [data-action="turn"]').count()) === 1 && (await page.locator('#stopActs [data-action="bun"]').count()) === 1 && (await page.locator('#stopActs [data-action="plate"]').count()) === 1);
     const g0 = await page.evaluate(() => window.__market.handlers.grill());
     await tapAct(page, '#stopActs [data-action="turn"]');
@@ -1045,10 +1070,10 @@ try {
       m.advance(1.5);
       const g2 = m.glow();
       m.freeze(false);
-      return { min: Math.min(...lv), max: Math.max(...lv), peak: g0.peak, reduced: g0.reduced, targets: g0.targets.length, after20: { shimmer: g1.shimmer, lit: g1.items.filter((i) => i.level > 0.001).length }, again: { stop: g2.stop, shimmer: g2.shimmer, lit: g2.items.filter((i) => i.level > 0.001).length } };
+      return { min: Math.min(...lv), max: Math.max(...lv), peak: g0.peak, reduced: g0.reduced, targets: g0.targets.length, after20: { shimmer: g1.shimmer, lit: g1.items.filter((i) => i.level > 0.001).length, atRest: g1.items.filter((i) => Math.abs(i.level - g1.rest) < 1e-3).length, rest: g1.rest }, again: { stop: g2.stop, shimmer: g2.shimmer, lit: g2.items.filter((i) => i.level > 0.001).length } };
     });
-    check('glow (lite, with motion): the clickable things breathe slowly and faintly on arrival', !breath.reduced && breath.targets >= 3 && breath.max <= breath.peak + 1e-6 && breath.max > breath.min * 1.8 && breath.min > 0, JSON.stringify(breath));
-    check('glow: the shimmer is gone after about 20 s, and comes back on the next arrival', breath.after20.shimmer === 0 && breath.after20.lit === 0 && breath.again.stop === 'glueh' && breath.again.shimmer > 0.9 && breath.again.lit >= 3, JSON.stringify(breath));
+    check('glow (lite, with motion): the clickable things breathe slowly and faintly on arrival', !breath.reduced && breath.targets >= 3 && breath.max <= breath.peak + 1e-6 && breath.max > breath.min * 1.4 && breath.min > 0, JSON.stringify(breath));
+    check('glow: after about 20 s the shimmer settles to the faint steady glow, and comes back on the next arrival', breath.after20.shimmer === 0 && breath.after20.lit > 0 && breath.after20.atRest === breath.after20.lit && breath.again.stop === 'glueh' && breath.again.shimmer > 0.9 && breath.again.lit >= 3, JSON.stringify(breath));
     await ctx.close();
   }
 
@@ -1077,7 +1102,7 @@ try {
       const pt = await page.evaluate(() => { const m = window.__market; for (let t = 0; t < 10 && m.handlers.plate().busy; t += 0.5) m.advance(0.5); m.advance(0.5); return m.handlers.plate(); });
       check('phone: tapping a Thüringer puts one on the plate (reduced motion: it lands at once)', pt.food.join() === 'thueringer', JSON.stringify(pt));
       const gq = await page.evaluate(() => { window.__market.advance(2.5); return window.__market.glow(); });
-      check('phone: after the first tap the glow fades (the tapped item glows a moment while its name shows)', gq.ending && gq.shimmer === 0 && lit(gq).every((i) => i.name === gq.hovered), JSON.stringify({ ending: gq.ending, shimmer: gq.shimmer, lit: lit(gq).map((i) => i.name), hovered: gq.hovered }));
+      check('phone: after the first tap the shimmer settles to the faint steady glow (the tapped item glows brighter while its name shows)', gq.ending && gq.shimmer === 0 && lit(gq).every((i) => i.name === gq.hovered || Math.abs(i.level - gq.rest) < 1e-3), JSON.stringify({ ending: gq.ending, shimmer: gq.shimmer, lit: lit(gq).map((i) => i.name), hovered: gq.hovered }));
     } else check('phone: tapping a Thüringer puts one on the plate (reduced motion: it lands at once)', false, 'no clear pixel on act_wurst_thueringer');
     await page.evaluate(() => window.__market.read('wurst.menu'));
     await page.evaluate(() => window.__market.advance(1));
@@ -1090,7 +1115,7 @@ try {
     check('phone: at the ornament shop the stop bar folds away (judge note, round 8)', pf.stop === 'schmuck' && pf.folded, JSON.stringify(pf));
     const gs = await page.evaluate(() => { window.__market.advance(1.5); return window.__market.glow(); });
     const harm = gs.targets.filter((n) => /^act_orn_harmonica_\d+$/.test(n)).length;
-    check('glow: at the ornament shop its three moments glow (twelve harmonica baubles, the mirror ball, the Schwibbogen) and nothing else', gs.stop === 'schmuck' && harm === 12 && gs.targets.includes('act_orn_mirrorball') && gs.targets.includes('act_orn_schwibbogen') && gs.targets.length === 14 && lit(gs).length === 14, JSON.stringify({ targets: gs.targets, lit: lit(gs).length }));
+    check('glow: at the ornament shop its three moments glow (twelve harmonica baubles, the mirror ball, the Schwibbogen) and nothing else', gs.stop === 'schmuck' && harm === 12 && gs.targets.includes('act_orn_mirrorball') && gs.targets.includes('act_orn_schwibbogen') && gs.targets.filter((n) => !gs.readables.includes(n)).length === 14 && lit(gs).length >= 14, JSON.stringify({ targets: gs.targets, lit: lit(gs).length }));
     const rm = await page.evaluate(() => {
       const m = window.__market, H = () => m.handlers.schmuck();
       m.freeze(true);
