@@ -41,6 +41,7 @@ import { createGovernor } from './governor.js';
 import { counterLocal } from './actions/util.js';
 import { showPlainFallback } from './ui/fallback.js';
 import { setupMute } from './ui/mute.js';
+import { initAnalytics, track } from './analytics.js';
 
 const $ = (id) => document.getElementById(id);
 const warnings = [];
@@ -65,6 +66,7 @@ function fail(msg, { plain = true } = {}) {
 const STREAMED = (e) => e.kind === 'section' || e.place === 'band' || e.kind === 'town' || e.id === 'tree' || e.kind === 'tree';
 
 async function boot() {
+  initAnalytics();
   if (!$('tagline').textContent.trim()) $('tagline').innerHTML = taglineHtml();
   const quality = chooseQuality();
   const lite = quality.lite;
@@ -217,6 +219,7 @@ async function boot() {
   function readSurface(sid, p = null) {
     const piece = world.pieceFor(sid);
     if (!piece) return;
+    if (!(world.isOpen && world.current.surface === sid)) track('read', { surface: sid });
     // reading already: a click on the page turns it (the right half on, the left half back)
     if (world.isOpen && world.current.surface === sid) {
       const half = clickHalf(sid, p);
@@ -347,7 +350,7 @@ async function boot() {
     onStep: (id) => guide.walkTo(id),
     playButtonLabel: playLabel,
   });
-  guide = createGuide({ camera, rig, stroll, streamer, actions, world, stopbar, signboard, note, key, market, announce, sections: SECTIONS });
+  guide = createGuide({ camera, rig, stroll, streamer, actions, world, stopbar, signboard, note, key, market, announce, sections: SECTIONS, onArrive: (id) => track('stop', { stop: id }) });
   // the reading bar's "Step back" and Escape both come back to the stop
 
   /** What there is to read at a stop, as buttons for the bar. */
@@ -422,6 +425,7 @@ async function boot() {
       if (item.placeId && market.places[item.placeId] && guide.here !== item.placeId) { guide.walkTo(item.placeId); return; }
       if (world.isOpen && item.kind !== 'book') world.close({ silent: true, keepCamera: true });
       actions.items.click(item);
+      track('use', { item: item.node?.name || item.kind || '' });
       focusItem(item);
     },
     // a pick proxy: a Bücherstand cabinet (or its sign), opened by the books' handler

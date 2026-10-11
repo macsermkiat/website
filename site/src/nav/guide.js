@@ -4,7 +4,7 @@
 //   step(±1)     the previous / next stop                  read(id) read a piece (walking there first if need be)
 //   back()       from a close-up (an item, a deco stall, a shelf) back to the stop's view
 
-export function createGuide({ camera, rig, stroll, streamer, actions, world, stopbar, signboard, note, key, market, announce, sections, onMove }) {
+export function createGuide({ camera, rig, stroll, streamer, actions, world, stopbar, signboard, note, key, market, announce, sections, onMove, onArrive }) {
   let here = null; // the stop the visitor is at, or walking to
   let arrived = false;
   let closeUp = false;
@@ -50,6 +50,7 @@ export function createGuide({ camera, rig, stroll, streamer, actions, world, sto
   function arrive(id) {
     if (here !== id) return;
     arrived = true;
+    onArrive?.(id);
     document.documentElement.dataset.walking = 'false';
     stopbar.show(id, { prevId: stroll.prev(id), nextId: stroll.next(id) });
     announce(sections[id]?.play ? `At the ${name(id)}: ${sections[id]?.sub || ''}. Click the ornaments, or use the buttons below.` : `At the ${name(id)}: ${sections[id]?.sub || ''}. Press Enter to read what is written here.`);
