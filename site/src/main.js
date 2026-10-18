@@ -66,6 +66,11 @@ function fail(msg, { plain = true } = {}) {
 const STREAMED = (e) => e.kind === 'section' || e.place === 'band' || e.kind === 'town' || e.id === 'tree' || e.kind === 'tree';
 
 async function boot() {
+  // How to visit: the walking tips and the credits live in a dialog, not under the market. Wired first, so it
+  // opens while the market loads and on the text fallback too.
+  const about = $('about');
+  $('aboutOpen').addEventListener('click', () => { if (about.showModal) about.showModal(); else about.setAttribute('open', ''); });
+  about.addEventListener('click', (e) => { if (e.target === about) about.close(); });   // a click on the backdrop closes it
   initAnalytics();
   if (!$('tagline').textContent.trim()) $('tagline').innerHTML = taglineHtml();
   const quality = chooseQuality();
@@ -313,6 +318,8 @@ async function boot() {
     syncPlay();
   }
   playBtn.addEventListener('click', togglePlay);
+  playBtn.disabled = false;
+  playBtn.removeAttribute('title');
 
   // ---------- streaming ----------
   const streamer = createStreamer({
@@ -593,15 +600,12 @@ async function boot() {
     guide.home();
   }
   $('reset').addEventListener('click', resetView);
-  // How to visit: the walking tips and the credits live in a dialog, not under the market
-  const about = $('about');
-  $('aboutOpen').addEventListener('click', () => { if (about.showModal) about.showModal(); else about.setAttribute('open', ''); });
-  about.addEventListener('click', (e) => { if (e.target === about) about.close(); });   // a click on the backdrop closes it
   // Step back: out of a shop moment first (the view over the Schwibbogen, the dive into the mirror ball)
   $('stepBack').addEventListener('click', () => { if (actions.shop?.end()) return; guide.back(); });
   $('cabTurnL').addEventListener('click', () => actions.items.handlers.turnCabinets?.(-1));
   $('cabTurnR').addEventListener('click', () => actions.items.handlers.turnCabinets?.(1));
   setupMute($('mute'), audio);
+  $('mute').disabled = false;
   bindKeyboard({
     canvas: renderer.domElement, order: ORDER, rig,
     walkTo: (id) => { showStage(); guide.walkTo(id); },

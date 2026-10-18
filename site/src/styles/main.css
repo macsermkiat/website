@@ -60,6 +60,10 @@ mark.check { background: rgba(230, 182, 94, .18); color: var(--gold); border-rad
   body { padding-block: 14px 40px; }
   .stage { height: 72vh; height: 72svh; min-height: 400px; }
 }
+/* a phone held sideways: the whole stage fits the screen, so the stop bar along its bottom stays in view */
+@media (max-height: 560px) and (orientation: landscape) {
+  .stage { height: calc(100vh - 8px); height: calc(100svh - 8px); min-height: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }

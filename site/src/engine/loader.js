@@ -122,6 +122,28 @@ class SidecarSwap {
   }
 }
 
+// A build ships <name>.glb.gz beside each glb (plugins/gzip-models.js), since GitHub Pages sends glbs uncompressed.
+// A server that adds Content-Encoding to the .gz hands over the glb itself, so the gzip header decides.
+async function fetchModel(url) {
+  if (import.meta.env.PROD && typeof DecompressionStream === 'function') {
+    try {
+      const res = await fetch(`${url}.gz`);
+      if (res.ok) {
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) return bytes.buffer;
+        return await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+      }
+    } catch { /* the plain glb below */ }
+  }
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  return res.arrayBuffer();
+}
+
+async function loadModel(l, url) {
+  return l.parseAsync(await fetchModel(url), THREE.LoaderUtils.extractUrlBase(url));
+}
+
 async function parseGlb(rel, manager, compressed) {
   const url = modelUrl(rel);
   let gltf;
@@ -131,12 +153,10 @@ async function parseGlb(rel, manager, compressed) {
     l.setMeshoptDecoder(MeshoptDecoder);
     l.setKTX2Loader(ktx2Watcher(failures));
     l.register((parser) => new SidecarSwap(parser));
-    gltf = await l.loadAsync(url);
-    THREE.Cache.remove(url);
+    gltf = await loadModel(l, url);
     if (failures.length) throw Object.assign(new Error(`${failures.length} texture(s) did not transcode: ${failures[0]?.message || failures[0]}`), { textures: true });
   } else {
-    gltf = await getLoader(manager).loadAsync(url);
-    THREE.Cache.remove(url); // keep the decoded images, not the glb's bytes
+    gltf = await loadModel(getLoader(manager), url);
   }
   return gltf;
 }

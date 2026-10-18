@@ -147,6 +147,8 @@ export function createStemsBand({ manifest, positions, getCamera, lite }) {
     const m = ensureMix();
     m.el.currentTime = at;
     await m.el.play();
+    // a pause pressed while play() was pending found nothing playing to stop
+    if (!api.playing) { m.el.pause(); return; }
     const now = AC.currentTime;
     m.gain.gain.cancelScheduledValues(now);
     m.gain.gain.setValueAtTime(m.gain.gain.value, now);
@@ -322,7 +324,7 @@ export function createStemsBand({ manifest, positions, getCamera, lite }) {
       mixPass = cursor.pass;
       mixRestUntil = 0;
       await playMix(cursor.pos);
-      if (useStems) {
+      if (useStems && api.playing) {
         if (!loading) loading = loadStems();
         loading.then(handOver, (err) => { console.info('[audio] stems unavailable, staying on the mix:', err?.message || err); });
       }

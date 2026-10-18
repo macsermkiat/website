@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 import market from './plugins/market.js';
+import gzipModels from './plugins/gzip-models.js';
 
 // GitHub Pages project site: https://macsermkiat.github.io/website/
 // The Pages workflow passes the repository's real base path (PAGES_BASE) so a renamed repository or a custom
@@ -9,7 +10,7 @@ const base = process.env.PAGES_BASE && /^\/([\w.-]+\/)*$/.test(process.env.PAGES
 
 export default defineConfig({
   base,
-  plugins: [market()],
+  plugins: [market(), gzipModels()],
   server: { fs: { allow: ['..'] } },
   build: {
     target: 'es2022',

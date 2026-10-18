@@ -42,7 +42,7 @@ export function showPlainFallback(reason) {
   stage.querySelector('canvas')?.remove();
   stage.appendChild(box);
   // the 3D controls have nothing to act on
-  for (const id of ['snow', 'reset', 'quality']) { const b = $(id); if (b) b.hidden = true; }
+  for (const id of ['snow', 'reset', 'quality', 'play', 'mute']) { const b = $(id); if (b) b.hidden = true; }
   $('places')?.setAttribute('hidden', '');
   $('hint')?.setAttribute('hidden', '');
 }
