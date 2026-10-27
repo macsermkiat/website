@@ -7,3 +7,4 @@ venv/
 music/out/
 __pycache__/
 *.pyc
+.verify/
